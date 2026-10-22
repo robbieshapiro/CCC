@@ -210,6 +210,16 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-aim button:active { background: rgba(184, 149, 90, 0.4); }
 .g3-club button.on { background: var(--gold); color: var(--green); }
 .g3-club button.on small { color: var(--green); }
+.g3-strike { position: absolute; right: max(14px, env(safe-area-inset-right, 0px)); top: 52%; transform: translateY(-50%); display: grid; grid-template-columns: auto 84px auto; grid-template-areas: '. t .' 'l ball r' '. b .' 'lab lab lab'; align-items: center; justify-items: center; gap: 2px 6px; pointer-events: auto; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
+.g3-strike[hidden] { display: none; }
+.g3-strike small { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #f0dcae; }
+.g3-strike .t { grid-area: t; } .g3-strike .b { grid-area: b; } .g3-strike .l { grid-area: l; } .g3-strike .r { grid-area: r; }
+.g3-strike b { grid-area: lab; margin-top: 4px; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(15, 42, 31, 0.72); border: 1px solid rgba(184, 149, 90, 0.7); }
+.g3-ball { grid-area: ball; position: relative; width: 84px; height: 84px; border-radius: 50%; cursor: pointer; touch-action: none; background: radial-gradient(circle at 36% 30%, #fff, #e9e6dc 55%, #b9b4a6); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.08); background-image: radial-gradient(circle at 36% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0) 60%), radial-gradient(circle, rgba(0, 0, 0, 0.07) 1.5px, transparent 2px); background-size: 100% 100%, 9px 9px; background-color: #ecebe4; }
+.g3-ball::before, .g3-ball::after { content: ''; position: absolute; background: rgba(22, 59, 44, 0.18); }
+.g3-ball::before { left: 50%; top: 10px; bottom: 10px; width: 1px; }
+.g3-ball::after { top: 50%; left: 10px; right: 10px; height: 1px; }
+.g3-ball i { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); z-index: 1; pointer-events: none; }
 .g3-meter { position: absolute; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(440px, calc(100vw - 48px)); display: grid; gap: 6px; justify-items: center; pointer-events: none; }
 .g3-meter p { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
 .g3-meter-bar { position: relative; width: 100%; height: 22px; border-radius: 11px; background: linear-gradient(90deg, #7a1f2b, #3b4a3c 30%, #3b4a3c 70%, #7a1f2b); border: 2px solid var(--cream); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); overflow: hidden; }
@@ -226,6 +236,16 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .cart-drinks button b { font-family: var(--serif); font-size: 17px; color: var(--green); }
 .cart-drinks button:hover { border-color: var(--gold); }
 .cart-card .link { justify-self: center; }
+.cart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cart-head .link { font-size: 13px; }
+.cart-log { display: grid; gap: 8px; }
+.cart-card .msg { margin: 0; font-size: 16px; line-height: 1.4; }
+.cart-card .msg.daisy { padding-left: 12px; border-left: 3px solid var(--gold); }
+.cart-card .msg.you { justify-self: end; max-width: 85%; padding: 6px 12px; border-radius: 14px 14px 4px 14px; background: var(--green); color: var(--cream); font-size: 14px; font-weight: 600; }
+.cart-card .msg.typing i { color: var(--muted); font-style: normal; letter-spacing: 0.2em; }
+.cart-replies { display: grid; gap: 8px; }
+.cart-replies .reply { cursor: pointer; text-align: left; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font: 700 15px/1.3 var(--font); color: var(--green); }
+.cart-replies .reply:hover, .cart-replies .reply:focus-visible { border-color: var(--gold); outline: none; }
 .g3-skip { position: absolute; right: max(14px, env(safe-area-inset-right, 0px)); bottom: calc(90px + env(safe-area-inset-bottom, 0px)); cursor: pointer; font-weight: 800; font-size: 13px; padding: 9px 14px; border-radius: 999px; color: var(--green); background: var(--cream); border: 0; opacity: 0; pointer-events: none !important; transition: opacity 0.3s; }
 .g3-skip.show { opacity: 1; pointer-events: auto !important; }
 .g3-callout { position: absolute; left: 0; right: 0; top: 34%; display: grid; justify-items: center; text-align: center; opacity: 0; transform: translateY(8px) scale(0.98); transition: opacity 0.35s, transform 0.35s; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45); }
@@ -252,10 +272,18 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
   .brand b { font-size: 18px; }
   .g3-title b { font-size: 20px; }
   .g3-club button { min-width: 58px; padding: 4px 6px; font-size: 12px; }
-  .cart-drinks { grid-template-columns: 1fr; }
+  .cart-drinks { grid-template-columns: 1fr; gap: 6px; }
+  .cart-drinks button { padding: 8px 10px; }
+  .cart-card { padding: 12px 14px; gap: 8px; }
+  .cart-card .msg { font-size: 15px; }
   .g3-aim button { min-width: 46px; }
   .g3-hint { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); font-size: 13px; border-radius: 12px; max-width: calc(100vw - 48px); width: auto; }
   .g3-mini { width: 84px; height: 108px; top: calc(78px + env(safe-area-inset-top, 0px)); }
+  .g3-strike { grid-template-columns: auto 72px auto; right: max(8px, env(safe-area-inset-right, 0px)); }
+  .g3-ball { width: 72px; height: 72px; }
+}
+@media (max-height: 500px) {
+  .g3-strike { top: auto; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

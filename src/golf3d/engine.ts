@@ -1,5 +1,5 @@
 // The 3D course: one renderer for the whole round, a fresh world per hole.
-// Pick a club, drag sideways to aim, pull down for power, release, then tap the swing meter.
+// Pick a club, drag sideways to aim, pick a strike point for spin and shape, pull down for power, release, then tap the swing meter.
 import * as THREE from 'three';
 import type { Avatar } from '../api/types';
 import { specOf } from '../avatar';
@@ -58,6 +58,9 @@ export class Course3D {
   private petals: THREE.Points | null = null;
   private puffs: { m: THREE.Mesh; t: number }[] = [];
   private cart: CartGirl | null = null;
+  private visits = 0; // beverage cart stops this round
+  private lastDrink: Drink | null = null;
+  private total = { strokes: 0, par: 0 };
 
   private mode: Mode = 'fly';
   private pos: V2 = { x: 0, y: 0 };
@@ -65,6 +68,8 @@ export class Course3D {
   private power = 0;
   private club: ClubId = 'driver';
   private meter = { t: 0, pos: -1, speed: 1 };
+  private spin = 0; // -1 topspin .. 1 backspin, from where you strike the ball
+  private shape = 0; // -1 draw .. 1 fade
   private strokes = 0;
   private zones = new Set<string>();
   private drink: { kind: Drink; shots: number } | null = null;
@@ -167,6 +172,7 @@ export class Course3D {
     this.cart = null;
     this.hole = hole;
     this.number = number;
+    this.total = total;
     this.world = buildWorld(hole, number);
     this.scene.add(this.world.root);
     this.faded.clear();
@@ -276,6 +282,12 @@ export class Course3D {
       <canvas class="g3-mini" width="132" height="168" aria-hidden="true"></canvas>
       <div class="g3-drink" data-drink hidden></div>
       <div class="g3-power" aria-hidden="true"><i data-power></i></div>
+      <div class="g3-strike" data-strike hidden>
+        <small class="t">Top</small><small class="l">Draw</small>
+        <div class="g3-ball" data-ball role="slider" aria-label="Strike point: spin and shape" tabindex="0"><i data-dot></i></div>
+        <small class="r">Fade</small><small class="b">Back</small>
+        <b data-strike-label>Stock</b>
+      </div>
       <div class="g3-meter" data-meter hidden><div class="g3-meter-bar"><span class="sweet" data-sweet></span><span class="needle" data-needle></span></div><p>Tap in the gold</p></div>
       <div class="g3-callout" data-callout></div>
       <div class="g3-hint" data-hint></div>
@@ -324,7 +336,49 @@ export class Course3D {
       view.classList.toggle('on', this.overview);
     };
     q('[data-skip]').onclick = () => this.endFlyover();
+    this.bindStrike(q('[data-ball]'));
     this.showDrink();
+  }
+
+  // The strike point: low on the ball for backspin, high for topspin; left bends it left (draw), right for a fade.
+  private bindStrike(ball: HTMLElement) {
+    let down = false;
+    const set = (e: PointerEvent) => {
+      const r = ball.getBoundingClientRect();
+      let x = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+      let y = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+      const d = Math.hypot(x, y);
+      if (d > 1) {
+        x /= d;
+        y /= d;
+      }
+      this.setStrike(y, x);
+    };
+    ball.onpointerdown = (e) => {
+      if (this.mode !== 'aim') return;
+      down = true;
+      ball.setPointerCapture(e.pointerId);
+      set(e);
+    };
+    ball.onpointermove = (e) => down && this.mode === 'aim' && set(e);
+    ball.onpointerup = ball.onpointercancel = () => {
+      if (down) sfx('tick');
+      down = false;
+    };
+  }
+
+  private setStrike(spin: number, shape: number) {
+    // a dead-centre strike snaps to stock
+    const snap = (v: number) => (Math.abs(v) < 0.2 ? 0 : Math.max(-1, Math.min(1, v)));
+    this.spin = snap(spin);
+    this.shape = snap(shape);
+    const dot = this.overlay.querySelector('[data-dot]') as HTMLElement | null;
+    if (dot) dot.style.cssText = `left:${50 + this.shape * 34}%;top:${50 + this.spin * 34}%`;
+    const label = this.overlay.querySelector('[data-strike-label]');
+    if (label) {
+      const parts = [this.spin > 0 ? 'Backspin' : this.spin < 0 ? 'Topspin' : '', this.shape < 0 ? 'Draw' : this.shape > 0 ? 'Fade' : ''].filter(Boolean);
+      label.textContent = parts.join(' · ') || 'Stock';
+    }
   }
 
   private setClub(c: ClubId) {
@@ -374,6 +428,7 @@ export class Course3D {
   private order(kind: Drink | null) {
     this.overlay.classList.remove('carting');
     if (kind) {
+      this.lastDrink = kind;
       this.drink = { kind, shots: 2 };
       try {
         const k = 'ccc-drinks';
@@ -484,7 +539,11 @@ export class Course3D {
     if (this.cart && !this.cart.visited) {
       this.mode = 'cart';
       this.overlay.classList.add('carting');
-      this.cart.arrive(this.pos, this.aim, this.overlay.querySelector('[data-cart]') as HTMLElement);
+      this.cart.arrive(this.pos, this.aim, this.overlay.querySelector('[data-cart]') as HTMLElement, {
+        visit: ++this.visits,
+        diff: this.total.strokes - this.total.par,
+        last: this.lastDrink,
+      });
     } else this.toAim();
     this.snapCamera();
   }
@@ -497,7 +556,9 @@ export class Course3D {
     this.setClub(want);
     const dist = this.overlay.querySelector('[data-dist]');
     if (dist) dist.textContent = `${Math.round(d)} ft to the pin`;
-    this.hint(this.strokes === 0 && this.number === 1 ? 'Drag sideways to aim. Pull down and let go to swing.' : '');
+    const first = this.number === 1 && this.strokes === 0;
+    const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
+    this.hint(first ? 'Drag sideways to aim. Pull down and let go to swing.' : tip ? 'Drag the dot on the ball for spin, or to bend the shot.' : '');
     this.golfer.setPose('address');
   }
 
@@ -551,6 +612,11 @@ export class Course3D {
     else if (e.key === 'ArrowRight') this.aim += e.shiftKey ? 0.003 : 0.012;
     else if (e.key === 'ArrowUp') this.power = Math.min(1, this.power + 0.02);
     else if (e.key === 'ArrowDown') this.power = Math.max(0, this.power - 0.02);
+    else if ('wasdx'.includes(e.key) && this.club !== 'putter')
+      this.setStrike(
+        e.key === 'x' ? 0 : this.spin + (e.key === 's' ? 0.5 : e.key === 'w' ? -0.5 : 0),
+        e.key === 'x' ? 0 : this.shape + (e.key === 'd' ? 0.5 : e.key === 'a' ? -0.5 : 0),
+      );
     else if (e.key === 'c') this.overlay.querySelector<HTMLButtonElement>(`[data-club="${BAG[(idx + 1) % BAG.length]}"]:not(:disabled)`)?.click();
     else if (e.key === ' ' && this.power > 0.03) this.release();
     else return;
@@ -597,8 +663,11 @@ export class Course3D {
   }
 
   private hit(club: ClubId, power: number, error: number) {
-    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: club === 'putter' ? 1 : this.boost() };
+    const full = club !== 'putter';
+    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0 };
     const r = simulate(this.hole, this.pos, shot);
+    // every shot starts from a stock strike
+    this.setStrike(0, 0);
     if (this.drink && club !== 'putter') {
       this.drink.shots--;
       if (this.drink.shots <= 0) this.drink = null;
@@ -800,14 +869,14 @@ export class Course3D {
       } else {
         // the flight arc and a landing ring sized to the club's spread
         const power = Math.max(this.power, 0.6);
-        const v = launch({ angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost() });
+        const v = launch({ angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost(), spin: this.spin, shape: this.shape });
         const z0 = heightAt(this.hole, this.pos.x, this.pos.y);
         let landed: V2 | null = null;
         const T = (2 * v.vz) / G + 1;
         for (let i = 1; i < 200 && n < 80; i++) {
           const t = (i / 200) * T;
-          const x = this.pos.x + v.vx * t;
-          const y = this.pos.y + v.vy * t;
+          const x = this.pos.x + v.vx * t + 0.5 * v.ax * t * t;
+          const y = this.pos.y + v.vy * t + 0.5 * v.ay * t * t;
           const z = z0 + v.vz * t - 0.5 * G * t * t;
           if (z < heightAt(this.hole, x, y)) {
             landed = { x, y };
@@ -834,6 +903,8 @@ export class Course3D {
       bar.style.height = `${Math.round(this.power * 100)}%`;
       bar.parentElement!.classList.toggle('show', this.mode === 'aim' && this.power > 0);
     }
+    const strike = this.overlay.querySelector('[data-strike]') as HTMLElement | null;
+    if (strike) strike.hidden = this.mode !== 'aim' || this.club === 'putter';
   }
 
   // ---------- camera ----------
@@ -864,6 +935,12 @@ export class Course3D {
       return;
     }
     if (this.mode === 'cart' && this.cart) {
+      const close = this.cart.closeUp(this.camera.aspect);
+      if (close) {
+        this.camPos.copy(close.pos);
+        this.camLook.copy(close.look);
+        return;
+      }
       const c = this.cart.focus();
       const dir = new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim));
       this.camPos.copy(c).addScaledVector(dir, -14).add(new THREE.Vector3(6, 7, 0));
@@ -899,18 +976,15 @@ export class Course3D {
     }
     this.clock += dt;
     this.world?.update(this.clock, dt);
-    this.cart?.update(dt, () => this.mode === 'cart');
+    this.cart?.update(dt);
 
     if (this.mode === 'meter') {
       this.meter.t += dt;
-      // the needle runs left to right once; miss it entirely and you hook it
-      this.meter.pos = -1 + this.meter.t * this.meter.speed * 1.6;
+      // the needle sweeps back and forth until you tap
+      const u = (this.meter.t * this.meter.speed * 1.6) % 4;
+      this.meter.pos = u < 2 ? u - 1 : 3 - u;
       const needle = this.overlay.querySelector('[data-needle]') as HTMLElement | null;
-      if (needle) needle.style.left = `${((Math.min(1, this.meter.pos) + 1) / 2) * 100}%`;
-      if (this.meter.pos >= 1) {
-        this.meter.pos = 1;
-        this.tapMeter();
-      }
+      if (needle) needle.style.left = `${((this.meter.pos + 1) / 2) * 100}%`;
     }
 
     if (this.mode === 'fly' && this.fly) {
@@ -935,7 +1009,8 @@ export class Course3D {
     }
 
     if (this.mode === 'aim' || this.mode === 'meter' || this.mode === 'cart' || this.mode === 'fly') this.placeGolfer();
-    this.golfer.group.visible = !this.overview;
+    // you're the one talking to Daisy, so you step out of her close-up
+    this.golfer.group.visible = !this.overview && !(this.mode === 'cart' && this.cart?.closeUp(this.camera.aspect));
     this.golfer.update(dt);
 
     this.guide();

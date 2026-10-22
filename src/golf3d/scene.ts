@@ -4,7 +4,7 @@ import { makeRng } from '../seed';
 import { CUP_R, curbs } from './physics';
 import * as props from './props';
 import { mat, mesh, P } from './props';
-import { heightAt, inPoly, isWater, surfaceAt } from './terrain';
+import { heightAt, inPoly, isWater, surfaceAt, waterLevel } from './terrain';
 import type { Hole, Surface, Wall } from './types';
 
 export const w3 = (x: number, y: number, h: number) => new THREE.Vector3(x, h, -y);
@@ -112,10 +112,9 @@ function terrainMesh(h: Hole) {
   return { mesh: m, low };
 }
 
-// Water sits a little below the banks: level is the terrain with the water beds dug out removed.
+// Water sits a little below the banks, at the level physics uses.
 function waterMesh(h: Hole) {
   if (!h.water.length) return null;
-  const level: Hole = { ...h, terrain: h.terrain.filter((p) => !(p.kind === 'box' && p.op === 'add' && p.h < 0)) };
   const S = 2;
   const verts: number[] = [];
   for (const poly of h.water) {
@@ -125,7 +124,7 @@ function waterMesh(h: Hole) {
       for (let y = Math.min(...ys) - S; y < Math.max(...ys) + S; y += S) {
         const mid = { x: x + S / 2, y: y + S / 2 };
         if (!inPoly(mid, poly) || !inPoly(mid, h.border)) continue;
-        const z = (a: number, b: number) => heightAt(level, a, b) - 0.7;
+        const z = (a: number, b: number) => waterLevel(h, a, b);
         const q = [
           [x, y],
           [x + S, y],

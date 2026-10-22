@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import type { ClubId } from './clubs';
 
 export type Build = 'slim' | 'regular' | 'broad';
-export type HairStyle = 'short' | 'side' | 'curly' | 'long' | 'bun' | 'bald';
+export type HairStyle = 'short' | 'side' | 'curly' | 'long' | 'bun' | 'bald' | 'ponytail';
 export type FaceHair = 'none' | 'stubble' | 'moustache' | 'beard';
 export type Top = 'polo' | 'quarterzip' | 'vest' | 'cardigan' | 'cashmere' | 'blazer' | 'goldblazer' | 'tweed' | 'uniform';
 export type Bottoms = 'trousers' | 'shorts' | 'plusfours' | 'tartan' | 'skirt';
@@ -31,6 +31,7 @@ export type GolferSpec = {
   crestBag?: boolean;
   bowtie?: boolean;
   monocle?: boolean;
+  staff?: { name: string; lips: string }; // club staff: a fitted uniform, a name badge and a made-up face
 };
 
 export const SKIN_TONES = ['#f6d7bf', '#eac09a', '#d29a6e', '#a8704a', '#7a4e33', '#563726'];
@@ -190,7 +191,7 @@ function buildBag(color: string, crest: boolean) {
 
 // ---------- the golfer ----------
 
-export type PoseName = 'idle' | 'address' | 'cheer' | 'groan' | 'wave' | 'clasp';
+export type PoseName = 'idle' | 'address' | 'cheer' | 'groan' | 'wave' | 'clasp' | 'laugh';
 
 export class Golfer {
   readonly group = new THREE.Group();
@@ -250,9 +251,18 @@ export class Golfer {
 
     // torso
     this.hips.add(this.spine);
-    const torso = mesh(new THREE.CapsuleGeometry(0.52, 1.0, 6, 14), topMat);
+    // staff uniforms are tailored: in at the waist, out at the hip
+    const torso = s.staff
+      ? mesh(
+          new THREE.LatheGeometry(
+            [[0, -0.17], [0.42, -0.14], [0.52, 0.05], [0.47, 0.32], [0.41, 0.62], [0.45, 0.92], [0.52, 1.18], [0.51, 1.42], [0.49, 1.68], [0.32, 1.9], [0, 1.96]].map(([r, y]) => new THREE.Vector2(r, y)),
+            20,
+          ),
+          topMat,
+        )
+      : mesh(new THREE.CapsuleGeometry(0.52, 1.0, 6, 14), topMat);
     torso.scale.set(w * 1.05, 1, 0.72 * w);
-    torso.position.y = 0.85;
+    if (!s.staff) torso.position.y = 0.85;
     this.spine.add(torso);
     // belt
     if (s.top === 'polo' || s.top === 'quarterzip' || s.top === 'vest' || s.top === 'uniform')
@@ -290,6 +300,13 @@ export class Golfer {
         this.spine.add(badge);
       }
     }
+    if (s.staff) {
+      // a brass name badge over the heart
+      const badge = mesh(new THREE.BoxGeometry(0.26, 0.09, 0.02), m('#c9a24a', 0.3, { metalness: 0.7 }));
+      badge.position.set(-0.24, 1.38, 0.355 * w);
+      badge.rotation.y = -0.25;
+      this.spine.add(badge);
+    }
     if (s.bowtie) this.spine.add(mesh(new THREE.BoxGeometry(0.3, 0.1, 0.06), m('#163b2c', 0.5)).translateY(1.72).translateZ(0.38));
 
     // head
@@ -302,11 +319,15 @@ export class Golfer {
     this.head.add(skull);
     for (const side of [-1, 1]) {
       this.head.add(mesh(new THREE.SphereGeometry(0.09, 8, 6), skin).translateX(0.4 * side).translateY(0.48));
-      this.head.add(mesh(new THREE.SphereGeometry(0.045, 8, 6), m('#1d1a18', 0.3)).translateX(0.14 * side).translateY(0.55).translateZ(0.38));
-      this.head.add(mesh(new THREE.BoxGeometry(0.14, 0.035, 0.03), m(s.hair === 'bald' ? '#8a7a6a' : s.hairColor, 0.8)).translateX(0.14 * side).translateY(0.65).translateZ(0.38));
+      this.head.add(mesh(new THREE.SphereGeometry(s.staff ? 0.058 : 0.045, 10, 8), m(s.staff ? '#2e2119' : '#1d1a18', 0.3)).translateX(0.14 * side).translateY(0.55).translateZ(0.38));
+      const brow = mesh(new THREE.BoxGeometry(0.14, s.staff ? 0.022 : 0.035, 0.03), m(s.hair === 'bald' ? '#8a7a6a' : s.staff ? '#5a3b26' : s.hairColor, 0.8));
+      brow.position.set(0.14 * side, s.staff ? 0.69 : 0.65, 0.38);
+      if (s.staff) brow.rotation.z = -0.14 * side;
+      this.head.add(brow);
     }
     this.head.add(mesh(new THREE.SphereGeometry(0.07, 8, 6), skin).translateY(0.46).translateZ(0.42));
-    this.head.add(mesh(new THREE.TorusGeometry(0.09, 0.018, 4, 10, Math.PI), m('#8a4b3a', 0.6)).translateY(0.35).translateZ(0.38).rotateZ(Math.PI));
+    if (s.staff) this.addMakeup(s.staff.lips);
+    else this.head.add(mesh(new THREE.TorusGeometry(0.09, 0.018, 4, 10, Math.PI), m('#8a4b3a', 0.6)).translateY(0.35).translateZ(0.38).rotateZ(Math.PI));
     this.addHair(s);
     this.addFaceHair(s);
     this.addHat(s);
@@ -322,12 +343,12 @@ export class Golfer {
     this.swing.add(this.plane);
     const hands = new THREE.Vector3(0, -2.05, 0.3);
     for (const side of [-1, 1]) {
-      const shoulder = new THREE.Vector3(0.62 * side * w, 0.15, 0);
+      const shoulder = new THREE.Vector3((s.staff ? 0.5 : 0.62) * side * w, 0.15, 0);
       const elbow = shoulder.clone().lerp(hands, 0.5).add(new THREE.Vector3(0.12 * side, 0, 0.05));
-      this.plane.add(mesh(new THREE.SphereGeometry(0.22 * w, 10, 8), topMat).translateX(shoulder.x).translateY(shoulder.y));
+      this.plane.add(mesh(new THREE.SphereGeometry((s.staff ? 0.17 : 0.22) * w, 10, 8), topMat).translateX(shoulder.x).translateY(shoulder.y));
       const sleeve = s.top === 'polo' || s.top === 'vest' || s.top === 'uniform' ? shoulder.clone().lerp(elbow, 0.55) : elbow.clone().lerp(hands, 0.75);
-      this.plane.add(limb(shoulder, sleeve, 0.17 * w, topMat));
-      this.plane.add(limb(sleeve, hands.clone().add(new THREE.Vector3(0.05 * side, 0.1, 0)), 0.13, skin));
+      this.plane.add(limb(shoulder, sleeve, (s.staff ? 0.14 : 0.17) * w, topMat));
+      this.plane.add(limb(sleeve, hands.clone().add(new THREE.Vector3(0.05 * side, 0.1, 0)), s.staff ? 0.1 : 0.13, skin));
       const glove = s.glove && side > 0;
       this.plane.add(mesh(new THREE.SphereGeometry(0.15, 10, 8), glove ? m('#f4f2ec', 0.6) : skin).translateX(hands.x + 0.05 * side).translateY(hands.y).translateZ(hands.z));
     }
@@ -346,7 +367,7 @@ export class Golfer {
   private addHair(s: GolferSpec) {
     if (s.hair === 'bald') return;
     const hm = m(s.hairColor, 0.85);
-    const cap = mesh(new THREE.SphereGeometry(0.45, 20, 12, 0, Math.PI * 2, 0, s.hair === 'long' ? 1.9 : 1.45), hm);
+    const cap = mesh(new THREE.SphereGeometry(0.45, 20, 12, 0, Math.PI * 2, 0, s.hair === 'long' || s.hair === 'ponytail' ? 1.75 : 1.45), hm);
     cap.position.set(0, 0.5, -0.03);
     cap.scale.set(1, 1.05, 1.02);
     this.head.add(cap);
@@ -365,9 +386,53 @@ export class Golfer {
       back.position.set(0, 0.2, -0.22);
       back.scale.set(1.15, 1, 0.6);
       this.head.add(back);
+    } else if (s.hair === 'ponytail') {
+      // pulled back through the visor, with a swept fringe and a tail to the shoulder blades
+      const fringe = mesh(new THREE.SphereGeometry(0.24, 12, 8), hm);
+      fringe.position.set(0.12, 0.8, 0.26);
+      fringe.scale.set(1.5, 0.45, 0.7);
+      fringe.rotation.z = -0.25;
+      this.head.add(fringe);
+      this.head.add(mesh(new THREE.TorusGeometry(0.09, 0.035, 6, 12), m('#163b2c', 0.6)).translateY(0.62).translateZ(-0.44));
+      const tail = limb(new THREE.Vector3(0, 0.6, -0.48), new THREE.Vector3(0, -0.35, -0.62), 0.13, hm, 0.05);
+      tail.name = 'ponytail';
+      this.head.add(tail);
+      // fuller at the back of the head where it gathers into the tie
+      const back = mesh(new THREE.SphereGeometry(0.36, 14, 10), hm);
+      back.position.set(0, 0.5, -0.2);
+      back.scale.set(1.1, 1, 0.8);
+      this.head.add(back);
     } else if (s.hair === 'bun') {
       this.head.add(mesh(new THREE.SphereGeometry(0.17, 10, 8), hm).translateY(0.88).translateZ(-0.28));
     }
+  }
+
+  // lashes, a little blush, lipstick and gold studs: polished, the way the club likes its staff
+  private addMakeup(lips: string) {
+    const ink = m('#1d1a18', 0.4);
+    for (const side of [-1, 1]) {
+      const lash = mesh(new THREE.BoxGeometry(0.13, 0.016, 0.02), ink);
+      lash.position.set(0.145 * side, 0.6, 0.405);
+      lash.rotation.z = -0.08 * side;
+      this.head.add(lash);
+      const glint = mesh(new THREE.SphereGeometry(0.016, 6, 4), m('#ffffff', 0.2));
+      glint.position.set(0.14 * side + 0.02, 0.57, 0.43);
+      this.head.add(glint);
+      const blush = mesh(new THREE.SphereGeometry(0.08, 10, 8), new THREE.MeshStandardMaterial({ color: '#e07f7f', transparent: true, opacity: 0.32, roughness: 0.9, depthWrite: false }));
+      blush.scale.set(1, 0.6, 0.4);
+      blush.position.set(0.23 * side, 0.43, 0.35);
+      this.head.add(blush);
+      this.head.add(mesh(new THREE.SphereGeometry(0.035, 8, 6), m('#d4af37', 0.25, { metalness: 0.9 })).translateX(0.41 * side).translateY(0.36).translateZ(0.03));
+    }
+    const lip = m(lips, 0.45);
+    const upper = mesh(new THREE.CapsuleGeometry(0.028, 0.09, 4, 8), lip);
+    upper.rotation.z = Math.PI / 2;
+    upper.position.set(0, 0.355, 0.4);
+    this.head.add(upper);
+    const lower = mesh(new THREE.SphereGeometry(0.05, 10, 8), lip);
+    lower.scale.set(1.25, 0.55, 0.6);
+    lower.position.set(0, 0.325, 0.395);
+    this.head.add(lower);
   }
 
   private addFaceHair(s: GolferSpec) {
@@ -457,6 +522,11 @@ export class Golfer {
     } else if (p === 'wave') {
       target.tilt = 2.2;
       target.phi = 0.6 + Math.sin(this.t * 8) * 0.35;
+    } else if (p === 'laugh') {
+      target.tilt = 0.32;
+      target.bend = -0.06 + Math.abs(Math.sin(this.t * 9)) * 0.05;
+      target.headTilt = -0.22;
+      target.phi = Math.sin(this.t * 2) * 0.04;
     } else if (p === 'groan') {
       target.tilt = 0.05;
       target.bend = 0.45;

@@ -68,7 +68,6 @@ export const azalea: Hole = {
     { poly: circle(GREEN.x, GREEN.y, GREEN.r), surface: 'green' },
   ],
   water: [rect(-232, 150, 56, 164)],
-  dry: [rect(-4, 146, 4, 168), band(cartPath.slice(0, 2), 3.6)],
   terrain: [
     // it falls away from the tee and toward the inside of the dogleg
     { kind: 'tilt', gx: 0.008, gy: -0.012 },
