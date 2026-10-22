@@ -1,4 +1,5 @@
 // Hole 3, The Clubhouse (par 5, about 520 ft): croquet lawn, a hedge maze, and a raised green by the terrace.
+// The green is guarded: pot bunkers front and back-right, and anything long runs off the back into the rough.
 // The gamble: an iron over the maze. The secret: up the terrace stairs and along the veranda onto the green.
 import { circle, rect } from '../terrain';
 import type { Hole, Post, V2, Wall } from '../types';
@@ -84,6 +85,9 @@ export const clubhouse: Hole = {
     { poly: rect(22, 390, 72, 426), surface: 'stone' },
     { poly: rect(GREEN.x0 - 4, GREEN.y0 - 4, GREEN.x1 + 4, GREEN.y1 + 4), surface: 'fringe' },
     { poly: rect(GREEN.x0, GREEN.y0, GREEN.x1, GREEN.y1), surface: 'green' },
+    { poly: rect(-136, GREEN.y1 + 3, 20, 446), surface: 'rough' },
+    { poly: circle(-30, 372, 7), surface: 'sand' },
+    { poly: circle(10, 424, 6), surface: 'sand' },
     { poly: circle(-100, 404, 10), surface: 'sand' },
     { poly: circle(-10, 350, 8), surface: 'sand' },
   ],
@@ -98,8 +102,12 @@ export const clubhouse: Hole = {
     { kind: 'ramp', x0: -88, y0: 334, x1: -50, y1: 368, axis: 'y', h0: 0.8, h1: GREEN_H, op: 'set' },
     { kind: 'ramp', x0: 20, y0: 390, x1: 73, y1: 426, axis: 'x', h0: GREEN_H, h1: TERRACE_H, op: 'set' },
     // the green breaks hard toward the maze, with a tier at the back
-    { kind: 'ramp', x0: GREEN.x0, y0: GREEN.y0, x1: GREEN.x1, y1: GREEN.y1, axis: 'x', h0: 0, h1: 1.2, op: 'add' },
-    { kind: 'hill', x: -40, y: 424, r: 22, h: 0.9 },
+    { kind: 'ramp', x0: GREEN.x0, y0: GREEN.y0, x1: GREEN.x1, y1: GREEN.y1, axis: 'x', h0: 0, h1: 1.8, op: 'add' },
+    { kind: 'hill', x: -40, y: 420, r: 20, h: 0.9 },
+    // the runoff: past the back tier the ground drops away into a rough hollow
+    { kind: 'box', x0: -136, y0: GREEN.y1 + 2, x1: 20, y1: 450, h: -1, edge: 5, op: 'set' },
+    { kind: 'disc', x: -30, y: 372, r: 7, h: -1.1, edge: 2, op: 'add' },
+    { kind: 'disc', x: 10, y: 424, r: 6, h: -1.1, edge: 2, op: 'add' },
     { kind: 'disc', x: -100, y: 404, r: 10, h: -0.9, edge: 3, op: 'add' },
     { kind: 'disc', x: -10, y: 350, r: 8, h: -0.9, edge: 3, op: 'add' },
   ],
