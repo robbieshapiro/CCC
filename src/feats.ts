@@ -1,0 +1,14 @@
+export type Feat = { id: string; name: string; icon: string; how: string };
+
+export const FEATS: Feat[] = [
+  { id: 'ace', name: 'Hole in One', icon: '⛳', how: 'Ace any hole' },
+  { id: 'chipin', name: 'Wedge Hole-out', icon: '🪶', how: 'Hole out with the wedge' },
+  { id: 'cartpath', name: 'Cart Path Bank', icon: '🛞', how: 'Ride the cart path on The Azalea' },
+  { id: 'bridge', name: 'Over the Bridge', icon: '🌉', how: 'Fly the gap on The Island' },
+  { id: 'terrace', name: 'Terrace Route', icon: '🏛️', how: 'Take the veranda on The Clubhouse' },
+  { id: 'underpar', name: 'Under Par Round', icon: '📉', how: 'Finish a round under par' },
+  { id: 'nineteenth', name: 'The Nineteenth Hole', icon: '🍹', how: 'Try all three drinks from the cart' },
+  { id: 'champion', name: 'Club Champion', icon: '🏆', how: 'Win a month' },
+];
+
+export const featById = (id: string) => FEATS.find((f) => f.id === id);

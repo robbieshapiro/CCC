@@ -1,0 +1,989 @@
+// The 3D course: one renderer for the whole round, a fresh world per hole.
+// Pick a club, drag sideways to aim, pull down for power, release, then tap the swing meter.
+import * as THREE from 'three';
+import type { Avatar } from '../api/types';
+import { specOf } from '../avatar';
+import { sfx } from '../fx/sound';
+import { CartGirl } from './cartgirl';
+import { BAG, carryOf, CLUBS, DRINKS, type ClubId, type Drink } from './clubs';
+import { Golfer } from './golfer';
+import { BALL_R, G, launch, simulate, type Result } from './physics';
+import * as props from './props';
+import { buildWorld, w3, type World } from './scene';
+import { heightAt, inPoly, isWater, surfaceAt } from './terrain';
+import type { Hole, Shot, V2 } from './types';
+
+export const MAX_OVER = 3; // pick up at par + 3
+const TRAIL = 60;
+
+export type HoleResult = { strokes: number; feats: string[] };
+type Mode = 'fly' | 'aim' | 'meter' | 'swing' | 'roll' | 'done' | 'cart';
+
+const html = (s: string) => {
+  const t = document.createElement('template');
+  t.innerHTML = s.trim();
+  return t.content.firstElementChild as HTMLElement;
+};
+
+export function scoreName(strokes: number, par: number) {
+  if (strokes === 1) return 'Hole in one';
+  const d = strokes - par;
+  return d <= -3 ? 'Albatross' : d === -2 ? 'Eagle' : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey' : d === 2 ? 'Double bogey' : 'Triple bogey';
+}
+
+const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', putter: 'Putter' };
+
+export class Course3D {
+  private renderer: THREE.WebGLRenderer;
+  private scene = new THREE.Scene();
+  private camera = new THREE.PerspectiveCamera(55, 1, 0.5, 2600);
+  private sun = new THREE.DirectionalLight('#ffeccc', 2.6);
+  private world: World | null = null;
+  private hole!: Hole;
+  private number = 1;
+  private overlay: HTMLElement;
+  private raf = 0;
+  private last = performance.now();
+  private clock = 0; // hole clock: drives movers, matches the physics
+  private slow = 0; // seconds of slow frames, for the automatic quality drop
+
+  private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
+  private golfer: Golfer;
+  private dots: THREE.InstancedMesh;
+  private ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: '#f3ecdc', transparent: true, opacity: 0.85, depthWrite: false }));
+  private trail: THREE.Line;
+  private trailPts: THREE.Vector3[] = [];
+  private clouds: THREE.Object3D[] = [];
+  private birds: THREE.Object3D[] = [];
+  private petals: THREE.Points | null = null;
+  private puffs: { m: THREE.Mesh; t: number }[] = [];
+  private cart: CartGirl | null = null;
+
+  private mode: Mode = 'fly';
+  private pos: V2 = { x: 0, y: 0 };
+  private aim = 0;
+  private power = 0;
+  private club: ClubId = 'driver';
+  private meter = { t: 0, pos: -1, speed: 1 };
+  private strokes = 0;
+  private zones = new Set<string>();
+  private drink: { kind: Drink; shots: number } | null = null;
+  private shot: { r: Result; t: number; from: V2; club: ClubId; next: number } | null = null;
+  private fly: { curve: THREE.CatmullRomCurve3; t: number } | null = null;
+  private follow = new THREE.Vector3(0, 0, -1);
+  private camPos = new THREE.Vector3();
+  private camLook = new THREE.Vector3();
+  private overview = false;
+  private orbit = 0;
+  private resolve: ((r: HoleResult) => void) | null = null;
+  private drag: { x: number; y: number; aim: number; kind: '' | 'aim' | 'power' } | null = null;
+  private miniBase: HTMLCanvasElement | null = null;
+  private faded = new Map<THREE.Object3D, number>();
+  private onResize = () => this.resize();
+  private onKey = (e: KeyboardEvent) => this.key(e);
+
+  constructor(private host: HTMLElement, avatar: Avatar, private onQuit: () => void) {
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.08;
+    host.appendChild(this.renderer.domElement);
+    this.overlay = html(`<div class="g3-ui"></div>`);
+    host.appendChild(this.overlay);
+
+    this.sky();
+    this.scene.add(new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25));
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.bias = -0.0005;
+    this.sun.shadow.normalBias = 0.5;
+    this.scene.add(this.sun, this.sun.target);
+    this.scene.fog = new THREE.Fog('#e3ebe2', 320, 1100);
+    // soft reflections from the sky
+    const pm = new THREE.PMREMGenerator(this.renderer);
+    const env = new THREE.Scene();
+    env.add(this.skyMesh(0.6));
+    this.scene.environment = pm.fromScene(env, 0.04).texture;
+    pm.dispose();
+
+    this.ball.castShadow = true;
+    this.scene.add(this.ball);
+    this.golfer = new Golfer(specOf(avatar));
+    this.golfer.holdClub('driver');
+    this.scene.add(this.golfer.group);
+
+    this.dots = new THREE.InstancedMesh(new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshBasicMaterial({ color: '#f3ecdc', transparent: true, opacity: 0.9 }), 80);
+    this.dots.frustumCulled = false;
+    this.scene.add(this.dots);
+    this.ring.rotation.x = -Math.PI / 2;
+    this.scene.add(this.ring);
+    const tg = new THREE.BufferGeometry();
+    tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL * 3), 3));
+    tg.setDrawRange(0, 0);
+    this.trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55 }));
+    this.trail.frustumCulled = false;
+    this.scene.add(this.trail);
+
+    for (let i = 0; i < 8; i++) {
+      const c = props.cloud();
+      c.position.set(-700 + i * 190, 190 + (i % 3) * 40, -300 - (i % 4) * 160);
+      this.clouds.push(c);
+      this.scene.add(c);
+    }
+    for (let i = 0; i < 5; i++) {
+      const b = props.bird();
+      this.birds.push(b);
+      this.scene.add(b);
+    }
+
+    this.bindInput();
+    window.addEventListener('resize', this.onResize);
+    window.addEventListener('keydown', this.onKey);
+    this.resize();
+    this.loop();
+    if (import.meta.env.DEV) Object.assign(window, { __g3: this }); // for browser tests
+  }
+
+  destroy() {
+    cancelAnimationFrame(this.raf);
+    window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('keydown', this.onKey);
+    this.world?.dispose();
+    this.cart?.dispose();
+    this.renderer.dispose();
+    this.renderer.forceContextLoss();
+    this.host.innerHTML = '';
+  }
+
+  // Plays one hole to completion. The beverage cart may stop by on the tee.
+  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: boolean } = {}): Promise<HoleResult> {
+    if (this.world) {
+      this.scene.remove(this.world.root);
+      this.world.dispose();
+    }
+    this.cart?.dispose();
+    this.cart = null;
+    this.hole = hole;
+    this.number = number;
+    this.world = buildWorld(hole, number);
+    this.scene.add(this.world.root);
+    this.faded.clear();
+    this.clock = 0;
+    this.strokes = 0;
+    this.zones = new Set();
+    this.pos = { ...hole.tee };
+    this.aim = hole.aim;
+    this.power = 0;
+    this.shot = null;
+    this.overview = false;
+    this.trailPts = [];
+    this.drawTrail();
+    this.placeBall();
+    this.fitShadows();
+    this.petalsFor(hole);
+    this.hud(total);
+    this.miniBase = null;
+    if (opts.cart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k));
+    this.startFlyover();
+    return new Promise((res) => (this.resolve = res));
+  }
+
+  // ---------- setup ----------
+
+  private skyMesh(scale = 1) {
+    const geo = new THREE.SphereGeometry(2000 * scale, 32, 16);
+    const col: number[] = [];
+    const top = new THREE.Color('#6fa3d0');
+    const mid = new THREE.Color('#bcd5e8');
+    const low = new THREE.Color('#f1ecdc');
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const k = p.getY(i) / (2000 * scale);
+      const c = k > 0.2 ? mid.clone().lerp(top, Math.min(1, (k - 0.2) / 0.6)) : low.clone().lerp(mid, Math.max(0, k / 0.2));
+      col.push(c.r, c.g, c.b);
+    }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+  }
+
+  private sky() {
+    this.scene.add(this.skyMesh());
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(40, 16, 10), new THREE.MeshBasicMaterial({ color: '#fff3d6', fog: false }));
+    sun.position.set(-900, 700, 1200);
+    this.scene.add(sun);
+  }
+
+  private fitShadows() {
+    const { x0, y0, x1, y1 } = this.hole.bounds;
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    const r = Math.hypot(x1 - x0, y1 - y0) / 2 + 20;
+    this.sun.position.set(cx - 170, 260, -cy + 220);
+    this.sun.target.position.set(cx, 0, -cy);
+    const c = this.sun.shadow.camera;
+    c.left = -r;
+    c.right = r;
+    c.top = r;
+    c.bottom = -r;
+    c.near = 10;
+    c.far = 900;
+    c.updateProjectionMatrix();
+  }
+
+  private petalsFor(h: Hole) {
+    if (this.petals) {
+      this.scene.remove(this.petals);
+      this.petals.geometry.dispose();
+      this.petals = null;
+    }
+    const blooms = h.decor.filter((d) => d.kind === 'azalea');
+    const n = blooms.length ? 260 : 80;
+    const arr = new Float32Array(n * 3);
+    const { x0, y0, x1, y1 } = h.bounds;
+    for (let i = 0; i < n; i++) {
+      arr[i * 3] = x0 + Math.random() * (x1 - x0);
+      arr[i * 3 + 1] = Math.random() * 24;
+      arr[i * 3 + 2] = -(y0 + Math.random() * (y1 - y0));
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    this.petals = new THREE.Points(geo, new THREE.PointsMaterial({ color: blooms.length ? '#f4a7c3' : '#fff6d8', size: blooms.length ? 0.5 : 0.3, transparent: true, opacity: 0.85 }));
+    this.scene.add(this.petals);
+  }
+
+  private resize() {
+    const w = this.host.clientWidth || window.innerWidth;
+    const h = this.host.clientHeight || window.innerHeight;
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h;
+    this.camera.fov = w < h ? 66 : 52;
+    this.camera.updateProjectionMatrix();
+  }
+
+  // ---------- HUD ----------
+
+  private hud(total: { strokes: number; par: number }) {
+    const h = this.hole;
+    const diff = total.strokes - total.par;
+    this.overlay.innerHTML = `
+      <div class="g3-top">
+        <button class="g3-pill" data-quit>Leave</button>
+        <div class="g3-title"><small>Hole ${this.number} of 3</small><b>${h.name}</b><span>Par ${h.par} · <i data-dist></i></span></div>
+        <div class="g3-score"><small>Stroke</small><b data-strokes>0</b><span>${total.par ? `Round ${diff === 0 ? 'E' : diff > 0 ? `+${diff}` : diff}` : ''}</span></div>
+      </div>
+      <canvas class="g3-mini" width="132" height="168" aria-hidden="true"></canvas>
+      <div class="g3-drink" data-drink hidden></div>
+      <div class="g3-power" aria-hidden="true"><i data-power></i></div>
+      <div class="g3-meter" data-meter hidden><div class="g3-meter-bar"><span class="sweet" data-sweet></span><span class="needle" data-needle></span></div><p>Tap in the gold</p></div>
+      <div class="g3-callout" data-callout></div>
+      <div class="g3-hint" data-hint></div>
+      <div class="g3-cart" data-cart hidden></div>
+      <div class="g3-bottom">
+        <div class="g3-club" role="group" aria-label="Club">
+          ${BAG.map((c) => `<button data-club="${c}"><b>${LABEL[c]}</b><small>${c === 'putter' ? 'roll' : `${CLUBS[c].carry[1]} ft`}</small></button>`).join('')}
+        </div>
+        <div class="g3-aim">
+          <button data-nudge="-1" aria-label="Aim left">◀</button>
+          <button data-nudge="1" aria-label="Aim right">▶</button>
+        </div>
+        <button class="g3-pill" data-view aria-pressed="false">Overview</button>
+      </div>
+      <button class="g3-skip" data-skip>Skip flyover</button>`;
+    const q = (s: string) => this.overlay.querySelector(s) as HTMLElement;
+    q('[data-quit]').onclick = () => {
+      if (confirm('Leave the round? An unfinished round does not count.')) this.onQuit();
+    };
+    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
+      b.onclick = () => {
+        if (this.mode !== 'aim' || b.disabled) return;
+        this.setClub(b.dataset.club as ClubId);
+        sfx('tick');
+      };
+    });
+    this.overlay.querySelectorAll<HTMLButtonElement>('[data-nudge]').forEach((b) => {
+      let timer = 0;
+      const step = () => {
+        if (this.mode === 'aim') this.aim += Number(b.dataset.nudge) * (this.club === 'putter' ? 0.004 : 0.008);
+      };
+      b.onpointerdown = (e) => {
+        e.preventDefault();
+        step();
+        timer = window.setInterval(step, 60);
+      };
+      const stop = () => clearInterval(timer);
+      b.onpointerup = stop;
+      b.onpointerleave = stop;
+      b.onpointercancel = stop;
+    });
+    const view = q('[data-view]');
+    view.onclick = () => {
+      this.overview = !this.overview;
+      view.setAttribute('aria-pressed', String(this.overview));
+      view.classList.toggle('on', this.overview);
+    };
+    q('[data-skip]').onclick = () => this.endFlyover();
+    this.showDrink();
+  }
+
+  private setClub(c: ClubId) {
+    this.club = c;
+    this.golfer.holdClub(c);
+    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((x) => x.classList.toggle('on', x.dataset.club === c));
+  }
+
+  // Which clubs this lie allows, and a sensible default for the distance.
+  private lie() {
+    const s = surfaceAt(this.hole, this.pos);
+    const allowed: ClubId[] = s === 'sand' ? ['wedge'] : s === 'green' ? ['putter', 'wedge'] : BAG;
+    const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
+    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? 'wedge' : d < 26 && s !== 'rough' ? 'putter' : d < 95 ? 'wedge' : d < 200 || s === 'rough' ? 'iron' : 'driver';
+    return { allowed, want, d };
+  }
+
+  private setStrokes() {
+    const el = this.overlay.querySelector('[data-strokes]');
+    if (el) el.textContent = String(this.strokes);
+  }
+
+  private hint(text: string) {
+    const el = this.overlay.querySelector('[data-hint]') as HTMLElement | null;
+    if (el) el.textContent = text;
+  }
+
+  callout(text: string, sub = '', ms = 1800) {
+    const el = this.overlay.querySelector('[data-callout]') as HTMLElement | null;
+    if (!el) return;
+    el.innerHTML = `<b>${text}</b>${sub ? `<span>${sub}</span>` : ''}`;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+    window.setTimeout(() => el.classList.remove('show'), ms);
+  }
+
+  private showDrink() {
+    const el = this.overlay.querySelector('[data-drink]') as HTMLElement | null;
+    if (!el) return;
+    el.hidden = !this.drink || this.drink.kind === 'water';
+    if (this.drink) el.innerHTML = `<b>${DRINKS[this.drink.kind].name}</b><span>${this.drink.shots} ${this.drink.shots === 1 ? 'swing' : 'swings'} left</span>`;
+  }
+
+  // ---------- the beverage cart ----------
+
+  private order(kind: Drink | null) {
+    this.overlay.classList.remove('carting');
+    if (kind) {
+      this.drink = { kind, shots: 2 };
+      try {
+        const k = 'ccc-drinks';
+        const had = new Set<string>(JSON.parse(localStorage.getItem(k) || '[]'));
+        had.add(kind);
+        localStorage.setItem(k, JSON.stringify([...had]));
+        if (had.size === 3) this.zones.add('nineteenth');
+      } catch {
+        /* private mode: no trophy tracking */
+      }
+      sfx('pop');
+    }
+    this.showDrink();
+    this.toAim();
+  }
+
+  private mini() {
+    const c = this.overlay.querySelector('.g3-mini') as HTMLCanvasElement | null;
+    if (!c) return;
+    const x = c.getContext('2d')!;
+    const { x0, y0, x1, y1 } = this.hole.bounds;
+    const s = Math.min((c.width - 12) / (x1 - x0), (c.height - 12) / (y1 - y0));
+    const ox = (c.width - (x1 - x0) * s) / 2;
+    const oy = (c.height - (y1 - y0) * s) / 2;
+    const px = (p: V2) => [ox + (p.x - x0) * s, c.height - oy - (p.y - y0) * s] as const;
+    if (!this.miniBase) {
+      const b = document.createElement('canvas');
+      b.width = c.width;
+      b.height = c.height;
+      const g = b.getContext('2d')!;
+      const step = 1 / s;
+      for (let yy = y0; yy < y1; yy += step * 2)
+        for (let xx = x0; xx < x1; xx += step * 2) {
+          const p = { x: xx, y: yy };
+          if (!inPoly(p, this.hole.border)) continue;
+          const surf = surfaceAt(this.hole, p);
+          g.fillStyle = isWater(this.hole, p)
+            ? '#4d8193'
+            : ({ green: '#86c977', fairway: '#62a957', fringe: '#4f8f47', rough: '#3a6533', path: '#cbb88f', wood: '#a77a4e', stone: '#d8cfbd', sand: '#e8d8a8' } as Record<string, string>)[surf];
+          const [a, bb] = px(p);
+          g.fillRect(a, bb - 2, 2.2, 2.2);
+        }
+      g.strokeStyle = '#1e3a26';
+      g.lineWidth = 1.2;
+      for (const w of this.hole.walls) {
+        g.beginPath();
+        g.moveTo(...px(w.a));
+        g.lineTo(...px(w.b));
+        g.stroke();
+      }
+      g.fillStyle = '#20402a';
+      for (const p of this.hole.posts) {
+        if (p.r < 1) continue;
+        const [a, bb] = px(p);
+        g.beginPath();
+        g.arc(a, bb, 1.6, 0, Math.PI * 2);
+        g.fill();
+      }
+      this.miniBase = b;
+    }
+    x.clearRect(0, 0, c.width, c.height);
+    x.drawImage(this.miniBase, 0, 0);
+    const [cx, cy] = px(this.hole.cup);
+    x.fillStyle = '#b8955a';
+    x.beginPath();
+    x.arc(cx, cy, 3, 0, Math.PI * 2);
+    x.fill();
+    const b = this.shot ? { x: this.ball.position.x, y: -this.ball.position.z } : this.pos;
+    const [bx, by] = px(b);
+    if (this.mode === 'aim' || this.mode === 'meter') {
+      const reach = this.club === 'putter' ? 30 : carryOf(this.club, Math.max(this.power, 0.6), this.boost());
+      x.strokeStyle = 'rgba(255,255,255,.85)';
+      x.setLineDash([3, 3]);
+      x.beginPath();
+      x.moveTo(bx, by);
+      x.lineTo(bx + Math.sin(this.aim) * reach * s, by - Math.cos(this.aim) * reach * s);
+      x.stroke();
+      x.setLineDash([]);
+    }
+    x.fillStyle = '#fff';
+    x.strokeStyle = '#163b2c';
+    x.beginPath();
+    x.arc(bx, by, 3.2, 0, Math.PI * 2);
+    x.fill();
+    x.stroke();
+  }
+
+  // ---------- flyover ----------
+
+  private startFlyover() {
+    const pts = this.hole.flyover.map((p, i, a) => {
+      const k = i / (a.length - 1);
+      return w3(p.x, p.y, heightAt(this.hole, p.x, p.y) + 70 - k * 34);
+    });
+    this.fly = { curve: new THREE.CatmullRomCurve3(pts), t: 0 };
+    this.mode = 'fly';
+    this.overlay.querySelector('[data-skip]')?.classList.add('show');
+    this.callout(this.hole.name, `Hole ${this.number} · Par ${this.hole.par}`, 3200);
+    this.hint('');
+    this.golfer.setPose('idle');
+    sfx('whoosh');
+  }
+
+  private endFlyover() {
+    if (this.mode !== 'fly') return;
+    this.fly = null;
+    this.overlay.querySelector('[data-skip]')?.classList.remove('show');
+    if (this.cart && !this.cart.visited) {
+      this.mode = 'cart';
+      this.overlay.classList.add('carting');
+      this.cart.arrive(this.pos, this.aim, this.overlay.querySelector('[data-cart]') as HTMLElement);
+    } else this.toAim();
+    this.snapCamera();
+  }
+
+  private toAim() {
+    this.mode = 'aim';
+    this.power = 0;
+    const { allowed, want, d } = this.lie();
+    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.disabled = !allowed.includes(b.dataset.club as ClubId)));
+    this.setClub(want);
+    const dist = this.overlay.querySelector('[data-dist]');
+    if (dist) dist.textContent = `${Math.round(d)} ft to the pin`;
+    this.hint(this.strokes === 0 && this.number === 1 ? 'Drag sideways to aim. Pull down and let go to swing.' : '');
+    this.golfer.setPose('address');
+  }
+
+  // ---------- input ----------
+
+  private bindInput() {
+    const el = this.renderer.domElement;
+    el.style.touchAction = 'none';
+    el.addEventListener('pointerdown', (e) => {
+      if (this.mode === 'fly') return this.endFlyover();
+      if (this.mode === 'meter') return this.tapMeter();
+      if (this.mode !== 'aim') return;
+      el.setPointerCapture(e.pointerId);
+      this.drag = { x: e.clientX, y: e.clientY, aim: this.aim, kind: '' };
+    });
+    el.addEventListener('pointermove', (e) => {
+      const d = this.drag;
+      if (!d || this.mode !== 'aim') return;
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
+      if (!d.kind && Math.hypot(dx, dy) > 10) d.kind = Math.abs(dx) > Math.abs(dy) ? 'aim' : 'power';
+      if (d.kind === 'aim') this.aim = d.aim + dx * (this.club === 'putter' ? 0.0025 : 0.004);
+      if (d.kind === 'power') {
+        const full = Math.min(window.innerHeight * 0.42, 340);
+        this.power = Math.max(0, Math.min(1, dy / full));
+      }
+    });
+    const up = () => {
+      const d = this.drag;
+      this.drag = null;
+      if (!d || this.mode !== 'aim') return;
+      if (d.kind === 'power' && this.power > 0.03) this.release();
+      else this.power = 0;
+    };
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', () => {
+      this.drag = null;
+      this.power = 0;
+    });
+  }
+
+  private key(e: KeyboardEvent) {
+    if (this.mode === 'fly' && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) return this.endFlyover();
+    if (this.mode === 'meter' && (e.key === ' ' || e.key === 'Enter')) {
+      e.preventDefault();
+      return this.tapMeter();
+    }
+    if (this.mode !== 'aim') return;
+    const idx = BAG.indexOf(this.club);
+    if (e.key === 'ArrowLeft') this.aim -= e.shiftKey ? 0.003 : 0.012;
+    else if (e.key === 'ArrowRight') this.aim += e.shiftKey ? 0.003 : 0.012;
+    else if (e.key === 'ArrowUp') this.power = Math.min(1, this.power + 0.02);
+    else if (e.key === 'ArrowDown') this.power = Math.max(0, this.power - 0.02);
+    else if (e.key === 'c') this.overlay.querySelector<HTMLButtonElement>(`[data-club="${BAG[(idx + 1) % BAG.length]}"]:not(:disabled)`)?.click();
+    else if (e.key === ' ' && this.power > 0.03) this.release();
+    else return;
+    e.preventDefault();
+  }
+
+  private boost() {
+    return this.drink ? DRINKS[this.drink.kind].boost : 1;
+  }
+
+  // ---------- the swing ----------
+
+  // Power is set. Putts go straight away; full swings run the meter.
+  private release() {
+    if (this.club === 'putter') return this.swing(0);
+    const drink = this.drink ? DRINKS[this.drink.kind] : null;
+    this.mode = 'meter';
+    this.meter = { t: 0, pos: -1, speed: (this.club === 'driver' ? 1.25 : this.club === 'iron' ? 1.05 : 0.9) * (drink?.needle ?? 1) };
+    const sweet = Math.min(0.5, CLUBS[this.club].sweet * (drink?.sweet ?? 1));
+    const m = this.overlay.querySelector('[data-meter]') as HTMLElement;
+    m.hidden = false;
+    (this.overlay.querySelector('[data-sweet]') as HTMLElement).style.cssText = `left:${50 - sweet * 50}%;width:${sweet * 100}%`;
+    this.hint('');
+  }
+
+  private tapMeter() {
+    if (this.mode !== 'meter') return;
+    const drink = this.drink ? DRINKS[this.drink.kind] : null;
+    const sweet = Math.min(0.5, CLUBS[this.club].sweet * (drink?.sweet ?? 1));
+    const miss = this.meter.pos;
+    const error = Math.abs(miss) <= sweet ? 0 : Math.sign(miss) * Math.min(1, (Math.abs(miss) - sweet) / 0.3);
+    (this.overlay.querySelector('[data-meter]') as HTMLElement).hidden = true;
+    if (error === 0) this.callout('Pure', '', 700);
+    else if (Math.abs(error) > 0.5) this.callout(error > 0 ? 'Slice' : 'Hook', '', 900);
+    this.swing(error);
+  }
+
+  private swing(error: number) {
+    this.mode = 'swing';
+    const power = this.power;
+    const club = this.club;
+    this.golfer.swingClub(club, power, () => this.hit(club, power, error));
+    if (club !== 'putter') window.setTimeout(() => sfx('whoosh'), 500);
+  }
+
+  private hit(club: ClubId, power: number, error: number) {
+    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: club === 'putter' ? 1 : this.boost() };
+    const r = simulate(this.hole, this.pos, shot);
+    if (this.drink && club !== 'putter') {
+      this.drink.shots--;
+      if (this.drink.shots <= 0) this.drink = null;
+      this.showDrink();
+    }
+    this.strokes++;
+    this.setStrokes();
+    this.mode = 'roll';
+    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0 };
+    this.trailPts = [];
+    this.power = 0;
+    r.zones.forEach((z) => this.zones.add(z));
+    sfx(club === 'putter' ? 'tick' : club === 'driver' ? 'crack' : 'thump');
+    this.follow.set(Math.sin(this.aim), 0, -Math.cos(this.aim));
+  }
+
+  private stepShot(dt: number) {
+    const s = this.shot!;
+    s.t += dt;
+    const f = s.r.frames;
+    while (s.next < s.r.sounds.length && s.r.sounds[s.next].t <= s.t) {
+      const k = s.r.sounds[s.next++].s;
+      if (k === 'wall') sfx('clank');
+      else if (k === 'post') sfx('board');
+      else if (k === 'land') {
+        sfx('bounce');
+        this.puff(this.ball.position);
+      } else if (k === 'sand') {
+        sfx('thump');
+        this.puff(this.ball.position, '#e9dcb2');
+      } else if (k === 'splash') {
+        sfx('swish');
+        this.splash(this.ball.position);
+      }
+    }
+    let i = 0;
+    while (i < f.length - 1 && f[i + 1].t < s.t) i++;
+    const a = f[i];
+    const b = f[Math.min(i + 1, f.length - 1)];
+    const k = b.t > a.t ? Math.min(1, (s.t - a.t) / (b.t - a.t)) : 1;
+    const x = a.x + (b.x - a.x) * k;
+    const y = a.y + (b.y - a.y) * k;
+    const z = a.z + (b.z - a.z) * k;
+    const prev = this.ball.position.clone();
+    this.ball.position.copy(w3(x, y, z + BALL_R));
+    const mv = this.ball.position.clone().sub(prev);
+    mv.y = 0;
+    if (mv.lengthSq() > 1e-4) this.follow.lerp(mv.normalize(), Math.min(1, dt * 2.5)).normalize();
+    const dist = Math.hypot(b.x - a.x, b.y - a.y) * (dt / Math.max(1e-3, b.t - a.t));
+    this.ball.rotateOnWorldAxis(new THREE.Vector3(this.follow.z, 0, -this.follow.x).normalize(), -dist / BALL_R);
+    this.trailPts.push(this.ball.position.clone());
+    if (this.trailPts.length > TRAIL) this.trailPts.shift();
+    this.drawTrail();
+    if (s.t >= s.r.duration + 0.3) this.endShot();
+  }
+
+  private endShot() {
+    const s = this.shot!;
+    this.shot = null;
+    const r = s.r;
+    if (r.holed) {
+      sfx('pop');
+      window.setTimeout(() => sfx('cheer'), 250);
+      const feats = [...this.zones];
+      if (this.strokes === 1) feats.push('ace');
+      if (s.club === 'wedge') feats.push('chipin');
+      return this.finish(feats);
+    }
+    if (r.penalty) {
+      this.strokes++;
+      this.setStrokes();
+      const last = r.frames[r.frames.length - 1];
+      const roof = this.hole.roofs?.some((rf) => inPoly(last, rf.poly));
+      this.callout(isWater(this.hole, last) ? 'In the drink' : roof ? 'On the roof' : 'Out of bounds', 'Penalty stroke. Play it again.', 1800);
+      sfx('sad');
+      this.golfer.setPose('groan');
+    } else this.pos = r.end;
+    if (this.strokes >= this.hole.par + MAX_OVER) {
+      this.callout('Picked up', `Par + ${MAX_OVER} is the limit`, 2200);
+      this.strokes = this.hole.par + MAX_OVER;
+      this.setStrokes();
+      return this.finish([], 2200);
+    }
+    this.placeBall();
+    this.trailPts = [];
+    this.drawTrail();
+    window.setTimeout(() => this.mode === 'roll' && this.toAim(), r.penalty ? 1000 : 250);
+  }
+
+  private finish(feats: string[], delay = 0) {
+    this.mode = 'done';
+    const name = scoreName(this.strokes, this.hole.par);
+    const d = this.strokes - this.hole.par;
+    this.golfer.setPose(d <= 0 ? 'cheer' : 'groan');
+    if (this.strokes < this.hole.par + MAX_OVER || delay === 0) this.callout(name, `${this.strokes} ${this.strokes === 1 ? 'stroke' : 'strokes'}`, 2400);
+    const pin = this.world?.root.getObjectByName('pin');
+    if (pin) pin.position.y += 1.2;
+    this.orbit = 0;
+    window.setTimeout(() => this.resolve?.({ strokes: this.strokes, feats: [...new Set(feats)] }), 2800 + delay);
+  }
+
+  private drawTrail() {
+    const attr = this.trail.geometry.attributes.position as THREE.BufferAttribute;
+    this.trailPts.forEach((p, i) => attr.setXYZ(i, p.x, p.y, p.z));
+    attr.needsUpdate = true;
+    this.trail.geometry.setDrawRange(0, this.trailPts.length);
+  }
+
+  private placeBall() {
+    const z = heightAt(this.hole, this.pos.x, this.pos.y);
+    this.ball.position.copy(w3(this.pos.x, this.pos.y, z + BALL_R));
+  }
+
+  // The golfer stands side-on to the line, ball in front, target to their left.
+  private placeGolfer() {
+    const a = this.aim;
+    const front = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+    const reach = this.club === 'putter' ? 2.2 : this.club === 'driver' ? 3.1 : 2.7;
+    const at = w3(this.pos.x, this.pos.y, 0).addScaledVector(front, -reach * this.golfer.spec.height);
+    at.y = heightAt(this.hole, at.x, -at.z);
+    this.golfer.group.position.copy(at);
+    this.golfer.group.rotation.y = Math.PI / 2 - a;
+  }
+
+  // ---------- effects ----------
+
+  private puff(at: THREE.Vector3, color = '#e9f1df') {
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.7, 16), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.copy(at).add(new THREE.Vector3(0, -0.4, 0));
+    this.scene.add(m);
+    this.puffs.push({ m, t: 0 });
+  }
+
+  private splash(at: THREE.Vector3) {
+    for (let i = 0; i < 4; i++) window.setTimeout(() => this.puff(at.clone().add(new THREE.Vector3(0, -0.2, 0)), '#dff0f4'), i * 150);
+  }
+
+  // Anything standing between the camera and the golfer or ball turns see-through.
+  private fadeOccluders(dt: number) {
+    const occ = this.world?.occluders ?? [];
+    const cam = this.camera.position;
+    const targets = [this.ball.position, this.golfer.group.position.clone().add(new THREE.Vector3(0, 4, 0))];
+    const want = new Set<THREE.Object3D>();
+    if (this.mode !== 'fly' && !this.overview)
+      for (const o of occ) {
+        for (const t of targets) {
+          // closest approach of the camera->target segment to the occluder, in plan view
+          const ax = cam.x;
+          const az = cam.z;
+          const bx = t.x - ax;
+          const bz = t.z - az;
+          const len2 = bx * bx + bz * bz || 1;
+          const k = Math.max(0, Math.min(1, ((o.x - ax) * bx + (o.z - az) * bz) / len2));
+          if (k > 0.98) continue;
+          const d = Math.hypot(ax + bx * k - o.x, az + bz * k - o.z);
+          if (d < o.r) {
+            want.add(o.obj);
+            break;
+          }
+        }
+      }
+    for (const o of occ) {
+      const cur = this.faded.get(o.obj) ?? 1;
+      const goal = want.has(o.obj) ? 0.22 : 1;
+      if (cur === goal) continue;
+      const next = cur + (goal - cur) * Math.min(1, dt * 8);
+      const v = Math.abs(next - goal) < 0.02 ? goal : next;
+      this.faded.set(o.obj, v);
+      o.obj.traverse((m) => {
+        const mm = (m as THREE.Mesh).material as THREE.Material | undefined;
+        if (!mm) return;
+        mm.transparent = v < 1;
+        mm.opacity = v;
+        mm.depthWrite = v >= 1;
+      });
+    }
+  }
+
+  // ---------- aim guide ----------
+
+  private guide() {
+    const m = new THREE.Matrix4();
+    let n = 0;
+    const show = this.mode === 'aim' || this.mode === 'meter';
+    this.ring.visible = false;
+    if (show) {
+      const dx = Math.sin(this.aim);
+      const dy = Math.cos(this.aim);
+      if (this.club === 'putter') {
+        // a dotted line that hugs the ground; longer as you pull back
+        const len = 8 + this.power * 30;
+        for (let d = 1.5; d < len && n < 80; d += 1.1) {
+          const x = this.pos.x + dx * d;
+          const y = this.pos.y + dy * d;
+          m.setPosition(w3(x, y, heightAt(this.hole, x, y) + 0.2));
+          this.dots.setMatrixAt(n++, m);
+        }
+      } else {
+        // the flight arc and a landing ring sized to the club's spread
+        const power = Math.max(this.power, 0.6);
+        const v = launch({ angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost() });
+        const z0 = heightAt(this.hole, this.pos.x, this.pos.y);
+        let landed: V2 | null = null;
+        const T = (2 * v.vz) / G + 1;
+        for (let i = 1; i < 200 && n < 80; i++) {
+          const t = (i / 200) * T;
+          const x = this.pos.x + v.vx * t;
+          const y = this.pos.y + v.vy * t;
+          const z = z0 + v.vz * t - 0.5 * G * t * t;
+          if (z < heightAt(this.hole, x, y)) {
+            landed = { x, y };
+            break;
+          }
+          if (i % 4 === 0) {
+            m.setPosition(w3(x, y, z + BALL_R));
+            this.dots.setMatrixAt(n++, m);
+          }
+        }
+        const carry = carryOf(this.club, power, this.boost());
+        const p = landed ?? { x: this.pos.x + dx * carry, y: this.pos.y + dy * carry };
+        const spread = 2 + CLUBS[this.club].curve * 0.35 * (1 - Math.min(1, CLUBS[this.club].sweet * 4));
+        this.ring.position.copy(w3(p.x, p.y, heightAt(this.hole, p.x, p.y) + 0.15));
+        this.ring.scale.set(spread, spread * 0.6, 1);
+        this.ring.rotation.z = -this.aim + Math.PI / 2;
+        this.ring.visible = this.power > 0;
+      }
+    }
+    this.dots.count = n;
+    this.dots.instanceMatrix.needsUpdate = true;
+    const bar = this.overlay.querySelector('[data-power]') as HTMLElement | null;
+    if (bar) {
+      bar.style.height = `${Math.round(this.power * 100)}%`;
+      bar.parentElement!.classList.toggle('show', this.mode === 'aim' && this.power > 0);
+    }
+  }
+
+  // ---------- camera ----------
+
+  private snapCamera() {
+    this.cameraTarget();
+    this.camera.position.copy(this.camPos);
+    this.camera.lookAt(this.camLook);
+  }
+
+  private cameraTarget() {
+    const ball = this.ball.position;
+    if (this.overview) {
+      const { x0, y0, x1, y1 } = this.hole.bounds;
+      const cx = (x0 + x1) / 2;
+      const cy = (y0 + y1) / 2;
+      const span = Math.max(x1 - x0, y1 - y0);
+      const back = new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim));
+      this.camPos.set(cx, span * (this.camera.aspect < 1 ? 1.5 : 0.95), -cy).addScaledVector(back, -span * 0.25);
+      this.camLook.set(cx, 0, -cy);
+      return;
+    }
+    if (this.mode === 'done') {
+      this.orbit += 0.004;
+      const c = w3(this.hole.cup.x, this.hole.cup.y, heightAt(this.hole, this.hole.cup.x, this.hole.cup.y));
+      this.camPos.set(c.x + Math.cos(this.orbit) * 16, c.y + 8, c.z + Math.sin(this.orbit) * 16);
+      this.camLook.copy(c).add(new THREE.Vector3(0, 1.5, 0));
+      return;
+    }
+    if (this.mode === 'cart' && this.cart) {
+      const c = this.cart.focus();
+      const dir = new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim));
+      this.camPos.copy(c).addScaledVector(dir, -14).add(new THREE.Vector3(6, 7, 0));
+      this.camLook.copy(c).add(new THREE.Vector3(0, 3, 0));
+      return;
+    }
+    const flying = this.mode === 'roll' && this.shot && this.shot.club !== 'putter';
+    const dir = this.mode === 'roll' ? this.follow.clone() : new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim));
+    const long = this.club === 'driver' || this.club === 'iron';
+    const back = this.mode === 'roll' ? (flying ? 34 : 20) : long ? 20 : this.club === 'wedge' ? 17 : 14;
+    const up = this.mode === 'roll' ? (flying ? 20 : 12) : long ? 12 : 9.5;
+    this.camPos.copy(ball).addScaledVector(dir, -back).add(new THREE.Vector3(0, up + this.power * 2, 0));
+    const ground = heightAt(this.hole, this.camPos.x, -this.camPos.z);
+    this.camPos.y = Math.max(this.camPos.y, ground + 3.5);
+    this.camLook.copy(ball).addScaledVector(dir, long && this.mode !== 'roll' ? 40 : 16).add(new THREE.Vector3(0, -2, 0));
+  }
+
+  // ---------- frame loop ----------
+
+  private loop = () => {
+    this.raf = requestAnimationFrame(this.loop);
+    const now = performance.now();
+    const raw = (now - this.last) / 1000;
+    const dt = Math.min(0.05, raw);
+    this.last = now;
+    if (!this.hole) return;
+    // drop the pixel ratio if the device is struggling
+    this.slow = raw > 0.034 ? this.slow + raw : Math.max(0, this.slow - raw);
+    if (this.slow > 3 && this.renderer.getPixelRatio() > 1) {
+      this.renderer.setPixelRatio(1);
+      this.resize();
+      this.slow = 0;
+    }
+    this.clock += dt;
+    this.world?.update(this.clock, dt);
+    this.cart?.update(dt, () => this.mode === 'cart');
+
+    if (this.mode === 'meter') {
+      this.meter.t += dt;
+      // the needle runs left to right once; miss it entirely and you hook it
+      this.meter.pos = -1 + this.meter.t * this.meter.speed * 1.6;
+      const needle = this.overlay.querySelector('[data-needle]') as HTMLElement | null;
+      if (needle) needle.style.left = `${((Math.min(1, this.meter.pos) + 1) / 2) * 100}%`;
+      if (this.meter.pos >= 1) {
+        this.meter.pos = 1;
+        this.tapMeter();
+      }
+    }
+
+    if (this.mode === 'fly' && this.fly) {
+      this.fly.t += dt / 6;
+      const k = Math.min(1, this.fly.t);
+      const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      const p = this.fly.curve.getPoint(e);
+      const ahead = this.fly.curve.getPoint(Math.min(1, e + 0.12));
+      this.camera.position.copy(p);
+      this.camera.lookAt(ahead.x, ahead.y - 34, ahead.z);
+      if (k >= 1) this.endFlyover();
+    } else {
+      if (this.mode === 'roll' && this.shot) this.stepShot(dt);
+      this.cameraTarget();
+      const k = 1 - Math.exp(-dt * (this.mode === 'roll' ? 3 : 6));
+      this.camera.position.lerp(this.camPos, k);
+      const look = new THREE.Vector3();
+      this.camera.getWorldDirection(look);
+      const want = this.camLook.clone().sub(this.camera.position).normalize();
+      look.lerp(want, this.overview ? 1 : Math.min(1, k * 1.4));
+      this.camera.lookAt(this.camera.position.clone().add(look));
+    }
+
+    if (this.mode === 'aim' || this.mode === 'meter' || this.mode === 'cart' || this.mode === 'fly') this.placeGolfer();
+    this.golfer.group.visible = !this.overview;
+    this.golfer.update(dt);
+
+    this.guide();
+    this.fadeOccluders(dt);
+    this.effects(dt);
+    this.mini();
+    this.renderer.render(this.scene, this.camera);
+  };
+
+  private effects(dt: number) {
+    for (const c of this.clouds) {
+      c.position.x += dt * 4;
+      if (c.position.x > 900) c.position.x = -900;
+    }
+    const cx = (this.hole.bounds.x0 + this.hole.bounds.x1) / 2;
+    const cy = (this.hole.bounds.y0 + this.hole.bounds.y1) / 2;
+    this.birds.forEach((b, i) => {
+      const a = this.clock * (0.1 + i * 0.012) + i * 1.3;
+      const r = 110 + i * 24;
+      b.position.set(cx + Math.cos(a) * r, 70 + i * 7 + Math.sin(this.clock + i) * 3, -(cy + Math.sin(a) * r));
+      b.rotation.y = -a;
+      const flap = Math.sin(this.clock * 9 + i) * 0.6;
+      (b.getObjectByName('l') as THREE.Object3D).rotation.z = flap;
+      (b.getObjectByName('r') as THREE.Object3D).rotation.z = -flap;
+    });
+    if (this.petals) {
+      const a = this.petals.geometry.attributes.position as THREE.BufferAttribute;
+      const arr = a.array as Float32Array;
+      for (let i = 0; i < arr.length; i += 3) {
+        arr[i] += dt * (1.2 + Math.sin(this.clock + i) * 0.8);
+        arr[i + 1] -= dt * 0.9;
+        if (arr[i + 1] < heightAt(this.hole, arr[i], -arr[i + 2])) {
+          arr[i + 1] = 16 + (i % 9);
+          arr[i] -= 30;
+        }
+      }
+      a.needsUpdate = true;
+    }
+    for (const p of this.puffs) {
+      p.t += dt;
+      p.m.scale.setScalar(1 + p.t * 6);
+      (p.m.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.8 - p.t * 1.6);
+    }
+    this.puffs = this.puffs.filter((p) => {
+      if (p.t < 0.6) return true;
+      this.scene.remove(p.m);
+      p.m.geometry.dispose();
+      return false;
+    });
+  }
+}
