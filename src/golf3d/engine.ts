@@ -105,7 +105,7 @@ export class Course3D {
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.5;
     this.scene.add(this.sun, this.sun.target);
-    this.scene.fog = new THREE.Fog('#e3ebe2', 320, 1100);
+    this.scene.fog = new THREE.Fog('#e3ebe2', 420, 1300);
     // soft reflections from the sky
     const pm = new THREE.PMREMGenerator(this.renderer);
     const env = new THREE.Scene();
@@ -392,7 +392,7 @@ export class Course3D {
     const s = surfaceAt(this.hole, this.pos);
     const allowed: ClubId[] = s === 'sand' ? ['wedge'] : s === 'green' ? ['putter', 'wedge'] : BAG;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? 'wedge' : d < 26 && s !== 'rough' ? 'putter' : d < 95 ? 'wedge' : d < 200 || s === 'rough' ? 'iron' : 'driver';
+    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? 'wedge' : d < 26 && s !== 'rough' ? 'putter' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
     return { allowed, want, d };
   }
 
@@ -634,7 +634,9 @@ export class Course3D {
     if (this.club === 'putter') return this.swing(0);
     const drink = this.drink ? DRINKS[this.drink.kind] : null;
     this.mode = 'meter';
-    this.meter = { t: 0, pos: -1, speed: (this.club === 'driver' ? 1.25 : this.club === 'iron' ? 1.05 : 0.9) * (drink?.needle ?? 1) };
+    // the driver's needle is calm at half power and frantic flat out
+    const base = this.club === 'driver' ? 0.8 + 2.8 * this.power ** 3 : this.club === 'iron' ? 1.05 : 0.9;
+    this.meter = { t: 0, pos: -1, speed: base * (drink?.needle ?? 1) };
     const sweet = Math.min(0.5, CLUBS[this.club].sweet * (drink?.sweet ?? 1));
     const m = this.overlay.querySelector('[data-meter]') as HTMLElement;
     m.hidden = false;
@@ -902,6 +904,8 @@ export class Course3D {
     if (bar) {
       bar.style.height = `${Math.round(this.power * 100)}%`;
       bar.parentElement!.classList.toggle('show', this.mode === 'aim' && this.power > 0);
+      // a full-power driver warns you the needle will be wild
+      bar.parentElement!.classList.toggle('hot', this.club === 'driver' && this.power > 0.85);
     }
     const strike = this.overlay.querySelector('[data-strike]') as HTMLElement | null;
     if (strike) strike.hidden = this.mode !== 'aim' || this.club === 'putter';

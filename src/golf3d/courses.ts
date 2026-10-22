@@ -1,19 +1,19 @@
 // One course per month. A month without its own course keeps the most recent one.
-import { azalea } from './holes/azalea';
-import { clubhouse } from './holes/clubhouse';
 import { island } from './holes/island';
+import { ridge } from './holes/ridge';
+import { summit } from './holes/summit';
 import type { Hole } from './types';
 
 export type Course = { id: string; month: string; name: string; tagline: string; holes: Hole[]; par: number };
 
 const COURSES: Course[] = [
   {
-    id: 'founders',
+    id: 'highlands',
     month: '2026-10',
-    name: "The Founders' Course",
-    tagline: 'Three holes. Pines, a lake, and the clubhouse lawn.',
-    holes: [azalea, island, clubhouse],
-    par: azalea.par + island.par + clubhouse.par,
+    name: 'The Highlands Course',
+    tagline: 'Three holes in the mountains. A cliff-top par 5, an island par 3, and the ridge.',
+    holes: [summit, island, ridge],
+    par: summit.par + island.par + ridge.par,
   },
 ];
 

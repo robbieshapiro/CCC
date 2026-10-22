@@ -4,7 +4,7 @@ import { makeRng } from '../seed';
 import { CUP_R, curbs } from './physics';
 import * as props from './props';
 import { mat, mesh, P } from './props';
-import { heightAt, inPoly, isWater, surfaceAt, waterLevel } from './terrain';
+import { gradAt, heightAt, inPoly, isWater, surfaceAt } from './terrain';
 import type { Hole, Surface, Wall } from './types';
 
 export const w3 = (x: number, y: number, h: number) => new THREE.Vector3(x, h, -y);
@@ -51,8 +51,9 @@ function grassTexture() {
 }
 
 function terrainMesh(h: Hole) {
-  const S = 1;
   const { x0, y0, x1, y1 } = h.bounds;
+  // about 150k vertices whatever the hole's size: 1 ft on small holes, a little coarser on long ones
+  const S = Math.max(1, Math.sqrt(((x1 - x0) * (y1 - y0)) / 150000));
   const nx = Math.ceil((x1 - x0) / S) + 1;
   const ny = Math.ceil((y1 - y0) / S) + 1;
   const pos = new Float32Array(nx * ny * 3);
@@ -82,6 +83,12 @@ function terrainMesh(h: Hole) {
         else if (s === 'fringe') c.offsetHSL(0, 0, Math.floor((y + x * 0.3) / 10) % 2 ? 0.015 : 0);
         else if (s === 'sand') c.offsetHSL(0, 0, (rng.next() - 0.5) * 0.04);
         else if (s === 'wood') c.offsetHSL(0, 0, Math.floor(x / 1.4) % 2 ? 0.03 : -0.02);
+        // steep rough turns to scree and rock, the way a mountainside does
+        if (s === 'rough' || s === 'fringe') {
+          const g = gradAt(h, x, y);
+          const steep = Math.min(1, Math.max(0, (Math.hypot(g.x, g.y) - 0.55) / 0.6));
+          if (steep > 0) c.lerp(ROCK, steep * 0.85);
+        }
       }
       c.offsetHSL(0, 0, (rng.next() - 0.5) * 0.025);
       col[k] = c.r;
@@ -112,25 +119,24 @@ function terrainMesh(h: Hole) {
   return { mesh: m, low };
 }
 
-// Water sits a little below the banks, at the level physics uses.
+// Each lake is a flat sheet at its level; the banks hide what's under them.
 function waterMesh(h: Hole) {
   if (!h.water.length) return null;
   const S = 2;
   const verts: number[] = [];
-  for (const poly of h.water) {
+  for (const { poly, level } of h.water) {
     const xs = poly.map((p) => p.x);
     const ys = poly.map((p) => p.y);
     for (let x = Math.min(...xs) - S; x < Math.max(...xs) + S; x += S)
       for (let y = Math.min(...ys) - S; y < Math.max(...ys) + S; y += S) {
         const mid = { x: x + S / 2, y: y + S / 2 };
         if (!inPoly(mid, poly) || !inPoly(mid, h.border)) continue;
-        const z = (a: number, b: number) => waterLevel(h, a, b);
         const q = [
           [x, y],
           [x + S, y],
           [x + S, y + S],
           [x, y + S],
-        ].map(([a, b]) => [a, z(a, b), -b]);
+        ].map(([a, b]) => [a, level, -b]);
         verts.push(...q[0], ...q[1], ...q[2], ...q[0], ...q[2], ...q[3]);
       }
   }
@@ -192,6 +198,7 @@ function wallMesh(h: Hole, w: Wall, group: THREE.Group, occ: Occluder[]) {
 }
 
 const CROQUET = ['#b8352b', '#2c5f8a', '#d4a017', '#222222'];
+const ROCK = new THREE.Color('#8a8270');
 
 export function buildWorld(h: Hole, number: number): World {
   const root = new THREE.Group();
@@ -244,6 +251,7 @@ export function buildWorld(h: Hole, number: number): World {
     else if (look === 'tree') root.add(fadeable(at(props.leafyTree(1.1), p.x, p.y, -0.2), p.x, p.y, 6));
     else if (look === 'oak') root.add(fadeable(at(props.oak(vary), p.x, p.y, -0.2), p.x, p.y, 9));
     else if (look === 'cypress') root.add(fadeable(at(props.cypress(vary), p.x, p.y, -0.2), p.x, p.y, 3));
+    else if (look === 'rock') root.add(at(props.rock(p.r, Math.round(p.x + p.y)), p.x, p.y, -0.3));
     else if (look === 'column') {
       const g = new THREE.Group();
       g.add(mesh(new THREE.CylinderGeometry(p.r, p.r * 1.1, p.h, 12), mat(P.white, { rough: 0.6 })).translateY(p.h / 2));
@@ -276,6 +284,7 @@ export function buildWorld(h: Hole, number: number): World {
     else if (d.kind === 'lamp') o = props.lamp();
     else if (d.kind === 'umbrella') o = props.umbrella();
     else if (d.kind === 'sign') o = props.sign(h.name, `HOLE ${number} · PAR ${h.par}`);
+    else if (d.kind === 'rock') o = props.rock(d.scale ?? 2, Math.round(d.x * 3 + d.y));
     else if (d.kind === 'teebox') {
       for (const side of [-1, 1]) root.add(at(props.teeMarker(), d.x + side * 6, d.y + 2, 0));
       continue;
@@ -310,9 +319,10 @@ export function buildWorld(h: Hole, number: number): World {
     root.add(o);
     anim.push((clock) => {
       const s = m.at(clock);
-      const lift = m.look === 'swan' ? -0.75 : 0;
-      o.position.copy(w3(s.pos.x, s.pos.y, heightAt(h, s.pos.x, s.pos.y) + lift));
-      if (m.look === 'swan') o.position.y = Math.max(o.position.y, -1.25) + Math.sin(clock * 2) * 0.05;
+      o.position.copy(w3(s.pos.x, s.pos.y, heightAt(h, s.pos.x, s.pos.y)));
+      // swans ride on whichever lake they're on
+      const lake = m.look === 'swan' ? h.water.find((w) => inPoly(s.pos, w.poly)) : undefined;
+      if (lake) o.position.y = lake.level - 0.15 + Math.sin(clock * 2) * 0.05;
       // heading is a hole-space angle from +x; the props face -z (up the hole) by default
       o.rotation.y = s.heading - Math.PI / 2;
     });
@@ -405,6 +415,17 @@ export function buildWorld(h: Hole, number: number): World {
     const tree = rng.next() < 0.55 ? props.pine(1 + rng.next() * 0.5) : props.leafyTree(1 + rng.next() * 0.6);
     tree.position.set(x, floor, -y);
     root.add(tree);
+  }
+
+  // the range: peaks all round the valley, far beyond the fog
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  for (let i = 0; i < 26; i++) {
+    const a = (i / 26) * Math.PI * 2 + rng.next() * 0.2;
+    const r = 1150 + rng.next() * 350;
+    const peak = props.mountain(180 + rng.next() * 260, 220 + rng.next() * 160, i);
+    peak.position.set(cx + Math.cos(a) * r, floor - 20, -(cy + Math.sin(a) * r));
+    root.add(peak);
   }
 
   return {

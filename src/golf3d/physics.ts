@@ -10,7 +10,7 @@ const DT = 1 / 240;
 const MAX_T = 24;
 const CURB_H = 0.9;
 const ROLL = 5 / 7; // a rolling ball feels 5/7 of the slope's pull
-const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.8, stone: 4.6, wood: 2.6, sand: 40 };
+const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40 };
 // how much of a landing ball's speed each surface lets it keep
 const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.45, path: 1, stone: 1, wood: 1, sand: 0.1 };
 // how well each surface grabs a spinning ball: soft greens bite, rough and sand eat the spin

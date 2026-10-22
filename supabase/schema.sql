@@ -106,7 +106,7 @@ begin
     clean := clean || greatest(1, least(p_pars[i] + 3, p_holes[i]));
     par := par + p_pars[i];
   end loop;
-  f := array(select distinct x from unnest(coalesce(p_feats, '{}')) x where x in ('ace', 'chipin', 'cartpath', 'bridge', 'terrace', 'nineteenth'));
+  f := array(select distinct x from unnest(coalesce(p_feats, '{}')) x where x in ('ace', 'chipin', 'cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'nineteenth'));
   if (select sum(x) from unnest(clean) x) < par then f := f || 'underpar'::text; end if;
   insert into rounds (player_id, group_id, month, course, holes, total, par, feats)
   values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f);
