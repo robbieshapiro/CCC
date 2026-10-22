@@ -77,8 +77,17 @@ export function inPoly(p: V2, poly: V2[]): boolean {
   return inside;
 }
 
+// The lake surface: the ground as it was before the beds were dug out, a little below the banks.
+const levels = new WeakMap<Hole, Hole>();
+export function waterLevel(h: Hole, x: number, y: number): number {
+  let level = levels.get(h);
+  if (!level) levels.set(h, (level = { ...h, terrain: h.terrain.filter((p) => !(p.kind === 'box' && p.op === 'add' && p.h < 0)) }));
+  return heightAt(level, x, y) - 0.7;
+}
+
+// Wet means under the surface you can see: islands, banks and bridges are dry by their height, not by a list.
 export function isWater(h: Hole, p: V2): boolean {
-  return h.water.some((w) => inPoly(p, w)) && !h.dry.some((d) => inPoly(p, d));
+  return h.water.some((w) => inPoly(p, w)) && heightAt(h, p.x, p.y) < waterLevel(h, p.x, p.y) - 0.25;
 }
 
 export function surfaceAt(h: Hole, p: V2): Surface {

@@ -34,7 +34,6 @@ export const island: Hole = {
     { poly: circle(60, 120, 11), surface: 'sand' },
   ],
   water: [rect(-110, 140, 120, 396)],
-  dry: [rect(-36, 136, 36, 236), rect(-4, 234, 4, 262), rect(-4, 268, 4, 295), circle(ISLAND.x, ISLAND.y, ISLAND.r + 0.5), rect(-4, 348, 4, 397)],
   terrain: [
     { kind: 'tilt', gx: 0, gy: 0.003 },
     // the lake bed

@@ -88,7 +88,6 @@ export const clubhouse: Hole = {
     { poly: circle(-10, 350, 8), surface: 'sand' },
   ],
   water: [],
-  dry: [],
   terrain: [
     { kind: 'tilt', gx: -0.003, gy: 0.004 },
     // terrace: a raised deck with stairs up from the lawn and a drop onto the green

@@ -13,6 +13,8 @@ const ROLL = 5 / 7; // a rolling ball feels 5/7 of the slope's pull
 const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.8, stone: 4.6, wood: 2.6, sand: 40 };
 // how much of a landing ball's speed each surface lets it keep
 const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.45, path: 1, stone: 1, wood: 1, sand: 0.1 };
+// how well each surface grabs a spinning ball: soft greens bite, rough and sand eat the spin
+const GRIP: Record<Surface, number> = { green: 1, fairway: 0.8, fringe: 0.6, rough: 0.25, path: 0.4, stone: 0.4, wood: 0.4, sand: 0 };
 
 export type Frame = { x: number; y: number; z: number; t: number };
 export type Sound = { t: number; s: 'wall' | 'post' | 'land' | 'splash' | 'cup' | 'sand' };
@@ -39,21 +41,28 @@ function closest(px: number, py: number, a: V2, b: V2) {
 
 export function launch(shot: Shot): { vx: number; vy: number; vz: number; ax: number; ay: number } {
   const club = CLUBS[shot.club];
-  // angle 0 points up the hole (+y); a mishit pushes the start line and curves the flight
-  const a = shot.angle + shot.error * club.push;
-  const dx = Math.sin(a);
-  const dy = Math.cos(a);
+  // angle 0 points up the hole (+y)
   if (shot.club === 'putter') {
     const v = carryOf('putter', shot.power);
-    return { vx: dx * v, vy: dy * v, vz: 0, ax: 0, ay: 0 };
+    return { vx: Math.sin(shot.angle) * v, vy: Math.cos(shot.angle) * v, vz: 0, ax: 0, ay: 0 };
   }
+  // backspin climbs a touch higher and carries a touch less; topspin comes out low
+  const spin = shot.spin ?? 0;
+  const loft = (club.loft * (1 + spin * (spin > 0 ? 0.08 : 0.1)) * Math.PI) / 180;
+  const carry = carryOf(shot.club, shot.power, shot.boost) * (1 - 0.04 * Math.max(0, spin));
   // carry d on flat ground needs v² = d·g / sin(2·loft)
-  const loft = (club.loft * Math.PI) / 180;
-  const v = Math.sqrt((carryOf(shot.club, shot.power, shot.boost) * G) / Math.sin(2 * loft));
-  const flat = v * Math.cos(loft);
-  // sideways pull to the right of the line for a slice (error > 0), left for a hook
-  const side = shot.error * club.curve;
-  return { vx: dx * flat, vy: dy * flat, vz: v * Math.sin(loft), ax: dy * side, ay: -dx * side };
+  const v = Math.sqrt((carry * G) / Math.sin(2 * loft));
+  const vz = v * Math.sin(loft);
+  // a played shape starts off line and bends back onto it at the same carry; a mishit just bends
+  const bend = (shot.shape ?? 0) * club.bend;
+  const off = Math.atan((0.5 * bend * ((2 * vz) / G)) / (v * Math.cos(loft)));
+  const flat = (v * Math.cos(loft)) / Math.cos(off);
+  const a = shot.angle + shot.error * club.push - off;
+  const dx = Math.sin(a);
+  const dy = Math.cos(a);
+  // sideways pull, square to the target line: right for a slice or fade (> 0), left for a hook or draw
+  const side = shot.error * club.curve + bend;
+  return { vx: dx * flat, vy: dy * flat, vz, ax: Math.cos(shot.angle) * side, ay: -Math.sin(shot.angle) * side };
 }
 
 // slopes past 1.5 are cliff edges in the heightfield; treat them as steep, not vertical
@@ -133,10 +142,22 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         const vzRel = vz - (vx * gr.x + vy * gr.y);
         // the first landing takes the club's bite; later hops barely scrub
         const hard = Math.min(1, -vzRel / 30);
-        const keep = (flying ? club.keep + (1 - club.keep) * (1 - hard) : 1 - Math.min(0.4, -vzRel * 0.02)) * LANDING[surf];
-        flying = false;
+        const spin = shot.spin ?? 0;
+        const bite = club.keep + (1 - club.keep) * (1 - hard) + club.release * Math.max(0, -spin);
+        const keep = (flying ? Math.min(1, bite) : 1 - Math.min(0.4, -vzRel * 0.02)) * LANDING[surf];
         vx *= keep;
         vy *= keep;
+        // backspin grabs on the first landing: it checks up, or zips back if there's enough of it
+        if (flying && spin > 0) {
+          const sp = Math.hypot(vx, vy);
+          const check = club.check * spin * GRIP[surf] * (0.35 + 0.65 * shot.power);
+          const next = Math.max(sp - check, -0.6 * check);
+          if (sp > 1e-6) {
+            vx *= next / sp;
+            vy *= next / sp;
+          }
+        }
+        flying = false;
         if (vzRel < -9 && surf !== 'sand') vz = -vzRel * 0.24 + (vx * gr.x + vy * gr.y);
         else air = false;
       }

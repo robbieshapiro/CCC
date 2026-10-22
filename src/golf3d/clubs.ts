@@ -10,13 +10,16 @@ export type Club = {
   sweet: number; // half-width of the meter's gold zone, as a share of the bar
   curve: number; // ft/s² of sideways pull for a full mishit
   push: number; // radians the start line moves for a full mishit
+  check: number; // ft/s a full backspin strike takes off the ball when it lands (enough and it spins back)
+  release: number; // extra share of speed a full topspin strike keeps when it lands
+  bend: number; // ft/s² of sideways pull for a full draw or fade
 };
 
 export const CLUBS: Record<ClubId, Club> = {
-  driver: { id: 'driver', name: 'Driver', carry: [100, 280], loft: 15, keep: 0.22, sweet: 0.06, curve: 26, push: 0.06 },
-  iron: { id: 'iron', name: 'Iron', carry: [50, 180], loft: 30, keep: 0.18, sweet: 0.1, curve: 20, push: 0.04 },
-  wedge: { id: 'wedge', name: 'Wedge', carry: [8, 90], loft: 52, keep: 0.08, sweet: 0.16, curve: 8, push: 0.02 },
-  putter: { id: 'putter', name: 'Putter', carry: [1.5, 34], loft: 0, keep: 1, sweet: 1, curve: 0, push: 0 },
+  driver: { id: 'driver', name: 'Driver', carry: [100, 280], loft: 15, keep: 0.22, sweet: 0.06, curve: 26, push: 0.06, check: 5, release: 0.05, bend: 28 },
+  iron: { id: 'iron', name: 'Iron', carry: [50, 180], loft: 30, keep: 0.18, sweet: 0.1, curve: 20, push: 0.04, check: 12, release: 0.08, bend: 18 },
+  wedge: { id: 'wedge', name: 'Wedge', carry: [8, 90], loft: 52, keep: 0.08, sweet: 0.16, curve: 8, push: 0.02, check: 15, release: 0.14, bend: 9 },
+  putter: { id: 'putter', name: 'Putter', carry: [1.5, 34], loft: 0, keep: 1, sweet: 1, curve: 0, push: 0, check: 0, release: 0, bend: 0 },
 };
 
 export const BAG: ClubId[] = ['driver', 'iron', 'wedge', 'putter'];

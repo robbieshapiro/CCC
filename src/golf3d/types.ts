@@ -35,8 +35,7 @@ export type Hole = {
   border: V2[]; // closed outline, edged with a low curb
   base: Surface;
   regions: Region[]; // later entries win
-  water: V2[][];
-  dry: V2[][]; // land that overrides water (islands, bridges)
+  water: V2[][]; // lake outlines; anything inside that sits under the surface is wet
   terrain: Piece[];
   walls: Wall[];
   posts: Post[];
@@ -50,4 +49,5 @@ export type Hole = {
 };
 
 // error: -1..1 from the swing meter (0 is pure). boost scales carry (drinks).
-export type Shot = { angle: number; power: number; club: ClubId; error: number; clock: number; boost?: number };
+// spin: -1 topspin .. 1 backspin. shape: -1 draw (bends left) .. 1 fade (bends right).
+export type Shot = { angle: number; power: number; club: ClubId; error: number; clock: number; boost?: number; spin?: number; shape?: number };

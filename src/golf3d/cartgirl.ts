@@ -1,41 +1,45 @@
-// Daisy and the beverage cart: drives up to the tee, offers a drink, drives off.
+// Daisy and the beverage cart: drives up to the tee, steps off for a chat and your order, drives off.
 import * as THREE from 'three';
 import { sfx } from '../fx/sound';
 import { DRINKS, type Drink } from './clubs';
+import { orderLine, orderReply, script, type CartTalk, type Mood } from './daisy';
 import { DEFAULT_SPEC, Golfer } from './golfer';
 import * as props from './props';
 import { w3 } from './scene';
 import { heightAt } from './terrain';
 import type { Hole, V2 } from './types';
 
-const LINES = [
-  "Afternoon! Something to take the edge off before this one? Reginald's watching, so I'd keep it civilised.",
-  'Back again. Hydration, or courage? I carry both.',
-];
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 export class CartGirl {
   visited = false;
   private cart = props.cart();
   private daisy = new Golfer({
     ...DEFAULT_SPEC,
-    skin: '#eac09a',
-    hair: 'long',
-    hairColor: '#b78a52',
+    skin: '#efc7a4',
+    build: 'slim',
+    hair: 'ponytail',
+    hairColor: '#c7995a',
     top: 'uniform',
     topColor: '#163b2c',
-    accent: '#b8955a',
+    accent: '#f4f1e8',
     bottoms: 'skirt',
     bottomsColor: '#f4f1e8',
     hat: 'visor',
     hatColor: '#f4f1e8',
     glove: false,
-    height: 0.95,
+    height: 1,
+    staff: { name: 'Daisy', lips: '#b4505e' },
   });
   private group = new THREE.Group();
   private from = new THREE.Vector3();
   private to = new THREE.Vector3();
+  private tee = new THREE.Vector3();
   private t = 0;
   private phase: 'idle' | 'in' | 'stop' | 'out' = 'idle';
+  private talking = false;
+  private pending: (() => void) | null = null;
+  private fill = new THREE.PointLight('#fff1e2', 0, 26, 1.4);
 
   constructor(private scene: THREE.Scene, private hole: Hole, private onOrder: (d: Drink | null) => void) {
     this.daisy.showBag(false);
@@ -50,61 +54,154 @@ export class CartGirl {
       this.cart.add(g);
     }
     this.group.visible = false;
-    scene.add(this.group);
+    scene.add(this.group, this.fill);
   }
 
   focus() {
     return this.group.position.clone();
   }
 
-  // Drive in beside the tee, then show the menu in `card`.
-  arrive(at: V2, aim: number, card: HTMLElement) {
+  // While you're chatting, a close-up of Daisy, framed above the card.
+  closeUp(aspect: number): { pos: THREE.Vector3; look: THREE.Vector3 } | null {
+    if (!this.talking) return null;
+    const d = this.daisy.group.getWorldPosition(new THREE.Vector3());
+    const toTee = this.tee.clone().sub(d).setY(0).normalize();
+    const portrait = aspect < 1;
+    const pos = d.clone().addScaledVector(toTee, portrait ? 6.6 : 8.5).add(new THREE.Vector3(0, 5.3, 0));
+    const look = d.clone().add(new THREE.Vector3(0, portrait ? 3.7 : 4.4, 0));
+    return { pos, look };
+  }
+
+  // Drive in beside the tee, step off, then talk in `card`.
+  arrive(at: V2, aim: number, card: HTMLElement, talk: CartTalk) {
     const side = new THREE.Vector3(Math.cos(aim), 0, Math.sin(aim));
     const fwd = new THREE.Vector3(Math.sin(aim), 0, -Math.cos(aim));
-    const tee = w3(at.x, at.y, 0);
-    this.to.copy(tee).addScaledVector(side, 12).addScaledVector(fwd, 8);
+    this.tee = w3(at.x, at.y, heightAt(this.hole, at.x, at.y));
+    this.to.copy(this.tee).addScaledVector(side, 12).addScaledVector(fwd, 8);
     this.from.copy(this.to).addScaledVector(fwd, 90).addScaledVector(side, 30);
     this.group.position.copy(this.from);
     this.group.visible = true;
     this.phase = 'in';
     this.t = 0;
     sfx('hum');
-    const line = LINES[(this.hole.id.length + at.x) % 2 ? 1 : 0];
-    window.setTimeout(() => {
-      card.hidden = false;
-      card.innerHTML = `
-        <div class="cart-card">
-          <p class="eyebrow">The beverage cart</p>
-          <p><b>Daisy</b> ${line}</p>
+    this.pending = () => this.chat(card, talk);
+  }
+
+  private chat(card: HTMLElement, talk: CartTalk) {
+    this.stepOff();
+    this.talking = true;
+    const lines = script(talk);
+    card.hidden = false;
+    card.innerHTML = `
+      <div class="cart-card">
+        <div class="cart-head"><p class="eyebrow">The beverage cart</p><button class="link" data-skip-chat>Skip to drinks</button></div>
+        <div class="cart-log" data-log aria-live="polite"></div>
+        <div class="cart-replies" data-replies></div>
+      </div>`;
+    const log = card.querySelector('[data-log]') as HTMLElement;
+    const replies = card.querySelector('[data-replies]') as HTMLElement;
+    let step = 0;
+    let gen = 0; // bumps on skip, so pending lines from the old thread don't land
+    const say = (who: 'daisy' | 'you', text: string) => {
+      // only the last few lines stay, so the card never covers her
+      log.insertAdjacentHTML('beforeend', who === 'daisy' ? `<p class="msg daisy"><b>Daisy</b> ${esc(text)}</p>` : `<p class="msg you">${esc(text)}</p>`);
+      while (log.children.length > 3) log.firstElementChild!.remove();
+    };
+    const mood = (m: Mood | undefined) => {
+      this.daisy.setPose(m ?? 'idle');
+      if (m && m !== 'idle') window.setTimeout(() => this.talking && this.daisy.setPose('idle'), 1600);
+    };
+    // Daisy "types" for a moment before each line
+    const daisySays = (text: string, then: () => void, m?: Mood) => {
+      const g = gen;
+      replies.innerHTML = '';
+      log.insertAdjacentHTML('beforeend', '<p class="msg daisy typing" data-typing><b>Daisy</b> <i>…</i></p>');
+      window.setTimeout(() => {
+        if (g !== gen) return;
+        log.querySelector('[data-typing]')?.remove();
+        say('daisy', text);
+        mood(m);
+        sfx('tick');
+        then();
+      }, 650);
+    };
+    const ask = () => {
+      if (step >= lines.length) return menu();
+      const ex = lines[step];
+      daisySays(ex.daisy, () => {
+        replies.innerHTML = ex.replies.map((r, i) => `<button class="reply" data-reply="${i}">${esc(r.you)}</button>`).join('');
+        replies.querySelectorAll<HTMLButtonElement>('[data-reply]').forEach((b) => {
+          b.onclick = () => {
+            const r = ex.replies[Number(b.dataset.reply)];
+            say('you', r.you);
+            step++;
+            daisySays(r.daisy, () => window.setTimeout(ask, 900), r.mood);
+          };
+        });
+      }, step === 0 ? 'wave' : undefined);
+    };
+    const menu = () => {
+      card.querySelector('[data-skip-chat]')?.remove();
+      daisySays(orderLine(talk), () => {
+        replies.innerHTML = `
           <div class="cart-drinks">${(Object.keys(DRINKS) as Drink[])
             .map((k) => `<button data-drink="${k}"><b>${DRINKS[k].name}</b><small>${DRINKS[k].blurb}</small></button>`)
             .join('')}</div>
-          <button class="link" data-drink="none">No thanks, Daisy</button>
-        </div>`;
-      card.querySelectorAll<HTMLButtonElement>('[data-drink]').forEach((b) => {
-        b.onclick = () => {
-          card.hidden = true;
-          card.innerHTML = '';
-          const d = b.dataset.drink === 'none' ? null : (b.dataset.drink as Drink);
-          this.leave();
-          this.onOrder(d);
-        };
+          <button class="link" data-drink="none">No thanks, Daisy</button>`;
+        replies.querySelectorAll<HTMLButtonElement>('[data-drink]').forEach((b) => {
+          b.onclick = () => {
+            const d = b.dataset.drink === 'none' ? null : (b.dataset.drink as Drink);
+            say('you', d ? DRINKS[d].name : 'No thanks, Daisy.');
+            daisySays(orderReply(d, talk), () =>
+              window.setTimeout(() => {
+                card.hidden = true;
+                card.innerHTML = '';
+                this.leave();
+                this.onOrder(d);
+              }, 1500),
+            d ? 'laugh' : 'wave');
+          };
+        });
       });
-    }, 2600);
+    };
+    (card.querySelector('[data-skip-chat]') as HTMLButtonElement).onclick = () => {
+      gen++;
+      log.innerHTML = '';
+      menu();
+    };
+    ask();
+  }
+
+  // Off the cart on the side facing the tee, square to you.
+  private stepOff() {
+    this.group.updateMatrixWorld(true);
+    const local = this.group.worldToLocal(this.tee.clone());
+    const sx = local.x >= 0 ? 1 : -1;
+    this.daisy.group.position.set(3.6 * sx, 0, 0.6);
+    const d = this.daisy.group.getWorldPosition(new THREE.Vector3());
+    const face = this.tee.clone().sub(d);
+    this.daisy.group.rotation.y = Math.atan2(face.x, face.z) - this.group.rotation.y;
+    // a soft fill from over your shoulder so her face isn't in shadow
+    this.fill.position.copy(d).addScaledVector(face.setY(0).normalize(), 7).add(new THREE.Vector3(0, 7, 0));
+    this.fill.intensity = 18;
   }
 
   private leave() {
     this.visited = true;
+    this.talking = false;
+    this.fill.intensity = 0;
     this.daisy.setPose('wave');
+    this.daisy.group.position.set(3.4, 0, 1.5);
+    this.daisy.group.rotation.y = 0.6;
     this.from.copy(this.group.position);
     this.to.copy(this.from).add(new THREE.Vector3(80, 0, 40));
     this.phase = 'out';
     this.t = 0;
   }
 
-  update(dt: number, _active: () => boolean) {
+  update(dt: number) {
     this.daisy.update(dt);
-    if (this.phase === 'idle') return;
+    if (this.phase === 'idle' || this.phase === 'stop') return;
     this.t += dt;
     const k = Math.min(1, this.t / (this.phase === 'in' ? 2.4 : 3));
     const e = this.phase === 'in' ? 1 - (1 - k) ** 3 : k * k;
@@ -118,8 +215,10 @@ export class CartGirl {
       if (this.phase === 'in') {
         this.phase = 'stop';
         this.daisy.setPose('wave');
-        window.setTimeout(() => this.phase === 'stop' && this.daisy.setPose('idle'), 1800);
-      } else if (this.phase === 'out') {
+        const go = this.pending;
+        this.pending = null;
+        if (go) window.setTimeout(go, 350);
+      } else {
         this.phase = 'idle';
         this.group.visible = false;
       }
@@ -127,7 +226,8 @@ export class CartGirl {
   }
 
   dispose() {
-    this.scene.remove(this.group);
+    this.scene.remove(this.group, this.fill);
+    this.fill.dispose();
     this.daisy.dispose();
   }
 }
