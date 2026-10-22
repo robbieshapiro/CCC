@@ -1,85 +1,76 @@
-// Hole 2, The Island (par 4, about 330 ft): an island green in the lake.
-// The gamble: a driver straight at the island. The safe way: lay up on the peninsula and wedge on.
-// The secret: putt hard up the stone bridge and fly the gap.
+// Hole 2, The Island (par 3, about 205 ft): from a cliff-top tee, down to a small green in a mountain lake.
+// The play: a high iron that stops. Short is wet, long is wet, and the green tips toward the water.
+// The secret: from the shore below the tee, putt the length of the boardwalk onto the green.
 import { circle, rect } from '../terrain';
-import type { Hole } from '../types';
+import type { Hole, Post } from '../types';
 
-const ISLAND = { x: 10, y: 322, r: 30 };
+const ISLAND = { x: -6, y: 200, r: 24 };
+const LEVEL = 0.6;
+const BOARD = { x0: -26, x1: -22, y0: 64, y1: 200 };
+
+const trees: Post[] = [
+  ...[-120, -84, -40, 30, 74, 118].map((x, i) => ({ x, y: 318 + (i % 2) * 10, r: 1.2, h: 20, look: 'pine' as const })),
+  ...[-130, -98, 96, 128].map((x, i) => ({ x, y: -14 + (i % 2) * 12, r: 1.2, h: 20, look: 'pine' as const })),
+  { x: -64, y: 330, r: 2, h: 34, look: 'oak' },
+  { x: 54, y: 332, r: 2, h: 34, look: 'oak' },
+];
+
+const rocks: Post[] = [
+  [-60, 30, 3.4], [44, 34, 3], [-110, 34, 2.6], [96, 30, 3.8], [-136, 120, 3.2], [136, 230, 3.6],
+].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
 
 export const island: Hole = {
   id: 'island',
   name: 'The Island',
-  par: 4,
+  par: 3,
   tee: { x: 0, y: 0 },
-  cup: { x: 16, y: 330 },
-  aim: 0,
-  bounds: { x0: -150, y0: -22, x1: 130, y1: 420 },
+  cup: { x: -2, y: 204 },
+  aim: -0.03,
+  bounds: { x0: -150, y0: -40, x1: 150, y1: 340 },
   border: [
-    { x: -146, y: -16 },
-    { x: 126, y: -16 },
-    { x: 126, y: 416 },
-    { x: -146, y: 416 },
+    { x: -146, y: -36 },
+    { x: 146, y: -36 },
+    { x: 146, y: 336 },
+    { x: -146, y: 336 },
   ],
-  base: 'fringe',
+  base: 'rough',
   regions: [
-    { poly: rect(-36, 16, 36, 236), surface: 'fairway' },
-    { poly: rect(-146, 398, 126, 416), surface: 'path' },
-    { poly: rect(-146, 0, -114, 416), surface: 'path' },
-    { poly: rect(-4, 234, 4, 262), surface: 'stone' },
-    { poly: rect(-4, 268, 4, 294), surface: 'wood' },
-    { poly: rect(-4, 350, 4, 398), surface: 'wood' },
-    { poly: circle(ISLAND.x, ISLAND.y, ISLAND.r), surface: 'green' },
-    { poly: circle(34, 344, 6), surface: 'sand' },
-    { poly: circle(-58, 100, 10), surface: 'sand' },
-    { poly: circle(60, 120, 11), surface: 'sand' },
+    { poly: rect(-14, -14, 14, 14), surface: 'fairway' },
+    { poly: rect(-146, 44, 146, 70), surface: 'fringe' },
+    { poly: circle(ISLAND.x, ISLAND.y, 21), surface: 'fringe' },
+    { poly: circle(ISLAND.x, ISLAND.y, 18), surface: 'green' },
+    { poly: circle(8, 214, 4.5), surface: 'sand' },
+    { poly: rect(BOARD.x0, BOARD.y0, BOARD.x1, BOARD.y1), surface: 'wood' },
   ],
-  water: [rect(-110, 140, 120, 396)],
+  water: [{ poly: rect(-146, 62, 146, 304), level: LEVEL }],
   terrain: [
-    { kind: 'tilt', gx: 0, gy: 0.003 },
-    // the lake bed
-    { kind: 'box', x0: -110, y0: 140, x1: 120, y1: 396, h: -3.5, edge: 4, op: 'add' },
-    // the peninsula and the island back up at lawn height
-    { kind: 'box', x0: -36, y0: 130, x1: 36, y1: 236, h: 0.3, edge: 2, op: 'set' },
-    { kind: 'disc', x: ISLAND.x, y: ISLAND.y, r: ISLAND.r, h: 0.8, edge: 4, op: 'set' },
-    // the island green tilts toward the lake on the left, with a crown by the pin
-    { kind: 'ramp', x0: -20, y0: 292, x1: 40, y1: 352, axis: 'x', h0: -0.6, h1: 0.5, op: 'add' },
-    { kind: 'hill', x: 6, y: 316, r: 14, h: 0.8 },
-    { kind: 'disc', x: 34, y: 344, r: 6, h: -0.8, edge: 2, op: 'add' },
-    { kind: 'disc', x: -58, y: 100, r: 10, h: -0.9, edge: 3, op: 'add' },
-    { kind: 'disc', x: 60, y: 120, r: 11, h: -0.9, edge: 3, op: 'add' },
-    // the stone bridge: climbs, stops short, then a landing ramp onto the island
-    { kind: 'ramp', x0: -4, y0: 234, x1: 4, y1: 262, axis: 'y', h0: 0.3, h1: 3.4, op: 'set' },
-    { kind: 'ramp', x0: -4, y0: 268, x1: 4, y1: 295, axis: 'y', h0: 2.2, h1: 0.8, op: 'set' },
-    // the boardwalk causeway at the back
-    { kind: 'box', x0: -4, y0: 346, x1: 4, y1: 398, h: 0.4, edge: 0.8, op: 'set' },
+    // the tee on the cliff top, the cliff, then a strip of shore
+    { kind: 'ramp', x0: -150, y0: -40, x1: 150, y1: 18, axis: 'y', h0: 26, h1: 26, op: 'set' },
+    { kind: 'ramp', x0: -150, y0: 18, x1: 150, y1: 44, axis: 'y', h0: 26, h1: 1.4, op: 'set' },
+    { kind: 'ramp', x0: -150, y0: 44, x1: 150, y1: 340, axis: 'y', h0: 1.4, h1: 1.4, op: 'set' },
+    // mountains close in on both sides and behind
+    { kind: 'hill', x: -236, y: 170, r: 140, h: 36 },
+    { kind: 'hill', x: 236, y: 150, r: 140, h: 40 },
+    { kind: 'hill', x: 0, y: 440, r: 140, h: 34 },
+    // the lake
+    { kind: 'box', x0: -150, y0: 70, x1: 150, y1: 304, h: -5, edge: 8, op: 'add' },
+    // the island: one foot above the water, with a shore that drops straight in
+    { kind: 'disc', x: ISLAND.x, y: ISLAND.y, r: ISLAND.r, h: 1.6, edge: 6, op: 'set' },
+    // it tips left, toward the long carry over the water
+    { kind: 'ramp', x0: ISLAND.x - 24, y0: ISLAND.y - 24, x1: ISLAND.x + 24, y1: ISLAND.y + 24, axis: 'x', h0: -0.35, h1: 0.4, op: 'add' },
+    { kind: 'disc', x: 8, y: 214, r: 4.5, h: -0.9, edge: 1.5, op: 'add' },
+    // the boardwalk out from the shore
+    { kind: 'box', x0: BOARD.x0, y0: BOARD.y0, x1: BOARD.x1, y1: BOARD.y1, h: 1.5, edge: 0.4, op: 'set' },
   ],
-  walls: [
-    // hedges between the promenade and the lake, with a gap for the boardwalk
-    { a: { x: -112, y: 140 }, b: { x: -112, y: 396 }, h: 3, look: 'hedge' },
-    { a: { x: -112, y: 396 }, b: { x: -5, y: 396 }, h: 3, look: 'hedge' },
-    { a: { x: 5, y: 396 }, b: { x: 120, y: 396 }, h: 3, look: 'hedge' },
-    // bridge rails
-    { a: { x: -4.3, y: 236 }, b: { x: -4.3, y: 262 }, h: 1.2, look: 'stone' },
-    { a: { x: 4.3, y: 236 }, b: { x: 4.3, y: 262 }, h: 1.2, look: 'stone' },
-    { a: { x: -4.3, y: 352 }, b: { x: -4.3, y: 396 }, h: 1, look: 'rail' },
-    { a: { x: 4.3, y: 352 }, b: { x: 4.3, y: 396 }, h: 1, look: 'rail' },
-  ],
-  posts: [
-    { x: -130, y: 80, r: 2, h: 34, look: 'oak' },
-    { x: -132, y: 200, r: 2, h: 34, look: 'oak' },
-    { x: -130, y: 320, r: 2, h: 34, look: 'oak' },
-    { x: 80, y: 408, r: 1.4, h: 30, look: 'cypress' },
-    { x: -60, y: 408, r: 1.4, h: 30, look: 'cypress' },
-    { x: 100, y: 40, r: 2, h: 34, look: 'oak' },
-    { x: -100, y: 30, r: 1.4, h: 30, look: 'cypress' },
-  ],
+  walls: [],
+  posts: [...trees, ...rocks],
   movers: [
     {
       id: 'swan1',
       look: 'swan',
       at: (t) => {
         const a = t * 0.12;
-        const pos = { x: 70 + Math.cos(a) * 32, y: 240 + Math.sin(a) * 50 };
+        const pos = { x: 50 + Math.cos(a) * 26, y: 150 + Math.sin(a) * 40 };
         return { walls: [], posts: [{ ...pos, r: 1.6, h: 2.2, look: 'post' }], pos, heading: a + Math.PI / 2 };
       },
     },
@@ -88,30 +79,24 @@ export const island: Hole = {
       look: 'swan',
       at: (t) => {
         const a = -t * 0.1 + 2;
-        const pos = { x: -60 + Math.cos(a) * 30, y: 300 + Math.sin(a) * 50 };
+        const pos = { x: -70 + Math.cos(a) * 24, y: 250 + Math.sin(a) * 30 };
         return { walls: [], posts: [{ ...pos, r: 1.6, h: 2.2, look: 'post' }], pos, heading: a - Math.PI / 2 };
       },
     },
   ],
-  // the fountain's spray drifts across the bridge gap
-  pushes: [{ id: 'fountain', look: 'fountain', x: 40, y: 262, r: 20, at: (t) => ({ x: Math.sin(t * 1.3) * 10, y: 0 }) }],
-  zones: [{ id: 'bridge', poly: rect(-5, 263, 5, 268) }],
-  secret: { name: 'Over the Bridge', zone: 'bridge', hint: 'The stone bridge stops short. Putt it hard enough and you will fly the gap.' },
+  pushes: [],
+  zones: [{ id: 'plank', poly: rect(BOARD.x0, 90, BOARD.x1, 180) }],
+  secret: { name: 'Walk the Plank', zone: 'plank', hint: 'There is a boardwalk out to the island. No rails. Steady hands.' },
   flyover: [
     { x: 0, y: -20 },
-    { x: 0, y: 220 },
-    { x: 10, y: 322 },
+    { x: 40, y: 120 },
+    { x: -2, y: 204 },
   ],
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
-    { kind: 'fountain', x: 40, y: 262 },
-    { kind: 'bench', x: -132, y: 140, rot: Math.PI / 2 },
-    { kind: 'bench', x: -132, y: 260, rot: Math.PI / 2 },
-    { kind: 'lamp', x: -116, y: 60 },
-    { kind: 'lamp', x: -116, y: 180 },
-    { kind: 'lamp', x: -116, y: 300 },
-    { kind: 'lamp', x: -40, y: 402 },
-    { kind: 'lamp', x: 40, y: 402 },
-    { kind: 'sign', x: -24, y: -9, rot: 0 },
+    { kind: 'sign', x: -22, y: -10, rot: 0 },
+    { kind: 'bench', x: 26, y: -12, rot: 0 },
+    { kind: 'rock', x: 20, y: 300, scale: 3 },
+    { kind: 'rock', x: -100, y: 296, scale: 2.6 },
   ],
 };

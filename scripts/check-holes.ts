@@ -148,16 +148,35 @@ function solve(h: Hole, opts: { exclude?: string; via?: V2[] } = {}) {
   return { strokes: 99, zones };
 }
 
-const VIA: Record<string, V2[]> = {
-  azalea: [{ x: -14, y: 176 }],
-  island: [{ x: 0, y: 218 }],
-  clubhouse: [{ x: 86, y: 60 }],
+// Where each secret starts, and the clubs that can use it from there.
+const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, number] }> = {
+  summit: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [30, 75] },
+  island: { from: { x: -24, y: 58 }, clubs: ['putter'], angles: [-6, 6] },
+  ridge: { from: { x: -2, y: 300 }, clubs: ['iron', 'wedge'], angles: [-30, 30] },
 };
 
+// The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
+function secretBest(h: Hole) {
+  const { from, clubs, angles } = SECRET_FROM[h.id];
+  let best = { d: Infinity, shot: null as Shot | null };
+  for (const club of clubs)
+    for (let a = angles[0]; a <= angles[1]; a += club === 'putter' ? 0.25 : 1)
+      for (let p = 0.3; p <= 1.001; p += 0.02) {
+        const shot: Shot = { angle: (a * Math.PI) / 180, power: p, club, error: 0, clock: 0 };
+        const r = simulate(h, from, shot, false);
+        if (!r.zones.includes(h.secret.zone) || r.penalty) continue;
+        const d = r.holed ? 0 : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y);
+        if (d < best.d) best = { d, shot };
+      }
+  return best;
+}
+
 // The swing meter as a person plays it: tap timing scatters around the centre of the bar.
-function meterError(club: ClubId, gauss: () => number, sigma: number) {
+function meterError(club: ClubId, gauss: () => number, sigma: number, power = 1) {
   if (club === 'putter') return 0;
-  const miss = gauss() * sigma;
+  // the driver's needle speeds up with power (see the engine), so timing gets worse with it
+  const speed = club === 'driver' ? (0.8 + 2.8 * power ** 3) / 1.25 : 1;
+  const miss = gauss() * sigma * speed;
   const sweet = CLUBS[club].sweet;
   if (Math.abs(miss) <= sweet) return 0;
   return Math.sign(miss) * Math.min(1, (Math.abs(miss) - sweet) / 0.3);
@@ -199,7 +218,7 @@ function novice(h: Hole, seed: string) {
       ...b.shot,
       angle: b.shot.angle + (gauss() * 3.5 * Math.PI) / 180,
       power: Math.max(0.03, Math.min(1, b.shot.power * (1 + gauss() * 0.12))),
-      error: meterError(b.shot.club, gauss, 0.15),
+      error: meterError(b.shot.club, gauss, 0.15, b.shot.power),
     };
     const r = simulate(h, pos, shot, false);
     log.push(`${shot.club[0]}${r.holed ? '!' : r.penalty ? 'x' : ''}`);
@@ -212,23 +231,22 @@ function novice(h: Hole, seed: string) {
 }
 
 const course = courseFor('2026-10');
-const [azalea, island, clubhouse] = course.holes;
 const mode = process.argv[2] ?? 'all';
 const only = process.argv[3];
 const holes = course.holes.filter((h) => !only || h.id === only);
 
 if (mode === 'all' || mode === 'basic') {
+  const first = course.holes[0];
   const s: Shot = { angle: 0.1, power: 0.7, club: 'iron', error: 0.3, clock: 2 };
-  const a = simulate(azalea, azalea.tee, s);
-  const b = simulate(azalea, azalea.tee, s);
+  const a = simulate(first, first.tee, s);
+  const b = simulate(first, first.tee, s);
   ok(a.end.x === b.end.x && a.end.y === b.end.y && a.frames.length === b.frames.length, 'deterministic');
-  const flat: Hole = { ...island, terrain: [], water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], base: 'fairway', cup: { x: 0, y: 2000 } };
+  const flat: Hole = { ...first, terrain: [], water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], base: 'fairway', cup: { x: 0, y: 2000 } };
   for (const club of ['driver', 'iron', 'wedge'] as ClubId[]) {
     const r = simulate(flat, { x: 0, y: 0 }, { angle: 0, power: 1, club, error: 0, clock: 0 });
     const land = r.frames.find((f, i) => i > 2 && f.z <= 0.01)!;
-    const [lo, hi] = CLUBS[club].carry;
+    const hi = CLUBS[club].carry[1];
     ok(Math.abs(land.y - hi) < hi * 0.12 && r.end.y > land.y, `${club} carries ${land.y.toFixed(0)} ft (spec ${hi}) and rolls to ${r.end.y.toFixed(0)}`);
-    void lo;
   }
   const slice = simulate(flat, { x: 0, y: 0 }, { angle: 0, power: 1, club: 'driver', error: 1, clock: 0 }, false);
   const hook = simulate(flat, { x: 0, y: 0 }, { angle: 0, power: 1, club: 'driver', error: -1, clock: 0 }, false);
@@ -241,36 +259,20 @@ if (mode === 'all' || mode === 'basic') {
   const slope: Hole = { ...flat, base: 'green', terrain: [{ kind: 'tilt', gx: 0, gy: 0.3 }] };
   const down = simulate(slope, { x: 0, y: 100 }, { angle: 0, power: 0.01, club: 'putter', error: 0, clock: 0 }, false);
   ok(down.end.y < 60, `a ball on a slope rolls back downhill (${down.end.y.toFixed(1)})`);
-  const hits = (h: Hole, from: V2, zone: string) => {
-    for (let a = -90; a <= 90; a += 1) for (let p = 0.3; p <= 1.001; p += 0.02) {
-      const r = simulate(h, from, { angle: (a * Math.PI) / 180, power: p, club: 'putter', error: 0, clock: 0 }, false);
-      if (r.zones.includes(zone) && !r.penalty) return { a, p: Math.round(p * 100) / 100, holed: r.holed, end: [Math.round(r.end.x), Math.round(r.end.y)] };
-    }
-    return null;
-  };
-  ok(!!hits(island, { x: 0, y: 218 }, 'bridge'), `bridge jump is possible ${JSON.stringify(hits(island, { x: 0, y: 218 }, 'bridge'))}`);
-  ok(!!hits(azalea, { x: -14, y: 176 }, 'cartpath'), `cart path bank is rideable ${JSON.stringify(hits(azalea, { x: -14, y: 176 }, 'cartpath'))}`);
-  ok(!!hits(clubhouse, { x: 86, y: 60 }, 'terrace'), `terrace route is rollable ${JSON.stringify(hits(clubhouse, { x: 86, y: 60 }, 'terrace'))}`);
+  for (const h of course.holes) {
+    ok(!isWater(h, h.tee) && !isWater(h, h.cup), `${h.name}: tee and cup are dry`);
+    ok(surfaceAt(h, h.cup) === 'green', `${h.name}: the cup is on the green`);
+  }
 }
 
 if (mode === 'all' || mode === 'solve') {
   for (const h of holes) {
     const normal = solve(h, { exclude: h.secret.zone });
     ok(normal.strokes <= h.par, `${h.name} par ${h.par}: solver ${normal.strokes} the normal way`);
-    // the secret, rolled from its entrance, should leave you near the pin
-    const from = VIA[h.id][0];
-    let best = Infinity;
-    for (let a = -180; a < 180; a += 1)
-      for (let p = 0.4; p <= 1.001; p += 0.04) {
-        const r = simulate(h, from, { angle: (a * Math.PI) / 180, power: p, club: 'putter', error: 0, clock: 0 }, false);
-        if (r.zones.includes(h.secret.zone) && !r.penalty) best = Math.min(best, r.holed ? 0 : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y));
-      }
-    if (best < 60) ok(true, `${h.name}: rolling ${h.secret.name} from its entrance finishes ${best.toFixed(0)} ft from the pin`);
-    else {
-      // a longer secret: play the whole route through it
-      const secret = solve(h, { via: VIA[h.id] });
-      ok(secret.strokes <= h.par && secret.zones.has(h.secret.zone), `${h.name}: ${secret.strokes} via ${h.secret.name}`);
-    }
+    // the secret should be worth finding: it leaves you close
+    const best = secretBest(h);
+    const near = h.par >= 5 ? 160 : 60;
+    ok(best.d < near, `${h.name}: ${h.secret.name} finishes ${best.d.toFixed(0)} ft from the pin ${best.shot ? `(${best.shot.club} ${Math.round((best.shot.angle * 180) / Math.PI)}° ${best.shot.power.toFixed(2)})` : ''}`);
   }
 }
 

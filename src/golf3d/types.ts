@@ -14,8 +14,10 @@ export type Piece =
   | { kind: 'channel'; pts: V2[]; width: number; depth: number };
 
 export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' };
-export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' };
+export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' };
 export type Region = { poly: V2[]; surface: Surface };
+// A lake or creek: its outline and the flat height of its surface. Ground inside that sits under the surface is wet.
+export type Water = { poly: V2[]; level: number };
 export type Zone = { id: string; poly: V2[] };
 
 // Things that move on the hole clock. `at(t)` returns their collision shapes at time t.
@@ -35,7 +37,7 @@ export type Hole = {
   border: V2[]; // closed outline, edged with a low curb
   base: Surface;
   regions: Region[]; // later entries win
-  water: V2[][]; // lake outlines; anything inside that sits under the surface is wet
+  water: Water[];
   terrain: Piece[];
   walls: Wall[];
   posts: Post[];

@@ -346,3 +346,31 @@ export function teeMarker() {
   g.add(mesh(new THREE.SphereGeometry(0.45, 14, 10), new THREE.MeshStandardMaterial({ color: '#b8955a', roughness: 0.3, metalness: 0.7 })).translateY(0.35));
   return g;
 }
+
+// a lichen-grey boulder, squashed and turned so no two look alike
+export function rock(scale = 1, seed = 0) {
+  const g = new THREE.Group();
+  const r = mesh(new THREE.DodecahedronGeometry(1, 0), mat(seed % 2 ? '#8d8a80' : '#7c7a72'));
+  r.scale.set(1.3, 0.8 + (seed % 3) * 0.12, 1);
+  r.rotation.set(seed * 0.7, seed * 1.3, seed * 0.4);
+  r.position.y = 0.4;
+  g.add(r);
+  g.scale.setScalar(scale);
+  return g;
+}
+
+// a far-off peak for the skyline: hazy blue rock with a snow cap, outside the fog
+export function mountain(height: number, radius: number, seed = 0) {
+  const g = new THREE.Group();
+  const haze = (c: string) => new THREE.MeshBasicMaterial({ color: c, fog: false });
+  const body = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 7 + (seed % 3), 1), haze(seed % 2 ? '#8ea3b3' : '#99adbb'));
+  body.position.y = height / 2;
+  body.rotation.y = seed;
+  g.add(body);
+  const capH = height * 0.28;
+  const cap = new THREE.Mesh(new THREE.ConeGeometry((radius * capH) / height + 1, capH, 7 + (seed % 3), 1), haze('#eef2f5'));
+  cap.position.y = height - capH / 2 + 0.5;
+  cap.rotation.y = seed;
+  g.add(cap);
+  return g;
+}
