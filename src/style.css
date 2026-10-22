@@ -82,6 +82,7 @@ input { font: 600 17px var(--font); padding: 11px 13px; border-radius: 4px; bord
 .masthead { display: grid; justify-items: center; text-align: center; gap: 8px; margin-top: 36px; }
 .title-big { font-size: clamp(36px, 8vw, 54px); }
 .lede { font-size: 18px; margin: 0; }
+label .hint { font-weight: 500; font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--muted); }
 .code-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
 .code-form > * { min-width: 0; }
 .code-form input { width: 100%; min-width: 0; }

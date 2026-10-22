@@ -35,7 +35,8 @@ export function join(code: string) {
       <form id="join" class="member-form stack">
         ${hostChip(REGINALD.invited())}
         <label for="name">Name <input id="name" name="name" maxlength="20" autocomplete="nickname" required autofocus></label>
-        <label for="pin">PIN <input id="pin" name="pin" inputmode="numeric" pattern="\\d{4}" maxlength="4" required></label>
+        <label for="pin">PIN <input id="pin" name="pin" type="password" inputmode="numeric" pattern="\\d{4}" maxlength="4" autocomplete="off" required>
+          <small class="hint">Your password. Use the same name and PIN to sign back in on your phone, iPad or laptop.</small></label>
         <p class="error" id="err" role="alert"></p>
         <button class="btn" type="submit">Sign the book</button>
         <a class="link" href="#/">Wrong code? Go back</a>

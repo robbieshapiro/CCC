@@ -1,11 +1,26 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Api, Snapshot } from './types';
 
+// Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
+// a trailing slash or /rest/v1, or just the project ref.
+export function cleanUrl(raw: string): string {
+  let u = (raw ?? '').trim().replace(/^['"]|['"]$/g, '').trim();
+  if (/^[a-z0-9]{20}$/i.test(u)) u = `${u}.supabase.co`;
+  if (u && !/^https?:\/\//i.test(u)) u = `https://${u}`;
+  return u.replace(/\/(rest\/v1\/?)?$/, '');
+}
+
 let client: SupabaseClient | null = null;
 function db(): SupabaseClient {
-  client ??= createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-  });
+  if (client) return client;
+  const url = cleanUrl(import.meta.env.VITE_SUPABASE_URL);
+  const key = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim().replace(/^['"]|['"]$/g, '');
+  try {
+    new URL(url);
+  } catch {
+    throw new Error("The club's database address isn't set up right. In Vercel, VITE_SUPABASE_URL should look like https://abcd1234.supabase.co");
+  }
+  client = createClient(url, key, { auth: { persistSession: false } });
   return client;
 }
 

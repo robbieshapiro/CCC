@@ -52,7 +52,7 @@ const pick = <T,>(list: T[], seed: string) => list[[...seed].reduce((a, c) => a 
 
 export const REGINALD = {
   welcome: () => 'Good afternoon. Members only, I am afraid. Do sign in.',
-  invited: () => "You've been put up for membership. Choose a name and a four-digit PIN, and do try to remember it.",
+  invited: () => "You've been put up for membership. Choose a name and a four-digit PIN. The PIN is how the club knows it's you on any device, so do try to remember it.",
   course: (name: string, par: number) => `This month the committee presents <b>${esc(name)}</b>. Three holes, par ${par}. Your best round counts.`,
   nobody: (day: string) => pick(['Not a single round this month. The greens are, frankly, offended.', 'The board is empty. One of you might consider golf.'], day),
   notYet: (n: number) => `${n} ${n === 1 ? 'member has' : 'members have'} posted a round. You have not. I merely observe.`,
