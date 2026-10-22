@@ -12,10 +12,20 @@ export function landing() {
       ${masthead()}
       <section class="member-form">
         <p class="lede">A private mini golf club for a few friends. A new course every month, as many rounds as you like. Your best one counts.</p>
-        ${hostChip(useSupabase ? 'This club is by invitation. Ask a member for the link.' : `${REGINALD.welcome()} You're in local mode, so it's just this device for now.`)}
-        ${useSupabase ? '' : `<a class="btn" href="#/join/demo">Enter the club</a>`}
+        ${hostChip(useSupabase ? "Members only. If you've been put up for membership, enter the invite code." : `${REGINALD.welcome()} You're in local mode, so it's just this device for now.`)}
+        <form id="code" class="code-form">
+          <label for="invite">Invite code <input id="invite" name="invite" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" required></label>
+          <button class="btn" type="submit">Continue</button>
+        </form>
+        ${useSupabase ? '' : `<a class="link" href="#/join/demo">Or enter the demo club</a>`}
       </section>
     </main>`);
+  const form = document.getElementById('code') as HTMLFormElement;
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = String(new FormData(form).get('invite')).trim().toLowerCase();
+    if (code) navigate(`#/join/${encodeURIComponent(code)}`);
+  });
 }
 
 export function join(code: string) {
@@ -28,6 +38,7 @@ export function join(code: string) {
         <label for="pin">PIN <input id="pin" name="pin" inputmode="numeric" pattern="\\d{4}" maxlength="4" required></label>
         <p class="error" id="err" role="alert"></p>
         <button class="btn" type="submit">Sign the book</button>
+        <a class="link" href="#/">Wrong code? Go back</a>
       </form>
     </main>`);
   const form = document.getElementById('join') as HTMLFormElement;
