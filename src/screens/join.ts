@@ -51,7 +51,8 @@ export function join(code: string) {
     try {
       const s = await api.join(code, String(fd.get('name')), String(fd.get('pin')));
       setSession(s);
-      navigate('#/welcome');
+      // the router sends new members on the tour and returning ones straight to the club
+      navigate('#/');
     } catch (err) {
       document.getElementById('err')!.innerHTML = esc((err as Error).message);
       btn.disabled = false;
