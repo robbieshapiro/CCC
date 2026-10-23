@@ -65,6 +65,8 @@ export function home(snap: Snapshot) {
         .join('')
     : `<li class="empty">The first name goes up when ${monthName(snap.month).split(' ')[0]} closes.</li>`;
 
+  // whatever was full screen before (the tour, a round) has let go of the page by now
+  document.body.classList.remove('court-open');
   render(`
     ${header(snap.groupName, 'month')}
     <main>

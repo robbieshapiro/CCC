@@ -30,8 +30,12 @@ async function router() {
   try {
     const s = await refresh();
     const me = s.players.find((p) => p.id === s.me);
-    // new members get the tour first
-    if (page === 'welcome' || (me && !me.avatar.onboarded && page !== 'card')) return welcome(s);
+    // new members get the tour first; it lives at #/ for them, so mark the route or the minute-by-minute
+    // refresh would redraw the home page over the top of it
+    if (page === 'welcome' || (me && !me.avatar.onboarded && page !== 'card')) {
+      route = 'welcome';
+      return welcome(s);
+    }
     if (page === 'round') return round(s);
     if (page === 'card') return card(s);
     return home(s);
