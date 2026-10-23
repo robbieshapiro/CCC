@@ -40,6 +40,7 @@ export const summit: Hole = {
   par: 5,
   tee: { x: 0, y: 0 },
   cup: { x: -8, y: 736 },
+  pins: [{ x: -8, y: 736 }, { x: 6, y: 716 }, { x: -16, y: 748 }, { x: 10, y: 742 }],
   aim: 0,
   bounds: { x0: -170, y0: -40, x1: 170, y1: 840 },
   border: [

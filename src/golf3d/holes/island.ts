@@ -25,6 +25,9 @@ export const island: Hole = {
   par: 3,
   tee: { x: 0, y: 0 },
   cup: { x: -2, y: 204 },
+  // tucked by the water on the right, front left, and back
+  pins: [{ x: -2, y: 204 }, { x: 4, y: 194 }, { x: -14, y: 192 }, { x: -8, y: 211 }],
+  greenFirm: 0.03,
   aim: -0.03,
   bounds: { x0: -150, y0: -40, x1: 150, y1: 340 },
   border: [

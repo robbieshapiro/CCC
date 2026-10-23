@@ -32,6 +32,8 @@ export type Hole = {
   par: number;
   tee: V2;
   cup: V2;
+  pins?: V2[]; // where the pin can be cut; one is picked each day
+  greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
   aim: number; // initial aim angle (radians, 0 = straight up the hole)
   bounds: { x0: number; y0: number; x1: number; y1: number };
   border: V2[]; // closed outline, edged with a low curb
@@ -51,5 +53,5 @@ export type Hole = {
 };
 
 // error: -1..1 from the swing meter (0 is pure). boost scales carry (drinks).
-// spin: -1 topspin .. 1 backspin. shape: -1 draw (bends left) .. 1 fade (bends right).
-export type Shot = { angle: number; power: number; club: ClubId; error: number; clock: number; boost?: number; spin?: number; shape?: number };
+// spin: -1 topspin .. 1 backspin. shape: -1 draw (bends left) .. 1 fade (bends right). wind: ft/s² while airborne.
+export type Shot = { angle: number; power: number; club: ClubId; error: number; clock: number; boost?: number; spin?: number; shape?: number; wind?: V2 };
