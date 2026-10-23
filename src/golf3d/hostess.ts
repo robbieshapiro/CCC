@@ -1,5 +1,5 @@
 // Daisy, drawn differently from the members: smooth, realistic proportions instead of the club's toy golfers.
-// About 5'7" in a fitted club polo and a tennis skort, long layered hair, and her own way of moving:
+// About 5'7" in a fitted club tank top and a tennis skort, long layered hair, and her own way of moving:
 // weight on one hip, a hand resting on it, a turn of the head, a laugh that tips her head back.
 // Faces +z like the golfers; units are feet.
 import * as THREE from 'three';
@@ -88,30 +88,47 @@ export class Hostess {
     this.body.add(belt);
     this.body.add(this.chest);
     this.chest.position.y = 0.3;
-    const torso = part(lathe([[0.001, -0.02], [0.5, 0], [0.46, 0.18], [0.46, 0.36], [0.53, 0.66], [0.57, 0.86], [0.55, 1.02], [0.56, 1.16], [0.5, 1.3], [0.3, 1.42], [0.001, 1.46]]), shirt);
+    // skin underneath, then a fitted tank top over it: scoop neck, thin straps, bare shoulders
+    const profile: [number, number][] = [[0.5, 0], [0.46, 0.18], [0.45, 0.36], [0.53, 0.62], [0.59, 0.82], [0.58, 0.92], [0.55, 1.02], [0.56, 1.16], [0.5, 1.3], [0.3, 1.42], [0.001, 1.46]];
+    const torso = part(lathe([[0.001, -0.02], ...profile]), skin);
     torso.scale.set(1, 1, 0.7);
     this.chest.add(torso);
-    // open collar, placket and a brass name badge
+    const tank = part(lathe([[0.001, -0.02], ...profile.filter(([, y]) => y < 1.0), [0.57, 1.0], [0.565, 1.03]]), shirt);
+    tank.scale.set(1.02, 1, 0.72);
+    this.chest.add(tank);
+    // straps over the shoulders, out where the hair doesn't hide them
     for (const side of [-1, 1]) {
-      const c = part(new THREE.BoxGeometry(0.2, 0.05, 0.14), white);
-      c.position.set(0.11 * side, 1.34, 0.17);
-      c.rotation.set(-0.5, 0, 0.5 * side);
-      this.chest.add(c);
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0.3 * side, 1.0, 0.33),
+        new THREE.Vector3(0.37 * side, 1.2, 0.2),
+        new THREE.Vector3(0.4 * side, 1.29, 0),
+        new THREE.Vector3(0.37 * side, 1.2, -0.22),
+        new THREE.Vector3(0.3 * side, 1.0, -0.34),
+      ]);
+      this.chest.add(part(new THREE.TubeGeometry(curve, 16, 0.035, 6, false), shirt));
     }
-    this.chest.add(part(new THREE.BoxGeometry(0.05, 0.28, 0.02), smooth('#0f2a1f', 0.7)).translateY(1.18).translateZ(0.37));
-    const badge = part(new THREE.BoxGeometry(0.22, 0.07, 0.02), gold);
-    badge.position.set(-0.27, 0.98, 0.385);
-    badge.rotation.y = -0.35;
-    this.chest.add(badge);
+    // the neckline: a soft shadow between, and a thin gold trim along the edge
+    const shade = part(new THREE.CapsuleGeometry(0.008, 0.07, 3, 6), smooth('#c99a76', 0.6));
+    shade.position.set(0, 1.0, 0.395);
+    this.chest.add(shade);
+    const trim = part(new THREE.TorusGeometry(0.555, 0.008, 4, 40), gold);
+    trim.rotation.x = Math.PI / 2;
+    trim.scale.set(1.02, 0.72, 1);
+    trim.position.y = 1.03;
+    this.chest.add(trim);
+    // the club crest, small, on the left of the tank
+    const crestPin = part(new THREE.CircleGeometry(0.045, 16), gold);
+    crestPin.position.set(-0.3, 0.68, 0.372);
+    crestPin.rotation.y = -0.4;
+    this.chest.add(crestPin);
 
     // arms: shoulder -> elbow -> hand, each a joint we can bend
     for (const side of [-1, 1]) {
       const shoulder = new THREE.Group();
       shoulder.position.set(0.53 * side, 1.16, 0);
       this.chest.add(shoulder);
-      shoulder.add(part(new THREE.SphereGeometry(0.15, 16, 12), shirt));
-      shoulder.add(part(lathe([[0.15, 0], [0.145, -0.3], [0.13, -0.42], [0.001, -0.43]], 20), shirt));
-      shoulder.add(part(lathe([[0.001, -0.95], [0.085, -0.93], [0.1, -0.6], [0.115, -0.3], [0.001, -0.25]], 16), skin));
+      shoulder.add(part(new THREE.SphereGeometry(0.13, 16, 12), skin));
+      shoulder.add(part(lathe([[0.001, -0.95], [0.085, -0.93], [0.1, -0.6], [0.118, -0.25], [0.125, -0.05], [0.001, 0.06]], 16), skin));
       const elbow = new THREE.Group();
       elbow.position.y = -0.93;
       shoulder.add(elbow);
