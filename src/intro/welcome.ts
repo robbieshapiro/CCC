@@ -119,7 +119,7 @@ function arrival(scene: THREE.Scene) {
   return g;
 }
 
-function room(scene: THREE.Scene, ox: number, floor: THREE.Material, wall: THREE.Material) {
+export function room(scene: THREE.Scene, ox: number, floor: THREE.Material, wall: THREE.Material) {
   const g = new THREE.Group();
   g.position.x = ox;
   const f = new THREE.Mesh(new THREE.PlaneGeometry(60, 40), floor);
@@ -153,7 +153,7 @@ function room(scene: THREE.Scene, ox: number, floor: THREE.Material, wall: THREE
   return g;
 }
 
-function checker() {
+export function checker() {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const x = c.getContext('2d')!;
@@ -169,7 +169,7 @@ function checker() {
   return new THREE.MeshStandardMaterial({ map: t, roughness: 0.25, metalness: 0.05 });
 }
 
-function panelling() {
+export function panelling() {
   const c = document.createElement('canvas');
   c.width = 256;
   c.height = 128;
@@ -242,9 +242,9 @@ function foyer(scene: THREE.Scene) {
   return { g, reg };
 }
 
-// A row of lockers: every member's name on a brass plate. The newest member's plate starts blank and is
-// engraved when Reginald shows them to it.
-function lockerRoom(scene: THREE.Scene, names: string[]) {
+// A row of lockers: every member's name on a brass plate. On the tour the newest member's plate starts
+// blank and is engraved when Reginald shows them to it.
+export function lockerRoom(scene: THREE.Scene, names: string[], blankLast = true) {
   const g = room(scene, 2000, mat('#7a5a3a', 0.5), panelling());
   const lockers: { x: number; name: string }[] = [];
   let newPlate: THREE.Mesh | null = null;
@@ -264,7 +264,7 @@ function lockerRoom(scene: THREE.Scene, names: string[]) {
       g.add(vent);
     }
     const name = names[i] ?? '';
-    const blank = !name || i === names.length - 1;
+    const blank = !name || (blankLast && i === names.length - 1);
     const nm = box(step - 2.2, 0.9, 0.12, blank ? mat('#b8955a', 0.3, { metalness: 0.6 }) : plate(name.toUpperCase(), 256, 64, '700 28px Georgia, serif'));
     nm.position.set(x, 11.3, -16.6);
     g.add(nm);

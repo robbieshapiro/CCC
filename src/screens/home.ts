@@ -52,7 +52,7 @@ export function home(snap: Snapshot) {
       const feats = p.feats.map((f) => featById(f)?.icon ?? '').join('');
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who">${portrait(p.avatar, 34)}<span>${esc(p.name)}${feats ? ` <small>${feats}</small>` : ''}<em>${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · ${when(r.last!)}` : 'yet to play'}</em></span></td>
+        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${feats ? ` <small>${feats}</small>` : ''}<em>${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · ${when(r.last!)}` : 'yet to play'}</em></span></a></td>
         ${cells}
         <td class="num tot">${r.best ? r.best.total : ''}</td>
         <td class="num topar ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>
@@ -63,7 +63,7 @@ export function home(snap: Snapshot) {
   const plaque = snap.champions.length
     ? snap.champions
         .slice(0, 6)
-        .map((c) => `<li><span>${monthName(c.month)}</span><b>${c.playerIds.map((id) => esc(player(id)?.name ?? '?')).join(' & ')}</b><em>${toParLabel(c.total - c.par)}</em></li>`)
+        .map((c) => `<li><span>${monthName(c.month)}</span><b>${c.playerIds.map((id) => `<a href="#/member/${id}">${esc(player(id)?.name ?? '?')}</a>`).join(' & ')}</b><em>${toParLabel(c.total - c.par)}</em></li>`)
         .join('')
     : `<li class="empty">The first name goes up when ${monthName(snap.month).split(' ')[0]} closes.</li>`;
 

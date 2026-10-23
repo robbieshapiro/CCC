@@ -23,12 +23,13 @@ export function muteButton(): string {
   return `<button class="mute" data-mute aria-pressed="${on}" aria-label="${on ? 'Sound on' : 'Sound off'}">${on ? '🔊' : '🔇'}</button>`;
 }
 
-export function header(groupName: string, active: 'month' | 'card'): string {
+export function header(groupName: string, active: 'month' | 'card' | 'lockers'): string {
   return `
     <header class="top">
       <a class="brand" href="#/">${crest(30, 'h')}<span><b>Claude Country Club</b><small>${esc(groupName)}</small></span></a>
       <nav>
         <a href="#/" class="${active === 'month' ? 'on' : ''}">This Month</a>
+        <a href="#/lockers" class="${active === 'lockers' ? 'on' : ''}">Locker Room</a>
         <a href="#/card" class="${active === 'card' ? 'on' : ''}">Member Card</a>
         ${muteButton()}
       </nav>
