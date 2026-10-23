@@ -447,3 +447,31 @@ main.invite { max-width: none; min-height: 100svh; padding-block: 32px; place-it
 .notice-live li span { display: grid; gap: 2px; overflow-wrap: anywhere; }
 .notice-live li small { color: var(--muted); font-size: 12px; }
 .notice-live .link { font-size: 13px; flex: none; }
+
+/* Locker room, member profiles */
+td.who a { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+td.who a:hover span { text-decoration: underline; }
+.plaque li b a { color: inherit; text-decoration: none; }
+.plaque li b a:hover { text-decoration: underline; }
+.locker-room { position: relative; height: min(56vh, 460px); border-radius: 8px; overflow: hidden; background: #2a1d14; margin-bottom: 18px; border: 1px solid var(--line); }
+.locker-room canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
+.room-hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); margin: 0; padding: 4px 12px; border-radius: 999px; background: rgba(22, 59, 44, 0.85); color: var(--cream); font-size: 12px; font-weight: 700; white-space: nowrap; pointer-events: none; }
+.roster ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.roster a { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; color: inherit; text-decoration: none; border: 1px solid var(--line); }
+.roster a:hover { border-color: var(--gold); }
+.roster span { display: grid; line-height: 1.2; }
+.roster small { color: var(--muted); font-size: 12px; }
+.profile-stage { margin-top: 14px; padding: 8px; }
+.profile-stage .stage { height: 320px; }
+.stats { margin-top: 14px; }
+.stats h2 { margin-top: 0; }
+.stats h2 + .stat-row { margin-bottom: 14px; }
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stat-row div { display: grid; text-align: center; padding: 10px 4px; border-radius: 6px; background: rgba(22, 59, 44, 0.06); }
+.stat-row b { font-family: var(--serif); font-size: 26px; color: var(--green); }
+.stat-row small { color: var(--muted); font-size: 12px; font-weight: 700; }
+.stats .table-wrap { margin-bottom: 16px; }
+@media (max-width: 560px) {
+  .top nav a { padding: 6px 9px; font-size: 13px; }
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+}

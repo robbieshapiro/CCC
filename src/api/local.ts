@@ -35,6 +35,10 @@ const rand = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n))
 const inviteCode = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(7)), (b, i) => (i === 3 ? '-' : i % 2 ? '23456789'[b % 8] : 'abcdefghjkmnpqrstuvwxyz'[b % 23])).join('');
 const strip = ({ groupId: _g, ...r }: DbRound): Round => r;
+const career = (rs: Round[]) => {
+  const d = rs.map((r) => r.total - r.par);
+  return { rounds: d.length, best: d.length ? Math.min(...d) : null, avg: d.length ? Math.round((d.reduce((a, b) => a + b, 0) / d.length) * 10) / 10 : null };
+};
 
 function playerByToken(db: Db, token: string): DbPlayer {
   const p = db.players.find((x) => x.token === token);
@@ -109,6 +113,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
           joined: p.joined,
           wins: wins(p.id),
           feats: [...new Set([...mine.filter((r) => r.playerId === p.id).flatMap((r) => r.feats), ...(wins(p.id) ? ['champion'] : [])])],
+          career: career(mine.filter((r) => r.playerId === p.id)),
         })),
       rounds: mine.filter((r) => r.month === month).map(strip),
       champions,
@@ -125,7 +130,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     const total = holes.reduce((a, b) => a + b, 0);
     const feats = [...new Set(r.feats)];
     if (total < course.par) feats.push('underpar');
-    db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, createdAt: new Date().toISOString() });
+    const spots = r.spots?.length === holes.length ? r.spots.map((p) => (p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null)) : null;
+    db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, createdAt: new Date().toISOString() });
     save(db);
   },
 
@@ -252,7 +258,16 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
           });
           const total = holes.reduce((a, c) => a + c, 0);
           const day = m === month ? Math.max(1, Math.min(28, new Date().getUTCDate() - k - i)) : 10 + k * 7 + i;
-          db.rounds.push({ playerId: p.id, groupId: me.groupId, month: m, course: course.id, holes, total, par: course.par, feats: total < course.par ? ['underpar'] : [], createdAt: `${m}-${String(day).padStart(2, '0')}T17:${10 + i * 7}:00.000Z` });
+          // each buddy's first round this month was played today, so they stand on the course
+          const today = m === month && k === 0;
+          const spots = today
+            ? course.holes.map((h) => {
+                const at = h.par === 3 ? h.cup : h.flyover[1];
+                return { x: Math.round(at.x + (rng.next() - 0.5) * 30), y: Math.round(at.y + (rng.next() - 0.5) * 30) };
+              })
+            : null;
+          const createdAt = today ? new Date(Date.now() - (i + 1) * 3_600_000).toISOString() : `${m}-${String(day).padStart(2, '0')}T17:${10 + i * 7}:00.000Z`;
+          db.rounds.push({ playerId: p.id, groupId: me.groupId, month: m, course: course.id, holes, total, par: course.par, feats: total < course.par ? ['underpar'] : [], spots, createdAt });
         }
     });
     save(db);

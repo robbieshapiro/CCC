@@ -37,7 +37,14 @@ export const supabaseApi: Api = {
   signIn: (name, pin) => rpc('sign_in', { p_name: name, p_pin: pin }),
   snapshot: (s) => rpc<Snapshot>('get_snapshot', { p_token: s.token }),
   submitRound: async (s, r) => {
-    await rpc('submit_round', { p_token: s.token, p_course: r.course, p_holes: r.holes, p_pars: r.pars, p_feats: r.feats });
+    const args = { p_token: s.token, p_course: r.course, p_holes: r.holes, p_pars: r.pars, p_feats: r.feats };
+    try {
+      await rpc('submit_round', { ...args, p_spots: r.spots ?? null });
+    } catch (err) {
+      // a database without tee-shot spots yet: the score still counts
+      if (!/submit_round|function|schema cache/i.test((err as Error).message)) throw err;
+      await rpc('submit_round', args);
+    }
   },
   saveAvatar: async (s, avatar) => {
     await rpc('save_avatar', { p_token: s.token, p_avatar: avatar });

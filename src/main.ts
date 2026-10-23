@@ -8,6 +8,8 @@ import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
 import { closeRound, round } from './screens/round';
+import { leaveLockers, lockers } from './screens/lockers';
+import { leaveMember, member } from './screens/member';
 import { onSnapshot, refresh, startPolling } from './state';
 import { esc, muteButton, render } from './ui';
 
@@ -19,6 +21,8 @@ document.querySelector<HTMLLinkElement>('link[rel=icon]')?.setAttribute('href', 
 async function router() {
   closeRound();
   leaveCard();
+  leaveLockers();
+  leaveMember();
   closeWelcome();
   const hash = location.hash.replace(/^#\/?/, '');
   const [page, arg, extra] = hash.split('/');
@@ -39,7 +43,9 @@ async function router() {
       return welcome(s);
     }
     if (page === 'round') return round(s);
-    if (page === 'card') return card(s);
+    if (page === 'card' || (page === 'member' && arg === s.me)) return card(s);
+    if (page === 'member' && arg) return member(s, arg);
+    if (page === 'lockers') return lockers(s);
     return home(s);
   } catch (err) {
     render(`<main class="narrow"><h1>Something went wrong</h1><p class="error">${esc((err as Error).message)}</p>

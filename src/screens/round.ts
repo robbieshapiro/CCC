@@ -3,7 +3,9 @@ import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { crest } from '../brand';
 import { sfx } from '../fx/sound';
-import { Course3D, scoreName } from '../golf3d/engine';
+import { Course3D, scoreName, type Ghost } from '../golf3d/engine';
+import { todayInGameTz } from '../day';
+import type { Spot } from '../api/types';
 import { courseFor } from '../golf3d/courses';
 import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
@@ -18,6 +20,20 @@ export function closeRound() {
   game?.destroy();
   game = null;
   document.body.classList.remove('court-open');
+}
+
+// Everyone else who has played today: their best round of the day, on today's pins and wind.
+function todaysField(snap: Snapshot): Ghost[] {
+  const best = new Map<string, Snapshot['rounds'][number]>();
+  for (const r of snap.rounds) {
+    if (r.playerId === snap.me || !r.spots || todayInGameTz(new Date(r.createdAt)) !== snap.today) continue;
+    const b = best.get(r.playerId);
+    if (!b || r.total < b.total) best.set(r.playerId, r);
+  }
+  return [...best.values()].flatMap((r) => {
+    const p = snap.players.find((x) => x.id === r.playerId);
+    return p ? [{ name: p.name, avatar: p.avatar, spots: r.spots!, holes: r.holes }] : [];
+  });
 }
 
 export async function round(snap: Snapshot) {
@@ -40,7 +56,9 @@ export async function round(snap: Snapshot) {
     render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/">Back to the club</a></main>`);
     return;
   }
+  game.setGhosts(todaysField(snap));
   const scores: number[] = [];
+  const spots: Spot[] = [];
   const feats = new Set<string>();
   for (let i = 0; i < course.holes.length; i++) {
     const h = course.holes[i];
@@ -48,6 +66,7 @@ export async function round(snap: Snapshot) {
     const r = await game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i > 0 });
     if (quit || !game) return;
     scores.push(r.strokes);
+    spots.push(r.spot);
     r.feats.forEach((f) => feats.add(f));
   }
   const total = scores.reduce((a, b) => a + b, 0);
@@ -55,7 +74,7 @@ export async function round(snap: Snapshot) {
   const best = !before || toPar < before.total - before.par;
   let posted = true;
   try {
-    await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats] });
+    await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots });
   } catch {
     posted = false;
   }

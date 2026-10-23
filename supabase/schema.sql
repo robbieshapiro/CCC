@@ -34,6 +34,8 @@ create table if not exists rounds (
   feats text[] not null default '{}',
   created_at timestamptz not null default now()
 );
+-- where each tee shot came to rest, per hole ({x, y} or null), so today's players can stand on the course
+alter table rounds add column if not exists spots jsonb;
 create index if not exists rounds_group_month on rounds (group_id, month);
 
 drop table if exists hole_scores cascade;
@@ -271,9 +273,10 @@ begin
   update notices set live = false where id = p_id and group_id = me.group_id;
 end $$;
 
-create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[]) returns void
+drop function if exists submit_round(uuid, text, int[], int[], text[]);
+create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[], p_spots jsonb default null) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[];
+declare me players := player_for(p_token); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
 begin
   if n not between 1 and 9 or n <> coalesce(array_length(p_pars, 1), 0) then raise exception 'That round is not a full card.'; end if;
   if char_length(coalesce(p_course, '')) not between 1 and 40 then raise exception 'Unknown course.'; end if;
@@ -284,8 +287,14 @@ begin
   end loop;
   f := array(select distinct x from unnest(coalesce(p_feats, '{}')) x where x in ('ace', 'chipin', 'cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'nineteenth'));
   if (select sum(x) from unnest(clean) x) < par then f := f || 'underpar'::text; end if;
-  insert into rounds (player_id, group_id, month, course, holes, total, par, feats)
-  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f);
+  -- one spot per hole, numbers only, clamped to the map
+  if jsonb_typeof(p_spots) = 'array' and jsonb_array_length(p_spots) = n then
+    sp := (select jsonb_agg(case when jsonb_typeof(e->'x') = 'number' and jsonb_typeof(e->'y') = 'number'
+        then jsonb_build_object('x', round(greatest(-2000, least(2000, (e->>'x')::numeric)), 1), 'y', round(greatest(-2000, least(2000, (e->>'y')::numeric)), 1))
+        else 'null'::jsonb end order by k) from jsonb_array_elements(p_spots) with ordinality as t(e, k));
+  end if;
+  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots)
+  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp);
 end $$;
 
 create or replace function save_avatar(p_token uuid, p_avatar jsonb) returns void
@@ -310,6 +319,7 @@ begin
         'id', pl.id, 'name', pl.name, 'avatar', pl.avatar, 'joined', pl.created_at,
         -- a win is the lowest best round of a finished month; ties all win
         'wins', (select count(*) from month_bests(me.group_id) b where b.player_id = pl.id and b.r = 1 and b.month < m),
+        'career', (select json_build_object('rounds', count(*), 'best', min(total - par), 'avg', round(avg(total - par), 1)) from rounds where player_id = pl.id),
         'feats', (select coalesce(json_agg(distinct f), '[]') from (
             select unnest(feats) f from rounds where player_id = pl.id
             union select 'champion' where exists (select 1 from month_bests(me.group_id) b where b.player_id = pl.id and b.r = 1 and b.month < m)
@@ -319,7 +329,7 @@ begin
     ), '[]'),
     'rounds', coalesce((
       select json_agg(json_build_object('playerId', r.player_id, 'month', r.month, 'course', r.course, 'holes', r.holes,
-        'total', r.total, 'par', r.par, 'feats', r.feats, 'createdAt', r.created_at) order by r.created_at)
+        'total', r.total, 'par', r.par, 'feats', r.feats, 'spots', r.spots, 'createdAt', r.created_at) order by r.created_at)
       from rounds r where r.group_id = me.group_id and r.month = m
     ), '[]'),
     'champions', coalesce((
@@ -335,7 +345,7 @@ revoke all on function player_for(uuid) from public, anon, authenticated;
 revoke all on function month_bests(uuid) from public, anon, authenticated;
 grant execute on function join_group(text, text, text) to anon;
 grant execute on function get_snapshot(uuid) to anon;
-grant execute on function submit_round(uuid, text, int[], int[], text[]) to anon;
+grant execute on function submit_round(uuid, text, int[], int[], text[], jsonb) to anon;
 grant execute on function save_avatar(uuid, jsonb) to anon;
 revoke all on function rand_code(int) from public, anon, authenticated;
 grant execute on function create_invite(uuid, text) to anon;

@@ -26,7 +26,11 @@ export type Player = {
   wins: number; // months won
   feats: string[];
   joined: string; // ISO date, for the member number
+  career?: { rounds: number; best: number | null; avg: number | null }; // every round they've played, to par
 };
+
+// Where a tee shot came to rest, in course feet. Null if it found the water or went out.
+export type Spot = { x: number; y: number } | null;
 
 // One finished round: all holes of the month's course in one go.
 export type Round = {
@@ -37,6 +41,7 @@ export type Round = {
   total: number;
   par: number;
   feats: string[];
+  spots?: Spot[] | null; // one per hole
   createdAt: string;
 };
 
@@ -66,7 +71,7 @@ export interface Api {
   join(invite: string, name: string, pin: string): Promise<Session>;
   signIn(name: string, pin: string): Promise<Session>; // returning members: no code needed
   snapshot(session: Session): Promise<Snapshot>;
-  submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[] }): Promise<void>;
+  submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[]; spots?: Spot[] }): Promise<void>;
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
   listInvites(session: Session): Promise<Invite[]>;

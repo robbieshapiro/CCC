@@ -20,8 +20,39 @@ import type { Hole, Shot, V2 } from './types';
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
 
-export type HoleResult = { strokes: number; feats: string[] };
+export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
+// A member who played today, standing where their tee shot finished on each hole.
+export type Ghost = { name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
 type Mode = 'fly' | 'aim' | 'meter' | 'swing' | 'roll' | 'done' | 'cart';
+
+// A floating name card over another member: their name, and what they made on this hole.
+function nameTag(name: string, score: string) {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 84;
+  const x = c.getContext('2d')!;
+  x.fillStyle = 'rgba(22,59,44,0.88)';
+  x.beginPath();
+  x.roundRect(4, 4, 248, 76, 18);
+  x.fill();
+  x.strokeStyle = '#e6cf9f';
+  x.lineWidth = 3;
+  x.stroke();
+  x.fillStyle = '#f3ecdc';
+  x.textAlign = 'center';
+  x.font = '700 30px Georgia, serif';
+  x.fillText(name.length > 12 ? `${name.slice(0, 11)}…` : name, 128, 40);
+  x.fillStyle = '#e6cf9f';
+  x.font = '600 22px system-ui, sans-serif';
+  x.fillText(score, 128, 68);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true, fog: false, sizeAttenuation: false }));
+  // the same size on screen near or far, so you can read who's down the fairway
+  s.scale.set(0.15, 0.05, 1);
+  s.renderOrder = 10;
+  return s;
+}
 
 const html = (s: string) => {
   const t = document.createElement('template');
@@ -93,6 +124,9 @@ export class Course3D {
   private visits = 0; // beverage cart stops this round
   private lastDrink: Drink | null = null;
   private total = { strokes: 0, par: 0 };
+  private ghosts: Ghost[] = [];
+  private onCourse: { golfer: Golfer; objs: THREE.Object3D[]; at: THREE.Vector3 }[] = [];
+  private spot: V2 | null | undefined; // the tee shot's resting place, once it has one
 
   private mode: Mode = 'fly';
   private pos: V2 = { x: 0, y: 0 };
@@ -192,6 +226,7 @@ export class Course3D {
     window.removeEventListener('keydown', this.onKey);
     this.world?.dispose();
     this.cart?.dispose();
+    this.clearGhosts();
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.host.innerHTML = '';
@@ -219,6 +254,7 @@ export class Course3D {
     this.faded.clear();
     this.clock = 0;
     this.strokes = 0;
+    this.spot = undefined;
     this.practice = false;
     this.zones = new Set();
     this.pos = { ...hole.tee };
@@ -233,6 +269,7 @@ export class Course3D {
     this.petalsFor(hole);
     this.hud(total);
     this.miniBase = null;
+    this.placeGhosts();
     if (opts.cart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k));
     this.startFlyover();
     return new Promise((res) => (this.resolve = res));
@@ -857,6 +894,7 @@ export class Course3D {
       window.setTimeout(() => this.mode === 'roll' && this.toAim(), 1200);
       return;
     }
+    if (this.spot === undefined) this.spot = r.holed ? { ...this.hole.cup } : r.penalty ? null : { ...r.end };
     if (r.holed) {
       sfx('pop');
       window.setTimeout(() => sfx('cheer'), 250);
@@ -895,7 +933,7 @@ export class Course3D {
     const pin = this.world?.root.getObjectByName('pin');
     if (pin) pin.position.y += 1.2;
     this.orbit = 0;
-    window.setTimeout(() => this.resolve?.({ strokes: this.strokes, feats: [...new Set(feats)] }), 2800 + delay);
+    window.setTimeout(() => this.resolve?.({ strokes: this.strokes, feats: [...new Set(feats)], spot: this.spot ?? null }), 2800 + delay);
   }
 
   private drawTrail() {
@@ -903,6 +941,58 @@ export class Course3D {
     this.trailPts.forEach((p, i) => attr.setXYZ(i, p.x, p.y, p.z));
     attr.needsUpdate = true;
     this.trail.geometry.setDrawRange(0, this.trailPts.length);
+  }
+
+  // ---------- today's players ----------
+
+  setGhosts(g: Ghost[]) {
+    this.ghosts = g;
+  }
+
+  private clearGhosts() {
+    for (const o of this.onCourse) {
+      o.objs.forEach((x) => this.scene.remove(x));
+      o.golfer.dispose();
+    }
+    this.onCourse = [];
+  }
+
+  // Each one stands beside their ball, facing the flag, with their name and score on this hole overhead.
+  private placeGhosts() {
+    this.clearGhosts();
+    const i = this.number - 1;
+    for (const g of this.ghosts) {
+      const s = g.spots[i];
+      if (!s) continue;
+      const toCup = Math.atan2(this.hole.cup.y - s.y, this.hole.cup.x - s.x);
+      const ball = props.mesh(new THREE.SphereGeometry(BALL_R, 12, 10), new THREE.MeshStandardMaterial({ color: '#f4f1ea', roughness: 0.4 }));
+      ball.position.copy(w3(s.x, s.y, heightAt(this.hole, s.x, s.y) + BALL_R));
+      const golfer = new Golfer(specOf(g.avatar));
+      golfer.holdClub(g.holes[i] === 1 ? 'putter' : 'iron');
+      golfer.setPose('idle');
+      // a pace back and to the side, so they don't stand on the line
+      const sx = s.x - Math.cos(toCup) * 2.5 + Math.sin(toCup) * 2.5;
+      const sy = s.y - Math.sin(toCup) * 2.5 - Math.cos(toCup) * 2.5;
+      golfer.group.position.copy(w3(sx, sy, heightAt(this.hole, sx, sy)));
+      golfer.group.rotation.y = Math.PI / 2 - toCup;
+      const n = g.holes[i];
+      const tag = nameTag(g.name, n === 1 ? 'Hole in one' : `Made ${n} · ${scoreName(n, this.hole.par)}`);
+      tag.position.copy(golfer.group.position).add(new THREE.Vector3(0, 8.5 * golfer.spec.height, 0));
+      // stack the cards of players who finished close together, so both names read
+      const k = this.onCourse.filter((o) => o.at.distanceTo(golfer.group.position) < 30).length;
+      tag.center.set(0.5, -k * 1.1);
+      this.scene.add(ball, golfer.group, tag);
+      this.onCourse.push({ golfer, objs: [ball, golfer.group, tag], at: golfer.group.position.clone() });
+    }
+  }
+
+  // Step aside when your own ball comes to rest beside theirs.
+  private updateGhosts(dt: number) {
+    for (const o of this.onCourse) {
+      const near = o.at.distanceTo(this.ball.position) < 7 || o.at.distanceTo(this.golfer.group.position) < 5;
+      o.objs.forEach((x) => (x.visible = !near));
+      if (!near) o.golfer.update(dt);
+    }
   }
 
   private placeBall() {
@@ -1163,6 +1253,7 @@ export class Course3D {
     // you're the one talking to Daisy, so you step out of her close-up
     this.golfer.group.visible = !(this.mode === 'cart' && this.cart?.closeUp(this.camera.aspect));
     this.golfer.update(dt);
+    this.updateGhosts(dt);
 
     this.guide();
     this.fadeOccluders(dt);

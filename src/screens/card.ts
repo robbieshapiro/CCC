@@ -40,7 +40,7 @@ export function card(snap: Snapshot) {
         </div>
       </section>
       <section class="panel locker-wrap">
-        <div class="card-head"><h2>Your locker</h2><a class="link" href="#/welcome">Revisit the locker room</a></div>
+        <div class="card-head"><h2>Your locker</h2><a class="link" href="#/lockers">Visit the locker room</a></div>
         <div class="locker-grid"><div class="stage" id="stage"></div><div id="panel"></div></div>
       </section>
       <h2>Trophy cabinet</h2>
