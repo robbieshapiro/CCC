@@ -49,9 +49,11 @@ export function feedbackPanel(admin: boolean) {
 const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
 
 export async function bindFeedbackPanel() {
+  if (!document.getElementById('fb-list')) return;
+  const s = requireSession();
+  const first = await api.listFeedback(s).catch(() => [] as Feedback[]);
   const list = document.getElementById('fb-list');
   if (!list) return;
-  const s = requireSession();
   const draw = (items: Feedback[]) => {
     const open = items.filter((f) => !f.done).length;
     document.getElementById('fb-count')!.textContent = items.length ? `${open} open` : '';
@@ -73,5 +75,5 @@ export async function bindFeedbackPanel() {
       };
     });
   };
-  draw(await api.listFeedback(s).catch(() => []));
+  draw(first);
 }

@@ -5,13 +5,13 @@ import { courseFor, monthOf } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
-import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Round } from './types';
+import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
 type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[] };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[] };
 
 const KEY = 'ccc-local-db';
 
@@ -191,6 +191,36 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     if (!me.admin) throw new Error('Only the committee can manage feedback.');
     const f = (db.feedback ?? []).find((x) => x.id === id && x.groupId === me.groupId);
     if (f) f.done = done;
+    save(db);
+  },
+
+  async postNotice(session, body, asReginald) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can post notices.');
+    const clean = body.trim();
+    if (!clean || clean.length > 1000) throw new Error('Keep it under 1000 characters, and not empty.');
+    const list = (db.notices ??= []);
+    list.push({ id: list.length + 1, groupId: me.groupId, authorId: me.id, author: me.name, body: clean, asReginald, live: true, createdAt: new Date().toISOString() });
+    save(db);
+  },
+
+  async listNotices(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    return (db.notices ?? [])
+      .filter((n) => n.groupId === me.groupId && n.live)
+      .reverse()
+      .slice(0, 5)
+      .map(({ id, body, asReginald, authorId, createdAt }) => ({ id, body, asReginald, createdAt, author: db.players.find((p) => p.id === authorId)?.name ?? null }));
+  },
+
+  async takeDownNotice(session, id) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can take notices down.');
+    const n = (db.notices ?? []).find((x) => x.id === id && x.groupId === me.groupId);
+    if (n) n.live = false;
     save(db);
   },
 

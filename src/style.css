@@ -426,3 +426,24 @@ main.invite { max-width: none; min-height: 100svh; padding-block: 32px; place-it
 .feedback-list li p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .feedback-list li .link { justify-self: start; font-size: 13px; }
 .feedback-list li.done { opacity: 0.5; }
+
+/* Club notices: news from the admin at the top of the home page, and the admin's composer */
+.notices { display: grid; gap: 10px; }
+.notice { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 14px 40px 14px 14px; border-radius: 6px; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--gold); }
+.notice-from { margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.notice-from b { font-family: var(--serif); font-size: 19px; color: var(--green); }
+.notice-from small { color: var(--muted); font-size: 12px; }
+.notice-body { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.notice-x { position: absolute; top: 6px; right: 8px; border: 0; background: none; cursor: pointer; font-size: 22px; line-height: 1; color: var(--muted); padding: 4px 8px; }
+.notice-composer { display: grid; gap: 12px; border-top: 3px solid var(--gold); }
+.notice-composer p { margin: 4px 0 0; }
+.notice-composer textarea { font: 500 16px/1.45 var(--font); padding: 11px 13px; border-radius: 4px; border: 1px solid var(--line); background: #fff; color: var(--ink); resize: vertical; }
+.notice-composer .error:empty { display: none; }
+.notice-sign { display: flex; gap: 18px; }
+.notice-sign label { display: flex; gap: 6px; align-items: center; font-size: 13px; letter-spacing: 0.08em; }
+.notice-live { list-style: none; margin: 0; padding: 0; display: grid; }
+.notice-live:empty { display: none; }
+.notice-live li { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.notice-live li span { display: grid; gap: 2px; overflow-wrap: anywhere; }
+.notice-live li small { color: var(--muted); font-size: 12px; }
+.notice-live .link { font-size: 13px; flex: none; }

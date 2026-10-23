@@ -72,6 +72,18 @@ create table if not exists feedback (
 );
 alter table feedback enable row level security;
 
+-- Notices: the admin posts club news to every member, signed as Reginald or as themselves.
+create table if not exists notices (
+  id bigserial primary key,
+  group_id uuid not null references groups on delete cascade,
+  author_id uuid references players on delete set null,
+  body text not null check (char_length(body) between 1 and 1000),
+  as_reginald boolean not null default true,
+  live boolean not null default true,
+  created_at timestamptz not null default now()
+);
+alter table notices enable row level security;
+
 -- random lowercase letters and digits, no look-alikes (no i, l, o, 0, 1)
 create or replace function rand_code(n int) returns text
 language sql volatile set search_path = public, extensions as $$
@@ -230,6 +242,35 @@ begin
   update feedback set done = p_done where id = p_id and group_id = me.group_id;
 end $$;
 
+create or replace function post_notice(p_token uuid, p_body text, p_as_reginald boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); clean text := trim(p_body);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can post notices.'; end if;
+  if char_length(clean) not between 1 and 1000 then raise exception 'Keep it under 1000 characters, and not empty.'; end if;
+  insert into notices (group_id, author_id, body, as_reginald) values (me.group_id, me.id, clean, p_as_reginald);
+end $$;
+
+-- every member reads the live notices, newest first
+create or replace function list_notices(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((
+    select json_agg(json_build_object('id', n.id, 'body', n.body, 'asReginald', n.as_reginald,
+      'author', (select name from players where id = n.author_id), 'createdAt', n.created_at) order by n.created_at desc)
+    from (select * from notices where group_id = me.group_id and live order by created_at desc limit 5) n
+  ), '[]');
+end $$;
+
+create or replace function take_down_notice(p_token uuid, p_id bigint) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can take notices down.'; end if;
+  update notices set live = false where id = p_id and group_id = me.group_id;
+end $$;
+
 create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[]) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[];
@@ -305,6 +346,9 @@ grant execute on function sign_in(text, text) to anon;
 grant execute on function submit_feedback(uuid, text, text) to anon;
 grant execute on function list_feedback(uuid) to anon;
 grant execute on function set_feedback_done(uuid, bigint, boolean) to anon;
+grant execute on function post_notice(uuid, text, boolean) to anon;
+grant execute on function list_notices(uuid) to anon;
+grant execute on function take_down_notice(uuid, bigint) to anon;
 
 -- Create your group (change the name and code). The first person to join with the code runs the club;
 -- after that, new members need a personal invitation from them. Share https://YOUR-SITE/#/join/<code> to start:

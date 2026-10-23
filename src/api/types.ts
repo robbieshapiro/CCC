@@ -57,6 +57,8 @@ export type Snapshot = {
 export type Invite = { id: string; name: string; code: string; createdAt: string; usedBy: string | null; usedAt: string | null };
 // A note to the Committee. Only the admin reads them.
 export type Feedback = { id: number; from: string | null; body: string; context: string | null; done: boolean; createdAt: string };
+// Club news from the admin, signed as Reginald or as themselves.
+export type Notice = { id: number; body: string; asReginald: boolean; author: string | null; createdAt: string };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -72,4 +74,7 @@ export interface Api {
   submitFeedback(session: Session, body: string, context: string): Promise<void>;
   listFeedback(session: Session): Promise<Feedback[]>;
   setFeedbackDone(session: Session, id: number, done: boolean): Promise<void>;
+  postNotice(session: Session, body: string, asReginald: boolean): Promise<void>;
+  listNotices(session: Session): Promise<Notice[]>;
+  takeDownNotice(session: Session, id: number): Promise<void>;
 }

@@ -199,8 +199,13 @@ export function inviteMaker(admin: boolean) {
 const canShare = () => typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
 
 export async function bindInviteMaker() {
+  if (!document.getElementById('invite-form')) return;
+  const s = requireSession();
+  const first = await api.listInvites(s).catch(() => [] as Invite[]);
+  // look the page up after the wait, so we wire whatever is on screen now
   const form = document.getElementById('invite-form') as HTMLFormElement | null;
-  if (!form) return;
+  if (!form || form.dataset.bound) return;
+  form.dataset.bound = '1';
   const list = document.getElementById('invite-list')!;
   const err = document.getElementById('invite-err')!;
   const draw = (invites: Invite[], fresh?: string) => {
@@ -227,8 +232,7 @@ export async function bindInviteMaker() {
       };
     });
   };
-  const s = requireSession();
-  draw(await api.listInvites(s).catch(() => []));
+  draw(first);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = document.getElementById('invite-name') as HTMLInputElement;
