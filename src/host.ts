@@ -51,23 +51,23 @@ export function hostChip(text: string, mood: Mood = 'dry', id = ''): string {
 const pick = <T,>(list: T[], seed: string) => list[[...seed].reduce((a, c) => a + c.charCodeAt(0), 0) % list.length];
 
 export const REGINALD = {
-  welcome: () => 'Good afternoon. Members only, I am afraid. Do sign in.',
-  invited: () => "You've been put up for membership. Choose a name and a four-digit PIN. The PIN is how the club knows it's you on any device, so do try to remember it.",
-  course: (name: string, par: number) => `This month the committee presents <b>${esc(name)}</b>. Three holes, par ${par}. Your best round counts.`,
-  nobody: (day: string) => pick(['Not a single round this month. The greens are, frankly, offended.', 'The board is empty. One of you might consider golf.'], day),
-  notYet: (n: number) => `${n} ${n === 1 ? 'member has' : 'members have'} posted a round. You have not. I merely observe.`,
+  welcome: () => "Good afternoon. Members only, I'm afraid. Do sign in, there's a good sort.",
+  invited: () => "Splendid. You've been put up for membership. Choose a name and a four-digit PIN. The PIN is your password hereafter, so do try to remember it. I shan't.",
+  course: (name: string, par: number) => `This month the Committee presents <b>${esc(name)}</b>. Three holes, par ${par}. Your lowest round takes the honours.`,
+  nobody: (day: string) => pick(['Not a single round this month. The greens are, frankly, offended.', 'The board stands empty. One of you might consider, and I say this gently, golf.'], day),
+  notYet: (n: number) => `${n} ${n === 1 ? 'member has' : 'members have'} posted a round. You, as yet, have not. I merely observe.`,
   leading: (toPar: string, day: string) =>
-    pick([`You lead the month at <b>${toPar}</b>. Do try not to let it go to your head.`, `<b>${toPar}</b> and top of the board. The staff are cautiously impressed.`], day),
-  behind: (who: string, toPar: string, gap: number) => `${esc(who)} leads at <b>${toPar}</b>, ${gap} ${gap === 1 ? 'stroke' : 'strokes'} ahead of you. One soldiers on.`,
+    pick([`You lead the month at <b>${toPar}</b>. Do try not to let it go to your head. It rarely ends well.`, `<b>${toPar}</b> and top of the board. The staff are cautiously impressed. I am reserving judgement.`], day),
+  behind: (who: string, toPar: string, gap: number) => `${esc(who)} leads at <b>${toPar}</b>, ${gap} ${gap === 1 ? 'stroke' : 'strokes'} ahead of you. Chin up. Stiff upper lip and all that.`,
   others: (who: string, toPar: string) => `${esc(who)} leads the month at <b>${toPar}</b>. The rest of you are, regrettably, also members.`,
   hole: (name: string, toPar: number, strokes: number) =>
-    strokes === 1 ? 'A hole in one. I shall have it engraved.'
+    strokes === 1 ? 'A hole in one! Good heavens. I shall have it engraved at once.'
     : toPar <= -2 ? `${name}. Extraordinary. I had to sit down.`
     : toPar === -1 ? 'A birdie. How very agreeable.'
-    : toPar === 0 ? 'Par. Perfectly respectable.'
-    : toPar === 1 ? 'A bogey. We have all been there, some of us more than others.'
+    : toPar === 0 ? 'Par. Perfectly respectable, as my father used to say of me.'
+    : toPar === 1 ? 'A bogey. We have all been there, some of us rather more often than others.'
     : toPar === 2 ? 'A double. We shan’t speak of it.'
-    : `A ${strokes}. We shan’t speak of it.`,
-  round: (toPar: string, best: boolean) => (best ? `<b>${toPar}</b>. A personal best. I've informed the committee.` : `<b>${toPar}</b> for the round. Your best still stands, which is something.`),
-  card: (wins: number) => (wins ? `${wins} monthly ${wins === 1 ? 'title' : 'titles'}. The wardrobe reflects it.` : 'No titles yet. Win a month and the pro shop opens up.'),
+    : `A ${strokes}. We shan’t speak of it. Ever.`,
+  round: (toPar: string, best: boolean) => (best ? `<b>${toPar}</b>. A personal best. I've informed the Committee, who were thrilled, in their way.` : `<b>${toPar}</b> for the round. Your best still stands, which is something.`),
+  card: (wins: number) => (wins ? `${wins} monthly ${wins === 1 ? 'title' : 'titles'}. The wardrobe reflects it.` : 'No titles yet. Win a month and the pro shop shall open its doors to you.'),
 };

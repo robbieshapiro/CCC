@@ -107,7 +107,7 @@ function arrival(scene: THREE.Scene) {
       g.add(bar);
     }
   }
-  const sign = box(14, 3, 0.4, [mat('#1b1d1c'), mat('#1b1d1c'), mat('#1b1d1c'), mat('#1b1d1c'), plate("CLAUDE COUNTRY CLUB", 512, 96, '600 44px Georgia, serif', '#163b2c', '#e6cf9f'), mat('#1b1d1c')] as unknown as THREE.Material);
+  const sign = box(14, 3, 0.4, [mat('#1b1d1c'), mat('#1b1d1c'), mat('#1b1d1c'), mat('#1b1d1c'), plate("C  C  C", 512, 96, '600 54px Georgia, serif', '#163b2c', '#e6cf9f'), mat('#1b1d1c')] as unknown as THREE.Material);
   sign.position.set(0, 13.5, -20);
   g.add(sign);
   const house = props.clubhouse(160);
@@ -244,9 +244,12 @@ function foyer(scene: THREE.Scene) {
   return { g, reg };
 }
 
+// A row of lockers: every member's name on a brass plate. The newest member's plate starts blank and is
+// engraved when Reginald shows them to it.
 function lockerRoom(scene: THREE.Scene, names: string[]) {
   const g = room(scene, 2000, mat('#7a5a3a', 0.5), panelling());
   const lockers: { x: number; name: string }[] = [];
+  let newPlate: THREE.Mesh | null = null;
   const n = Math.max(6, names.length + 2);
   const step = 52 / n;
   for (let i = 0; i < n; i++) {
@@ -263,9 +266,11 @@ function lockerRoom(scene: THREE.Scene, names: string[]) {
       g.add(vent);
     }
     const name = names[i] ?? '';
-    const nm = box(step - 2.2, 0.9, 0.12, name ? plate(name.toUpperCase(), 256, 64, '700 28px Georgia, serif') : mat('#b8955a', 0.3, { metalness: 0.6 }));
+    const blank = !name || i === names.length - 1;
+    const nm = box(step - 2.2, 0.9, 0.12, blank ? mat('#b8955a', 0.3, { metalness: 0.6 }) : plate(name.toUpperCase(), 256, 64, '700 28px Georgia, serif'));
     nm.position.set(x, 11.3, -16.6);
     g.add(nm);
+    if (i === names.length - 1) newPlate = nm;
     lockers.push({ x, name });
   }
   const bench = box(30, 1.2, 3, mat('#6b4428', 0.4));
@@ -280,7 +285,10 @@ function lockerRoom(scene: THREE.Scene, names: string[]) {
   rug.rotation.x = -Math.PI / 2;
   rug.position.set(0, 0.03, -4);
   g.add(rug);
-  return { g, lockers };
+  const engrave = () => {
+    if (newPlate) newPlate.material = plate(names[names.length - 1].toUpperCase(), 256, 64, '700 28px Georgia, serif');
+  };
+  return { g, lockers, engrave };
 }
 
 // ---------- the flow ----------
@@ -300,7 +308,8 @@ export async function welcome(snap0: Snapshot) {
     snap = await refresh();
   }
   const me = snap.players.find((p) => p.id === snap.me)!;
-  const others = snap.players.filter((p) => p.id !== snap.me).slice(0, 5);
+  // everyone already in the club, oldest first; the room fits about nine
+  const others = snap.players.filter((p) => p.id !== snap.me).slice(0, 9);
   const course = courseFor(snap.month);
   const rows = board(snap);
   let spec = specOf(me.avatar);
@@ -339,7 +348,7 @@ export async function welcome(snap0: Snapshot) {
   scene.add(sun);
   arrival(scene);
   const { reg } = foyer(scene);
-  const { lockers } = lockerRoom(scene, [...others.map((p) => p.name), me.name]);
+  const { lockers, engrave } = lockerRoom(scene, [...others.map((p) => p.name), me.name]);
   const actors: Golfer[] = [reg];
   const mates = others.map((p, i) => {
     const gl = new Golfer(specOf(p.avatar));
@@ -466,11 +475,11 @@ export async function welcome(snap0: Snapshot) {
 
   // 1. Arrival
   sfx('whoosh');
-  title('Members only', "Welcome to Claude Country Club");
+  title('Members only', 'Welcome to the CCC');
   go({ pos: v(0, 7, -2), look: v(0, 9, -120) }, 6);
   await wait(4200);
   if (skipped) return;
-  await say('Reginald', `Ah, ${me.name}. You'll be the new member. Do come in. Mind the gravel.`);
+  await say('Reginald', `Ah, ${me.name}. The new member, I presume. Do come in, and mind the gravel. It was raked this morning, and I shall know.`);
   if (skipped) return;
   title('', '');
 
@@ -481,13 +490,14 @@ export async function welcome(snap0: Snapshot) {
   await wait(1200);
   reg.setPose('clasp');
   const rules = [
-    "I'm Reginald. I keep the place running, and I keep score, which is rather the same thing.",
-    `Rule one. A new course every month. This month it's ${course.name}: three holes, par ${course.par}.`,
-    'Rule two. Full rounds only. Walk off halfway and it never happened.',
-    "Rule three. Your best round of the month goes on the board. Play as often as you like. The lowest best round takes the month, and the title.",
-    'You carry a driver, an iron, a wedge and a putter. The bigger the club, the smaller the sweet spot. Do tap in the gold.',
-    "Daisy runs the beverage cart. I'm told her Arnold Palmer steadies the hands. I'm told a great many things.",
-    'And members have been known to discover certain shortcuts. I couldn’t possibly comment. Now, the locker room. The chaps are waiting.',
+    'Reginald, Club Steward. Forty years, man and boy. I keep the place running and I keep the score, which, between ourselves, amounts to the same thing.',
+    `Now then. A new course opens every month. This month it is ${course.name}: three holes, par ${course.par}. Frightfully good fun, provided one keeps it out of the water.`,
+    'Play it as often as you please. Your lowest round of the month goes up on the board, and the lowest of the lot takes the Monthly Championship. Engraved, naturally.',
+    'Full rounds only, mind. Wander off at the turn and it never happened. I have a long memory and a short temper for that sort of thing.',
+    'You carry a driver, an iron, a wedge and a putter. Swing the driver flat out and the needle goes positively feral. Tap it in the gold, there\'s a good sort.',
+    'Win a month and the pro shop opens its doors. Gear is earned here, not bought. We are not animals.',
+    "Daisy runs the beverage cart. Her Arnold Palmer is said to steady the hands. Her conversation, rather less so.",
+    "And some members claim to have found the odd shortcut. I couldn't possibly comment. Come along, the locker room awaits.",
   ];
   for (const line of rules) {
     await say('Reginald', line);
@@ -495,9 +505,22 @@ export async function welcome(snap0: Snapshot) {
   }
 
   // 3. The locker room: meet the members
-  cut({ pos: v(2000, 9, 18), look: v(2000, 5, -14) });
-  go({ pos: v(2000, 8, 10), look: v(2000, 5, -14) }, 2.2);
-  await wait(1600);
+  // a slow walk along the row first, so you see every member's locker
+  const row0 = 2000 + lockers[0].x;
+  const rowN = 2000 + lockers[lockers.length - 1].x;
+  cut({ pos: v(row0 + 2, 7.5, 6), look: v(row0, 6, -16) });
+  go({ pos: v(rowN - 2, 7.5, 6), look: v(rowN, 6, -16) }, 3.6);
+  await wait(3600);
+  go({ pos: v(2000, 8, 12), look: v(2000, 5, -14) }, 1.6);
+  const names = others.map((p) => p.name);
+  const roll = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+  await say(
+    'Reginald',
+    names.length
+      ? `The members' lockers. ${roll}. A finer collection of handicaps you will not find in the county.`
+      : "The locker room. Rather quiet at present. You'll be among the founders, which I'm told is an honour.",
+  );
+  if (skipped) return;
   for (let i = 0; i < others.length; i++) {
     const p = others[i];
     const x = 2000 + lockers[i].x;
@@ -516,7 +539,12 @@ export async function welcome(snap0: Snapshot) {
   const mx = 2000 + mine.x;
   go({ pos: v(mx + 1, 6.2, 3), look: v(mx, 4.6, -11) }, 1.6);
   await wait(1200);
-  await say('Reginald', 'Your locker. The pro shop has left a few things. Do dress for the occasion.');
+  await say('Reginald', 'And this one, I believe, is yours.');
+  if (skipped) return;
+  engrave();
+  sfx('clank');
+  await wait(700);
+  await say('Reginald', 'There. Your name, in brass. The pro shop has left a few things. Do dress for the occasion; we have standards here, however faded.');
   if (skipped) return;
   const b = q('[data-builder]');
   b.hidden = false;

@@ -16,7 +16,7 @@ export async function invite(id: string) {
     render(`
       <main class="invite">
         <article class="letter in">
-          <header class="letter-head">${crest(64, 'lh')}<p class="eyebrow">Claude Country Club · Est. 2026</p></header>
+          <header class="letter-head">${crest(64, 'lh')}<p class="eyebrow">CCC · Est. 2026</p></header>
           <p class="letter-dear">${inv ? `Welcome back, ${esc(inv.name)}.` : 'Ah.'}</p>
           <p>${inv ? 'This invitation has already been accepted. Members sign in with their name and PIN.' : 'This invitation is not one of ours. Do ask the member who sent it for a fresh one.'}</p>
           ${inv || getSession() ? '<a class="btn accept" href="#/">To the clubhouse</a>' : ''}
@@ -35,21 +35,23 @@ export async function invite(id: string) {
         <span class="env-hint">Tap to break the seal</span>
       </button>
       <article class="letter" id="letter" hidden>
-        <header class="letter-head">${crest(64, 'lh')}<p class="eyebrow">Claude Country Club · Est. 2026</p></header>
+        <header class="letter-head">${crest(64, 'lh')}<p class="eyebrow">CCC · Est. 2026</p></header>
         <p class="letter-dear">Dear ${esc(dear)},</p>
-        <p>The Members' Committee has the pleasure of inviting you to join the Claude Country Club.</p>
-        <p>We are a private mini golf club for a few friends. A new course every month, as many rounds as you like, and only your best one counts. The beverage cart is staffed. The steward is watching.</p>
-        <p>Your membership code is below. It is yours alone and works once. Kindly scratch to reveal it.</p>
+        <p>The Committee is delighted to put you up for membership of the CCC.</p>
+        <p>A new course opens every month. Play it as often as you please; your lowest round of the month counts toward the Monthly Championship, and you'll collect gear along the way.</p>
+        <p>Your invitation code lies beneath the foil. You'll need it but once.</p>
         <div class="scratch" id="scratch">
-          <p class="scratch-code" aria-live="polite"><small>Your code</small><b id="code">${esc(inv.code)}</b></p>
+          <p class="scratch-code" aria-live="polite"><small>Your code</small><b id="code">${esc(inv.code.toUpperCase())}</b></p>
           <canvas id="foil" aria-hidden="true"></canvas>
         </div>
         <button class="link reveal-link" id="reveal">Can't scratch? Reveal it</button>
+        <button class="btn ghost copy-code" id="copy" hidden>Copy code</button>
         <div class="letter-sign">
           <span class="host-face">${reginaldSvg('pleased', 52)}</span>
-          <p>Yours, with the usual reservations,<b>Reginald</b><small>Club Steward, on behalf of the Committee</small></p>
+          <p>Yours most cordially,<b>Reginald</b><small>Club Steward</small></p>
         </div>
         <a class="btn accept" id="accept" href="#/join/${encodeURIComponent(inv.code)}/${encodeURIComponent(inv.name)}" hidden>Accept membership</a>
+        <p class="fine accept-note" id="accept-note" hidden>Next you'll choose a four-digit PIN. That's your password from then on: members sign in with their name and PIN.</p>
       </article>
     </main>`);
 
@@ -74,8 +76,18 @@ export async function invite(id: string) {
     revealed = true;
     document.getElementById('scratch')!.classList.add('done');
     document.getElementById('reveal')!.hidden = true;
-    const accept = document.getElementById('accept')!;
-    accept.hidden = false;
+    document.getElementById('accept')!.hidden = false;
+    document.getElementById('accept-note')!.hidden = false;
+    const copy = document.getElementById('copy') as HTMLButtonElement;
+    copy.hidden = false;
+    copy.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(document.getElementById('code')!.textContent ?? '');
+        copy.textContent = 'Copied';
+      } catch {
+        window.getSelection()?.selectAllChildren(document.getElementById('code')!);
+      }
+    };
     sfx('cheer');
   };
   document.getElementById('reveal')!.onclick = reveal;
