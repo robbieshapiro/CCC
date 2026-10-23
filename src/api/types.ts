@@ -55,6 +55,8 @@ export type Snapshot = {
 
 // A personal, single-use invitation. The link (#/invite/<id>) shows the code under the foil.
 export type Invite = { id: string; name: string; code: string; createdAt: string; usedBy: string | null; usedAt: string | null };
+// A note to the Committee. Only the admin reads them.
+export type Feedback = { id: number; from: string | null; body: string; context: string | null; done: boolean; createdAt: string };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -67,4 +69,7 @@ export interface Api {
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
   listInvites(session: Session): Promise<Invite[]>;
   peekInvite(id: string): Promise<InvitePeek | null>;
+  submitFeedback(session: Session, body: string, context: string): Promise<void>;
+  listFeedback(session: Session): Promise<Feedback[]>;
+  setFeedbackDone(session: Session, id: number, done: boolean): Promise<void>;
 }

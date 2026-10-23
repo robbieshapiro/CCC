@@ -60,6 +60,18 @@ create table if not exists invitations (
 );
 alter table invitations enable row level security;
 
+-- Feedback: any member can send the Committee a note; only the admin reads and clears them.
+create table if not exists feedback (
+  id bigserial primary key,
+  group_id uuid not null references groups on delete cascade,
+  player_id uuid references players on delete set null,
+  body text not null check (char_length(body) between 1 and 2000),
+  context text check (char_length(context) <= 120), -- e.g. 'After a 13 (+1) on The Highlands Course'
+  done boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table feedback enable row level security;
+
 -- random lowercase letters and digits, no look-alikes (no i, l, o, 0, 1)
 create or replace function rand_code(n int) returns text
 language sql volatile set search_path = public, extensions as $$
@@ -186,6 +198,38 @@ $$;
 
 
 
+create or replace function submit_feedback(p_token uuid, p_body text, p_context text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); clean text := trim(p_body);
+begin
+  if char_length(clean) not between 1 and 2000 then raise exception 'Keep it under 2000 characters, and not empty.'; end if;
+  -- a little rate limit: no more than 10 notes an hour each
+  if (select count(*) from feedback where player_id = me.id and created_at > now() - interval '1 hour') >= 10 then
+    raise exception 'That is plenty for one hour. The Committee will read them, eventually.';
+  end if;
+  insert into feedback (group_id, player_id, body, context) values (me.group_id, me.id, clean, left(nullif(trim(p_context), ''), 120));
+end $$;
+
+create or replace function list_feedback(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can read feedback.'; end if;
+  return coalesce((
+    select json_agg(json_build_object('id', f.id, 'from', (select name from players where id = f.player_id), 'body', f.body,
+      'context', f.context, 'done', f.done, 'createdAt', f.created_at) order by f.done, f.created_at desc)
+    from feedback f where f.group_id = me.group_id
+  ), '[]');
+end $$;
+
+create or replace function set_feedback_done(p_token uuid, p_id bigint, p_done boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can manage feedback.'; end if;
+  update feedback set done = p_done where id = p_id and group_id = me.group_id;
+end $$;
+
 create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[]) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[];
@@ -258,6 +302,9 @@ grant execute on function list_invites(uuid) to anon;
 grant execute on function peek_invite(text) to anon;
 revoke all on function invite_code() from public, anon, authenticated;
 grant execute on function sign_in(text, text) to anon;
+grant execute on function submit_feedback(uuid, text, text) to anon;
+grant execute on function list_feedback(uuid) to anon;
+grant execute on function set_feedback_done(uuid, bigint, boolean) to anon;
 
 -- Create your group (change the name and code). The first person to join with the code runs the club;
 -- after that, new members need a personal invitation from them. Share https://YOUR-SITE/#/join/<code> to start:

@@ -9,6 +9,7 @@ import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { esc, navigate, render } from '../ui';
+import { openFeedback } from './feedback';
 import { scoreClass } from './home';
 
 let game: Course3D | null = null;
@@ -73,9 +74,11 @@ export async function round(snap: Snapshot) {
       ${hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry')}
       <p class="fine">${posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
       <div class="summary-actions"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the club</button></div>
+      <button class="link" data-feedback>Leave feedback</button>
     </div>`;
   el.appendChild(sheet);
   sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => round(await refresh());
+  sheet.querySelector<HTMLButtonElement>('[data-feedback]')!.onclick = () => openFeedback(`After a ${total} (${toParLabel(toPar)}) on ${course.name}`, el);
   sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {
     closeRound();
     navigate('#/');
