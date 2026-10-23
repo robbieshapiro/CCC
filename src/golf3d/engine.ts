@@ -1,16 +1,20 @@
 // The 3D course: one renderer for the whole round, a fresh world per hole.
-// Pick a club, drag sideways to aim, pick a strike point for spin and shape, pull down for power, release, then tap the swing meter.
+// Pick a club, drag sideways to aim, pick a strike point for spin and shape, pull down to plan your power,
+// then the three-tap swing: tap to start, tap to set power on your plan, tap in the gold for accuracy.
 import * as THREE from 'three';
 import type { Avatar } from '../api/types';
 import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
+import { todayInGameTz } from '../day';
 import { CartGirl } from './cartgirl';
+import { conditionsFor, withPin, type Conditions } from './conditions';
 import { BAG, carryOf, CLUBS, DRINKS, type ClubId, type Drink } from './clubs';
 import { Golfer } from './golfer';
 import { BALL_R, G, launch, lieFactor, simulate, type Result } from './physics';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
 import { heightAt, inPoly, isWater, surfaceAt } from './terrain';
+import { accuracyError, goldHalf, OVERSWING, PURE, powerSpeed, returnSpeed } from './swing';
 import type { Hole, Shot, V2 } from './types';
 
 export const MAX_OVER = 3; // pick up at par + 3
@@ -32,6 +36,10 @@ export function scoreName(strokes: number, par: number) {
 }
 
 const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', putter: 'Putter' };
+
+// The swing bar: the impact point sits near the left end; power runs from there to the right, overswing last.
+const IMPACT = 0.12;
+const barX = (p: number) => IMPACT + 0.04 + (p / OVERSWING) * (1 - IMPACT - 0.04);
 
 function targetMarker() {
   const g = new THREE.Group();
@@ -91,7 +99,9 @@ export class Course3D {
   private aim = 0;
   private power = 0;
   private club: ClubId = 'driver';
-  private meter = { t: 0, pos: -1, speed: 1 };
+  // the swing in progress: the power bar fills, then the needle comes back for the accuracy tap
+  private meter = { phase: 'power' as 'power' | 'accuracy', p: 0, x: 0, speed: 0, half: 0 };
+  private wind: Conditions | null = null;
   private spin = 0; // -1 topspin .. 1 backspin, from where you strike the ball
   private shape = 0; // -1 draw .. 1 fade
   private strokes = 0;
@@ -106,7 +116,7 @@ export class Course3D {
   private landing = new THREE.Vector3();
   private orbit = 0;
   private resolve: ((r: HoleResult) => void) | null = null;
-  private drag: { x: number; y: number; aim: number; kind: '' | 'aim' | 'power' } | null = null;
+  private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
   private miniBase: HTMLCanvasElement | null = null;
   private faded = new Map<THREE.Object3D, number>();
   private onResize = () => this.resize();
@@ -194,11 +204,17 @@ export class Course3D {
     }
     this.cart?.dispose();
     this.cart = null;
+    // today's pin and wind, the same for every member
+    this.wind = conditionsFor(hole, todayInGameTz());
+    hole = withPin(hole, this.wind);
     this.hole = hole;
     this.number = number;
     this.total = total;
     this.world = buildWorld(hole, number);
     this.scene.add(this.world.root);
+    // the flag streams the way the wind blows
+    const pin = this.world.root.getObjectByName('pin');
+    if (pin && this.wind.mph) pin.rotation.y = Math.PI / 2 - this.wind.toward;
     this.faded.clear();
     this.clock = 0;
     this.strokes = 0;
@@ -312,7 +328,15 @@ export class Course3D {
         <small class="r">Fade</small><small class="b">Back</small>
         <b data-strike-label>Stock</b>
       </div>
-      <div class="g3-meter" data-meter hidden><div class="g3-meter-bar"><span class="sweet" data-sweet></span><span class="needle" data-needle></span></div><p>Tap in the gold</p></div>
+      <div class="g3-wind" data-wind><i data-wind-arrow aria-hidden="true">↑</i><b data-wind-speed></b></div>
+      <div class="g3-swing" data-swing hidden>
+        <div class="g3-swing-bar">
+          <span class="over"></span><span class="fill" data-fill></span>
+          <span class="gold" data-gold></span><span class="pure" data-pure></span>
+          <span class="plan" data-plan></span><span class="needle" data-needle></span>
+        </div>
+        <p data-swing-tip></p>
+      </div>
       <div class="g3-callout" data-callout></div>
       <div class="g3-hint" data-hint></div>
       <div class="g3-cart" data-cart hidden></div>
@@ -356,6 +380,9 @@ export class Course3D {
     const view = q('[data-view]');
     view.onclick = () => this.setView(this.view === 'play' ? 'target' : 'play');
     q('[data-skip]').onclick = () => this.endFlyover();
+    const w = this.wind!;
+    q('[data-wind-speed]').textContent = w.mph ? `${w.mph} mph` : 'Calm';
+    q('[data-wind-arrow]').hidden = !w.mph;
     this.bindStrike(q('[data-ball]'));
     this.showDrink();
   }
@@ -412,8 +439,16 @@ export class Course3D {
 
   private setClub(c: ClubId) {
     this.club = c;
+    this.power = c === 'putter' ? 0 : this.planFor(c);
     this.golfer.holdClub(c);
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((x) => x.classList.toggle('on', x.dataset.club === c));
+  }
+
+  // The planned power that would carry this club about to the pin, before wind and slopes: a starting point.
+  private planFor(c: ClubId) {
+    const [lo, hi] = CLUBS[c].carry;
+    const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
+    return Math.max(0.15, Math.min(1, (d / (this.boost() * lieFactor(this.hole, this.pos, c)) - lo) / (hi - lo)));
   }
 
   // Which clubs this lie allows, and a sensible default for the distance.
@@ -587,7 +622,13 @@ export class Course3D {
     if (dist) dist.textContent = `${Math.round(d)} ft to the pin`;
     const first = this.number === 1 && this.strokes === 0;
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
-    this.hint(first ? 'Drag sideways to aim. Pull down and let go to swing.' : tip ? 'Drag the dot on the ball for spin, or to bend the shot.' : '');
+    this.hint(
+      first
+        ? 'Drag sideways to aim, down to plan your power. Then tap to swing.'
+        : tip
+          ? 'Drag the dot on the ball for spin, or to bend the shot. Mind the wind.'
+          : '',
+    );
     this.golfer.setPose('address');
   }
 
@@ -598,10 +639,10 @@ export class Course3D {
     el.style.touchAction = 'none';
     el.addEventListener('pointerdown', (e) => {
       if (this.mode === 'fly') return this.endFlyover();
-      if (this.mode === 'meter') return this.tapMeter();
+      if (this.mode === 'meter') return this.tapSwing();
       if (this.mode !== 'aim') return;
       el.setPointerCapture(e.pointerId);
-      this.drag = { x: e.clientX, y: e.clientY, aim: this.aim, kind: '' };
+      this.drag = { x: e.clientX, y: e.clientY, aim: this.aim, power: this.power, kind: '' };
     });
     el.addEventListener('pointermove', (e) => {
       const d = this.drag;
@@ -612,20 +653,24 @@ export class Course3D {
       if (d.kind === 'aim') this.aim = d.aim + dx * (this.club === 'putter' ? 0.0025 : 0.004);
       if (d.kind === 'power') {
         const full = Math.min(window.innerHeight * 0.42, 340);
-        this.power = Math.max(0, Math.min(1, dy / full));
+        // putts pull back from nothing; full swings nudge the plan up (pull down) or down (push up)
+        this.power = Math.max(0, Math.min(1, (this.club === 'putter' ? 0 : d.power) + dy / full));
       }
     });
     const up = () => {
       const d = this.drag;
       this.drag = null;
       if (!d || this.mode !== 'aim') return;
-      if (d.kind === 'power' && this.power > 0.03) this.release();
-      else this.power = 0;
+      // putts go on release; full swings keep the plan and start with a tap
+      if (this.club === 'putter') {
+        if (d.kind === 'power' && this.power > 0.03) this.swing(0);
+        else this.power = 0;
+      } else if (!d.kind) this.startSwing();
     };
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', () => {
       this.drag = null;
-      this.power = 0;
+      if (this.club === 'putter') this.power = 0;
     });
   }
 
@@ -633,7 +678,7 @@ export class Course3D {
     if (this.mode === 'fly' && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) return this.endFlyover();
     if (this.mode === 'meter' && (e.key === ' ' || e.key === 'Enter')) {
       e.preventDefault();
-      return this.tapMeter();
+      return this.tapSwing();
     }
     if (this.mode !== 'aim') return;
     const idx = BAG.indexOf(this.club);
@@ -647,7 +692,8 @@ export class Course3D {
         e.key === 'x' ? 0 : this.shape + (e.key === 'd' ? 0.5 : e.key === 'a' ? -0.5 : 0),
       );
     else if (e.key === 'c') this.overlay.querySelector<HTMLButtonElement>(`[data-club="${BAG[(idx + 1) % BAG.length]}"]:not(:disabled)`)?.click();
-    else if (e.key === ' ' && this.power > 0.03) this.release();
+    else if (e.key === ' ' && this.club !== 'putter') this.startSwing();
+    else if (e.key === ' ' && this.power > 0.03) this.swing(0);
     else return;
     e.preventDefault();
   }
@@ -658,30 +704,50 @@ export class Course3D {
 
   // ---------- the swing ----------
 
-  // Power is set. Putts go straight away; full swings run the meter.
-  private release() {
-    if (this.club === 'putter') return this.swing(0);
+  // Tap 1: the power bar starts to fill. Your plan is the gold line on it.
+  private startSwing() {
+    if (this.mode !== 'aim' || this.club === 'putter') return;
     const drink = this.drink ? DRINKS[this.drink.kind] : null;
     this.mode = 'meter';
-    // the driver's needle is calm at half power and frantic flat out
-    const base = this.club === 'driver' ? 0.8 + 2.8 * this.power ** 3 : this.club === 'iron' ? 1.05 : 0.9;
-    this.meter = { t: 0, pos: -1, speed: base * (drink?.needle ?? 1) };
-    const sweet = Math.min(0.5, CLUBS[this.club].sweet * (drink?.sweet ?? 1));
-    const m = this.overlay.querySelector('[data-meter]') as HTMLElement;
+    this.meter = { phase: 'power', p: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0 };
+    const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
     m.hidden = false;
-    (this.overlay.querySelector('[data-sweet]') as HTMLElement).style.cssText = `left:${50 - sweet * 50}%;width:${sweet * 100}%`;
+    m.classList.remove('accuracy');
+    const plan = this.overlay.querySelector('[data-plan]') as HTMLElement;
+    plan.style.left = `${barX(this.power) * 100}%`;
+    (this.overlay.querySelector('[data-gold]') as HTMLElement).style.cssText = 'display:none';
+    (this.overlay.querySelector('[data-pure]') as HTMLElement).style.cssText = 'display:none';
+    (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = 'Tap on the gold line';
     this.hint('');
+    sfx('tick');
   }
 
-  private tapMeter() {
+  // Tap 2 sets the power; tap 3 strikes it.
+  private tapSwing() {
     if (this.mode !== 'meter') return;
-    const drink = this.drink ? DRINKS[this.drink.kind] : null;
-    const sweet = Math.min(0.5, CLUBS[this.club].sweet * (drink?.sweet ?? 1));
-    const miss = this.meter.pos;
-    const error = Math.abs(miss) <= sweet ? 0 : Math.sign(miss) * Math.min(1, (Math.abs(miss) - sweet) / 0.3);
-    (this.overlay.querySelector('[data-meter]') as HTMLElement).hidden = true;
-    if (error === 0) this.callout('Pure', '', 700);
-    else if (Math.abs(error) > 0.5) this.callout(error > 0 ? 'Slice' : 'Hook', '', 900);
+    const m = this.meter;
+    if (m.phase === 'power') {
+      const drink = this.drink ? DRINKS[this.drink.kind] : null;
+      m.phase = 'accuracy';
+      m.half = goldHalf(this.club, m.p, drink?.sweet ?? 1);
+      m.speed = returnSpeed(this.club, m.p, drink?.needle ?? 1);
+      const box = this.overlay.querySelector('[data-swing]') as HTMLElement;
+      box.classList.add('accuracy');
+      (this.overlay.querySelector('[data-gold]') as HTMLElement).style.cssText = `left:${(IMPACT - m.half) * 100}%;width:${m.half * 200}%`;
+      (this.overlay.querySelector('[data-pure]') as HTMLElement).style.cssText = `left:${(IMPACT - m.half * PURE) * 100}%;width:${m.half * PURE * 200}%`;
+      (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = m.p > 1 ? 'Overswing! Tap in the gold' : 'Tap in the gold';
+      sfx('tick');
+      return;
+    }
+    const miss = m.x - IMPACT;
+    const error = accuracyError(miss, m.half);
+    (this.overlay.querySelector('[data-swing]') as HTMLElement).hidden = true;
+    const off = Math.round((m.p - this.power) * 100);
+    const power = `${Math.round(m.p * 100)}%${Math.abs(off) >= 4 ? (off > 0 ? ' · long' : ' · short') : ''}`;
+    if (error === 0) this.callout('Pure', power, 900);
+    else if (Math.abs(error) <= 0.12) this.callout('Good', power, 800);
+    else this.callout(Math.abs(error) > 0.5 ? (error > 0 ? 'Slice' : 'Hook') : error > 0 ? 'Push' : 'Pull', power, 900);
+    this.power = m.p;
     this.swing(error);
   }
 
@@ -696,7 +762,7 @@ export class Course3D {
 
   private hit(club: ClubId, power: number, error: number) {
     const full = club !== 'putter';
-    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0 };
+    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind?.accel };
     const r = simulate(this.hole, this.pos, shot);
     // every shot starts from a stock strike
     this.setStrike(0, 0);
@@ -939,10 +1005,12 @@ export class Course3D {
     const bar = this.overlay.querySelector('[data-power]') as HTMLElement | null;
     if (bar) {
       bar.style.height = `${Math.round(this.power * 100)}%`;
-      bar.parentElement!.classList.toggle('show', this.mode === 'aim' && this.power > 0);
+      bar.parentElement!.classList.toggle('show', this.mode === 'aim' && this.drag?.kind === 'power');
       // a full-power driver warns you the needle will be wild
       bar.parentElement!.classList.toggle('hot', this.club === 'driver' && this.power > 0.85);
     }
+    const arrow = this.overlay.querySelector('[data-wind-arrow]') as HTMLElement | null;
+    if (arrow && this.wind) arrow.style.transform = `rotate(${((this.wind.toward - this.aim) * 180) / Math.PI}deg)`;
     const strike = this.overlay.querySelector('[data-strike]') as HTMLElement | null;
     if (strike) strike.hidden = this.mode !== 'aim' || this.club === 'putter';
   }
@@ -1019,12 +1087,24 @@ export class Course3D {
     this.cart?.update(dt);
 
     if (this.mode === 'meter') {
-      this.meter.t += dt;
-      // the needle sweeps back and forth until you tap
-      const u = (this.meter.t * this.meter.speed * 1.6) % 4;
-      this.meter.pos = u < 2 ? u - 1 : 3 - u;
+      const m = this.meter;
+      if (m.phase === 'power') {
+        // fills faster toward the top; at the end of the overswing it stops on its own
+        m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * dt);
+        m.x = barX(m.p);
+        if (m.p >= OVERSWING) this.tapSwing();
+      } else {
+        m.x -= m.speed * dt;
+        // gone right past the impact point: a full hook
+        if (m.x < IMPACT - m.half - 0.15) {
+          m.x = IMPACT - m.half - 0.15;
+          this.tapSwing();
+        }
+      }
       const needle = this.overlay.querySelector('[data-needle]') as HTMLElement | null;
-      if (needle) needle.style.left = `${((this.meter.pos + 1) / 2) * 100}%`;
+      if (needle) needle.style.left = `${Math.max(0, m.x) * 100}%`;
+      const fill = this.overlay.querySelector('[data-fill]') as HTMLElement | null;
+      if (fill) fill.style.cssText = `left:${barX(0) * 100}%;width:${(barX(m.p) - barX(0)) * 100}%`;
     }
 
     if (this.mode === 'fly' && this.fly) {

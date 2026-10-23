@@ -28,6 +28,7 @@ export const ridge: Hole = {
   par: 4,
   tee: { x: 40, y: 0 },
   cup: { x: -186, y: 348 },
+  pins: [{ x: -186, y: 348 }, { x: -176, y: 334 }, { x: -200, y: 356 }, { x: -194, y: 336 }],
   aim: -0.05,
   bounds: { x0: -290, y0: -40, x1: 130, y1: 440 },
   border: [

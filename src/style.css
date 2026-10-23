@@ -226,11 +226,19 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-ball::before { left: 50%; top: 10px; bottom: 10px; width: 1px; }
 .g3-ball::after { top: 50%; left: 10px; right: 10px; height: 1px; }
 .g3-ball i { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); z-index: 1; pointer-events: none; }
-.g3-meter { position: absolute; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(440px, calc(100vw - 48px)); display: grid; gap: 6px; justify-items: center; pointer-events: none; }
-.g3-meter p { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
-.g3-meter-bar { position: relative; width: 100%; height: 22px; border-radius: 11px; background: linear-gradient(90deg, #7a1f2b, #3b4a3c 30%, #3b4a3c 70%, #7a1f2b); border: 2px solid var(--cream); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); overflow: hidden; }
-.g3-meter-bar .sweet { position: absolute; top: 0; bottom: 0; background: linear-gradient(#f0d58e, var(--gold)); }
-.g3-meter-bar .needle { position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; background: #fff; box-shadow: 0 0 8px #fff; }
+.g3-swing { position: absolute; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(460px, calc(100vw - 40px)); display: grid; gap: 6px; justify-items: center; pointer-events: none; }
+.g3-swing p { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
+.g3-swing-bar { position: relative; width: 100%; height: 26px; border-radius: 13px; background: linear-gradient(90deg, #2c3a30, #3b4a3c); border: 2px solid var(--cream); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); overflow: hidden; }
+.g3-swing-bar span { position: absolute; top: 0; bottom: 0; }
+.g3-swing-bar .over { right: 0; width: 7.64%; background: repeating-linear-gradient(135deg, #7a1f2b, #7a1f2b 5px, #93303b 5px, #93303b 10px); }
+.g3-swing-bar .fill { background: linear-gradient(90deg, rgba(240, 213, 142, 0.35), rgba(240, 213, 142, 0.75)); }
+.g3-swing.accuracy .fill { opacity: 0.35; }
+.g3-swing-bar .gold { background: linear-gradient(#f0d58e, var(--gold)); }
+.g3-swing-bar .pure { background: #fffbe9; box-shadow: 0 0 8px #fff; }
+.g3-swing-bar .plan { width: 3px; margin-left: -1.5px; background: #ffd23f; box-shadow: 0 0 0 1px #13261c; }
+.g3-swing-bar .needle { width: 4px; margin-left: -2px; top: -2px; bottom: -2px; background: #fff; box-shadow: 0 0 8px #fff; }
+.g3-wind { position: absolute; left: 50%; top: calc(76px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 8px; border-radius: 999px; background: rgba(15, 42, 31, 0.7); border: 1px solid rgba(184, 149, 90, 0.7); font-size: 13px; font-weight: 800; }
+.g3-wind i { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--cream); color: var(--green); font-style: normal; font-size: 14px; line-height: 1; }
 .g3-drink { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); top: calc(84px + env(safe-area-inset-top, 0px)); display: grid; padding: 8px 12px; border-radius: 8px; background: rgba(15, 42, 31, 0.78); border: 1px solid rgba(184, 149, 90, 0.7); font-size: 12px; line-height: 1.25; }
 .g3-drink b { font-family: var(--serif); font-size: 16px; color: #f0dcae; }
 .g3-cart { position: absolute; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(520px, calc(100vw - 32px)); pointer-events: auto; }

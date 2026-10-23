@@ -2,7 +2,9 @@
 // Run: npm run check-holes
 import { BAG, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseFor } from '../src/golf3d/courses';
+import { conditionsFor, withPin } from '../src/golf3d/conditions';
 import { CUP_R, curbs, simulate } from '../src/golf3d/physics';
+import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed } from '../src/golf3d/swing';
 import { gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
 import { makeRng } from '../src/seed';
@@ -108,9 +110,10 @@ function candidates(h: Hole, pos: V2, nav: (p: V2) => number, clock: number, ste
   const toCup = Math.atan2(h.cup.x - pos.x, h.cup.y - pos.y);
   for (const club of only ? [only] : clubsFor(h, pos))
     for (let a = -180; a < 180; a += club === 'putter' && Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40 ? step / 4 : step)
-      for (const power of POWERS[club]) {
+      for (const power of POWERS[club])
+      for (const spin of h.greenFirm && (club === 'iron' || club === 'wedge') ? [0, 1] : [0]) {
         const angle = club === 'putter' && Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40 ? toCup + ((a / 4) * Math.PI) / 180 : (a * Math.PI) / 180;
-        const shot: Shot = { angle, power, club, error: 0, clock };
+        const shot: Shot = { angle, power, club, error: 0, clock, spin };
         const r = simulate(h, pos, shot, false);
         if (exclude && r.zones.includes(exclude)) continue;
         out.push({ d: r.holed ? -1 : r.penalty ? Infinity : nav(r.end), shot });
@@ -172,14 +175,15 @@ function secretBest(h: Hole) {
 }
 
 // The swing meter as a person plays it: tap timing scatters around the centre of the bar.
-function meterError(club: ClubId, gauss: () => number, sigma: number, power = 1) {
-  if (club === 'putter') return 0;
-  // the driver's needle speeds up with power (see the engine), so timing gets worse with it
-  const speed = club === 'driver' ? (0.8 + 2.8 * power ** 3) / 1.25 : 1;
-  const miss = gauss() * sigma * speed;
-  const sweet = CLUBS[club].sweet;
-  if (Math.abs(miss) <= sweet) return 0;
-  return Math.sign(miss) * Math.min(1, (Math.abs(miss) - sweet) / 0.3);
+// A person's tap is about this many seconds off, either way.
+const TIMING = 0.06;
+
+// The three-tap swing as a person plays it: the power stop lands near the plan, the strike near the gold.
+function swing(club: ClubId, plan: number, gauss: () => number) {
+  if (club === 'putter') return { power: Math.max(0.03, Math.min(1, plan * (1 + gauss() * 0.12))), error: 0 };
+  const power = Math.max(0.05, Math.min(OVERSWING, plan + gauss() * TIMING * powerSpeed(club, plan)));
+  const miss = gauss() * TIMING * returnSpeed(club, power);
+  return { power, error: accuracyError(miss, goldHalf(club, power)) };
 }
 
 // A risk-aware pick: the best few greedy shots, re-scored over small mistakes.
@@ -203,7 +207,10 @@ function safeShot(h: Hole, pos: V2, nav: (p: V2) => number, clock: number) {
   return best;
 }
 
-function novice(h: Hole, seed: string) {
+function novice(base: Hole, seed: string) {
+  // a random day: its pin and its wind, which a novice doesn't allow for
+  const today = conditionsFor(base, `sim:${seed}`);
+  const h = withPin(base, today);
   const nav = navField(h);
   const rng = makeRng(seed);
   const gauss = () => Math.sqrt(-2 * Math.log(rng.next() || 1e-9)) * Math.cos(2 * Math.PI * rng.next());
@@ -217,8 +224,8 @@ function novice(h: Hole, seed: string) {
     const shot = {
       ...b.shot,
       angle: b.shot.angle + (gauss() * 3.5 * Math.PI) / 180,
-      power: Math.max(0.03, Math.min(1, b.shot.power * (1 + gauss() * 0.12))),
-      error: meterError(b.shot.club, gauss, 0.15, b.shot.power),
+      ...swing(b.shot.club, b.shot.power, gauss),
+      wind: today.accel,
     };
     const r = simulate(h, pos, shot, false);
     log.push(`${shot.club[0]}${r.holed ? '!' : r.penalty ? 'x' : ''}`);
@@ -260,8 +267,8 @@ if (mode === 'all' || mode === 'basic') {
   const down = simulate(slope, { x: 0, y: 100 }, { angle: 0, power: 0.01, club: 'putter', error: 0, clock: 0 }, false);
   ok(down.end.y < 60, `a ball on a slope rolls back downhill (${down.end.y.toFixed(1)})`);
   for (const h of course.holes) {
-    ok(!isWater(h, h.tee) && !isWater(h, h.cup), `${h.name}: tee and cup are dry`);
-    ok(surfaceAt(h, h.cup) === 'green', `${h.name}: the cup is on the green`);
+    ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);
+    for (const pin of h.pins ?? [h.cup]) ok(!isWater(h, pin) && surfaceAt(h, pin) === 'green', `${h.name}: pin ${pin.x},${pin.y} is on dry green`);
   }
 }
 

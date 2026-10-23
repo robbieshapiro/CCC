@@ -117,6 +117,10 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         vx += shotLaunch.ax * DT;
         vy += shotLaunch.ay * DT;
       }
+      if (shot.wind) {
+        vx += shot.wind.x * DT;
+        vy += shot.wind.y * DT;
+      }
       z += vz * DT;
       x += vx * DT;
       y += vy * DT;
@@ -148,7 +152,9 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         // the first landing takes the club's bite; later hops barely scrub
         const hard = Math.min(1, -vzRel / 30);
         const spin = shot.spin ?? 0;
-        const bite = club.keep + (1 - club.keep) * (1 - hard) + club.release * Math.max(0, -spin);
+        // a firm green lets a plain shot skip on; backspin is what holds it
+        const firm = surf === 'green' ? (h.greenFirm ?? 0) : 0;
+        const bite = club.keep + (1 - club.keep) * (1 - hard) + club.release * Math.max(0, -spin) + firm;
         const keep = (flying ? Math.min(1, bite) : 1 - Math.min(0.4, -vzRel * 0.02)) * LANDING[surf];
         vx *= keep;
         vy *= keep;
