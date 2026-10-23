@@ -4,13 +4,11 @@ import * as THREE from 'three';
 import { api, localApi, useSupabase } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
 import { specOf } from '../avatar';
-import { STOCK_BUDDIES } from '../buddies';
 import { sfx } from '../fx/sound';
 import { courseFor } from '../golf3d/courses';
 import { DEFAULT_SPEC, Golfer, type GolferSpec } from '../golf3d/golfer';
 import * as props from '../golf3d/props';
 import { refresh, requireSession } from '../state';
-import { board, toParLabel } from '../standings';
 import { esc, navigate, render } from '../ui';
 import { lockerPanel } from '../screens/locker';
 import { crest } from '../brand';
@@ -311,7 +309,6 @@ export async function welcome(snap0: Snapshot) {
   // everyone already in the club, oldest first; the room fits about nine
   const others = snap.players.filter((p) => p.id !== snap.me).slice(0, 9);
   const course = courseFor(snap.month);
-  const rows = board(snap);
   let spec = specOf(me.avatar);
 
   render(`<div class="g3 intro" id="intro"><div class="intro-ui">
@@ -350,7 +347,8 @@ export async function welcome(snap0: Snapshot) {
   const { reg } = foyer(scene);
   const { lockers, engrave } = lockerRoom(scene, [...others.map((p) => p.name), me.name]);
   const actors: Golfer[] = [reg];
-  const mates = others.map((p, i) => {
+  // the members stand at their lockers
+  others.forEach((p, i) => {
     const gl = new Golfer(specOf(p.avatar));
     gl.holdClub(i % 2 ? 'driver' : 'putter');
     gl.setPose('idle');
@@ -358,7 +356,6 @@ export async function welcome(snap0: Snapshot) {
     gl.group.rotation.y = 0.15 * (i % 2 ? 1 : -1);
     scene.add(gl.group);
     actors.push(gl);
-    return gl;
   });
   const mine = lockers[others.length];
   let you = new Golfer(spec);
@@ -509,32 +506,18 @@ export async function welcome(snap0: Snapshot) {
   const row0 = 2000 + lockers[0].x;
   const rowN = 2000 + lockers[lockers.length - 1].x;
   cut({ pos: v(row0 + 2, 7.5, 6), look: v(row0, 6, -16) });
-  go({ pos: v(rowN - 2, 7.5, 6), look: v(rowN, 6, -16) }, 3.6);
-  await wait(3600);
+  go({ pos: v(rowN - 2, 7.5, 6), look: v(rowN, 6, -16) }, 2.4);
+  await wait(2400);
   go({ pos: v(2000, 8, 12), look: v(2000, 5, -14) }, 1.6);
   const names = others.map((p) => p.name);
   const roll = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
   await say(
     'Reginald',
     names.length
-      ? `The members' lockers. ${roll}. A finer collection of handicaps you will not find in the county.`
+      ? `The members' lockers. ${roll}. A finer collection of handicaps you will not find in the county. You'll meet them on the course.`
       : "The locker room. Rather quiet at present. You'll be among the founders, which I'm told is an honour.",
   );
   if (skipped) return;
-  for (let i = 0; i < others.length; i++) {
-    const p = others[i];
-    const x = 2000 + lockers[i].x;
-    go({ pos: v(x + 3, 6.5, 0), look: v(x, 5, -12) }, 1.4);
-    mates[i].setPose('wave');
-    await wait(900);
-    const stock = STOCK_BUDDIES.find((b) => b.name === p.name);
-    const row = rows.find((r) => r.playerId === p.id);
-    const stat = row?.best ? `Best this month: ${row.best.total} (${toParLabel(row.toPar)}).` : 'Yet to post a round this month.';
-    await say(p.name, stock ? `${stock.line} ${stat}` : `Welcome aboard, ${me.name}. ${stat}${p.wins ? ` ${p.wins} ${p.wins === 1 ? 'title' : 'titles'} on the wall.` : ''}`);
-    mates[i].setPose('idle');
-    if (skipped) return;
-  }
-
   // 4. Your locker: build your golfer
   const mx = 2000 + mine.x;
   go({ pos: v(mx + 1, 6.2, 3), look: v(mx, 4.6, -11) }, 1.6);

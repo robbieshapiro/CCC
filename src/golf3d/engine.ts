@@ -107,7 +107,8 @@ export class Course3D {
   private strokes = 0;
   private zones = new Set<string>();
   private drink: { kind: Drink; shots: number } | null = null;
-  private shot: { r: Result; t: number; from: V2; club: ClubId; next: number } | null = null;
+  private shot: { r: Result; t: number; from: V2; club: ClubId; next: number; practice: boolean } | null = null;
+  private practice = false; // warm-up swings on the first tee: they don't count
   private fly: { curve: THREE.CatmullRomCurve3; t: number } | null = null;
   private follow = new THREE.Vector3(0, 0, -1);
   private camPos = new THREE.Vector3();
@@ -218,6 +219,7 @@ export class Course3D {
     this.faded.clear();
     this.clock = 0;
     this.strokes = 0;
+    this.practice = false;
     this.zones = new Set();
     this.pos = { ...hole.tee };
     this.aim = hole.aim;
@@ -348,6 +350,7 @@ export class Course3D {
           <button data-nudge="-1" aria-label="Aim left">◀</button>
           <button data-nudge="1" aria-label="Aim right">▶</button>
         </div>
+        <button class="g3-pill" data-practice aria-pressed="false" hidden>Practice</button>
         <button class="g3-pill" data-view aria-pressed="false">Target</button>
       </div>
       <button class="g3-skip" data-skip>Skip flyover</button>`;
@@ -379,6 +382,16 @@ export class Course3D {
     });
     const view = q('[data-view]');
     view.onclick = () => this.setView(this.view === 'play' ? 'target' : 'play');
+    const practice = q('[data-practice]');
+    practice.onclick = () => {
+      if (this.mode !== 'aim' || this.strokes > 0) return;
+      this.practice = !this.practice;
+      practice.textContent = this.practice ? 'Practice: on' : 'Practice';
+      practice.setAttribute('aria-pressed', String(this.practice));
+      practice.classList.toggle('on', this.practice);
+      this.hint(this.practice ? "Practice swings don't count. Switch it off to start your round." : '');
+      sfx('tick');
+    };
     q('[data-skip]').onclick = () => this.endFlyover();
     const w = this.wind!;
     q('[data-wind-speed]').textContent = w.mph ? `${w.mph} mph` : 'Calm';
@@ -613,6 +626,9 @@ export class Course3D {
   }
 
   private toAim() {
+    // practice is only on offer before the first counted stroke of the round
+    const practice = this.overlay.querySelector('[data-practice]') as HTMLElement | null;
+    if (practice) practice.hidden = !(this.number === 1 && this.strokes === 0);
     this.mode = 'aim';
     this.power = 0;
     const { allowed, want, d } = this.lie();
@@ -766,18 +782,21 @@ export class Course3D {
     const r = simulate(this.hole, this.pos, shot);
     // every shot starts from a stock strike
     this.setStrike(0, 0);
-    if (this.drink && club !== 'putter') {
+    const practice = this.practice;
+    if (this.drink && club !== 'putter' && !practice) {
       this.drink.shots--;
       if (this.drink.shots <= 0) this.drink = null;
       this.showDrink();
     }
-    this.strokes++;
-    this.setStrokes();
+    if (!practice) {
+      this.strokes++;
+      this.setStrokes();
+      r.zones.forEach((z) => this.zones.add(z));
+    }
     this.mode = 'roll';
-    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0 };
+    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice };
     this.trailPts = [];
     this.power = 0;
-    r.zones.forEach((z) => this.zones.add(z));
     sfx(club === 'putter' ? 'tick' : club === 'driver' ? 'crack' : 'thump');
     this.follow.set(Math.sin(this.aim), 0, -Math.cos(this.aim));
   }
@@ -826,6 +845,18 @@ export class Course3D {
     const s = this.shot!;
     this.shot = null;
     const r = s.r;
+    if (s.practice) {
+      // tell them how it went, then put the ball back on the tee
+      const last = r.frames[r.frames.length - 1];
+      const d = Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y));
+      this.callout(r.holed ? 'In the hole!' : r.penalty ? (isWater(this.hole, last) ? 'In the drink' : 'Out of bounds') : `${d} ft from the pin`, 'Practice', 1600);
+      this.pos = { ...this.hole.tee };
+      this.placeBall();
+      this.trailPts = [];
+      this.drawTrail();
+      window.setTimeout(() => this.mode === 'roll' && this.toAim(), 1200);
+      return;
+    }
     if (r.holed) {
       sfx('pop');
       window.setTimeout(() => sfx('cheer'), 250);
