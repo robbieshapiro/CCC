@@ -47,10 +47,15 @@ export type Snapshot = {
   month: string;
   groupName: string;
   me: string;
+  admin?: boolean; // runs the club: the only one who can put up new members
   players: Player[];
   rounds: Round[]; // this month, whole group
   champions: Champion[]; // past months, newest first
 };
+
+// A personal, single-use invitation. The link (#/invite/<id>) shows the code under the foil.
+export type Invite = { id: string; name: string; code: string; createdAt: string; usedBy: string | null; usedAt: string | null };
+export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
   mode: 'local' | 'supabase';
@@ -58,4 +63,7 @@ export interface Api {
   snapshot(session: Session): Promise<Snapshot>;
   submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[] }): Promise<void>;
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;
+  createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
+  listInvites(session: Session): Promise<Invite[]>;
+  peekInvite(id: string): Promise<InvitePeek | null>;
 }

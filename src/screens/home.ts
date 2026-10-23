@@ -96,11 +96,11 @@ export function home(snap: Snapshot) {
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
       </section>
-      ${inviteMaker()}
+      ${inviteMaker(!!snap.admin)}
       ${!useSupabase && snap.players.length < 2 ? `<p class="fine">Local mode. <button class="link" id="demo">Add Sean, Danny and PJ</button> to see a full board.</p>` : ''}
     </main>`);
 
-  bindInviteMaker();
+  void bindInviteMaker();
   document.getElementById('demo')?.addEventListener('click', async () => {
     localApi.seedDemo(requireSession());
     home(await refresh());

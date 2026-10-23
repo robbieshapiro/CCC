@@ -23,7 +23,7 @@ async function router() {
   const [page, arg, extra] = hash.split('/');
   route = page || 'home';
 
-  if (page === 'invite') return invite(decodeURIComponent(arg ?? ''));
+  if (page === 'invite') return invite(arg ?? '');
   if (page === 'join' && arg) return join(decodeURIComponent(arg), decodeURIComponent(extra ?? ''));
   if (!getSession()) return landing();
 

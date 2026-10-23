@@ -59,7 +59,7 @@ With no Supabase keys set, the app runs in **local mode**: data lives in your br
    ```
 2. **Keys:** in *Project Settings → API*, copy the Project URL and the `anon` public key. Don't use the `service_role` key.
 3. **Vercel** (free): import this repo (`vercel.json` pins the Vite build). Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables, then deploy. If you change the variables later, redeploy.
-4. Send `https://<your-vercel-url>/#/join/gentlemen` to your friends. Each person picks a name and a 4-digit PIN, then takes the welcome tour.
+4. Open `https://<your-vercel-url>/#/join/gentlemen` yourself first: the first member runs the club. Then put up friends from "Put up a friend" on the home page. Each gets a private invitation link with a single-use code; the group code only signs existing members back in.
 
 ## Adding next month's course
 

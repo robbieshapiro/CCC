@@ -1,29 +1,30 @@
-// A personal invitation: a sealed envelope, a letter from the committee, and the club's code under a gold foil
-// you scratch off. Each friend gets their own link: #/invite/<name>.
-import { useSupabase } from '../api';
+// A personal invitation: a sealed envelope, a letter from the committee, and a single-use code under a gold foil
+// you scratch off. Only the club's admin can make one; each lives at its own private link: #/invite/<id>.
+import { api, getSession } from '../api';
+import type { Invite } from '../api/types';
 import { crest } from '../brand';
 import { sfx } from '../fx/sound';
 import { reginaldSvg } from '../host';
+import { requireSession } from '../state';
 import { esc, render } from '../ui';
 
-// the club's invite code; set VITE_INVITE_CODE to change it without touching the letter
-export const INVITE_CODE = (import.meta.env.VITE_INVITE_CODE as string | undefined)?.trim().toLowerCase() || (useSupabase ? 'gentlemen' : 'demo');
+export const inviteLink = (id: string) => `${location.origin}${location.pathname}#/invite/${id}`;
 
-// "jake", "Jake-Miller" and "Jake%20Miller" all read as a tidy name
-export function inviteName(raw: string) {
-  return raw
-    .replace(/[-_+]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 20)
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-export const inviteLink = (name: string) => `${location.origin}${location.pathname}#/invite/${encodeURIComponent(name.trim().replace(/\s+/g, '-'))}`;
-
-export function invite(raw: string) {
-  const name = inviteName(raw);
-  const dear = name || 'Guest';
+export async function invite(id: string) {
+  const inv = id ? await api.peekInvite(id).catch(() => null) : null;
+  if (!inv || inv.used) {
+    render(`
+      <main class="invite">
+        <article class="letter in">
+          <header class="letter-head">${crest(64, 'lh')}<p class="eyebrow">Claude Country Club · Est. 2026</p></header>
+          <p class="letter-dear">${inv ? `Welcome back, ${esc(inv.name)}.` : 'Ah.'}</p>
+          <p>${inv ? 'This invitation has already been accepted. Members sign in with their name and PIN.' : 'This invitation is not one of ours. Do ask the member who sent it for a fresh one.'}</p>
+          ${inv || getSession() ? '<a class="btn accept" href="#/">To the clubhouse</a>' : ''}
+        </article>
+      </main>`);
+    return;
+  }
+  const dear = inv.name;
   render(`
     <main class="invite">
       <button class="envelope" id="envelope" aria-label="Open your invitation">
@@ -38,9 +39,9 @@ export function invite(raw: string) {
         <p class="letter-dear">Dear ${esc(dear)},</p>
         <p>The Members' Committee has the pleasure of inviting you to join the Claude Country Club.</p>
         <p>We are a private mini golf club for a few friends. A new course every month, as many rounds as you like, and only your best one counts. The beverage cart is staffed. The steward is watching.</p>
-        <p>Your membership code is below. Kindly scratch to reveal it, and do keep it to yourself.</p>
+        <p>Your membership code is below. It is yours alone and works once. Kindly scratch to reveal it.</p>
         <div class="scratch" id="scratch">
-          <p class="scratch-code" aria-live="polite"><small>Your code</small><b id="code">${esc(INVITE_CODE)}</b></p>
+          <p class="scratch-code" aria-live="polite"><small>Your code</small><b id="code">${esc(inv.code)}</b></p>
           <canvas id="foil" aria-hidden="true"></canvas>
         </div>
         <button class="link reveal-link" id="reveal">Can't scratch? Reveal it</button>
@@ -48,7 +49,7 @@ export function invite(raw: string) {
           <span class="host-face">${reginaldSvg('pleased', 52)}</span>
           <p>Yours, with the usual reservations,<b>Reginald</b><small>Club Steward, on behalf of the Committee</small></p>
         </div>
-        <a class="btn accept" id="accept" href="#/join/${encodeURIComponent(INVITE_CODE)}${name ? `/${encodeURIComponent(name)}` : ''}" hidden>Accept membership</a>
+        <a class="btn accept" id="accept" href="#/join/${encodeURIComponent(inv.code)}/${encodeURIComponent(inv.name)}" hidden>Accept membership</a>
       </article>
     </main>`);
 
@@ -167,50 +168,65 @@ export function invite(raw: string) {
   }
 }
 
-// From the clubhouse: type a friend's name, get their personal invitation link.
-export function inviteMaker() {
+// From the clubhouse, for the admin only: type a friend's name, get their private invitation link.
+export function inviteMaker(admin: boolean) {
+  if (!admin) return '';
   return `
     <section class="panel invite-maker">
-      <div><h2>Put up a friend</h2><p class="muted">Type their name for a personal invitation. They scratch it open to find the code.</p></div>
+      <div><h2>Put up a friend</h2><p class="muted">Each invitation is a private link with a code that works once, for that person only.</p></div>
       <form id="invite-form" class="invite-form">
-        <input id="invite-name" maxlength="20" placeholder="Their first name" autocomplete="off" aria-label="Friend's name" />
+        <input id="invite-name" maxlength="20" placeholder="Their first name" autocomplete="off" aria-label="Friend's name" required />
         <button class="btn" type="submit">Make invitation</button>
       </form>
-      <div id="invite-out" class="invite-out" hidden>
-        <input id="invite-link" readonly aria-label="Invitation link" />
-        <button class="btn ghost" id="invite-copy" type="button">Copy</button>
-        <a class="link" id="invite-preview" target="_blank" rel="noopener">Preview</a>
-      </div>
+      <p class="error" id="invite-err" role="alert"></p>
+      <ul class="invite-list" id="invite-list"></ul>
     </section>`;
 }
 
 // phones get the native share sheet; desktops copy the link
 const canShare = () => typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
 
-export function bindInviteMaker() {
+export async function bindInviteMaker() {
   const form = document.getElementById('invite-form') as HTMLFormElement | null;
   if (!form) return;
-  const out = document.getElementById('invite-out')!;
-  const link = document.getElementById('invite-link') as HTMLInputElement;
-  const copy = document.getElementById('invite-copy') as HTMLButtonElement;
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = inviteName((document.getElementById('invite-name') as HTMLInputElement).value);
-    if (!name) return;
-    link.value = inviteLink(name);
-    (document.getElementById('invite-preview') as HTMLAnchorElement).href = link.value;
-    out.hidden = false;
-    copy.textContent = canShare() ? 'Share' : 'Copy';
-  });
-  copy.onclick = async () => {
-    try {
-      if (canShare()) await navigator.share({ title: 'Claude Country Club', text: 'You have been put up for membership.', url: link.value });
-      else {
-        await navigator.clipboard.writeText(link.value);
-        copy.textContent = 'Copied';
-      }
-    } catch {
-      link.select();
-    }
+  const list = document.getElementById('invite-list')!;
+  const err = document.getElementById('invite-err')!;
+  const draw = (invites: Invite[], fresh?: string) => {
+    list.innerHTML = invites
+      .map(
+        (i) => `<li class="${i.id === fresh ? 'fresh' : ''}">
+          <span><b>${esc(i.name)}</b><small>${i.usedBy ? `Accepted${i.usedBy !== i.name ? ` as ${esc(i.usedBy)}` : ''}` : 'Waiting to be opened'}</small></span>
+          ${i.usedBy ? '<em>Member</em>' : `<button class="btn ghost" data-send="${i.id}">${canShare() ? 'Share' : 'Copy link'}</button>`}
+        </li>`,
+      )
+      .join('');
+    list.querySelectorAll<HTMLButtonElement>('[data-send]').forEach((b) => {
+      b.onclick = async () => {
+        const url = inviteLink(b.dataset.send!);
+        try {
+          if (canShare()) await navigator.share({ title: 'Claude Country Club', text: 'You have been put up for membership.', url });
+          else {
+            await navigator.clipboard.writeText(url);
+            b.textContent = 'Copied';
+          }
+        } catch {
+          window.prompt('Copy this link', url);
+        }
+      };
+    });
   };
+  const s = requireSession();
+  draw(await api.listInvites(s).catch(() => []));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('invite-name') as HTMLInputElement;
+    err.textContent = '';
+    try {
+      const made = await api.createInvite(s, input.value);
+      input.value = '';
+      draw(await api.listInvites(s), made.id);
+    } catch (x) {
+      err.textContent = (x as Error).message;
+    }
+  });
 }
