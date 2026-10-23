@@ -5,11 +5,12 @@ import { courseFor, monthOf } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
-import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Round } from './types';
+import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Invite, type Round } from './types';
 
-type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string };
+type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
 type DbRound = Round & { groupId: string };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[] };
+type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[] };
 
 const KEY = 'ccc-local-db';
 
@@ -28,6 +29,7 @@ function save(db: Db) {
 }
 
 const uid = () => crypto.randomUUID();
+const rand = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
 const strip = ({ groupId: _g, ...r }: DbRound): Round => r;
 
 function playerByToken(db: Db, token: string): DbPlayer {
@@ -42,15 +44,25 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
   async join(invite, name, pin) {
     const db = load();
     const code = invite.trim().toLowerCase();
-    const group = (db.groups[code] ??= { id: uid(), name: code === 'demo' ? 'Claude Country Club' : code });
+    // a personal invitation, or the club's own code (which only signs members in once the club has started)
+    const inv = (db.invites ?? []).find((i) => i.code === code);
+    const groupCode = inv ? Object.keys(db.groups).find((k) => db.groups[k].id === inv.groupId)! : code;
+    const group = (db.groups[groupCode] ??= { id: uid(), name: code === 'demo' ? 'Claude Country Club' : code });
     const clean = name.trim();
     if (!clean || clean.length > 20) throw new Error('Name must be 1-20 characters.');
     if (!/^\d{4}$/.test(pin)) throw new Error('PIN must be 4 digits.');
     let p = db.players.find((x) => x.groupId === group.id && x.name.toLowerCase() === clean.toLowerCase());
     if (p && p.pin !== pin) throw new Error('That name is taken and the PIN does not match.');
     if (!p) {
-      p = { id: uid(), groupId: group.id, name: clean, pin, token: uid(), avatar: { color: '#163b2c', equip: {} }, joined: new Date().toISOString() };
+      const first = !db.players.some((x) => x.groupId === group.id);
+      if (!first && !inv) throw new Error('New members need a personal invitation from the committee.');
+      if (inv?.usedBy) throw new Error('That invitation has already been accepted.');
+      p = { id: uid(), groupId: group.id, name: clean, pin, token: uid(), avatar: { color: '#163b2c', equip: {} }, joined: new Date().toISOString(), admin: first };
       db.players.push(p);
+      if (inv) {
+        inv.usedBy = p.id;
+        inv.usedAt = new Date().toISOString();
+      }
     }
     save(db);
     return { token: p.token, playerId: p.id, groupId: group.id, groupName: group.name };
@@ -73,6 +85,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
       month,
       groupName: session.groupName,
       me: me.id,
+      admin: !!me.admin,
       players: db.players
         .filter((p) => p.groupId === me.groupId)
         .map((p) => ({
@@ -106,6 +119,37 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     const db = load();
     playerByToken(db, session.token).avatar = avatar;
     save(db);
+  },
+
+  async createInvite(session, name) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can put up new members.');
+    const clean = name.trim();
+    if (!clean || clean.length > 20) throw new Error('Name must be 1-20 characters.');
+    const groupCode = Object.keys(db.groups).find((k) => db.groups[k].id === me.groupId)!;
+    const inv: DbInvite = { id: rand(10), groupId: me.groupId, name: clean, code: `${groupCode}-${rand(4)}`, createdAt: new Date().toISOString(), usedBy: null, usedAt: null };
+    (db.invites ??= []).push(inv);
+    save(db);
+    return { id: inv.id, name: inv.name, code: inv.code };
+  },
+
+  async listInvites(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see invitations.');
+    return (db.invites ?? [])
+      .filter((i) => i.groupId === me.groupId)
+      .reverse()
+      .map(({ groupId: _g, ...i }) => ({ ...i, usedBy: i.usedBy ? (db.players.find((p) => p.id === i.usedBy)?.name ?? null) : null }));
+  },
+
+  async peekInvite(id) {
+    const db = load();
+    const inv = (db.invites ?? []).find((i) => i.id === id);
+    if (!inv) return null;
+    const group = Object.values(db.groups).find((g) => g.id === inv.groupId);
+    return { name: inv.name, code: inv.code, groupName: group?.name ?? '', used: !!inv.usedBy };
   },
 
   // Adds Sean, Danny and PJ with a few rounds this month and a past champion.
