@@ -34,6 +34,7 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
 export const supabaseApi: Api = {
   mode: 'supabase',
   join: (invite, name, pin) => rpc('join_group', { p_invite: invite, p_name: name, p_pin: pin }),
+  signIn: (name, pin) => rpc('sign_in', { p_name: name, p_pin: pin }),
   snapshot: (s) => rpc<Snapshot>('get_snapshot', { p_token: s.token }),
   submitRound: async (s, r) => {
     await rpc('submit_round', { p_token: s.token, p_course: r.course, p_holes: r.holes, p_pars: r.pars, p_feats: r.feats });

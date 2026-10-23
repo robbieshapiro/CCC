@@ -30,6 +30,9 @@ function save(db: Db) {
 
 const uid = () => crypto.randomUUID();
 const rand = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
+// k7q-4m2: letters and digits alternating, so a code never spells anything
+const inviteCode = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(7)), (b, i) => (i === 3 ? '-' : i % 2 ? '23456789'[b % 8] : 'abcdefghjkmnpqrstuvwxyz'[b % 23])).join('');
 const strip = ({ groupId: _g, ...r }: DbRound): Round => r;
 
 function playerByToken(db: Db, token: string): DbPlayer {
@@ -66,6 +69,16 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     }
     save(db);
     return { token: p.token, playerId: p.id, groupId: group.id, groupName: group.name };
+  },
+
+  async signIn(name, pin) {
+    const db = load();
+    const found = db.players.filter((p) => p.name.toLowerCase() === name.trim().toLowerCase() && p.pin === pin);
+    if (!found.length) throw new Error('No member by that name and PIN. Check both and try again.');
+    if (found.length > 1) throw new Error('More than one member by that name. Ask the committee for help.');
+    const p = found[0];
+    const group = Object.values(db.groups).find((g) => g.id === p.groupId)!;
+    return { token: p.token, playerId: p.id, groupId: p.groupId, groupName: group.name };
   },
 
   async snapshot(session) {
@@ -127,8 +140,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     if (!me.admin) throw new Error('Only the committee can put up new members.');
     const clean = name.trim();
     if (!clean || clean.length > 20) throw new Error('Name must be 1-20 characters.');
-    const groupCode = Object.keys(db.groups).find((k) => db.groups[k].id === me.groupId)!;
-    const inv: DbInvite = { id: rand(10), groupId: me.groupId, name: clean, code: `${groupCode}-${rand(4)}`, createdAt: new Date().toISOString(), usedBy: null, usedAt: null };
+    const inv: DbInvite = { id: rand(10), groupId: me.groupId, name: clean, code: inviteCode(), createdAt: new Date().toISOString(), usedBy: null, usedAt: null };
     (db.invites ??= []).push(inv);
     save(db);
     return { id: inv.id, name: inv.name, code: inv.code };

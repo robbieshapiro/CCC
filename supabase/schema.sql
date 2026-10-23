@@ -52,7 +52,7 @@ create table if not exists invitations (
   id text primary key, -- the private link: #/invite/<id>
   group_id uuid not null references groups on delete cascade,
   name text not null check (char_length(name) between 1 and 20),
-  code text not null unique, -- what they scratch off: '<group code>-xxxx'
+  code text not null unique, -- what they scratch off, e.g. k7q-4m2
   created_by uuid references players on delete set null,
   created_at timestamptz not null default now(),
   used_by uuid references players on delete set null,
@@ -67,6 +67,16 @@ language sql volatile set search_path = public, extensions as $$
   from (select gen_random_bytes(n) as b) x, generate_series(0, n - 1) i
 $$;
 
+
+-- Invitation codes look like K7Q-4M2: letters and digits alternating, so they never spell anything.
+create or replace function invite_code() returns text
+language sql volatile set search_path = public, extensions as $$
+  select string_agg(
+    case when i = 3 then '-'
+         when i % 2 = 0 then substr('abcdefghjkmnpqrstuvwxyz', 1 + (get_byte(x.b, i) % 23), 1)
+         else substr('23456789', 1 + (get_byte(x.b, i) % 8), 1) end, '' order by i)
+  from (select gen_random_bytes(7) as b) x, generate_series(0, 6) i
+$$;
 
 -- The game day rolls over at midnight Eastern.
 create or replace function game_today() returns date
@@ -128,6 +138,18 @@ begin
   return json_build_object('token', p.token, 'playerId', p.id, 'groupId', g.id, 'groupName', g.name);
 end $$;
 
+-- Members sign back in with just their name and PIN. Codes are only for joining.
+create or replace function sign_in(p_name text, p_pin text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare p players; n int; clean text := trim(p_name);
+begin
+  select count(*) into n from players where lower(name) = lower(clean) and pin_hash = crypt(p_pin, pin_hash);
+  if n = 0 then raise exception 'No member by that name and PIN. Check both and try again.'; end if;
+  if n > 1 then raise exception 'More than one member by that name. Ask the committee for help.'; end if;
+  select * into p from players where lower(name) = lower(clean) and pin_hash = crypt(p_pin, pin_hash);
+  return json_build_object('token', p.token, 'playerId', p.id, 'groupId', p.group_id, 'groupName', (select name from groups where id = p.group_id));
+end $$;
+
 create or replace function create_invite(p_token uuid, p_name text) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); clean text := trim(p_name); v_code text; v_id text;
@@ -135,8 +157,8 @@ begin
   if me.role <> 'admin' then raise exception 'Only the committee can put up new members.'; end if;
   if char_length(clean) not between 1 and 20 then raise exception 'Name must be 1-20 characters.'; end if;
   loop
-    v_code := (select invite_code from groups where id = me.group_id) || '-' || rand_code(4);
-    exit when not exists (select 1 from invitations where code = v_code);
+    v_code := invite_code();
+    exit when not exists (select 1 from invitations where code = v_code) and not exists (select 1 from groups where invite_code = v_code);
   end loop;
   v_id := rand_code(10);
   insert into invitations (id, group_id, name, code, created_by) values (v_id, me.group_id, clean, v_code, me.id);
@@ -234,6 +256,8 @@ revoke all on function rand_code(int) from public, anon, authenticated;
 grant execute on function create_invite(uuid, text) to anon;
 grant execute on function list_invites(uuid) to anon;
 grant execute on function peek_invite(text) to anon;
+revoke all on function invite_code() from public, anon, authenticated;
+grant execute on function sign_in(text, text) to anon;
 
 -- Create your group (change the name and code). The first person to join with the code runs the club;
 -- after that, new members need a personal invitation from them. Share https://YOUR-SITE/#/join/<code> to start:

@@ -60,6 +60,7 @@ export type InvitePeek = { name: string; code: string; groupName: string; used: 
 export interface Api {
   mode: 'local' | 'supabase';
   join(invite: string, name: string, pin: string): Promise<Session>;
+  signIn(name: string, pin: string): Promise<Session>; // returning members: no code needed
   snapshot(session: Session): Promise<Snapshot>;
   submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[] }): Promise<void>;
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;

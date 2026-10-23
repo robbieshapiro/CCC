@@ -86,6 +86,11 @@ label .hint { font-weight: 500; font-size: 13px; letter-spacing: 0; text-transfo
 .code-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
 .code-form > * { min-width: 0; }
 .code-form input { width: 100%; min-width: 0; }
+.code-form > h2, .code-form > p, .code-form > .link { grid-column: 1 / -1; margin: 0; }
+.member-form h2 { margin: 0; }
+#invite { text-transform: uppercase; letter-spacing: 0.12em; }
+.code-chip { margin: 0; font: 800 11px var(--font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+.code-chip b { margin-left: 6px; font: italic 700 22px var(--serif); letter-spacing: 0.06em; color: var(--green); }
 .member-form { background: var(--paper); border: 1px solid var(--line); border-top: 3px solid var(--gold); border-radius: 6px; padding: 22px; display: grid; gap: 16px; }
 
 /* This month */
@@ -378,6 +383,8 @@ main.invite { max-width: none; min-height: 100svh; padding-block: 32px; place-it
 .letter-sign small { font: 700 11px var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-style: normal; }
 .letter .accept { justify-self: center; margin-top: 6px; background: var(--gold); border-color: var(--gold); color: var(--green); animation: unfold 0.5s ease both; }
 .letter .accept:hover { background: #c9a66b; }
+.letter .copy-code { justify-self: center; padding: 9px 16px; font-size: 12px; }
+.letter .accept-note { text-align: center; font-family: var(--font); }
 
 /* Putting up a friend, from the clubhouse */
 .invite-maker { display: grid; gap: 12px; border-top: 3px solid var(--gold); }
