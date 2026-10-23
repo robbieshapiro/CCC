@@ -12,6 +12,7 @@ import { onSnapshot, refresh, startPolling } from './state';
 import { esc, muteButton, render } from './ui';
 
 let route = '';
+let routing = false; // the router draws the page itself; the refresh hook mustn't draw it a second time
 
 document.querySelector<HTMLLinkElement>('link[rel=icon]')?.setAttribute('href', favicon());
 
@@ -28,7 +29,8 @@ async function router() {
   if (!getSession()) return landing();
 
   try {
-    const s = await refresh();
+    routing = true;
+    const s = await refresh().finally(() => (routing = false));
     const me = s.players.find((p) => p.id === s.me);
     // new members get the tour first; it lives at #/ for them, so mark the route or the minute-by-minute
     // refresh would redraw the home page over the top of it
@@ -47,7 +49,7 @@ async function router() {
 
 // Live-update the home page as polls come in; never interrupt a shot.
 onSnapshot((s) => {
-  if (route === 'home') home(s);
+  if (route === 'home' && !routing) home(s);
 });
 
 // Sound toggle lives in the header on every screen.
