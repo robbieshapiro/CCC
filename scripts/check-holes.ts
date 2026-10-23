@@ -93,10 +93,10 @@ const POWERS: Record<ClubId, number[]> = {
   driver: [0.4, 0.6, 0.8, 0.9, 1],
 };
 
-// Clubs a player could pick from this lie: no driver off sand or the green.
+// Clubs a player could pick from this lie: wedge or iron from sand, putter or wedge on the green.
 function clubsFor(h: Hole, pos: V2): ClubId[] {
   const s = surfaceAt(h, pos);
-  if (s === 'sand') return ['wedge'];
+  if (s === 'sand') return ['wedge', 'iron'];
   if (s === 'green') return ['putter', 'wedge'];
   return BAG;
 }
@@ -152,7 +152,7 @@ function solve(h: Hole, opts: { exclude?: string; via?: V2[] } = {}) {
 const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, number] }> = {
   summit: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [30, 75] },
   island: { from: { x: -24, y: 58 }, clubs: ['putter'], angles: [-6, 6] },
-  ridge: { from: { x: -2, y: 300 }, clubs: ['iron', 'wedge'], angles: [-30, 30] },
+  ridge: { from: { x: -50, y: 318 }, clubs: ['iron', 'wedge'], angles: [-110, -70] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
@@ -251,7 +251,7 @@ if (mode === 'all' || mode === 'basic') {
   const slice = simulate(flat, { x: 0, y: 0 }, { angle: 0, power: 1, club: 'driver', error: 1, clock: 0 }, false);
   const hook = simulate(flat, { x: 0, y: 0 }, { angle: 0, power: 1, club: 'driver', error: -1, clock: 0 }, false);
   ok(slice.end.x > 20 && hook.end.x < -20, `a slice goes right (${slice.end.x.toFixed(0)}), a hook left (${hook.end.x.toFixed(0)})`);
-  const cupHole: Hole = { ...flat, cup: { x: 0.8, y: 30 } };
+  const cupHole: Hole = { ...flat, cup: { x: CUP_R * 0.8, y: 30 } };
   const fast = simulate(cupHole, { x: 0, y: 0 }, { angle: 0, power: 1, club: 'putter', error: 0, clock: 0 }, false);
   ok(fast.holed, 'a full-speed putt that crosses the cup drops');
   const miss = simulate({ ...cupHole, cup: { x: CUP_R + 0.2, y: 30 } }, { x: 0, y: 0 }, { angle: 0, power: 1, club: 'putter', error: 0, clock: 0 }, false);

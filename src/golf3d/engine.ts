@@ -7,7 +7,7 @@ import { sfx } from '../fx/sound';
 import { CartGirl } from './cartgirl';
 import { BAG, carryOf, CLUBS, DRINKS, type ClubId, type Drink } from './clubs';
 import { Golfer } from './golfer';
-import { BALL_R, G, launch, simulate, type Result } from './physics';
+import { BALL_R, G, launch, lieFactor, simulate, type Result } from './physics';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
 import { heightAt, inPoly, isWater, surfaceAt } from './terrain';
@@ -33,6 +33,30 @@ export function scoreName(strokes: number, par: number) {
 
 const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', putter: 'Putter' };
 
+function targetMarker() {
+  const g = new THREE.Group();
+  const flat = (geo: THREE.BufferGeometry, color: string, opacity: number) => {
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, fog: false }));
+    m.rotation.x = -Math.PI / 2;
+    m.renderOrder = 2;
+    g.add(m);
+    return m;
+  };
+  // spread ring at radius 1 (scaled to the club), a dark edge so it reads on any grass, and a solid centre
+  flat(new THREE.RingGeometry(0.9, 1.08, 48), '#13261c', 0.55);
+  flat(new THREE.RingGeometry(0.93, 1.03, 48), '#ffd23f', 1);
+  flat(new THREE.RingGeometry(0.44, 0.5, 40), '#ffd23f', 0.8);
+  flat(new THREE.CircleGeometry(0.16, 24), '#ffd23f', 1);
+  // a thin beam of light straight up, so the spot shows from the tee
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.08, 1, 8, 1, true),
+    new THREE.MeshBasicMaterial({ color: '#ffe27a', transparent: true, opacity: 0.55, depthWrite: false, fog: false }),
+  );
+  beam.name = 'beam';
+  g.add(beam);
+  return g;
+}
+
 export class Course3D {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -50,7 +74,7 @@ export class Course3D {
   private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
   private golfer: Golfer;
   private dots: THREE.InstancedMesh;
-  private ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: '#f3ecdc', transparent: true, opacity: 0.85, depthWrite: false }));
+  private ring = targetMarker(); // where the shot comes down: a bullseye with a beam you can see from the tee
   private trail: THREE.Line;
   private trailPts: THREE.Vector3[] = [];
   private clouds: THREE.Object3D[] = [];
@@ -78,7 +102,8 @@ export class Course3D {
   private follow = new THREE.Vector3(0, 0, -1);
   private camPos = new THREE.Vector3();
   private camLook = new THREE.Vector3();
-  private overview = false;
+  private view: 'play' | 'target' = 'play'; // one tap flips to a look at where the shot lands
+  private landing = new THREE.Vector3();
   private orbit = 0;
   private resolve: ((r: HoleResult) => void) | null = null;
   private drag: { x: number; y: number; aim: number; kind: '' | 'aim' | 'power' } | null = null;
@@ -122,7 +147,6 @@ export class Course3D {
     this.dots = new THREE.InstancedMesh(new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshBasicMaterial({ color: '#f3ecdc', transparent: true, opacity: 0.9 }), 80);
     this.dots.frustumCulled = false;
     this.scene.add(this.dots);
-    this.ring.rotation.x = -Math.PI / 2;
     this.scene.add(this.ring);
     const tg = new THREE.BufferGeometry();
     tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL * 3), 3));
@@ -183,7 +207,7 @@ export class Course3D {
     this.aim = hole.aim;
     this.power = 0;
     this.shot = null;
-    this.overview = false;
+    this.setView('play');
     this.trailPts = [];
     this.drawTrail();
     this.placeBall();
@@ -300,7 +324,7 @@ export class Course3D {
           <button data-nudge="-1" aria-label="Aim left">◀</button>
           <button data-nudge="1" aria-label="Aim right">▶</button>
         </div>
-        <button class="g3-pill" data-view aria-pressed="false">Overview</button>
+        <button class="g3-pill" data-view aria-pressed="false">Target</button>
       </div>
       <button class="g3-skip" data-skip>Skip flyover</button>`;
     const q = (s: string) => this.overlay.querySelector(s) as HTMLElement;
@@ -330,11 +354,7 @@ export class Course3D {
       b.onpointercancel = stop;
     });
     const view = q('[data-view]');
-    view.onclick = () => {
-      this.overview = !this.overview;
-      view.setAttribute('aria-pressed', String(this.overview));
-      view.classList.toggle('on', this.overview);
-    };
+    view.onclick = () => this.setView(this.view === 'play' ? 'target' : 'play');
     q('[data-skip]').onclick = () => this.endFlyover();
     this.bindStrike(q('[data-ball]'));
     this.showDrink();
@@ -381,6 +401,15 @@ export class Course3D {
     }
   }
 
+  private setView(v: 'play' | 'target') {
+    this.view = v;
+    const b = this.overlay.querySelector('[data-view]');
+    if (!b) return;
+    b.textContent = v === 'target' ? 'Back' : 'Target';
+    b.setAttribute('aria-pressed', String(v === 'target'));
+    b.classList.toggle('on', v === 'target');
+  }
+
   private setClub(c: ClubId) {
     this.club = c;
     this.golfer.holdClub(c);
@@ -390,9 +419,9 @@ export class Course3D {
   // Which clubs this lie allows, and a sensible default for the distance.
   private lie() {
     const s = surfaceAt(this.hole, this.pos);
-    const allowed: ClubId[] = s === 'sand' ? ['wedge'] : s === 'green' ? ['putter', 'wedge'] : BAG;
+    const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'wedge'] : BAG;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? 'wedge' : d < 26 && s !== 'rough' ? 'putter' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
+    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
     return { allowed, want, d };
   }
 
@@ -658,6 +687,7 @@ export class Course3D {
 
   private swing(error: number) {
     this.mode = 'swing';
+    this.setView('play');
     const power = this.power;
     const club = this.club;
     this.golfer.swingClub(club, power, () => this.hit(club, power, error));
@@ -814,7 +844,7 @@ export class Course3D {
     const cam = this.camera.position;
     const targets = [this.ball.position, this.golfer.group.position.clone().add(new THREE.Vector3(0, 4, 0))];
     const want = new Set<THREE.Object3D>();
-    if (this.mode !== 'fly' && !this.overview)
+    if (this.mode !== 'fly')
       for (const o of occ) {
         for (const t of targets) {
           // closest approach of the camera->target segment to the occluder, in plan view
@@ -868,10 +898,12 @@ export class Course3D {
           m.setPosition(w3(x, y, heightAt(this.hole, x, y) + 0.2));
           this.dots.setMatrixAt(n++, m);
         }
+        const end = 8 + this.power * 30;
+        this.landing.copy(w3(this.pos.x + dx * end, this.pos.y + dy * end, heightAt(this.hole, this.pos.x + dx * end, this.pos.y + dy * end)));
       } else {
         // the flight arc and a landing ring sized to the club's spread
         const power = Math.max(this.power, 0.6);
-        const v = launch({ angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost(), spin: this.spin, shape: this.shape });
+        const v = launch({ angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost() * lieFactor(this.hole, this.pos, this.club), spin: this.spin, shape: this.shape });
         const z0 = heightAt(this.hole, this.pos.x, this.pos.y);
         let landed: V2 | null = null;
         const T = (2 * v.vz) / G + 1;
@@ -892,10 +924,14 @@ export class Course3D {
         const carry = carryOf(this.club, power, this.boost());
         const p = landed ?? { x: this.pos.x + dx * carry, y: this.pos.y + dy * carry };
         const spread = 2 + CLUBS[this.club].curve * 0.35 * (1 - Math.min(1, CLUBS[this.club].sweet * 4));
-        this.ring.position.copy(w3(p.x, p.y, heightAt(this.hole, p.x, p.y) + 0.15));
-        this.ring.scale.set(spread, spread * 0.6, 1);
-        this.ring.rotation.z = -this.aim + Math.PI / 2;
-        this.ring.visible = this.power > 0;
+        this.landing.copy(w3(p.x, p.y, heightAt(this.hole, p.x, p.y)));
+        this.ring.position.copy(this.landing).add(new THREE.Vector3(0, 0.15, 0));
+        this.ring.scale.setScalar(spread);
+        this.ring.rotation.y = -this.aim;
+        this.ring.visible = true;
+        const beam = this.ring.getObjectByName('beam')!;
+        beam.scale.set(1 / spread, 16 / spread, 1 / spread);
+        beam.position.y = 8 / spread;
       }
     }
     this.dots.count = n;
@@ -921,14 +957,13 @@ export class Course3D {
 
   private cameraTarget() {
     const ball = this.ball.position;
-    if (this.overview) {
-      const { x0, y0, x1, y1 } = this.hole.bounds;
-      const cx = (x0 + x1) / 2;
-      const cy = (y0 + y1) / 2;
-      const span = Math.max(x1 - x0, y1 - y0);
+    if (this.view === 'target' && (this.mode === 'aim' || this.mode === 'meter')) {
+      // high over the landing spot, looking down the line at it
       const back = new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim));
-      this.camPos.set(cx, span * (this.camera.aspect < 1 ? 1.5 : 0.95), -cy).addScaledVector(back, -span * 0.25);
-      this.camLook.set(cx, 0, -cy);
+      const far = this.landing.distanceTo(ball);
+      const height = Math.max(26, Math.min(70, far * 0.35)) * (this.camera.aspect < 1 ? 1.3 : 1);
+      this.camPos.copy(this.landing).addScaledVector(back, -height * 0.75).add(new THREE.Vector3(0, height, 0));
+      this.camLook.copy(this.landing);
       return;
     }
     if (this.mode === 'done') {
@@ -973,8 +1008,9 @@ export class Course3D {
     if (!this.hole) return;
     // drop the pixel ratio if the device is struggling
     this.slow = raw > 0.034 ? this.slow + raw : Math.max(0, this.slow - raw);
+    // in half steps, so a struggling phone gets a little softer, not suddenly blurry
     if (this.slow > 3 && this.renderer.getPixelRatio() > 1) {
-      this.renderer.setPixelRatio(1);
+      this.renderer.setPixelRatio(Math.max(1, this.renderer.getPixelRatio() - 0.5));
       this.resize();
       this.slow = 0;
     }
@@ -1008,13 +1044,13 @@ export class Course3D {
       const look = new THREE.Vector3();
       this.camera.getWorldDirection(look);
       const want = this.camLook.clone().sub(this.camera.position).normalize();
-      look.lerp(want, this.overview ? 1 : Math.min(1, k * 1.4));
+      look.lerp(want, Math.min(1, k * 1.4));
       this.camera.lookAt(this.camera.position.clone().add(look));
     }
 
     if (this.mode === 'aim' || this.mode === 'meter' || this.mode === 'cart' || this.mode === 'fly') this.placeGolfer();
     // you're the one talking to Daisy, so you step out of her close-up
-    this.golfer.group.visible = !this.overview && !(this.mode === 'cart' && this.cart?.closeUp(this.camera.aspect));
+    this.golfer.group.visible = !(this.mode === 'cart' && this.cart?.closeUp(this.camera.aspect));
     this.golfer.update(dt);
 
     this.guide();

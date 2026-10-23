@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { sfx } from '../fx/sound';
 import { DRINKS, type Drink } from './clubs';
 import { orderLine, orderReply, script, type CartTalk, type Mood } from './daisy';
-import { DEFAULT_SPEC, Golfer } from './golfer';
+import { Hostess } from './hostess';
 import * as props from './props';
 import { w3 } from './scene';
 import { heightAt } from './terrain';
@@ -14,23 +14,7 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 export class CartGirl {
   visited = false;
   private cart = props.cart();
-  private daisy = new Golfer({
-    ...DEFAULT_SPEC,
-    skin: '#efc7a4',
-    build: 'slim',
-    hair: 'ponytail',
-    hairColor: '#c7995a',
-    top: 'uniform',
-    topColor: '#163b2c',
-    accent: '#f4f1e8',
-    bottoms: 'skirt',
-    bottomsColor: '#f4f1e8',
-    hat: 'visor',
-    hatColor: '#f4f1e8',
-    glove: false,
-    height: 1,
-    staff: { name: 'Daisy', lips: '#b4505e' },
-  });
+  private daisy = new Hostess();
   private group = new THREE.Group();
   private from = new THREE.Vector3();
   private to = new THREE.Vector3();
@@ -42,7 +26,6 @@ export class CartGirl {
   private fill = new THREE.PointLight('#fff1e2', 0, 26, 1.4);
 
   constructor(private scene: THREE.Scene, private hole: Hole, private onOrder: (d: Drink | null) => void) {
-    this.daisy.showBag(false);
     this.daisy.setPose('idle');
     this.group.add(this.cart, this.daisy.group);
     this.daisy.group.position.set(3.4, 0, 1.5);
