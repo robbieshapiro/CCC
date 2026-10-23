@@ -5,6 +5,7 @@ import { crest } from '../brand';
 import { featById } from '../feats';
 import { courseFor } from '../golf3d/courses';
 import { hostChip, REGINALD, type Mood } from '../host';
+import { bindInviteMaker, inviteMaker } from './invite';
 import { board, monthName, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { esc, header, render } from '../ui';
@@ -95,9 +96,11 @@ export function home(snap: Snapshot) {
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
       </section>
+      ${inviteMaker()}
       ${!useSupabase && snap.players.length < 2 ? `<p class="fine">Local mode. <button class="link" id="demo">Add Sean, Danny and PJ</button> to see a full board.</p>` : ''}
     </main>`);
 
+  bindInviteMaker();
   document.getElementById('demo')?.addEventListener('click', async () => {
     localApi.seedDemo(requireSession());
     home(await refresh());

@@ -3,6 +3,7 @@ import { favicon } from './brand';
 import { getSession } from './api';
 import { setSound, soundOn } from './fx/sound';
 import { home } from './screens/home';
+import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
@@ -19,10 +20,11 @@ async function router() {
   leaveCard();
   closeWelcome();
   const hash = location.hash.replace(/^#\/?/, '');
-  const [page, arg] = hash.split('/');
+  const [page, arg, extra] = hash.split('/');
   route = page || 'home';
 
-  if (page === 'join' && arg) return join(decodeURIComponent(arg));
+  if (page === 'invite') return invite(decodeURIComponent(arg ?? ''));
+  if (page === 'join' && arg) return join(decodeURIComponent(arg), decodeURIComponent(extra ?? ''));
   if (!getSession()) return landing();
 
   try {
