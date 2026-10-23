@@ -3,8 +3,8 @@ import { CLUBS, carryOf } from './clubs';
 import { gradAt, heightAt, inPoly, isWater, surfaceAt } from './terrain';
 import type { Hole, Post, Shot, Surface, V2, Wall } from './types';
 
-export const BALL_R = 0.5;
-export const CUP_R = 0.95;
+export const BALL_R = 0.3;
+export const CUP_R = 0.65;
 export const G = 32;
 const DT = 1 / 240;
 const MAX_T = 24;
@@ -27,6 +27,11 @@ export type Result = {
   sounds: Sound[];
   duration: number;
 };
+
+// An iron out of a bunker is possible, but the sand takes a fifth of the distance.
+export function lieFactor(h: Hole, from: V2, club: Shot['club']) {
+  return club === 'iron' && surfaceAt(h, from) === 'sand' ? 0.8 : 1;
+}
 
 export function curbs(h: Hole): Wall[] {
   return h.border.map((a, i) => ({ a, b: h.border[(i + 1) % h.border.length], h: CURB_H, look: 'stone' as const }));
@@ -73,7 +78,7 @@ function capped(g: V2): V2 {
 
 export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Result {
   let { x, y } = from;
-  const shotLaunch = launch(shot);
+  const shotLaunch = launch({ ...shot, boost: (shot.boost ?? 1) * lieFactor(h, from, shot.club) });
   let { vx, vy, vz } = shotLaunch;
   const club = CLUBS[shot.club];
   let z = heightAt(h, x, y);

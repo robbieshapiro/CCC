@@ -5,7 +5,7 @@ import { CUP_R, curbs } from './physics';
 import * as props from './props';
 import { mat, mesh, P } from './props';
 import { gradAt, heightAt, inPoly, isWater, surfaceAt } from './terrain';
-import type { Hole, Surface, Wall } from './types';
+import type { Hole, Surface, V2, Wall } from './types';
 
 export const w3 = (x: number, y: number, h: number) => new THREE.Vector3(x, h, -y);
 
@@ -20,6 +20,8 @@ const SURFACE: Record<Surface, string> = {
   sand: '#e4d3a3',
 };
 
+const ROCK = new THREE.Color('#8a8270');
+
 export type Occluder = { obj: THREE.Object3D; x: number; z: number; r: number };
 
 export type World = {
@@ -29,25 +31,84 @@ export type World = {
   dispose: () => void;
 };
 
-// fine grass and soil grain, multiplied over the vertex colours
-let grain: THREE.CanvasTexture | null = null;
-function grassTexture() {
-  if (grain) return grain;
+// The ground's colours, painted at ~5 px per foot so region edges and mowing stripes stay sharp up close.
+function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: number, color: THREE.Color, alpha: number) => void) => void) {
+  const { x0, y0, x1, y1 } = h.bounds;
+  const ppf = Math.min(5, 4096 / Math.max(x1 - x0, y1 - y0));
   const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const x = c.getContext('2d')!;
-  x.fillStyle = '#e6e6e6';
-  x.fillRect(0, 0, 256, 256);
-  const rng = makeRng('grain');
-  for (let i = 0; i < 9000; i++) {
-    const v = 190 + Math.floor(rng.next() * 65);
-    x.fillStyle = `rgb(${v},${v},${v})`;
-    x.fillRect(rng.next() * 256, rng.next() * 256, 1, 2 + rng.next() * 3);
+  c.width = Math.ceil((x1 - x0) * ppf);
+  c.height = Math.ceil((y1 - y0) * ppf);
+  const g = c.getContext('2d')!;
+  // canvas y runs down from the far end of the hole
+  g.setTransform(ppf, 0, 0, -ppf, -x0 * ppf, y1 * ppf);
+  const trace = (poly: V2[]) => {
+    g.beginPath();
+    poly.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
+    g.closePath();
+  };
+  const hex = (s: Surface, dl = 0) => '#' + new THREE.Color(SURFACE[s]).offsetHSL(0, 0, dl).getHexString();
+  g.fillStyle = '#284a25';
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  const layers: { poly: V2[]; surface: Surface }[] = [{ poly: h.border, surface: h.base }, ...h.regions];
+  for (const { poly, surface } of layers) {
+    g.save();
+    trace(h.border);
+    g.clip();
+    trace(poly);
+    g.clip();
+    g.fillStyle = hex(surface);
+    g.fillRect(x0, y0, x1 - x0, y1 - y0);
+    // mowing patterns
+    g.fillStyle = hex(surface, 0.035);
+    if (surface === 'green') {
+      for (let d = Math.floor((x0 + y0) / 10) * 10 - (y1 - y0); d < x1 + y1; d += 10) {
+        g.beginPath();
+        g.moveTo(d, y0);
+        g.lineTo(d + 5, y0);
+        g.lineTo(d + 5 - (y1 - y0), y1);
+        g.lineTo(d - (y1 - y0), y1);
+        g.fill();
+      }
+    } else if (surface === 'fairway') {
+      g.fillStyle = hex(surface, 0.04);
+      for (let y = Math.floor(y0 / 28) * 28; y < y1; y += 28) g.fillRect(x0, y, x1 - x0, 14);
+    } else if (surface === 'wood') {
+      g.fillStyle = hex(surface, -0.05);
+      for (let x = Math.floor(x0 / 1.4) * 1.4; x < x1; x += 1.4) g.fillRect(x, y0, 0.12, y1 - y0);
+    }
+    g.restore();
+    // a crisp collar where the green meets the fringe
+    if (surface === 'green') {
+      g.save();
+      trace(poly);
+      g.strokeStyle = hex('green', -0.06);
+      g.lineWidth = 0.35;
+      g.stroke();
+      g.restore();
+    }
   }
-  grain = new THREE.CanvasTexture(c);
-  grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
-  grain.anisotropy = 4;
-  return grain;
+  // lake beds and scree, from the heightfield
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  shade((x, y, size, color, alpha) => {
+    g.globalAlpha = alpha;
+    g.fillStyle = '#' + color.getHexString();
+    g.fillRect((x - x0 - size / 2) * ppf, (y1 - y - size / 2) * ppf, size * ppf + 1, size * ppf + 1);
+  });
+  g.globalAlpha = 1;
+  // grain, so close-up grass isn't flat colour
+  const img = g.getImageData(0, 0, c.width, c.height);
+  const rng = makeRng(`grain:${h.id}`);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (rng.next() - 0.5) * 14;
+    img.data[i] += n;
+    img.data[i + 1] += n;
+    img.data[i + 2] += n;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 16;
+  return t;
 }
 
 function terrainMesh(h: Hole) {
@@ -57,44 +118,33 @@ function terrainMesh(h: Hole) {
   const nx = Math.ceil((x1 - x0) / S) + 1;
   const ny = Math.ceil((y1 - y0) / S) + 1;
   const pos = new Float32Array(nx * ny * 3);
-  const col = new Float32Array(nx * ny * 3);
-  const c = new THREE.Color();
-  const outside = new THREE.Color('#284a25');
   const bed = new THREE.Color('#58705a');
-  const rng = makeRng(`terrain:${h.id}`);
   for (let j = 0; j < ny; j++)
     for (let i = 0; i < nx; i++) {
+      const k = (j * nx + i) * 3;
       const x = x0 + i * S;
       const y = y0 + j * S;
-      const k = (j * nx + i) * 3;
-      const z = heightAt(h, x, y);
       pos[k] = x;
-      pos[k + 1] = z;
+      pos[k + 1] = heightAt(h, x, y);
       pos[k + 2] = -y;
-      const p = { x, y };
-      if (!inPoly(p, h.border)) c.copy(outside);
-      else if (isWater(h, p)) c.copy(bed);
-      else {
-        const s = surfaceAt(h, p);
-        c.set(SURFACE[s]);
-        // mowing stripes: tight on the green, broad on the fairway
-        if (s === 'green') c.offsetHSL(0, 0, Math.floor((x + y) / 5) % 2 ? 0.035 : -0.01);
-        else if (s === 'fairway') c.offsetHSL(0, 0.02, Math.floor(y / 14) % 2 ? 0.04 : -0.005);
-        else if (s === 'fringe') c.offsetHSL(0, 0, Math.floor((y + x * 0.3) / 10) % 2 ? 0.015 : 0);
-        else if (s === 'sand') c.offsetHSL(0, 0, (rng.next() - 0.5) * 0.04);
-        else if (s === 'wood') c.offsetHSL(0, 0, Math.floor(x / 1.4) % 2 ? 0.03 : -0.02);
-        // steep rough turns to scree and rock, the way a mountainside does
-        if (s === 'rough' || s === 'fringe') {
-          const g = gradAt(h, x, y);
-          const steep = Math.min(1, Math.max(0, (Math.hypot(g.x, g.y) - 0.55) / 0.6));
-          if (steep > 0) c.lerp(ROCK, steep * 0.85);
-        }
-      }
-      c.offsetHSL(0, 0, (rng.next() - 0.5) * 0.025);
-      col[k] = c.r;
-      col[k + 1] = c.g;
-      col[k + 2] = c.b;
     }
+  const map = surfaceTexture(h, (paint) => {
+    for (let j = 0; j < ny; j++)
+      for (let i = 0; i < nx; i++) {
+        const p = { x: x0 + i * S, y: y0 + j * S };
+        if (!inPoly(p, h.border)) continue;
+        if (isWater(h, p)) {
+          paint(p.x, p.y, S, bed, 1);
+          continue;
+        }
+        // steep rough turns to scree and rock, the way a mountainside does
+        const s = surfaceAt(h, p);
+        if (s !== 'rough' && s !== 'fringe') continue;
+        const g = gradAt(h, p.x, p.y);
+        const steep = Math.min(1, Math.max(0, (Math.hypot(g.x, g.y) - 0.55) / 0.6));
+        if (steep > 0) paint(p.x, p.y, S, ROCK, steep * 0.85);
+      }
+  });
   const idx: number[] = [];
   for (let j = 0; j < ny - 1; j++)
     for (let i = 0; i < nx - 1; i++) {
@@ -103,16 +153,15 @@ function terrainMesh(h: Hole) {
     }
   const uv = new Float32Array(nx * ny * 2);
   for (let k = 0; k < nx * ny; k++) {
-    uv[k * 2] = pos[k * 3] / 9;
-    uv[k * 2 + 1] = pos[k * 3 + 2] / 9;
+    uv[k * 2] = (pos[k * 3] - x0) / (x1 - x0);
+    uv[k * 2 + 1] = (-pos[k * 3 + 2] - y0) / (y1 - y0);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx);
   geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, map: grassTexture() }));
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.92, map }));
   m.receiveShadow = true;
   let low = Infinity;
   for (let k = 1; k < pos.length; k += 3) low = Math.min(low, pos[k]);
@@ -198,7 +247,6 @@ function wallMesh(h: Hole, w: Wall, group: THREE.Group, occ: Occluder[]) {
 }
 
 const CROQUET = ['#b8352b', '#2c5f8a', '#d4a017', '#222222'];
-const ROCK = new THREE.Color('#8a8270');
 
 export function buildWorld(h: Hole, number: number): World {
   const root = new THREE.Group();
