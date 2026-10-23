@@ -5,12 +5,13 @@ import { courseFor, monthOf } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
-import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Invite, type Round } from './types';
+import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
 type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[] };
+type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[] };
 
 const KEY = 'ccc-local-db';
 
@@ -162,6 +163,35 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     if (!inv) return null;
     const group = Object.values(db.groups).find((g) => g.id === inv.groupId);
     return { name: inv.name, code: inv.code, groupName: group?.name ?? '', used: !!inv.usedBy };
+  },
+
+  async submitFeedback(session, body, context) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const clean = body.trim();
+    if (!clean || clean.length > 2000) throw new Error('Keep it under 2000 characters, and not empty.');
+    const list = (db.feedback ??= []);
+    list.push({ id: list.length + 1, groupId: me.groupId, playerId: me.id, body: clean, context: context.trim().slice(0, 120) || null, done: false, createdAt: new Date().toISOString() });
+    save(db);
+  },
+
+  async listFeedback(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can read feedback.');
+    return (db.feedback ?? [])
+      .filter((f) => f.groupId === me.groupId)
+      .sort((a, b) => Number(a.done) - Number(b.done) || b.createdAt.localeCompare(a.createdAt))
+      .map(({ groupId: _g, playerId, ...f }) => ({ ...f, from: db.players.find((p) => p.id === playerId)?.name ?? null }));
+  },
+
+  async setFeedbackDone(session, id, done) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can manage feedback.');
+    const f = (db.feedback ?? []).find((x) => x.id === id && x.groupId === me.groupId);
+    if (f) f.done = done;
+    save(db);
   },
 
   // Adds Sean, Danny and PJ with a few rounds this month and a past champion.

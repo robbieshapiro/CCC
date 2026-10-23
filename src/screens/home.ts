@@ -5,6 +5,7 @@ import { crest } from '../brand';
 import { featById } from '../feats';
 import { courseFor } from '../golf3d/courses';
 import { hostChip, REGINALD, type Mood } from '../host';
+import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
 import { bindInviteMaker, inviteMaker } from './invite';
 import { board, monthName, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
@@ -99,10 +100,14 @@ export function home(snap: Snapshot) {
         <ol>${plaque}</ol>
       </section>
       ${inviteMaker(!!snap.admin)}
+      ${feedbackPanel(!!snap.admin)}
+      <p class="fine feedback-link"><button class="link" id="send-feedback">Send the Committee a note</button></p>
       ${!useSupabase && snap.players.length < 2 ? `<p class="fine">Local mode. <button class="link" id="demo">Add Sean, Danny and PJ</button> to see a full board.</p>` : ''}
     </main>`);
 
   void bindInviteMaker();
+  void bindFeedbackPanel();
+  document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {
     localApi.seedDemo(requireSession());
     home(await refresh());

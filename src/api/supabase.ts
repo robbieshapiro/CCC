@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Api, Invite, InvitePeek, Snapshot } from './types';
+import type { Api, Feedback, Invite, InvitePeek, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -45,4 +45,11 @@ export const supabaseApi: Api = {
   createInvite: (s, name) => rpc('create_invite', { p_token: s.token, p_name: name }),
   listInvites: (s) => rpc<Invite[]>('list_invites', { p_token: s.token }),
   peekInvite: (id) => rpc<InvitePeek | null>('peek_invite', { p_id: id }),
+  submitFeedback: async (s, body, context) => {
+    await rpc('submit_feedback', { p_token: s.token, p_body: body, p_context: context });
+  },
+  listFeedback: (s) => rpc<Feedback[]>('list_feedback', { p_token: s.token }),
+  setFeedbackDone: async (s, id, done) => {
+    await rpc('set_feedback_done', { p_token: s.token, p_id: id, p_done: done });
+  },
 };
