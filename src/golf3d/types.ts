@@ -2,7 +2,7 @@ import type { ClubId } from './clubs';
 
 // Course data. Units are feet; x is left/right, y runs away from the tee, height is up.
 export type V2 = { x: number; y: number };
-export type Surface = 'green' | 'fairway' | 'fringe' | 'rough' | 'path' | 'stone' | 'wood' | 'sand';
+export type Surface = 'green' | 'fairway' | 'fringe' | 'rough' | 'path' | 'stone' | 'wood' | 'sand' | 'rock';
 
 // Terrain pieces combine in order: 'add' adds height, 'set' blends toward a target height.
 export type Piece =
@@ -11,18 +11,31 @@ export type Piece =
   | { kind: 'box'; x0: number; y0: number; x1: number; y1: number; h: number; edge: number; op: 'add' | 'set' }
   | { kind: 'disc'; x: number; y: number; r: number; h: number; edge: number; op: 'add' | 'set' }
   | { kind: 'ramp'; x0: number; y0: number; x1: number; y1: number; axis: 'x' | 'y'; h0: number; h1: number; op: 'add' | 'set'; steps?: number }
-  | { kind: 'channel'; pts: V2[]; width: number; depth: number };
+  | { kind: 'channel'; pts: V2[]; width: number; depth: number; taper?: number } // taper: ft over which the far end fades out
+  // a raised bed along a line (a road or a causeway): heights at each point, flat for `width` either side, then `edge` of bank
+  // wobble: ft the width wanders in and out, so a coastline isn't ruler-straight
+  | { kind: 'embankment'; pts: V2[]; h: number[]; width: number; edge: number; wobble?: number };
 
 export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' };
-export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' };
+export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' };
 export type Region = { poly: V2[]; surface: Surface };
 // A lake or creek: its outline and the flat height of its surface. Ground inside that sits under the surface is wet.
-export type Water = { poly: V2[]; level: number };
+// The sea can run a tide and lava can pulse: the level swings by `amp` either way over `period` seconds of the hole clock.
+export type Water = { poly: V2[]; level: number; look?: 'lake' | 'sea' | 'lava'; tide?: { amp: number; period: number } };
 export type Zone = { id: string; poly: V2[] };
 
 // Things that move on the hole clock. `at(t)` returns their collision shapes at time t.
 export type Mover = { id: string; look: 'swan' | 'cart'; at: (t: number) => { walls: Wall[]; posts: Post[]; pos: V2; heading: number } };
-export type Push = { id: string; look: 'sprinkler' | 'fountain'; x: number; y: number; r: number; at: (t: number) => V2 };
+// `erupt` (geysers and blowholes): while it returns a velocity, a ball rolling over the vent is thrown with it.
+export type Push = {
+  id: string;
+  look: 'sprinkler' | 'fountain' | 'geyser' | 'blowhole';
+  x: number;
+  y: number;
+  r: number;
+  at: (t: number) => V2;
+  erupt?: (t: number) => { x: number; y: number; z: number } | null;
+};
 
 export type Decor = { kind: string; x: number; y: number; rot?: number; scale?: number; color?: string };
 
@@ -34,6 +47,8 @@ export type Hole = {
   cup: V2;
   pins?: V2[]; // where the pin can be cut; one is picked each day
   greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
+  tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
+  theme?: 'highland' | 'volcanic';
   aim: number; // initial aim angle (radians, 0 = straight up the hole)
   bounds: { x0: number; y0: number; x1: number; y1: number };
   border: V2[]; // closed outline, edged with a low curb

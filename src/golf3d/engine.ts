@@ -13,7 +13,7 @@ import { Golfer } from './golfer';
 import { BALL_R, G, launch, lieFactor, simulate, type Result } from './physics';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
-import { heightAt, inPoly, isWater, surfaceAt } from './terrain';
+import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
 import { accuracyError, goldHalf, OVERSWING, PURE, powerSpeed, returnSpeed } from './swing';
 import type { Hole, Shot, V2 } from './types';
 
@@ -141,7 +141,7 @@ export class Course3D {
   private strokes = 0;
   private zones = new Set<string>();
   private drink: { kind: Drink; shots: number } | null = null;
-  private shot: { r: Result; t: number; from: V2; club: ClubId; next: number; practice: boolean } | null = null;
+  private shot: { r: Result; t: number; from: V2; club: ClubId; next: number; practice: boolean; clock: number } | null = null;
   private practice = false; // warm-up swings on the first tee: they don't count
   private fly: { curve: THREE.CatmullRomCurve3; t: number } | null = null;
   private follow = new THREE.Vector3(0, 0, -1);
@@ -579,9 +579,12 @@ export class Course3D {
           const p = { x: xx, y: yy };
           if (!inPoly(p, this.hole.border)) continue;
           const surf = surfaceAt(this.hole, p);
-          g.fillStyle = isWater(this.hole, p)
-            ? '#4d8193'
-            : ({ green: '#86c977', fairway: '#62a957', fringe: '#4f8f47', rough: '#3a6533', path: '#cbb88f', wood: '#a77a4e', stone: '#d8cfbd', sand: '#e8d8a8' } as Record<string, string>)[surf];
+          const wet = wetIn(this.hole, p);
+          g.fillStyle = wet
+            ? wet.look === 'lava'
+              ? '#e0662a'
+              : '#4d8193'
+            : ({ green: '#86c977', fairway: '#62a957', fringe: '#4f8f47', rough: '#3a6533', path: '#cbb88f', wood: '#a77a4e', stone: '#d8cfbd', sand: '#e8d8a8', rock: '#3b3633' } as Record<string, string>)[surf];
           const [a, bb] = px(p);
           g.fillRect(a, bb - 2, 2.2, 2.2);
         }
@@ -663,6 +666,20 @@ export class Course3D {
   }
 
   private toAim() {
+    // the tide (or the lava) has come up over the ball: a free drop uphill, somewhere it stays dry
+    const over = wetIn(this.hole, this.pos, this.clock);
+    if (over) {
+      const flooded = (p: V2) => this.hole.water.some((w) => inPoly(p, w.poly) && heightAt(this.hole, p.x, p.y) < w.level + (w.tide?.amp ?? 0));
+      let p = { ...this.pos };
+      for (let i = 0; i < 120 && flooded(p); i++) {
+        const g = gradAt(this.hole, p.x, p.y);
+        const m = Math.hypot(g.x, g.y) || 1;
+        p = { x: p.x + g.x / m, y: p.y + g.y / m };
+      }
+      this.pos = p;
+      this.placeBall();
+      this.callout(over.look === 'lava' ? "The lava's come up" : "The tide's in", 'Free drop, uphill', 1800);
+    }
     // practice is only on offer before the first counted stroke of the round
     const practice = this.overlay.querySelector('[data-practice]') as HTMLElement | null;
     if (practice) practice.hidden = !(this.number === 1 && this.strokes === 0);
@@ -716,7 +733,7 @@ export class Course3D {
       if (!d || this.mode !== 'aim') return;
       // putts go on release; full swings keep the plan and start with a tap
       if (this.club === 'putter') {
-        if (d.kind === 'power' && this.power > 0.03) this.swing(0);
+        if (d.kind === 'power' && this.power > 0.03) this.putt();
         else this.power = 0;
       } else if (!d.kind) this.startSwing();
     };
@@ -746,7 +763,7 @@ export class Course3D {
       );
     else if (e.key === 'c') this.overlay.querySelector<HTMLButtonElement>(`[data-club="${BAG[(idx + 1) % BAG.length]}"]:not(:disabled)`)?.click();
     else if (e.key === ' ' && this.club !== 'putter') this.startSwing();
-    else if (e.key === ' ' && this.power > 0.03) this.swing(0);
+    else if (e.key === ' ' && this.power > 0.03) this.putt();
     else return;
     e.preventDefault();
   }
@@ -804,6 +821,16 @@ export class Course3D {
     this.swing(error);
   }
 
+  // On tour greens the stroke isn't perfect: the harder you hit it, the more it can wander off line and off pace.
+  private putt() {
+    if (!this.hole.tour) return this.swing(0);
+    const shake = this.power ** 1.5;
+    const error = (Math.random() * 2 - 1) * shake;
+    this.power = Math.max(0.02, Math.min(1, this.power * (1 + (Math.random() * 2 - 1) * 0.06 * shake)));
+    if (Math.abs(error) > 0.5) this.callout(error > 0 ? 'Pushed it' : 'Pulled it', '', 800);
+    this.swing(error);
+  }
+
   private swing(error: number) {
     this.mode = 'swing';
     this.setView('play');
@@ -831,7 +858,7 @@ export class Course3D {
       r.zones.forEach((z) => this.zones.add(z));
     }
     this.mode = 'roll';
-    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice };
+    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice, clock: shot.clock };
     this.trailPts = [];
     this.power = 0;
     sfx(club === 'putter' ? 'tick' : club === 'driver' ? 'crack' : 'thump');
@@ -853,8 +880,18 @@ export class Course3D {
         sfx('thump');
         this.puff(this.ball.position, '#e9dcb2');
       } else if (k === 'splash') {
-        sfx('swish');
-        this.splash(this.ball.position);
+        const lava = wetIn(this.hole, { x: this.ball.position.x, y: -this.ball.position.z }, this.shot!.clock)?.look === 'lava';
+        sfx(lava ? 'fire' : 'swish');
+        this.splash(this.ball.position, lava);
+      } else if (k === 'lip') {
+        sfx('doink');
+        this.callout('Lipped out', '', 1000);
+      } else if (k === 'hop') {
+        sfx('doink');
+        this.callout('Too firm', 'It hopped the hole', 1100);
+      } else if (k === 'vent') {
+        sfx('whoosh');
+        this.puff(this.ball.position, '#f1efe9');
       }
     }
     let i = 0;
@@ -886,7 +923,7 @@ export class Course3D {
       // tell them how it went, then put the ball back on the tee
       const last = r.frames[r.frames.length - 1];
       const d = Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y));
-      this.callout(r.holed ? 'In the hole!' : r.penalty ? (isWater(this.hole, last) ? 'In the drink' : 'Out of bounds') : `${d} ft from the pin`, 'Practice', 1600);
+      this.callout(r.holed ? 'In the hole!' : r.penalty ? this.lost(last, s.clock + r.duration) : `${d} ft from the pin`, 'Practice', 1600);
       this.pos = { ...this.hole.tee };
       this.placeBall();
       this.trailPts = [];
@@ -908,7 +945,7 @@ export class Course3D {
       this.setStrokes();
       const last = r.frames[r.frames.length - 1];
       const roof = this.hole.roofs?.some((rf) => inPoly(last, rf.poly));
-      this.callout(isWater(this.hole, last) ? 'In the drink' : roof ? 'On the roof' : 'Out of bounds', 'Penalty stroke. Play it again.', 1800);
+      this.callout(roof ? 'On the roof' : this.lost(last, s.clock + r.duration), 'Penalty stroke. Play it again.', 1800);
       sfx('sad');
       this.golfer.setPose('groan');
     } else this.pos = r.end;
@@ -922,6 +959,12 @@ export class Course3D {
     this.trailPts = [];
     this.drawTrail();
     window.setTimeout(() => this.mode === 'roll' && this.toAim(), r.penalty ? 1000 : 250);
+  }
+
+  // where a lost ball went: the drink, the sea, the lava, or just out of bounds
+  private lost(at: V2, clock: number) {
+    const w = wetIn(this.hole, at, clock);
+    return !w ? 'Out of bounds' : w.look === 'lava' ? 'Into the lava' : w.look === 'sea' ? 'In the sea' : 'In the drink';
   }
 
   private finish(feats: string[], delay = 0) {
@@ -1021,8 +1064,8 @@ export class Course3D {
     this.puffs.push({ m, t: 0 });
   }
 
-  private splash(at: THREE.Vector3) {
-    for (let i = 0; i < 4; i++) window.setTimeout(() => this.puff(at.clone().add(new THREE.Vector3(0, -0.2, 0)), '#dff0f4'), i * 150);
+  private splash(at: THREE.Vector3, lava = false) {
+    for (let i = 0; i < 4; i++) window.setTimeout(() => this.puff(at.clone().add(new THREE.Vector3(0, -0.2, 0)), lava ? (i % 2 ? '#ff8a3d' : '#59524d') : '#dff0f4'), i * 150);
   }
 
   // Anything standing between the camera and the golfer or ball turns see-through.
@@ -1077,15 +1120,15 @@ export class Course3D {
       const dx = Math.sin(this.aim);
       const dy = Math.cos(this.aim);
       if (this.club === 'putter') {
-        // a dotted line that hugs the ground; longer as you pull back
-        const len = 8 + this.power * 30;
+        // a dotted line that hugs the ground; longer as you pull back. On tour greens it only shows the start line.
+        const len = this.hole.tour ? 6 : 8 + this.power * 30;
         for (let d = 1.5; d < len && n < 80; d += 1.1) {
           const x = this.pos.x + dx * d;
           const y = this.pos.y + dy * d;
           m.setPosition(w3(x, y, heightAt(this.hole, x, y) + 0.2));
           this.dots.setMatrixAt(n++, m);
         }
-        const end = 8 + this.power * 30;
+        const end = len;
         this.landing.copy(w3(this.pos.x + dx * end, this.pos.y + dy * end, heightAt(this.hole, this.pos.x + dx * end, this.pos.y + dy * end)));
       } else {
         // the flight arc and a landing ring sized to the club's spread

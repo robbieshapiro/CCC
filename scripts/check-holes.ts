@@ -1,9 +1,9 @@
 // Headless checks for the 3D holes: determinism, slopes, secret routes, a greedy solver, and a novice sim.
 // Run: npm run check-holes
 import { BAG, CLUBS, type ClubId } from '../src/golf3d/clubs';
-import { courseFor } from '../src/golf3d/courses';
+import { courseById, courseFor } from '../src/golf3d/courses';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
-import { CUP_R, curbs, simulate } from '../src/golf3d/physics';
+import { CUP_R, cupR, curbs, DROP_SPEED, simulate } from '../src/golf3d/physics';
 import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed } from '../src/golf3d/swing';
 import { gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
@@ -95,6 +95,9 @@ const POWERS: Record<ClubId, number[]> = {
   driver: [0.4, 0.6, 0.8, 0.9, 1],
 };
 
+// tour greens need a finer touch on the putter to find the speed that drops
+const TOUR_PUTTS = [...Array.from({ length: 29 }, (_, i) => 0.03 + i * 0.02), 0.7, 0.8, 1];
+
 // Clubs a player could pick from this lie: wedge or iron from sand, putter or wedge on the green.
 function clubsFor(h: Hole, pos: V2): ClubId[] {
   const s = surfaceAt(h, pos);
@@ -110,7 +113,7 @@ function candidates(h: Hole, pos: V2, nav: (p: V2) => number, clock: number, ste
   const toCup = Math.atan2(h.cup.x - pos.x, h.cup.y - pos.y);
   for (const club of only ? [only] : clubsFor(h, pos))
     for (let a = -180; a < 180; a += club === 'putter' && Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40 ? step / 4 : step)
-      for (const power of POWERS[club])
+      for (const power of club === 'putter' && h.tour ? TOUR_PUTTS : POWERS[club])
       for (const spin of h.greenFirm && (club === 'iron' || club === 'wedge') ? [0, 1] : [0]) {
         const angle = club === 'putter' && Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40 ? toCup + ((a / 4) * Math.PI) / 180 : (a * Math.PI) / 180;
         const shot: Shot = { angle, power, club, error: 0, clock, spin };
@@ -151,21 +154,24 @@ function solve(h: Hole, opts: { exclude?: string; via?: V2[] } = {}) {
   return { strokes: 99, zones };
 }
 
-// Where each secret starts, and the clubs that can use it from there.
-const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, number] }> = {
+// Where each secret starts, and the clubs that can use it from there (and the hole clock, for the ones that keep time).
+const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, number]; clock?: number }> = {
   summit: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [30, 75] },
   island: { from: { x: -24, y: 58 }, clubs: ['putter'], angles: [-6, 6] },
   ridge: { from: { x: -50, y: 318 }, clubs: ['iron', 'wedge'], angles: [-110, -70] },
+  blowhole: { from: { x: 14, y: 316 }, clubs: ['putter'], angles: [-110, -80], clock: 4.6 },
+  lavafield: { from: { x: 80, y: 262 }, clubs: ['putter'], angles: [-4, 10] },
+  caldera: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [-70, -40] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
 function secretBest(h: Hole) {
-  const { from, clubs, angles } = SECRET_FROM[h.id];
+  const { from, clubs, angles, clock = 0 } = SECRET_FROM[h.id];
   let best = { d: Infinity, shot: null as Shot | null };
   for (const club of clubs)
     for (let a = angles[0]; a <= angles[1]; a += club === 'putter' ? 0.25 : 1)
       for (let p = 0.3; p <= 1.001; p += 0.02) {
-        const shot: Shot = { angle: (a * Math.PI) / 180, power: p, club, error: 0, clock: 0 };
+        const shot: Shot = { angle: (a * Math.PI) / 180, power: p, club, error: 0, clock };
         const r = simulate(h, from, shot, false);
         if (!r.zones.includes(h.secret.zone) || r.penalty) continue;
         const d = r.holed ? 0 : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y);
@@ -237,7 +243,7 @@ function novice(base: Hole, seed: string) {
   return Math.min(s, h.par + 3);
 }
 
-const course = courseFor('2026-10');
+const course = process.env.COURSE ? courseById(process.env.COURSE)! : courseFor('2026-10');
 const mode = process.argv[2] ?? 'all';
 const only = process.argv[3];
 const holes = course.holes.filter((h) => !only || h.id === only);
@@ -248,7 +254,7 @@ if (mode === 'all' || mode === 'basic') {
   const a = simulate(first, first.tee, s);
   const b = simulate(first, first.tee, s);
   ok(a.end.x === b.end.x && a.end.y === b.end.y && a.frames.length === b.frames.length, 'deterministic');
-  const flat: Hole = { ...first, terrain: [], water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], base: 'fairway', cup: { x: 0, y: 2000 } };
+  const flat: Hole = { ...first, tour: false, terrain: [], water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], base: 'fairway', cup: { x: 0, y: 2000 } };
   for (const club of ['driver', 'iron', 'wedge'] as ClubId[]) {
     const r = simulate(flat, { x: 0, y: 0 }, { angle: 0, power: 1, club, error: 0, clock: 0 });
     const land = r.frames.find((f, i) => i > 2 && f.z <= 0.01)!;
@@ -266,6 +272,17 @@ if (mode === 'all' || mode === 'basic') {
   const slope: Hole = { ...flat, base: 'green', terrain: [{ kind: 'tilt', gx: 0, gy: 0.3 }] };
   const down = simulate(slope, { x: 0, y: 100 }, { angle: 0, power: 0.01, club: 'putter', error: 0, clock: 0 }, false);
   ok(down.end.y < 60, `a ball on a slope rolls back downhill (${down.end.y.toFixed(1)})`);
+  // tour greens: a putt has to be dying to drop
+  const tour: Hole = { ...flat, base: 'green', tour: true, cup: { x: 0, y: 20 } };
+  const putt = (speed: number, x = 0) => simulate(tour, { x, y: 0 }, { angle: 0, power: (speed - 1.5) / 32.5, club: 'putter', error: 0, clock: 0 }, false);
+  const dying = putt(Math.sqrt(2 * 3 * 21));
+  ok(dying.holed, `tour green: a putt dying at the hole drops (ends ${dying.end.x.toFixed(1)},${dying.end.y.toFixed(1)})`);
+  const firm = putt(Math.sqrt(2 * 3 * 20) * 1.5);
+  ok(!firm.holed, `tour green: a putt 1.5x too firm hops the hole (ends ${firm.end.y.toFixed(1)})`);
+  const edge = putt(Math.sqrt(2 * 3 * 24), cupR(tour) * 0.8);
+  ok(!edge.holed && Math.abs(edge.end.x - cupR(tour) * 0.8) > 0.5, `tour green: a medium putt on the edge lips out (ends ${edge.end.x.toFixed(1)},${edge.end.y.toFixed(1)})`);
+  const flatFirm = simulate({ ...tour, tour: false }, { x: 0, y: 0 }, { angle: 0, power: (Math.sqrt(2 * 4.2 * 20) * 1.5 - 1.5) / 32.5, club: 'putter', error: 0, clock: 0 }, false);
+  ok(flatFirm.holed, `classic greens are unchanged: the firm putt still drops (cap ${DROP_SPEED} ft/s only on tour)`);
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);
     for (const pin of h.pins ?? [h.cup]) ok(!isWater(h, pin) && surfaceAt(h, pin) === 'green', `${h.name}: pin ${pin.x},${pin.y} is on dry green`);

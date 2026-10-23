@@ -8,6 +8,7 @@ import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
 import { closeRound, round } from './screens/round';
+import { courseById } from './golf3d/courses';
 import { leaveLockers, lockers } from './screens/lockers';
 import { leaveMember, member } from './screens/member';
 import { onSnapshot, refresh, startPolling } from './state';
@@ -43,6 +44,13 @@ async function router() {
       return welcome(s);
     }
     if (page === 'round') return round(s);
+    // the admin's look at a course before it's on the calendar
+    if (page === 'preview') {
+      const c = courseById(arg ?? '');
+      if (s.admin && c?.draft) return round(s, { course: c });
+      location.hash = '#/';
+      return;
+    }
     if (page === 'card' || (page === 'member' && arg === s.me)) return card(s);
     if (page === 'member' && arg) return member(s, arg);
     if (page === 'lockers') return lockers(s);

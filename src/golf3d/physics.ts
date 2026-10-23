@@ -5,19 +5,25 @@ import type { Hole, Post, Shot, Surface, V2, Wall } from './types';
 
 export const BALL_R = 0.3;
 export const CUP_R = 0.65;
+// Tour greens: a smaller cup, quicker greens, and a putt has to be dying to drop.
+export const TOUR_CUP_R = 0.5;
+export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R);
+// the fastest a ball can roll over the dead centre of a tour cup and still drop (ft/s); it's slower toward the edge
+export const DROP_SPEED = 6;
+const TOUR_GREEN = 3;
 export const G = 32;
 const DT = 1 / 240;
 const MAX_T = 24;
 const CURB_H = 0.9;
 const ROLL = 5 / 7; // a rolling ball feels 5/7 of the slope's pull
-const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40 };
+const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40, rock: 7 };
 // how much of a landing ball's speed each surface lets it keep
-const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.45, path: 1, stone: 1, wood: 1, sand: 0.1 };
+const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.45, path: 1, stone: 1, wood: 1, sand: 0.1, rock: 1 };
 // how well each surface grabs a spinning ball: soft greens bite, rough and sand eat the spin
-const GRIP: Record<Surface, number> = { green: 1, fairway: 0.8, fringe: 0.6, rough: 0.25, path: 0.4, stone: 0.4, wood: 0.4, sand: 0 };
+const GRIP: Record<Surface, number> = { green: 1, fairway: 0.8, fringe: 0.6, rough: 0.25, path: 0.4, stone: 0.4, wood: 0.4, sand: 0, rock: 0.3 };
 
 export type Frame = { x: number; y: number; z: number; t: number };
-export type Sound = { t: number; s: 'wall' | 'post' | 'land' | 'splash' | 'cup' | 'sand' };
+export type Sound = { t: number; s: 'wall' | 'post' | 'land' | 'splash' | 'cup' | 'sand' | 'lip' | 'hop' | 'vent' };
 export type Result = {
   end: V2;
   holed: boolean;
@@ -48,8 +54,10 @@ export function launch(shot: Shot): { vx: number; vy: number; vz: number; ax: nu
   const club = CLUBS[shot.club];
   // angle 0 points up the hole (+y)
   if (shot.club === 'putter') {
+    // a shaky stroke (error) starts it off line
     const v = carryOf('putter', shot.power);
-    return { vx: Math.sin(shot.angle) * v, vy: Math.cos(shot.angle) * v, vz: 0, ax: 0, ay: 0 };
+    const a = shot.angle + shot.error * club.push;
+    return { vx: Math.sin(a) * v, vy: Math.cos(a) * v, vz: 0, ax: 0, ay: 0 };
   }
   // backspin climbs a touch higher and carries a touch less; topspin comes out low
   const spin = shot.spin ?? 0;
@@ -93,6 +101,11 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
   let step = 0;
   let still = 0;
   let prevGround = z;
+  const R = cupR(h);
+  const greenF = h.tour ? TOUR_GREEN : FRICTION.green;
+  const friction = (s: Surface) => (s === 'green' ? greenF : FRICTION[s]);
+  let lipped = false; // it has just caught the cup and spun out; it can't drop again on the same pass
+  const vented = new Map<string, number>();
 
   const sound = (key: string, s: Sound['s']) => {
     const p = last.get(key);
@@ -131,13 +144,13 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       }
       if (z <= g2) {
         z = g2;
-        if (isWater(h, { x, y })) {
+        if (isWater(h, { x, y }, clock)) {
           sounds.push({ t, s: 'splash' });
           return finish(false, true);
         }
         if (!inPoly({ x, y }, h.border)) return finish(false, true);
         // dropped straight in
-        if (Math.hypot(x - h.cup.x, y - h.cup.y) < CUP_R) {
+        if (Math.hypot(x - h.cup.x, y - h.cup.y) < R) {
           x = h.cup.x;
           y = h.cup.y;
           z -= 0.6;
@@ -177,30 +190,61 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       // gravity along the slope
       vx -= G * ROLL * gr.x * DT;
       vy -= G * ROLL * gr.y * DT;
+      let vent = 0;
       for (const p of h.pushes) {
         if (Math.hypot(x - p.x, y - p.y) < p.r) {
           const f = p.at(clock);
           vx += f.x * DT;
           vy += f.y * DT;
+          // a geyser or blowhole going off under the ball throws it in the air (once per eruption)
+          const e = p.erupt?.(clock);
+          if (e && t - (vented.get(p.id) ?? -9) > 1) {
+            vented.set(p.id, t);
+            vx = vx * 0.3 + e.x;
+            vy = vy * 0.3 + e.y;
+            vent = Math.max(vent, e.z);
+          }
         }
       }
       const sp = Math.hypot(vx, vy);
-      const fr = FRICTION[surfaceAt(h, { x, y })] * DT;
+      const fr = friction(surfaceAt(h, { x, y })) * DT;
       if (sp > fr) {
         vx -= (vx / sp) * fr;
         vy -= (vy / sp) * fr;
-      } else if (Math.hypot(gr.x, gr.y) * G * ROLL < FRICTION.green * 0.9) {
+      } else if (Math.hypot(gr.x, gr.y) * G * ROLL < greenF * 0.9) {
         vx = 0;
         vy = 0;
       }
-      // any rolling ball whose path crosses the cup drops
+      // a rolling ball whose path crosses the cup drops; on tour greens only if it's slow enough
       const near = closest(h.cup.x, h.cup.y, { x, y }, { x: x + vx * DT, y: y + vy * DT });
-      if (Math.hypot(near.x - h.cup.x, near.y - h.cup.y) < CUP_R) {
-        x = h.cup.x;
-        y = h.cup.y;
-        z = heightAt(h, x, y) - 0.6;
-        sounds.push({ t, s: 'cup' });
-        return finish(true, false);
+      if (lipped && Math.hypot(x - h.cup.x, y - h.cup.y) > R + 1) lipped = false;
+      if (Math.hypot(near.x - h.cup.x, near.y - h.cup.y) < R && !lipped) {
+        // how far off dead centre its line runs: a centred putt can be firmer than one that catches the edge
+        const v = Math.hypot(vx, vy) || 1;
+        const off = Math.min(R, Math.abs(vx * (h.cup.y - y) - vy * (h.cup.x - x)) / v);
+        const cap = h.tour ? DROP_SPEED * Math.sqrt(1 - (off / R) ** 2) : Infinity;
+        if (Math.hypot(vx, vy) <= cap) {
+          x = h.cup.x;
+          y = h.cup.y;
+          z = heightAt(h, x, y) - 0.6;
+          sounds.push({ t, s: 'cup' });
+          return finish(true, false);
+        }
+        lipped = true;
+        if (off < R * 0.45) {
+          // straight over the top: it hops the hole and loses some pace
+          vx *= 0.8;
+          vy *= 0.8;
+          sounds.push({ t, s: 'hop' });
+        } else {
+          // it catches the edge, swings round it and spins away
+          const side = Math.sign(vx * (h.cup.y - y) - vy * (h.cup.x - x)) || 1;
+          const turn = side * (0.6 + 0.9 * (1 - off / R));
+          const c = Math.cos(turn);
+          const s2 = Math.sin(turn);
+          [vx, vy] = [(vx * c - vy * s2) * 0.65, (vx * s2 + vy * c) * 0.65];
+          sounds.push({ t, s: 'lip' });
+        }
       }
       // how fast the ground was rising under the ball a step ago
       const vzSurf = air ? 0 : (ground - prevGround) / DT;
@@ -216,8 +260,14 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         z = ground + lift * DT;
         vz = lift;
       } else z = g2;
+      if (vent > 0) {
+        air = true;
+        z = g2 + 0.05;
+        vz = vent;
+        sounds.push({ t, s: 'vent' });
+      }
       prevGround = ground;
-      if (!air && isWater(h, { x, y })) {
+      if (!air && isWater(h, { x, y }, clock)) {
         sounds.push({ t, s: 'splash' });
         return finish(false, true);
       }

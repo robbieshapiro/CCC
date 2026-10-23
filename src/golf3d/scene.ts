@@ -1,11 +1,11 @@
 // Builds the 3D world for one hole from its data: terrain mesh, water, walls, props and moving parts.
 import * as THREE from 'three';
 import { makeRng } from '../seed';
-import { CUP_R, curbs } from './physics';
+import { cupR, curbs } from './physics';
 import * as props from './props';
 import { mat, mesh, P } from './props';
-import { gradAt, heightAt, inPoly, isWater, surfaceAt } from './terrain';
-import type { Hole, Surface, V2, Wall } from './types';
+import { gradAt, heightAt, inPoly, levelOf, surfaceAt, wetIn } from './terrain';
+import type { Hole, Surface, V2, Wall, Water } from './types';
 
 export const w3 = (x: number, y: number, h: number) => new THREE.Vector3(x, h, -y);
 
@@ -18,9 +18,14 @@ const SURFACE: Record<Surface, string> = {
   stone: '#d2c9b6',
   wood: '#9b6c44',
   sand: '#e4d3a3',
+  rock: '#34302e',
 };
+// on the volcanic island the sand is black, the paths are cinder and the cliffs are basalt
+const VOLCANIC: Partial<Record<Surface, string>> = { sand: '#4a4541', path: '#6b5f55', rough: '#3f6a2f' };
+const surfaceColor = (h: Hole, s: Surface) => (h.theme === 'volcanic' ? VOLCANIC[s] : undefined) ?? SURFACE[s];
 
 const ROCK = new THREE.Color('#8a8270');
+const BASALT = new THREE.Color('#2f2b29');
 
 export type Occluder = { obj: THREE.Object3D; x: number; z: number; r: number };
 
@@ -46,8 +51,8 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
     poly.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
     g.closePath();
   };
-  const hex = (s: Surface, dl = 0) => '#' + new THREE.Color(SURFACE[s]).offsetHSL(0, 0, dl).getHexString();
-  g.fillStyle = '#284a25';
+  const hex = (s: Surface, dl = 0) => '#' + new THREE.Color(surfaceColor(h, s)).offsetHSL(0, 0, dl).getHexString();
+  g.fillStyle = h.theme === 'volcanic' ? '#2a2624' : '#284a25';
   g.fillRect(x0, y0, x1 - x0, y1 - y0);
   const layers: { poly: V2[]; surface: Surface }[] = [{ poly: h.border, surface: h.base }, ...h.regions];
   for (const { poly, surface } of layers) {
@@ -119,6 +124,8 @@ function terrainMesh(h: Hole) {
   const ny = Math.ceil((y1 - y0) / S) + 1;
   const pos = new Float32Array(nx * ny * 3);
   const bed = new THREE.Color('#58705a');
+  const beds: Record<string, THREE.Color> = { lake: bed, sea: new THREE.Color('#2f5560'), lava: new THREE.Color('#5a1d0e') };
+  const cliff = h.theme === 'volcanic' ? BASALT : ROCK;
   for (let j = 0; j < ny; j++)
     for (let i = 0; i < nx; i++) {
       const k = (j * nx + i) * 3;
@@ -133,8 +140,9 @@ function terrainMesh(h: Hole) {
       for (let i = 0; i < nx; i++) {
         const p = { x: x0 + i * S, y: y0 + j * S };
         if (!inPoly(p, h.border)) continue;
-        if (isWater(h, p)) {
-          paint(p.x, p.y, S, bed, 1);
+        const wet = wetIn(h, p);
+        if (wet) {
+          paint(p.x, p.y, S, beds[wet.look ?? 'lake'], 1);
           continue;
         }
         // steep rough turns to scree and rock, the way a mountainside does
@@ -142,7 +150,7 @@ function terrainMesh(h: Hole) {
         if (s !== 'rough' && s !== 'fringe') continue;
         const g = gradAt(h, p.x, p.y);
         const steep = Math.min(1, Math.max(0, (Math.hypot(g.x, g.y) - 0.55) / 0.6));
-        if (steep > 0) paint(p.x, p.y, S, ROCK, steep * 0.85);
+        if (steep > 0) paint(p.x, p.y, S, cliff, steep * 0.85);
       }
   });
   const idx: number[] = [];
@@ -168,35 +176,62 @@ function terrainMesh(h: Hole) {
   return { mesh: m, low };
 }
 
-// Each lake is a flat sheet at its level; the banks hide what's under them.
-function waterMesh(h: Hole) {
-  if (!h.water.length) return null;
+// Each lake is a flat sheet at its level; the banks hide what's under them. The sea rides its tide; lava glows.
+function waterMesh(h: Hole, w: Water) {
   const S = 2;
   const verts: number[] = [];
-  for (const { poly, level } of h.water) {
-    const xs = poly.map((p) => p.x);
-    const ys = poly.map((p) => p.y);
-    for (let x = Math.min(...xs) - S; x < Math.max(...xs) + S; x += S)
-      for (let y = Math.min(...ys) - S; y < Math.max(...ys) + S; y += S) {
-        const mid = { x: x + S / 2, y: y + S / 2 };
-        if (!inPoly(mid, poly) || !inPoly(mid, h.border)) continue;
-        const q = [
-          [x, y],
-          [x + S, y],
-          [x + S, y + S],
-          [x, y + S],
-        ].map(([a, b]) => [a, level, -b]);
-        verts.push(...q[0], ...q[1], ...q[2], ...q[0], ...q[2], ...q[3]);
-      }
-  }
+  const { poly, level } = w;
+  const xs = poly.map((p) => p.x);
+  const ys = poly.map((p) => p.y);
+  // the sheet covers what the high tide can reach, a little beyond the border so the sea meets the skyline sea
+  const reach = (w.tide?.amp ?? 0) + level;
+  for (let x = Math.min(...xs) - S; x < Math.max(...xs) + S; x += S)
+    for (let y = Math.min(...ys) - S; y < Math.max(...ys) + S; y += S) {
+      const mid = { x: x + S / 2, y: y + S / 2 };
+      if (!inPoly(mid, poly) || !inPoly(mid, h.border)) continue;
+      // skip what is high and dry at every tide
+      if (Math.min(heightAt(h, x, y), heightAt(h, x + S, y), heightAt(h, x, y + S), heightAt(h, x + S, y + S)) > reach + 0.5) continue;
+      const q = [
+        [x, y],
+        [x + S, y],
+        [x + S, y + S],
+        [x, y + S],
+      ].map(([a, b]) => [a, level, -b]);
+      verts.push(...q[0], ...q[1], ...q[2], ...q[0], ...q[2], ...q[3]);
+    }
+  if (!verts.length) return null;
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
   geo.computeVertexNormals();
-  const m = new THREE.Mesh(
-    geo,
-    new THREE.MeshStandardMaterial({ color: '#3a6f80', roughness: 0.05, metalness: 0.25, transparent: true, opacity: 0.9, envMapIntensity: 1.4 }),
-  );
-  m.receiveShadow = true;
+  const look = w.look ?? 'lake';
+  if (look === 'lava') {
+    // cooling crust over the molten flow: dark plates with hot seams between them
+    const hot = new THREE.Color('#ffb03a');
+    const crust = new THREE.Color('#3b2620');
+    const col: number[] = [];
+    const c = new THREE.Color();
+    for (let i = 0; i < verts.length; i += 3) {
+      const x = verts[i];
+      const y = -verts[i + 2];
+      const n = Math.sin(x * 0.21 + Math.sin(y * 0.13) * 2) * Math.sin(y * 0.17 + Math.sin(x * 0.11) * 2);
+      c.copy(hot).lerp(crust, Math.min(1, Math.max(0, n * 1.8 + 0.35)));
+      col.push(c.r, c.g, c.b);
+    }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  }
+  const material =
+    look === 'lava'
+      ? new THREE.MeshStandardMaterial({ vertexColors: true, emissive: new THREE.Color('#a8300c'), emissiveIntensity: 0.9, roughness: 0.7 })
+      : new THREE.MeshStandardMaterial({
+          color: look === 'sea' ? '#2b6d84' : '#3a6f80',
+          roughness: 0.05,
+          metalness: 0.25,
+          transparent: true,
+          opacity: look === 'sea' ? 0.93 : 0.9,
+          envMapIntensity: 1.4,
+        });
+  const m = new THREE.Mesh(geo, material);
+  m.receiveShadow = look !== 'lava';
   return m;
 }
 
@@ -258,22 +293,39 @@ export function buildWorld(h: Hole, number: number): World {
 
   const terrain = terrainMesh(h);
   root.add(terrain.mesh);
-  const floor = terrain.low - 1.5;
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), new THREE.MeshStandardMaterial({ color: '#284a25', roughness: 1 }));
+  const volcanic = h.theme === 'volcanic';
+  // on the island the world beyond the grounds is the sea, at the sea's own level when the hole has one
+  const sea = h.water.find((w) => w.look === 'sea');
+  const floor = volcanic ? (sea ? sea.level : Math.min(0, terrain.low - 1.5)) : terrain.low - 1.5;
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(4000, 4000),
+    volcanic
+      ? new THREE.MeshStandardMaterial({ color: '#2b6d84', roughness: 0.08, metalness: 0.25, envMapIntensity: 1.4 })
+      : new THREE.MeshStandardMaterial({ color: '#284a25', roughness: 1 }),
+  );
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = floor;
+  ground.position.y = floor - (volcanic && sea ? 0.05 : 0);
   ground.receiveShadow = true;
   root.add(ground);
+  if (volcanic && sea) anim.push((clock) => (ground.position.y = levelOf(sea, clock) - 0.05));
 
-  const water = waterMesh(h);
-  if (water) {
+  for (const w of h.water) {
+    const water = waterMesh(h, w);
+    if (!water) continue;
     root.add(water);
     const posAttr = water.geometry.attributes.position as THREE.BufferAttribute;
     const base = Float32Array.from(posAttr.array as Float32Array);
+    const lava = w.look === 'lava';
+    const material = water.material as THREE.MeshStandardMaterial;
     anim.push((clock) => {
+      // the whole sheet rides the tide (or the swell of the lava); ripples on top
+      water.position.y = levelOf(w, clock) - w.level;
       const a = posAttr.array as Float32Array;
-      for (let i = 0; i < a.length; i += 3) a[i + 1] = base[i + 1] + Math.sin(clock * 1.6 + base[i] * 0.35 + base[i + 2] * 0.22) * 0.06;
+      const speed = lava ? 0.5 : 1.6;
+      const amp = lava ? 0.12 : 0.06;
+      for (let i = 0; i < a.length; i += 3) a[i + 1] = base[i + 1] + Math.sin(clock * speed + base[i] * 0.35 + base[i + 2] * 0.22) * amp;
       posAttr.needsUpdate = true;
+      if (lava) material.emissiveIntensity = 0.8 + Math.sin(clock * 1.3) * 0.25;
     });
   }
 
@@ -299,7 +351,8 @@ export function buildWorld(h: Hole, number: number): World {
     else if (look === 'tree') root.add(fadeable(at(props.leafyTree(1.1), p.x, p.y, -0.2), p.x, p.y, 6));
     else if (look === 'oak') root.add(fadeable(at(props.oak(vary), p.x, p.y, -0.2), p.x, p.y, 9));
     else if (look === 'cypress') root.add(fadeable(at(props.cypress(vary), p.x, p.y, -0.2), p.x, p.y, 3));
-    else if (look === 'rock') root.add(at(props.rock(p.r, Math.round(p.x + p.y)), p.x, p.y, -0.3));
+    else if (look === 'rock') root.add(at(volcanic ? basalt(props.rock(p.r, Math.round(p.x + p.y))) : props.rock(p.r, Math.round(p.x + p.y)), p.x, p.y, -0.3));
+    else if (look === 'palm') root.add(fadeable(at(props.palm(vary, Math.round(p.x)), p.x, p.y, -0.2), p.x, p.y, 4));
     else if (look === 'column') {
       const g = new THREE.Group();
       g.add(mesh(new THREE.CylinderGeometry(p.r, p.r * 1.1, p.h, 12), mat(P.white, { rough: 0.6 })).translateY(p.h / 2));
@@ -332,7 +385,7 @@ export function buildWorld(h: Hole, number: number): World {
     else if (d.kind === 'lamp') o = props.lamp();
     else if (d.kind === 'umbrella') o = props.umbrella();
     else if (d.kind === 'sign') o = props.sign(h.name, `HOLE ${number} · PAR ${h.par}`);
-    else if (d.kind === 'rock') o = props.rock(d.scale ?? 2, Math.round(d.x * 3 + d.y));
+    else if (d.kind === 'rock') o = volcanic ? basalt(props.rock(d.scale ?? 2, Math.round(d.x * 3 + d.y))) : props.rock(d.scale ?? 2, Math.round(d.x * 3 + d.y));
     else if (d.kind === 'teebox') {
       for (const side of [-1, 1]) root.add(at(props.teeMarker(), d.x + side * 6, d.y + 2, 0));
       continue;
@@ -405,6 +458,45 @@ export function buildWorld(h: Hole, number: number): World {
     });
   }
 
+  // geysers and blowholes: a ring of dark rock round the vent, a wisp of steam, and a burst when it goes
+  for (const p of h.pushes) {
+    if ((p.look !== 'geyser' && p.look !== 'blowhole') || !p.erupt) continue;
+    const erupt = p.erupt;
+    const base = heightAt(h, p.x, p.y);
+    const ring = mesh(new THREE.TorusGeometry(p.r * 0.8, 0.45, 6, 14), mat('#2a2523'));
+    ring.rotation.x = Math.PI / 2;
+    root.add(at(ring, p.x, p.y, 0.1));
+    const hole = new THREE.Mesh(new THREE.CircleGeometry(p.r * 0.7, 16), new THREE.MeshBasicMaterial({ color: '#141110' }));
+    hole.rotation.x = -Math.PI / 2;
+    root.add(at(hole, p.x, p.y, 0.06));
+    const n = 140;
+    const geo = new THREE.BufferGeometry();
+    const arr = new Float32Array(n * 3);
+    geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    const steam = new THREE.PointsMaterial({ color: p.look === 'blowhole' ? '#e8f4f7' : '#f1efe9', size: 1.1, transparent: true, opacity: 0.7, depthWrite: false });
+    const pts = new THREE.Points(geo, steam);
+    pts.frustumCulled = false;
+    root.add(pts);
+    const tall = p.look === 'blowhole' ? 26 : 20;
+    let burst = 0; // how far through the current burst, 0..1 (and on, while it settles)
+    anim.push((clock, dt) => {
+      const on = !!erupt(clock);
+      burst = on ? Math.min(1, burst + dt * 3) : Math.max(0, burst - dt * 0.8);
+      for (let i = 0; i < n; i++) {
+        const k = (i / n + clock * (on ? 1.4 : 0.25)) % 1;
+        const a = i * 2.39996;
+        // a lazy wisp at rest; a column of spray while it goes off
+        const h2 = burst > 0.02 ? k * tall * burst : k * 3;
+        const r = (burst > 0.02 ? 0.4 + k * 2.4 : 0.3 + k * 1.2) * (1 + Math.sin(clock * 2 + i) * 0.15);
+        arr[i * 3] = p.x + Math.cos(a) * r;
+        arr[i * 3 + 1] = base + 0.5 + h2;
+        arr[i * 3 + 2] = -(p.y + Math.sin(a) * r);
+      }
+      steam.opacity = 0.25 + burst * 0.6;
+      geo.attributes.position.needsUpdate = true;
+    });
+  }
+
   // verandas: a roof slab on the columns, with a white fascia
   for (const r of h.roofs ?? []) {
     const xs = r.poly.map((q) => q.x);
@@ -428,11 +520,12 @@ export function buildWorld(h: Hole, number: number): World {
 
   // the cup and the pin
   const cupZ = heightAt(h, h.cup.x, h.cup.y);
-  const hole = new THREE.Mesh(new THREE.CircleGeometry(CUP_R, 24), new THREE.MeshBasicMaterial({ color: '#0d0f0c', polygonOffset: true, polygonOffsetFactor: -4 }));
+  const R = cupR(h);
+  const hole = new THREE.Mesh(new THREE.CircleGeometry(R, 24), new THREE.MeshBasicMaterial({ color: '#0d0f0c', polygonOffset: true, polygonOffsetFactor: -4 }));
   hole.rotation.x = -Math.PI / 2;
   hole.position.copy(w3(h.cup.x, h.cup.y, cupZ + 0.04));
   root.add(hole);
-  const liner = new THREE.Mesh(new THREE.RingGeometry(CUP_R * 0.92, CUP_R, 24), new THREE.MeshBasicMaterial({ color: '#f4efe4', polygonOffset: true, polygonOffsetFactor: -4 }));
+  const liner = new THREE.Mesh(new THREE.RingGeometry(R * 0.92, R, 24), new THREE.MeshBasicMaterial({ color: '#f4efe4', polygonOffset: true, polygonOffsetFactor: -4 }));
   liner.rotation.x = -Math.PI / 2;
   liner.position.copy(hole.position).add(new THREE.Vector3(0, 0.01, 0));
   root.add(liner);
@@ -453,7 +546,7 @@ export function buildWorld(h: Hole, number: number): World {
   const rng = makeRng(`frame:${h.id}`);
   const { x0, y0, x1, y1 } = h.bounds;
   const building = h.decor.find((d) => d.kind === 'clubhouse');
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < (volcanic ? 0 : 70); i++) {
     const side = Math.floor(rng.next() * 4);
     const t = rng.next();
     const off = 10 + rng.next() * 60;
@@ -468,7 +561,31 @@ export function buildWorld(h: Hole, number: number): World {
   // the range: peaks all round the valley, far beyond the fog
   const cx = (x0 + x1) / 2;
   const cy = (y0 + y1) / 2;
-  for (let i = 0; i < 26; i++) {
+  if (volcanic) {
+    // the island's volcano beyond the far end of the hole, smoking, and sea stacks out in the water
+    const tall = 380;
+    const v = props.volcano(tall, 460);
+    v.position.set(cx - 300, floor - 10, -(y1 + 1500));
+    root.add(v);
+    const plume = new THREE.Group();
+    const smoke = new THREE.MeshBasicMaterial({ color: '#8b8890', transparent: true, opacity: 0.55, fog: false, depthWrite: false });
+    for (let i = 0; i < 9; i++) {
+      const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(40 + i * 9, 1), smoke);
+      puff.position.set(i * 26, tall + 20 + i * 40, -i * 8);
+      plume.add(puff);
+    }
+    plume.position.copy(v.position);
+    root.add(plume);
+    anim.push((clock) => plume.children.forEach((c, i) => (c.position.x = i * 26 + Math.sin(clock * 0.1 + i) * 10)));
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + rng.next() * 0.4;
+      const r = 700 + rng.next() * 700;
+      const st = props.seaStack(30 + rng.next() * 70, i);
+      st.position.set(cx + Math.cos(a) * r, floor, -(cy + Math.sin(a) * r));
+      root.add(st);
+    }
+  }
+  for (let i = 0; i < (volcanic ? 0 : 26); i++) {
     const a = (i / 26) * Math.PI * 2 + rng.next() * 0.2;
     const r = 1150 + rng.next() * 350;
     const peak = props.mountain(180 + rng.next() * 260, 220 + rng.next() * 160, i);
@@ -487,6 +604,15 @@ export function buildWorld(h: Hole, number: number): World {
       });
     },
   };
+}
+
+// basalt: the same rock, darker
+function basalt(o: THREE.Object3D) {
+  o.traverse((m) => {
+    const mm = m as THREE.Mesh;
+    if (mm.material) mm.material = mat('#3a3431');
+  });
+  return o;
 }
 
 function waveCloth(cloth: THREE.Mesh, anim: ((c: number, dt: number) => void)[], amp: number) {
