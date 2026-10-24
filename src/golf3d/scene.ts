@@ -19,6 +19,7 @@ const SURFACE: Record<Surface, string> = {
   wood: '#9b6c44',
   sand: '#e4d3a3',
   rock: '#34302e',
+  cinder: '#5e3c30', // a road of crushed lava: grippy, so a ball rolling down a steep one keeps an even pace
 };
 // on the volcanic island the sand is black, the paths are cinder and the cliffs are basalt
 const VOLCANIC: Partial<Record<Surface, string>> = { sand: '#4a4541', path: '#6b5f55', rough: '#3f6a2f' };
@@ -397,6 +398,8 @@ export function buildWorld(h: Hole, number: number): World {
     } else if (d.kind === 'fountain') {
       o = props.fountain();
       o.add(jets(anim));
+    } else if (d.kind === 'lavafount') {
+      o = lavaFountain(anim, d.scale ?? 1, d.x * 0.37 + d.y * 0.11);
     } else if (d.kind === 'clubhouse') {
       o = props.clubhouse(420);
       o.position.copy(w3(d.x + 23, d.y, heightAt(h, d.x - 2, d.y)));
@@ -604,6 +607,36 @@ export function buildWorld(h: Hole, number: number): World {
       });
     },
   };
+}
+
+// A fountain of lava out of the lake: a low bubbling, then every few seconds a burst of glowing spatter.
+function lavaFountain(anim: ((c: number, dt: number) => void)[], size: number, phase: number) {
+  const n = 120;
+  const geo = new THREE.BufferGeometry();
+  const arr = new Float32Array(n * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  const m = new THREE.PointsMaterial({ color: '#ffb347', size: 1.1 * size, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  const pts = new THREE.Points(geo, m);
+  pts.frustumCulled = false;
+  const period = 5.5 + (Math.abs(phase) % 3);
+  anim.push((clock) => {
+    const t = (clock + phase) % period;
+    // a burst lasts a couple of seconds; between them it only bubbles
+    const burst = t < 2.2 ? 1 : 0.12;
+    for (let i = 0; i < n; i++) {
+      const k = (i / n + clock * 0.9) % 1;
+      const a = i * 2.39996;
+      const spread = (0.6 + (i % 4) * 0.5) * size;
+      const up = (34 + (i % 5) * 6) * size * burst;
+      arr[i * 3] = Math.cos(a) * spread * k * 4;
+      arr[i * 3 + 1] = up * k - 0.5 * 52 * (k * 1.1) ** 2 * burst;
+      arr[i * 3 + 2] = Math.sin(a) * spread * k * 4;
+      if (arr[i * 3 + 1] < 0) arr[i * 3 + 1] = 0;
+    }
+    m.opacity = 0.5 + burst * 0.45;
+    geo.attributes.position.needsUpdate = true;
+  });
+  return pts;
 }
 
 // basalt: the same rock, darker

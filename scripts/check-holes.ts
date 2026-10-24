@@ -185,8 +185,8 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   island: { from: { x: -24, y: 58 }, clubs: ['putter'], angles: [-6, 6] },
   ridge: { from: { x: -50, y: 318 }, clubs: ['iron', 'wedge'], angles: [-110, -70] },
   blowhole: { from: { x: 14, y: 316 }, clubs: ['putter'], angles: [-110, -80], clock: 4.6 },
-  lavafield: { from: { x: 80, y: 262 }, clubs: ['putter'], angles: [-4, 10] },
-  caldera: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [-70, -40] },
+  lavafield: { from: { x: 80, y: 424 }, clubs: ['putter'], angles: [-4, 12] },
+  caldera: { from: { x: 0, y: 40 }, clubs: ['putter'], angles: [-100, -50] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
@@ -338,6 +338,13 @@ if (mode === 'all' || mode === 'basic') {
     const ms = (style: MeterStyle) => (goldHalf(club, 1, 1, style) / returnSpeed(club, 1, 1, style)) * 1000;
     ok(ms('vertical') >= ms('classic') * 1.9, `vertical meter: ${club} gold window ±${ms('vertical').toFixed(0)} ms (classic ±${ms('classic').toFixed(0)})`);
   }
+  // the Lava Field: a good drive carries the second flow onto the big island
+  const lava = course.holes.find((h) => h.id === 'lavafield');
+  if (lava)
+    for (const power of [0.85, 0.9, 0.95, 1]) {
+      const r = simulate(lava, lava.tee, { angle: 0, power, club: 'driver', error: 0, clock: 0 }, false);
+      ok(!r.penalty && r.end.y > 280, `${lava.name}: a ${Math.round(power * 100)}% driver clears the flow (${r.end.x.toFixed(0)},${r.end.y.toFixed(0)})`);
+    }
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);
     for (const pin of h.pins ?? [h.cup]) ok(!isWater(h, pin) && surfaceAt(h, pin) === 'green', `${h.name}: pin ${pin.x},${pin.y} is on dry green`);

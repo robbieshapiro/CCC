@@ -2,7 +2,7 @@ import type { ClubId } from './clubs';
 
 // Course data. Units are feet; x is left/right, y runs away from the tee, height is up.
 export type V2 = { x: number; y: number };
-export type Surface = 'green' | 'fairway' | 'fringe' | 'rough' | 'path' | 'stone' | 'wood' | 'sand' | 'rock';
+export type Surface = 'green' | 'fairway' | 'fringe' | 'rough' | 'path' | 'stone' | 'wood' | 'sand' | 'rock' | 'cinder';
 
 // Terrain pieces combine in order: 'add' adds height, 'set' blends toward a target height.
 export type Piece =
@@ -47,6 +47,7 @@ export type Hole = {
   cup: V2;
   pins?: V2[]; // where the pin can be cut; one is picked each day
   greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
+  maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
   theme?: 'highland' | 'volcanic';
   aim: number; // initial aim angle (radians, 0 = straight up the hole)
