@@ -47,7 +47,7 @@ export function swipeHalf(club: ClubId, power: number, sweetMul = 1, needle = 1)
   return ((CLUBS[club].sweet * 1.6 * sweetMul) / needle) * (1 - over * 4);
 }
 
-export const SLOW_DOWNSWING = 0.45; // seconds from the top to impact before it costs distance
+export const SLOW_DOWNSWING = 0.6; // seconds from the top to impact before it costs distance
 
 // full: the pull (px) that makes 100% power
 export function swipeResult(club: ClubId, pts: SwipePt[], full: number, sweetMul = 1, needle = 1): Swipe | null {
