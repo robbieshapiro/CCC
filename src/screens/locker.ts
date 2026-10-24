@@ -81,6 +81,7 @@ const tabs: { id: string; label: string; fields: Field[] }[] = [
     fields: [
       { key: 'bag', label: 'Bag', kind: 'swatch', colors: CLOTH },
       { key: 'glove', label: 'Glove', kind: 'toggle' },
+      { key: 'hand', label: 'Plays', kind: 'chips', options: [{ v: 'right', label: 'Righty · meter on the left' }, { v: 'left', label: 'Lefty · meter on the right' }] },
     ],
   },
 ];

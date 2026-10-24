@@ -876,6 +876,8 @@ export class Course3D {
     m.hidden = false;
     m.classList.remove('accuracy');
     m.classList.toggle('vertical', this.style() === 'vertical');
+    // righties have the meter on the left, out of the way of the golfer; lefties on the right
+    m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.power));
     (this.overlay.querySelector('[data-gold]') as HTMLElement).style.cssText = 'display:none';
     (this.overlay.querySelector('[data-pure]') as HTMLElement).style.cssText = 'display:none';
