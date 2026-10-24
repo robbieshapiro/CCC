@@ -2,8 +2,11 @@
 // A draft course isn't on the calendar yet: only the admin can play it, from the preview.
 import { blowhole } from './holes/blowhole';
 import { caldera } from './holes/caldera';
+import { geyseralley } from './holes/geyseralley';
 import { island } from './holes/island';
 import { lavafield } from './holes/lavafield';
+import { lavalift } from './holes/lavalift';
+import { lavatube } from './holes/lavatube';
 import { ridge } from './holes/ridge';
 import { summit } from './holes/summit';
 import type { Hole } from './types';
@@ -26,9 +29,9 @@ const COURSES: Course[] = [
     month: '',
     draft: true,
     name: 'The Caldera Course',
-    tagline: 'A volcanic island. Sea cliffs, a lava field, and a green on the crater rim. Tour greens: they are quick.',
-    holes: [blowhole, lavafield, caldera],
-    par: par([blowhole, lavafield, caldera]),
+    tagline: 'A volcanic island. Sea cliffs, lava fields, a gorge, an alley of steam and a tee inside a lava tube. Tour greens: they are quick.',
+    holes: [blowhole, lavafield, caldera, lavalift, geyseralley, lavatube],
+    par: par([blowhole, lavafield, caldera, lavalift, geyseralley, lavatube]),
   },
 ];
 

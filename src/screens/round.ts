@@ -66,7 +66,7 @@ export async function round(snap: Snapshot, opts: { course?: Course } = {}) {
   for (let i = 0; i < course.holes.length; i++) {
     const h = course.holes[i];
     const par = course.holes.slice(0, i).reduce((a, x) => a + x.par, 0);
-    const r = await game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i > 0 });
+    const r = await game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i > 0, of: course.holes.length });
     if (quit || !game) return;
     scores.push(r.strokes);
     spots.push(r.spot);

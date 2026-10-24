@@ -62,6 +62,7 @@ export type Hole = {
   movers: Mover[];
   pushes: Push[];
   roofs?: { poly: V2[]; h: number }[]; // a ball that comes down on one is lost (penalty)
+  ceilings?: { poly: V2[]; h: number }[]; // a cave roof this far above the ground: a ball that rises into it clips it and drops
   zones: Zone[]; // used to detect secret routes and feats
   secret: { name: string; zone: string; hint: string };
   flyover: V2[]; // camera path for the intro

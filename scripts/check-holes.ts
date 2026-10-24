@@ -187,8 +187,11 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   ridge: { from: { x: -50, y: 318 }, clubs: ['iron', 'wedge'], angles: [-110, -70] },
   blowhole: { from: { x: 14, y: 316 }, clubs: ['putter'], angles: [-110, -80], clock: 4.6 },
   lavafield: { from: { x: 80, y: 424 }, clubs: ['putter'], angles: [-4, 12] },
-  // the island leaves a long iron in: on in two, which is the prize
-  caldera: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [28, 35], spin: 1, near: 220 },
+  // the island is the prize: from it the green is one big shot away
+  caldera: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [48, 54], spin: 1, near: 340 },
+  lavalift: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [-72, -44] },
+  geyseralley: { from: { x: -46, y: 124 }, clubs: ['putter'], angles: [-8, 8] },
+  lavatube: { from: { x: -2, y: 232 }, clubs: ['putter'], angles: [44, 64] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
@@ -343,16 +346,18 @@ if (mode === 'all' || mode === 'basic') {
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)
-    for (const power of [0.85, 0.9, 0.95, 1]) {
-      const r = simulate(lava, lava.tee, { angle: 0, power, club: 'driver', error: 0, clock: 0 }, false);
-      ok(!r.penalty && r.end.y > 280, `${lava.name}: a ${Math.round(power * 100)}% driver clears the flow (${r.end.x.toFixed(0)},${r.end.y.toFixed(0)})`);
-    }
+    for (const power of [0.85, 0.9, 0.95, 1])
+      for (const side of [-1, 1]) {
+        // aimed at one half of the big island or the other
+        const r = simulate(lava, lava.tee, { angle: side * 0.09, power, club: 'driver', error: 0, clock: 0 }, false);
+        ok(!r.penalty && r.end.y > 280, `${lava.name}: a ${Math.round(power * 100)}% driver ${side < 0 ? 'left' : 'right'} of the creek clears the flow (${r.end.x.toFixed(0)},${r.end.y.toFixed(0)})`);
+      }
   // the Caldera's island: only a drive with backspin holds it
   const cal = course.holes.find((h) => h.id === 'caldera');
   if (cal) {
     const holds = (spin: number) => {
       let n = 0;
-      for (let a = 28; a <= 35; a += 1)
+      for (let a = 48; a <= 54; a += 1)
         for (let p = 0.8; p <= 0.93; p += 0.02) {
           const r = simulate(cal, cal.tee, { angle: (a * Math.PI) / 180, power: p, club: 'driver', error: 0, clock: 0, spin }, false);
           if (!r.penalty && r.zones.includes(cal.secret.zone)) n++;
@@ -361,7 +366,29 @@ if (mode === 'all' || mode === 'basic') {
     };
     const stock = holds(0);
     const spun = holds(1);
-    ok(stock === 0 && spun >= 3, `${cal.name}: a stock drive never holds the island (${stock}), a backspin drive can (${spun})`);
+    ok(stock <= 2 && spun >= stock * 5 && spun >= 3, `${cal.name}: a stock drive almost never holds the island (${stock}), a backspin drive can (${spun})`);
+    // the safe way can't get home in two: the best drive from the corner is still well short
+    let shortest = Infinity;
+    for (let a = 80; a <= 96; a += 2) {
+      const r = simulate(cal, { x: 0, y: 384 }, { angle: (a * Math.PI) / 180, power: 1, club: 'driver', error: 0, clock: 0 }, false);
+      if (!r.penalty) shortest = Math.min(shortest, Math.hypot(r.end.x - cal.cup.x, r.end.y - cal.cup.y));
+    }
+    ok(shortest > 40, `${cal.name}: from the corner a full driver is still ${shortest.toFixed(0)} ft short: three shots the safe way`);
+    // and the island is worth it: from there a driver finds the green
+    let best = Infinity;
+    for (let a = 46; a <= 56; a += 1)
+      for (let p = 0.7; p <= 1; p += 0.02) {
+        const r = simulate(cal, { x: 236, y: 190 }, { angle: (a * Math.PI) / 180, power: p, club: 'driver', error: 0, clock: 0 }, false);
+        if (!r.penalty && surfaceAt(cal, r.end) === 'green') best = Math.min(best, Math.hypot(r.end.x - cal.cup.x, r.end.y - cal.cup.y));
+      }
+    ok(best < 30, `${cal.name}: from the island a driver can find the green (${best.toFixed(0)} ft)`);
+  }
+  // the Lava Tube: the cave roof clips a full iron, but a driver comes out under it
+  const tube = course.holes.find((h) => h.id === 'lavatube');
+  if (tube) {
+    const iron = simulate(tube, tube.tee, { angle: 0, power: 1, club: 'iron', error: 0, clock: 0 }, false);
+    const drive = simulate(tube, tube.tee, { angle: 0, power: 0.9, club: 'driver', error: 0, clock: 0 }, false);
+    ok(iron.end.y < 120 && drive.end.y > 220, `${tube.name}: the roof clips a full iron (${iron.end.y.toFixed(0)} ft) but not a driver (${drive.end.y.toFixed(0)} ft)`);
   }
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);

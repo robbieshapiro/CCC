@@ -141,6 +141,8 @@ export class Course3D {
 
   private glow = ballGlow();
   private ballSink = 0; // how far the drawn ball is lowered to sit a smaller ball on the ground
+  private grid: THREE.LineSegments | null = null; // the contour grid laid over a tour green while you putt
+  private holesInRound = 3;
   private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
   private golfer: Golfer;
   private dots: THREE.InstancedMesh;
@@ -271,13 +273,16 @@ export class Course3D {
     this.world?.dispose();
     this.cart?.dispose();
     this.clearGhosts();
+    this.clearGrid();
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.host.innerHTML = '';
   }
 
   // Plays one hole to completion. The beverage cart may stop by on the tee.
-  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: boolean } = {}): Promise<HoleResult> {
+  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: boolean; of?: number } = {}): Promise<HoleResult> {
+    this.holesInRound = opts.of ?? this.holesInRound;
+    this.clearGrid();
     if (this.world) {
       this.scene.remove(this.world.root);
       this.world.dispose();
@@ -400,7 +405,7 @@ export class Course3D {
       <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-top">
         <button class="g3-pill" data-quit>Leave</button>
-        <div class="g3-title"><small>Hole ${this.number} of 3</small><b>${h.name}</b><span>Par ${h.par} · <i data-dist></i></span></div>
+        <div class="g3-title"><small>Hole ${this.number} of ${this.holesInRound}</small><b>${h.name}</b><span>Par ${h.par} · <i data-dist></i></span></div>
         <div class="g3-score"><small>Stroke</small><b data-strokes>0</b><span>${total.par ? `Round ${diff === 0 ? 'E' : diff > 0 ? `+${diff}` : diff}` : ''}</span></div>
       </div>
       <canvas class="g3-mini" width="132" height="168" aria-hidden="true"></canvas>
@@ -536,6 +541,7 @@ export class Course3D {
     this.club = c;
     this.power = c === 'putter' ? 0 : this.planFor(c);
     this.golfer.holdClub(c);
+    if (c === 'putter' && this.hole.tour) this.readGreen();
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((x) => x.classList.toggle('on', x.dataset.club === c));
   }
 
@@ -1220,10 +1226,71 @@ export class Course3D {
 
   // ---------- aim guide ----------
 
+  // Reading the green: a grid draped over the green round the ball, every foot and a half, coloured by how far
+  // above (warm) or below (cool) the ball the ground is. Where the lines bend and the colour runs is the break.
+  private readGreen() {
+    this.clearGrid();
+    const R = 40;
+    const step = 1.5;
+    const sub = 0.75;
+    const base = heightAt(this.hole, this.pos.x, this.pos.y);
+    const low = new THREE.Color('#8fd3ff');
+    const mid = new THREE.Color('#f3ecdc');
+    const high = new THREE.Color('#ffb347');
+    const c = new THREE.Color();
+    const pos: number[] = [];
+    const col: number[] = [];
+    const on = (x: number, y: number) => {
+      if (Math.hypot(x - this.pos.x, y - this.pos.y) > R) return false;
+      const s = surfaceAt(this.hole, { x, y });
+      return s === 'green' || s === 'fringe';
+    };
+    const vert = (x: number, y: number) => {
+      const z = heightAt(this.hole, x, y);
+      pos.push(...w3(x, y, z + 0.05).toArray());
+      const t = Math.max(-1, Math.min(1, (z - base) / 0.8));
+      c.copy(mid).lerp(t < 0 ? low : high, Math.abs(t));
+      col.push(c.r, c.g, c.b);
+    };
+    const x0 = Math.floor((this.pos.x - R) / step) * step;
+    const y0 = Math.floor((this.pos.y - R) / step) * step;
+    for (let a = x0; a <= this.pos.x + R; a += step)
+      for (let b = y0; b <= this.pos.y + R; b += sub) {
+        // a short run along y at this x, and one along x at this y
+        if (on(a, b) && on(a, b + sub)) {
+          vert(a, b);
+          vert(a, b + sub);
+        }
+        const bx = Math.floor(b / step) * step;
+        if (Math.abs(bx - b) < 1e-6 && on(a, b) && on(a + sub, b)) {
+          for (let k = 0; k < 2; k++) {
+            vert(a + k * sub, b);
+            vert(a + (k + 1) * sub, b);
+          }
+        }
+      }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    this.grid = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false }));
+    this.grid.renderOrder = 2;
+    this.grid.visible = false;
+    this.scene.add(this.grid);
+  }
+
+  private clearGrid() {
+    if (!this.grid) return;
+    this.scene.remove(this.grid);
+    this.grid.geometry.dispose();
+    (this.grid.material as THREE.Material).dispose();
+    this.grid = null;
+  }
+
   private guide() {
     const m = new THREE.Matrix4();
     let n = 0;
     const show = this.mode === 'aim' || this.mode === 'meter';
+    if (this.grid) this.grid.visible = this.mode === 'aim' && this.club === 'putter';
     this.ring.visible = false;
     if (show) {
       const dx = Math.sin(this.aim);
@@ -1231,16 +1298,16 @@ export class Course3D {
       if (this.club === 'putter') {
         // a dotted line that hugs the ground; longer as you pull back. On tour greens it starts from nothing and runs
         // out as far as the putt would roll on a flat green: the break you read for yourself
+        // On tour greens there's no line at all: you judge the pace yourself and read the break off the grid.
         const v = carryOf('putter', this.power);
-        const len = this.hole.tour ? (this.power > 0 ? (v * v) / (2 * TOUR_GREEN) : 0) : 8 + this.power * 30;
-        const gap = this.hole.tour ? Math.max(0.7, len / 70) : 1.1;
-        for (let d = this.hole.tour ? 0.6 : 1.5; d < len && n < 80; d += gap) {
+        const len = this.hole.tour ? 0 : 8 + this.power * 30;
+        for (let d = 1.5; d < len && n < 80; d += 1.1) {
           const x = this.pos.x + dx * d;
           const y = this.pos.y + dy * d;
           m.setPosition(w3(x, y, heightAt(this.hole, x, y) + 0.2));
           this.dots.setMatrixAt(n++, m);
         }
-        const end = len;
+        const end = this.hole.tour ? Math.max(6, (v * v) / (2 * TOUR_GREEN)) : len;
         this.landing.copy(w3(this.pos.x + dx * end, this.pos.y + dy * end, heightAt(this.hole, this.pos.x + dx * end, this.pos.y + dy * end)));
       } else {
         // the flight arc and a landing ring sized to the club's spread
