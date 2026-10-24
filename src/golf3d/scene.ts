@@ -398,6 +398,8 @@ export function buildWorld(h: Hole, number: number): World {
     } else if (d.kind === 'fountain') {
       o = props.fountain();
       o.add(jets(anim));
+    } else if (d.kind === 'steamvent') {
+      o = steamVent(anim, d.x * 0.29 + d.y * 0.13);
     } else if (d.kind === 'lavafount') {
       o = lavaFountain(anim, d.scale ?? 1, d.x * 0.37 + d.y * 0.11);
     } else if (d.kind === 'clubhouse') {
@@ -498,6 +500,38 @@ export function buildWorld(h: Hole, number: number): World {
       steam.opacity = 0.25 + burst * 0.6;
       geo.attributes.position.needsUpdate = true;
     });
+  }
+
+  // lava tubes: an arched roof of dark rock over each cave, with glowing seams and a warm light inside
+  for (const c of h.ceilings ?? []) {
+    const xs = c.poly.map((q) => q.x);
+    const ys = c.poly.map((q) => q.y);
+    const [cx0, cx1, cy0, cy1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const half = (cx1 - cx0) / 2;
+    const len = cy1 - cy0;
+    const mx = (cx0 + cx1) / 2;
+    const my = (cy0 + cy1) / 2;
+    const base = heightAt(h, mx, my);
+    const tube = new THREE.Group();
+    // a half cylinder, squashed to the roof height, running along the hole
+    const arch = mesh(new THREE.CylinderGeometry(half + 1.5, half + 1.5, len, 24, 1, true, -Math.PI / 2, Math.PI), mat('#2b2523', { rough: 1 }));
+    (arch.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+    // the open half of the cylinder faces up once it's laid along the hole
+    arch.rotation.x = -Math.PI / 2;
+    arch.scale.set(1, 1, (c.h + 1) / (half + 1.5));
+    arch.position.copy(w3(mx, my, base));
+    tube.add(arch);
+    // seams of lava glowing in the roof
+    for (let k = 1; k < 5; k++) {
+      const seam = new THREE.Mesh(new THREE.TorusGeometry(half + 1.2, 0.25, 4, 24, Math.PI), new THREE.MeshBasicMaterial({ color: '#ff7a2e' }));
+      seam.scale.set(1, (c.h + 1) / (half + 1.5), 1);
+      seam.position.copy(w3(mx, cy0 + (len * k) / 5, base));
+      tube.add(seam);
+    }
+    const glow = new THREE.PointLight('#ff8a3d', 60, half * 6, 1.6);
+    glow.position.copy(w3(mx, my, base + c.h * 0.7));
+    tube.add(glow);
+    root.add(tube);
   }
 
   // verandas: a roof slab on the columns, with a white fascia
@@ -607,6 +641,39 @@ export function buildWorld(h: Hole, number: number): World {
       });
     },
   };
+}
+
+// A steam vent: a ring of dark rock with a wisp coming off it and, every so often, a tall plume. Scenery only.
+function steamVent(anim: ((c: number, dt: number) => void)[], phase: number) {
+  const g = new THREE.Group();
+  const ring = mesh(new THREE.TorusGeometry(2.2, 0.5, 6, 14), mat('#2a2523'));
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.2;
+  g.add(ring);
+  const n = 90;
+  const geo = new THREE.BufferGeometry();
+  const arr = new Float32Array(n * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  const m = new THREE.PointsMaterial({ color: '#f1efe9', size: 1.3, transparent: true, opacity: 0.5, depthWrite: false });
+  const pts = new THREE.Points(geo, m);
+  pts.frustumCulled = false;
+  g.add(pts);
+  const period = 6 + (Math.abs(phase) % 4);
+  anim.push((clock) => {
+    const t = (clock + phase) % period;
+    const burst = t < 1.8 ? Math.sin((t / 1.8) * Math.PI) : 0;
+    for (let i = 0; i < n; i++) {
+      const k = (i / n + clock * (0.25 + burst)) % 1;
+      const a = i * 2.39996;
+      const r = (0.4 + k * (1.5 + burst * 2)) * (1 + Math.sin(clock + i) * 0.15);
+      arr[i * 3] = Math.cos(a) * r + Math.sin(clock * 0.4) * k * 2;
+      arr[i * 3 + 1] = 0.5 + k * (4 + burst * 24);
+      arr[i * 3 + 2] = Math.sin(a) * r;
+    }
+    m.opacity = 0.35 + burst * 0.45;
+    geo.attributes.position.needsUpdate = true;
+  });
+  return g;
 }
 
 // A fountain of lava out of the lake: a low bubbling, then every few seconds a burst of glowing spatter.

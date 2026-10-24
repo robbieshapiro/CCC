@@ -144,6 +144,16 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       x += vx * DT;
       y += vy * DT;
       const g2 = heightAt(h, x, y);
+      // a cave roof: a ball that climbs into it clips it, loses most of its pace and drops
+      const roof = h.ceilings?.find((c) => z - g2 > c.h - BALL_R && inPoly({ x, y }, c.poly));
+      if (roof) {
+        z = g2 + roof.h - BALL_R;
+        vz = -Math.abs(vz) * 0.3;
+        vx *= 0.55;
+        vy *= 0.55;
+        flying = false;
+        sound('roof', 'wall');
+      }
       if (h.roofs?.some((r) => z - g2 > 4 && inPoly({ x, y }, r.poly))) {
         sounds.push({ t, s: 'wall' });
         return finish(false, true);

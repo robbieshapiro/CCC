@@ -1,12 +1,14 @@
 // Hole 2, The Lava Field (par 5, about 590 ft): islands of turf in a field of black rock and running lava.
 // The play: an iron to the little island short of the second flow, then over it, then over the last one to the green.
-// The gamble: a driver off the tee, carrying the second flow onto the big island, and the green in two from there.
+// The gamble: a driver off the tee, carrying the second flow onto the big island. A creek of lava splits that island
+// down the middle, so pick a side. The green is a narrow two-tier island in a lake of lava.
 // The live hazard: the second flow swells and settles, so its banks are wider some moments than others.
 // The secret: an old lava tube still crosses the last flow on the right. Roll a ball along the top of it to the green.
 import { band, blob, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
 
-const GREEN = { x: -6, y: 580, r: 26 };
+const GREEN = { x: -6, y: 584, rx: 16, ry: 26 };
+const GREEN_ISLAND = { x: -6, y: 584, r: 34 };
 const FLOOR = 8; // the black rock (and the turf on it) sits at about this height; the flows are cut below it
 const LAVA = FLOOR - 4;
 
@@ -19,13 +21,21 @@ const L3: V2[] = [{ x: -150, y: 494 }, { x: -40, y: 488 }, { x: 40, y: 500 }, { 
 const tube: V2[] = [
   { x: 80, y: 430 },
   { x: 84, y: 462 },
-  { x: 84, y: 492 },
-  { x: 78, y: 520 },
-  { x: 64, y: 546 },
+  { x: 80, y: 494 },
+  { x: 64, y: 524 },
+  { x: 42, y: 550 },
+  { x: 24, y: 566 },
+];
+// the creek that splits the big island
+const creek: V2[] = [
+  { x: 6, y: 270 },
+  { x: 12, y: 330 },
+  { x: 6, y: 400 },
+  { x: 10, y: 470 },
 ];
 
 const rocks: Post[] = [
-  [-70, 20, 3.4], [70, 26, 3], [-96, 150, 4], [108, 140, 3.6], [-100, 420, 3.2], [-62, 640, 3.4], [56, 642, 3],
+  [-70, 20, 3.4], [70, 26, 3], [-96, 150, 4], [108, 140, 3.6], [-100, 420, 3.2], [-110, 300, 3.4], [112, 340, 3],
 ].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
 
 export const lavafield: Hole = {
@@ -35,8 +45,9 @@ export const lavafield: Hole = {
   theme: 'volcanic',
   tour: true,
   tee: { x: 0, y: 0 },
-  cup: { x: -2, y: 586 },
-  pins: [{ x: -2, y: 586 }, { x: 8, y: 568 }, { x: -18, y: 592 }, { x: 4, y: 596 }],
+  cup: { x: -4, y: 576 },
+  // two on the lower front tier, two on the upper back one
+  pins: [{ x: -4, y: 576 }, { x: -10, y: 568 }, { x: -6, y: 596 }, { x: 0, y: 602 }],
   aim: 0,
   bounds: { x0: -140, y0: -40, x1: 140, y1: 680 },
   border: [
@@ -51,18 +62,18 @@ export const lavafield: Hole = {
     { poly: blob(0, 0, 40, 34, 1, 0.12), surface: 'rough' },
     { poly: rect(-14, -12, 14, 12), surface: 'fairway' },
     // the little layup island, short of the second flow
-    { poly: blob(6, 150, 74, 40, 2, 0.1), surface: 'rough' },
-    { poly: blob(4, 150, 58, 28, 2, 0.1), surface: 'fairway' },
-    // the big island over the flow, where a good drive lands
+    { poly: blob(6, 150, 48, 32, 2, 0.1), surface: 'rough' },
+    { poly: blob(4, 150, 34, 22, 2, 0.1), surface: 'fairway' },
+    // the big island over the flow, where a good drive lands: two halves either side of the creek
     { poly: blob(10, 372, 84, 96, 3, 0.08), surface: 'rough' },
-    { poly: blob(8, 372, 66, 82, 3, 0.08), surface: 'fairway' },
-    // the green island
-    { poly: blob(-6, 584, 60, 50, 4, 0.1), surface: 'rough' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.r + 5, GREEN.r + 3, 5, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.r, GREEN.r - 2, 5, 0.06), surface: 'green' },
-    { poly: blob(-40, 556, 8, 6, 6, 0.15), surface: 'sand' },
-    { poly: blob(26, 612, 8, 6, 7, 0.15), surface: 'sand' },
-    { poly: blob(-36, 330, 10, 7, 8, 0.15), surface: 'sand' },
+    { poly: blob(-30, 372, 28, 70, 3, 0.08), surface: 'fairway' },
+    { poly: blob(48, 372, 28, 70, 4, 0.08), surface: 'fairway' },
+    // the green island: narrow, two tiers
+    { poly: blob(GREEN_ISLAND.x, GREEN_ISLAND.y, GREEN_ISLAND.r - 4, GREEN_ISLAND.r, 4, 0.08), surface: 'rough' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 5, 0.06), surface: 'fringe' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 5, 0.06), surface: 'green' },
+    { poly: blob(-26, 600, 5, 7, 6, 0.15), surface: 'sand' },
+    { poly: blob(-50, 330, 9, 7, 8, 0.15), surface: 'sand' },
     { poly: band(tube, 2.4), surface: 'path' },
   ],
   water: [
@@ -70,6 +81,9 @@ export const lavafield: Hole = {
     // the wide flow swells and settles
     { poly: band(L2, 34), level: LAVA, look: 'lava', tide: { amp: 1.2, period: 13 } },
     { poly: band(L3, 16), level: LAVA, look: 'lava' },
+    { poly: band(creek, 9), level: LAVA, look: 'lava' },
+    // the lake round the green
+    { poly: rect(-136, 500, 136, 676), level: LAVA, look: 'lava' },
   ],
   terrain: [
     { kind: 'ramp', x0: -140, y0: -40, x1: 140, y1: 680, axis: 'y', h0: FLOOR + 2, h1: FLOOR, op: 'set' },
@@ -81,21 +95,22 @@ export const lavafield: Hole = {
     { kind: 'channel', pts: L1, width: 24, depth: 7 },
     { kind: 'channel', pts: L2, width: 34, depth: 7 },
     { kind: 'channel', pts: L3, width: 16, depth: 7 },
+    { kind: 'channel', pts: creek, width: 9, depth: 7 },
+    // the lake round the green, and the island in it
+    { kind: 'box', x0: -140, y0: 504, x1: 140, y1: 680, h: -7, edge: 12, op: 'add' },
+    { kind: 'disc', x: GREEN_ISLAND.x, y: GREEN_ISLAND.y, r: GREEN_ISLAND.r, h: FLOOR + 1.5, edge: 6, op: 'set' },
     // the lava tube across the wide flow
-    { kind: 'embankment', pts: tube, h: [FLOOR + 0.3, FLOOR, FLOOR - 0.2, FLOOR - 0.3, FLOOR], width: 4, edge: 6 },
+    { kind: 'embankment', pts: tube, h: [FLOOR + 0.3, FLOOR, FLOOR - 0.2, FLOOR - 0.3, FLOOR, FLOOR + 1.4], width: 4, edge: 6 },
     { kind: 'channel', pts: tube, width: 4, depth: 0.7 },
     // rolls on the landing island
-    { kind: 'hill', x: 30, y: 350, r: 30, h: 1.4 },
-    { kind: 'hill', x: -30, y: 430, r: 24, h: 1 },
-    // the green: two tiers, the back one higher, with a false front that throws a timid shot back off
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.r + 12, h: FLOOR + 1.5, edge: 10, op: 'set' },
-    { kind: 'ramp', x0: GREEN.x - 40, y0: GREEN.y - 4, x1: GREEN.x + 40, y1: GREEN.y + 4, axis: 'y', h0: 0, h1: 1.1, op: 'add' },
-    { kind: 'box', x0: GREEN.x - 40, y0: GREEN.y + 4, x1: GREEN.x + 40, y1: GREEN.y + 40, h: 1.1, edge: 0.5, op: 'add' },
-    { kind: 'hill', x: GREEN.x, y: GREEN.y - GREEN.r + 2, r: 13, h: -0.9 },
-    // and the whole green leans left
-    { kind: 'ramp', x0: GREEN.x - 40, y0: GREEN.y - 40, x1: GREEN.x + 40, y1: GREEN.y + 40, axis: 'x', h0: -0.5, h1: 0.5, op: 'add' },
+    { kind: 'hill', x: 52, y: 350, r: 24, h: 1.2 },
+    { kind: 'hill', x: -34, y: 420, r: 22, h: 1 },
+    // the green: a lower front tier and a raised back one, with a sharp step between, leaning left
+    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y + 2, x1: GREEN.x + 30, y1: GREEN.y + 7, axis: 'y', h0: 0, h1: 1.4, op: 'add' },
+    { kind: 'box', x0: GREEN.x - 30, y0: GREEN.y + 7, x1: GREEN.x + 30, y1: GREEN.y + 40, h: 1.4, edge: 0.5, op: 'add' },
+    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 40, x1: GREEN.x + 30, y1: GREEN.y + 40, axis: 'x', h0: -0.4, h1: 0.4, op: 'add' },
     // bunkers
-    ...[[-40, 556, 8], [26, 612, 8], [-36, 330, 10]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.1, edge: 3, op: 'add' as const })),
+    ...[[-26, 600, 6], [-50, 330, 9]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.1, edge: 3, op: 'add' as const })),
   ],
   walls: [],
   posts: rocks,
@@ -107,7 +122,7 @@ export const lavafield: Hole = {
     { x: 0, y: -30 },
     { x: 0, y: 150 },
     { x: 20, y: 380 },
-    { x: -2, y: 586 },
+    { x: -4, y: 576 },
   ],
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
