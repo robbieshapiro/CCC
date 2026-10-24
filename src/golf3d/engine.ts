@@ -6,7 +6,6 @@ import type { Avatar } from '../api/types';
 import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
 import { todayInGameTz } from '../day';
-import { monthOf } from './courses';
 import { CartGirl } from './cartgirl';
 import { conditionsFor, withPin, type Conditions } from './conditions';
 import { BAG, carryOf, CLUBS, DRINKS, type ClubId, type Drink } from './clubs';
@@ -850,10 +849,10 @@ export class Course3D {
 
   // ---------- the swing ----------
 
-  // The vertical meter (tour courses now, every course from November) stands beside the golfer: power fills
+  // The vertical meter (tour courses) stands beside the golfer: power fills
   // upward and the club goes back with it, then the needle and the club come down together to the strike.
   private style(): MeterStyle {
-    return this.hole.tour || monthOf(todayInGameTz()) >= '2026-11' ? 'vertical' : 'classic';
+    return this.hole.tour ? 'vertical' : 'classic';
   }
 
   // a stretch of the bar (from, size as shares of it), across or up depending on the meter
@@ -953,9 +952,9 @@ export class Course3D {
       r.zones.forEach((z) => this.zones.add(z));
     }
     this.mode = 'roll';
-    // a pure strike gets the slow-motion treatment round the top of its flight, unless it's going to end in trouble
+    // on tour courses, a pure strike gets the slow-motion treatment round the top of its flight, unless it's going to end in trouble
     let slow: { from: number; to: number } | null = null;
-    if (full && error === 0 && !r.penalty) {
+    if (full && error === 0 && !r.penalty && this.hole.tour) {
       const land = r.frames.findIndex((f, i) => i > 2 && f.z <= heightAt(this.hole, f.x, f.y) + 0.05);
       const flight = r.frames.slice(0, land > 0 ? land : r.frames.length);
       const apex = flight.reduce((top, f) => (f.z > top.z ? f : top), flight[0]);
