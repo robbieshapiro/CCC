@@ -4,7 +4,7 @@ import { BAG, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor } from '../src/golf3d/courses';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
 import { CUP_R, cupR, curbs, DROP_SPEED, simulate } from '../src/golf3d/physics';
-import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, swipeHalf, swipeResult, type SwipePt } from '../src/golf3d/swing';
+import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type MeterStyle } from '../src/golf3d/swing';
 import { bake, gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
 import { makeRng } from '../src/seed';
@@ -210,17 +210,12 @@ function secretBest(h: Hole) {
 const TIMING = 0.06;
 
 // The three-tap swing as a person plays it: the power stop lands near the plan, the strike near the gold.
-// On tour courses it's the swipe: the pull lands near the plan (the ring shows it), the path wanders a few degrees.
-const SWIPE_WANDER = (3 * Math.PI) / 180;
-function swing(club: ClubId, plan: number, gauss: () => number, tour = false) {
+// Tour courses use the vertical meter: a slower needle and wider gold.
+function swing(club: ClubId, plan: number, gauss: () => number, style: MeterStyle = 'classic') {
   if (club === 'putter') return { power: Math.max(0.03, Math.min(1, plan * (1 + gauss() * 0.12))), error: 0 };
-  if (tour) {
-    const power = Math.max(0.05, Math.min(OVERSWING, plan * (1 + gauss() * 0.04)));
-    return { power, error: accuracyError(gauss() * SWIPE_WANDER, swipeHalf(club, power)) };
-  }
   const power = Math.max(0.05, Math.min(OVERSWING, plan + gauss() * TIMING * powerSpeed(club, plan)));
-  const miss = gauss() * TIMING * returnSpeed(club, power);
-  return { power, error: accuracyError(miss, goldHalf(club, power)) };
+  const miss = gauss() * TIMING * returnSpeed(club, power, 1, style);
+  return { power, error: accuracyError(miss, goldHalf(club, power, 1, style)) };
 }
 
 // A risk-aware pick: the best few greedy shots, re-scored over small mistakes.
@@ -261,7 +256,7 @@ function novice(base: Hole, seed: string) {
     const shot = {
       ...b.shot,
       angle: b.shot.angle + (gauss() * 3.5 * Math.PI) / 180,
-      ...swing(b.shot.club, b.shot.power, gauss, h.tour),
+      ...swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic'),
       wind: today.accel,
     };
     const r = simulate(h, pos, shot, false);
@@ -338,21 +333,11 @@ if (mode === 'all' || mode === 'basic') {
   ok(!edge.holed && Math.abs(edge.end.x - cupR(tour) * 0.8) > 0.5, `tour green: a medium putt on the edge lips out (ends ${edge.end.x.toFixed(1)},${edge.end.y.toFixed(1)})`);
   const flatFirm = simulate({ ...tour, tour: false }, { x: 0, y: 0 }, { angle: 0, power: (Math.sqrt(2 * 4.2 * 20) * 1.5 - 1.5) / 32.5, club: 'putter', error: 0, clock: 0 }, false);
   ok(flatFirm.holed, `classic greens are unchanged: the firm putt still drops (cap ${DROP_SPEED} ft/s only on tour)`);
-  // the swipe swing: a straight line is pure, drifting right pushes, a lazy one loses distance, quitting chunks
-  const swipe = (pts: [number, number, number][]) => swipeResult('iron', pts.map(([x, y, t]): SwipePt => ({ x, y, t })), 300);
-  const straight = swipe([[0, 0, 0], [0, 150, 0.4], [0, 300, 0.8], [0, 150, 0.9], [0, -40, 1.0]]);
-  ok(!!straight && straight.error === 0 && Math.abs(straight.power - 1) < 0.01, `swipe: straight down and up is pure at 100% (${straight?.label})`);
-  const tilted = swipe([[0, 0, 0], [30, 300, 0.8], [0, -40, 1.0]]);
-  ok(!!tilted && tilted.error === 0, 'swipe: a slanted line, retraced, is still square');
-  const right = swipe([[0, 0, 0], [0, 300, 0.8], [80, -40, 1.0]]);
-  ok(!!right && right.error > 0.12, `swipe: coming down right of the line pushes or slices (${right?.label}, ${right?.error.toFixed(2)})`);
-  const left = swipe([[0, 0, 0], [0, 300, 0.8], [-80, -40, 1.0]]);
-  ok(!!left && left.error < -0.12, `swipe: coming down left of the line pulls or hooks (${left?.label})`);
-  const lazy = swipe([[0, 0, 0], [0, 300, 0.8], [0, -40, 1.8]]);
-  ok(!!lazy && lazy.power < 0.9, `swipe: a slow downswing loses distance (${lazy?.power.toFixed(2)})`);
-  const chunk = swipe([[0, 0, 0], [0, 300, 0.8], [0, 240, 0.9]]);
-  ok(!!chunk && chunk.label === 'Chunked' && chunk.power < 0.7, 'swipe: quitting before the ball chunks it');
-  ok(swipe([[0, 0, 0], [0, 300, 0.8]]) === null, 'swipe: pulling back and letting go is no swing');
+  // the vertical meter gives you a good deal longer to find the gold
+  for (const club of ['driver', 'iron', 'wedge'] as ClubId[]) {
+    const ms = (style: MeterStyle) => (goldHalf(club, 1, 1, style) / returnSpeed(club, 1, 1, style)) * 1000;
+    ok(ms('vertical') >= ms('classic') * 1.9, `vertical meter: ${club} gold window ±${ms('vertical').toFixed(0)} ms (classic ±${ms('classic').toFixed(0)})`);
+  }
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);
     for (const pin of h.pins ?? [h.cup]) ok(!isWater(h, pin) && surfaceAt(h, pin) === 'green', `${h.name}: pin ${pin.x},${pin.y} is on dry green`);
