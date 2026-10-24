@@ -5,7 +5,7 @@ import { courseById, courseFor } from '../src/golf3d/courses';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
 import { CUP_R, cupR, curbs, DROP_SPEED, simulate } from '../src/golf3d/physics';
 import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, swipeHalf, swipeResult, type SwipePt } from '../src/golf3d/swing';
-import { gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
+import { bake, gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
 import { makeRng } from '../src/seed';
 
@@ -120,7 +120,7 @@ function candidates(h: Hole, pos: V2, nav: (p: V2) => number, clock: number, ste
     const putt = club === 'putter' && near;
     // try every power (and spin) in one direction; true if one of them holes out
     const tryAt = (a: number) => {
-      for (const power of club === 'putter' && h.tour ? TOUR_PUTTS : POWERS[club])
+      for (const power of club === 'putter' && h.tour ? (QUICK ? TOUR_PUTTS.filter((_, i) => i % 2 === 0) : TOUR_PUTTS) : POWERS[club])
         for (const spin of h.greenFirm && (club === 'iron' || club === 'wedge') ? [0, 1] : [0]) {
           const angle = putt ? toCup + ((a / 4) * Math.PI) / 180 : (a * Math.PI) / 180;
           const shot: Shot = { angle, power, club, error: 0, clock, spin };
@@ -132,7 +132,9 @@ function candidates(h: Hole, pos: V2, nav: (p: V2) => number, clock: number, ste
       return false;
     };
     if (!QUICK || putt) {
-      for (let a = -180; a < 180; a += putt ? step / 4 : step) if (tryAt(a)) return out;
+      // quick mode reads putts within 30° of the hole, a degree and a half apart
+      const reach = putt && QUICK ? 120 : 180;
+      for (let a = -reach; a < reach; a += putt ? step / 4 : step) if (tryAt(a)) return out;
       continue;
     }
     const from = out.length;
@@ -298,6 +300,8 @@ if (mode === 'quick') {
 }
 const only = process.argv[3];
 const holes = course.holes.filter((h) => !only || h.id === only);
+// quick mode plays on a baked copy of the ground: near enough for the sims, and far quicker
+if (QUICK) holes.forEach((h) => bake(h));
 
 if (mode === 'all' || mode === 'basic') {
   const first = course.holes[0];
