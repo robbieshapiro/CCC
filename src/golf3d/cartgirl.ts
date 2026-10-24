@@ -11,6 +11,8 @@ import type { Hole, V2 } from './types';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
+const NO_THANKS = "No thanks, I'm good for now";
+
 export class CartGirl {
   visited = false;
   private cart = props.cart();
@@ -23,6 +25,7 @@ export class CartGirl {
   private phase: 'idle' | 'in' | 'stop' | 'out' = 'idle';
   private talking = false;
   private pending: (() => void) | null = null;
+  private waved = false; // sent on her way with a "no thanks": anything still queued up stays unsaid
   private fill = new THREE.PointLight('#fff1e2', 0, 26, 1.4);
 
   constructor(private scene: THREE.Scene, private hole: Hole, private onOrder: (d: Drink | null) => void) {
@@ -66,8 +69,33 @@ export class CartGirl {
     this.group.visible = true;
     this.phase = 'in';
     this.t = 0;
+    this.waved = false;
     sfx('hum');
+    // you can wave her on before she's even stopped
+    card.hidden = false;
+    card.innerHTML = `
+      <div class="cart-card">
+        <div class="cart-head"><p class="eyebrow">The beverage cart</p></div>
+        <div class="cart-replies"><button class="reply" data-no-thanks>${NO_THANKS}</button></div>
+      </div>`;
+    this.bindNoThanks(card);
     this.pending = () => this.chat(card, talk);
+  }
+
+  // "No thanks, I'm good for now": she waves and drives on, and you get back to your game. Just this hole.
+  private bindNoThanks(card: HTMLElement) {
+    const b = card.querySelector('[data-no-thanks]') as HTMLButtonElement | null;
+    if (!b) return;
+    b.onclick = () => {
+      if (this.waved) return;
+      this.waved = true;
+      this.pending = null;
+      card.hidden = true;
+      card.innerHTML = '';
+      sfx('tick');
+      this.leave();
+      this.onOrder(null);
+    };
   }
 
   private chat(card: HTMLElement, talk: CartTalk) {
@@ -77,10 +105,11 @@ export class CartGirl {
     card.hidden = false;
     card.innerHTML = `
       <div class="cart-card">
-        <div class="cart-head"><p class="eyebrow">The beverage cart</p><button class="link" data-skip-chat>Skip to drinks</button></div>
+        <div class="cart-head"><p class="eyebrow">The beverage cart</p><span><button class="link" data-skip-chat>Skip to drinks</button> · <button class="link" data-no-thanks>${NO_THANKS}</button></span></div>
         <div class="cart-log" data-log aria-live="polite"></div>
         <div class="cart-replies" data-replies></div>
       </div>`;
+    this.bindNoThanks(card);
     const log = card.querySelector('[data-log]') as HTMLElement;
     const replies = card.querySelector('[data-replies]') as HTMLElement;
     let step = 0;
@@ -92,7 +121,7 @@ export class CartGirl {
     };
     const mood = (m: Mood | undefined) => {
       this.daisy.setPose(m ?? 'idle');
-      if (m && m !== 'idle') window.setTimeout(() => this.talking && this.daisy.setPose('idle'), 1600);
+      if (m && m !== 'idle') window.setTimeout(() => this.talking && !this.waved && this.daisy.setPose('idle'), 1600);
     };
     // Daisy "types" for a moment before each line
     const daisySays = (text: string, then: () => void, m?: Mood) => {
@@ -100,7 +129,7 @@ export class CartGirl {
       replies.innerHTML = '';
       log.insertAdjacentHTML('beforeend', '<p class="msg daisy typing" data-typing><b>Daisy</b> <i>…</i></p>');
       window.setTimeout(() => {
-        if (g !== gen) return;
+        if (g !== gen || this.waved) return;
         log.querySelector('[data-typing]')?.remove();
         say('daisy', text);
         mood(m);
@@ -124,7 +153,7 @@ export class CartGirl {
       }, step === 0 ? 'wave' : undefined);
     };
     const menu = () => {
-      card.querySelector('[data-skip-chat]')?.remove();
+      card.querySelector('[data-skip-chat]')?.parentElement?.remove();
       daisySays(orderLine(talk), () => {
         replies.innerHTML = `
           <div class="cart-drinks">${(Object.keys(DRINKS) as Drink[])
@@ -137,6 +166,7 @@ export class CartGirl {
             say('you', d ? DRINKS[d].name : 'No thanks, Daisy.');
             daisySays(orderReply(d, talk), () =>
               window.setTimeout(() => {
+                if (this.waved) return;
                 card.hidden = true;
                 card.innerHTML = '';
                 this.leave();
