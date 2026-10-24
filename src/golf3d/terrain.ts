@@ -85,7 +85,41 @@ function piece(p: Piece, x: number, y: number): [number, number] {
   }
 }
 
+// A baked copy of a hole's heightfield, for the headless checks: bilinear on a fine grid, many times quicker
+// than summing the pieces. The game never bakes, so it always plays on the exact surface.
+type Baked = { x0: number; y0: number; cell: number; nx: number; ny: number; z: Float32Array };
+const baked = new WeakMap<Piece[], Baked>();
+
+export function bake(h: Hole, cell = 0.5) {
+  if (baked.has(h.terrain)) return;
+  const { x0, y0, x1, y1 } = h.bounds;
+  const nx = Math.ceil((x1 - x0) / cell) + 2;
+  const ny = Math.ceil((y1 - y0) / cell) + 2;
+  const z = new Float32Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) z[j * nx + i] = exactHeight(h, x0 + i * cell, y0 + j * cell);
+  baked.set(h.terrain, { x0, y0, cell, nx, ny, z });
+}
+
 export function heightAt(h: Hole, x: number, y: number): number {
+  const b = baked.get(h.terrain);
+  if (b) {
+    const fx = (x - b.x0) / b.cell;
+    const fy = (y - b.y0) / b.cell;
+    const i = Math.floor(fx);
+    const j = Math.floor(fy);
+    if (i >= 0 && j >= 0 && i < b.nx - 1 && j < b.ny - 1) {
+      const u = fx - i;
+      const v = fy - j;
+      const k = j * b.nx + i;
+      const top = b.z[k] + (b.z[k + 1] - b.z[k]) * u;
+      const bot = b.z[k + b.nx] + (b.z[k + b.nx + 1] - b.z[k + b.nx]) * u;
+      return top + (bot - top) * v;
+    }
+  }
+  return exactHeight(h, x, y);
+}
+
+function exactHeight(h: Hole, x: number, y: number): number {
   let z = 0;
   for (const p of h.terrain) {
     const [v, w] = piece(p, x, y);

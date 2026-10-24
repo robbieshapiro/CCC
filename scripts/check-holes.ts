@@ -4,8 +4,8 @@ import { BAG, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor } from '../src/golf3d/courses';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
 import { CUP_R, cupR, curbs, DROP_SPEED, simulate } from '../src/golf3d/physics';
-import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed } from '../src/golf3d/swing';
-import { gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
+import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, swipeHalf, swipeResult, type SwipePt } from '../src/golf3d/swing';
+import { bake, gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
 import { makeRng } from '../src/seed';
 
@@ -108,20 +108,45 @@ function clubsFor(h: Hole, pos: V2): ClubId[] {
 
 type Cand = { d: number; shot: Shot };
 
+// QUICK=1 (npm run check-holes quick): a coarse sweep of directions, then a closer look round the best few,
+// instead of every direction at every power. Close to the full search's picks, at a fraction of the cost.
+const QUICK = !!process.env.QUICK;
+
 function candidates(h: Hole, pos: V2, nav: (p: V2) => number, clock: number, step: number, exclude?: string, only?: ClubId) {
   const out: Cand[] = [];
   const toCup = Math.atan2(h.cup.x - pos.x, h.cup.y - pos.y);
-  for (const club of only ? [only] : clubsFor(h, pos))
-    for (let a = -180; a < 180; a += club === 'putter' && Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40 ? step / 4 : step)
-      for (const power of club === 'putter' && h.tour ? TOUR_PUTTS : POWERS[club])
-      for (const spin of h.greenFirm && (club === 'iron' || club === 'wedge') ? [0, 1] : [0]) {
-        const angle = club === 'putter' && Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40 ? toCup + ((a / 4) * Math.PI) / 180 : (a * Math.PI) / 180;
-        const shot: Shot = { angle, power, club, error: 0, clock, spin };
-        const r = simulate(h, pos, shot, false);
-        if (exclude && r.zones.includes(exclude)) continue;
-        out.push({ d: r.holed ? -1 : r.penalty ? Infinity : nav(r.end), shot });
-        if (r.holed) return out;
-      }
+  const near = Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40;
+  for (const club of only ? [only] : clubsFor(h, pos)) {
+    const putt = club === 'putter' && near;
+    // try every power (and spin) in one direction; true if one of them holes out
+    const tryAt = (a: number) => {
+      for (const power of club === 'putter' && h.tour ? (QUICK ? TOUR_PUTTS.filter((_, i) => i % 2 === 0) : TOUR_PUTTS) : POWERS[club])
+        for (const spin of h.greenFirm && (club === 'iron' || club === 'wedge') ? [0, 1] : [0]) {
+          const angle = putt ? toCup + ((a / 4) * Math.PI) / 180 : (a * Math.PI) / 180;
+          const shot: Shot = { angle, power, club, error: 0, clock, spin };
+          const r = simulate(h, pos, shot, false);
+          if (exclude && r.zones.includes(exclude)) continue;
+          out.push({ d: r.holed ? -1 : r.penalty ? Infinity : nav(r.end), shot });
+          if (r.holed) return true;
+        }
+      return false;
+    };
+    if (!QUICK || putt) {
+      // quick mode reads putts within 30° of the hole, a degree and a half apart
+      const reach = putt && QUICK ? 120 : 180;
+      for (let a = -reach; a < reach; a += putt ? step / 4 : step) if (tryAt(a)) return out;
+      continue;
+    }
+    const from = out.length;
+    for (let a = -180; a < 180; a += 15) if (tryAt(a)) return out;
+    const best = out
+      .slice(from)
+      .sort((x, y) => x.d - y.d)
+      .map((c) => Math.round((c.shot.angle * 180) / Math.PI))
+      .filter((a, i, all) => all.findIndex((b) => Math.abs(b - a) < 12) === i)
+      .slice(0, 3);
+    for (const b of best) for (let a = b - 12; a <= b + 12; a += step) if (a !== b && tryAt(a)) return out;
+  }
   return out;
 }
 
@@ -185,8 +210,14 @@ function secretBest(h: Hole) {
 const TIMING = 0.06;
 
 // The three-tap swing as a person plays it: the power stop lands near the plan, the strike near the gold.
-function swing(club: ClubId, plan: number, gauss: () => number) {
+// On tour courses it's the swipe: the pull lands near the plan (the ring shows it), the path wanders a few degrees.
+const SWIPE_WANDER = (3 * Math.PI) / 180;
+function swing(club: ClubId, plan: number, gauss: () => number, tour = false) {
   if (club === 'putter') return { power: Math.max(0.03, Math.min(1, plan * (1 + gauss() * 0.12))), error: 0 };
+  if (tour) {
+    const power = Math.max(0.05, Math.min(OVERSWING, plan * (1 + gauss() * 0.04)));
+    return { power, error: accuracyError(gauss() * SWIPE_WANDER, swipeHalf(club, power)) };
+  }
   const power = Math.max(0.05, Math.min(OVERSWING, plan + gauss() * TIMING * powerSpeed(club, plan)));
   const miss = gauss() * TIMING * returnSpeed(club, power);
   return { power, error: accuracyError(miss, goldHalf(club, power)) };
@@ -230,7 +261,7 @@ function novice(base: Hole, seed: string) {
     const shot = {
       ...b.shot,
       angle: b.shot.angle + (gauss() * 3.5 * Math.PI) / 180,
-      ...swing(b.shot.club, b.shot.power, gauss),
+      ...swing(b.shot.club, b.shot.power, gauss, h.tour),
       wind: today.accel,
     };
     const r = simulate(h, pos, shot, false);
@@ -245,8 +276,32 @@ function novice(base: Hole, seed: string) {
 
 const course = process.env.COURSE ? courseById(process.env.COURSE)! : courseFor('2026-10');
 const mode = process.argv[2] ?? 'all';
+
+// quick: every hole at once, each in its own process, in quick mode; prints each hole's report as it lands
+if (mode === 'quick') {
+  const { spawn } = await import('node:child_process');
+  const ids = course.holes.map((h) => h.id).filter((id) => !process.argv[3] || id === process.argv[3]);
+  const run = (args: string[]) =>
+    new Promise<string>((done) => {
+      const kid = spawn(process.execPath, [process.argv[1], ...args], { env: { ...process.env, QUICK: '1' } });
+      let text = '';
+      kid.stdout.on('data', (d) => (text += d));
+      kid.stderr.on('data', (d) => (text += d));
+      kid.on('close', (code) => {
+        if (code) process.exitCode = 1;
+        done(text);
+      });
+    });
+  const started = Date.now();
+  const jobs = [run(['basic', '-']), ...ids.flatMap((id) => [run(['solve', id]), run(['novice', id])])];
+  for (const job of jobs) process.stdout.write((await job).split('\n').filter((l) => !l.startsWith('  ')).join('\n'));
+  console.log(`\nquick check done in ${Math.round((Date.now() - started) / 1000)}s`);
+  process.exit();
+}
 const only = process.argv[3];
 const holes = course.holes.filter((h) => !only || h.id === only);
+// quick mode plays on a baked copy of the ground: near enough for the sims, and far quicker
+if (QUICK) holes.forEach((h) => bake(h));
 
 if (mode === 'all' || mode === 'basic') {
   const first = course.holes[0];
@@ -283,6 +338,21 @@ if (mode === 'all' || mode === 'basic') {
   ok(!edge.holed && Math.abs(edge.end.x - cupR(tour) * 0.8) > 0.5, `tour green: a medium putt on the edge lips out (ends ${edge.end.x.toFixed(1)},${edge.end.y.toFixed(1)})`);
   const flatFirm = simulate({ ...tour, tour: false }, { x: 0, y: 0 }, { angle: 0, power: (Math.sqrt(2 * 4.2 * 20) * 1.5 - 1.5) / 32.5, club: 'putter', error: 0, clock: 0 }, false);
   ok(flatFirm.holed, `classic greens are unchanged: the firm putt still drops (cap ${DROP_SPEED} ft/s only on tour)`);
+  // the swipe swing: a straight line is pure, drifting right pushes, a lazy one loses distance, quitting chunks
+  const swipe = (pts: [number, number, number][]) => swipeResult('iron', pts.map(([x, y, t]): SwipePt => ({ x, y, t })), 300);
+  const straight = swipe([[0, 0, 0], [0, 150, 0.4], [0, 300, 0.8], [0, 150, 0.9], [0, -40, 1.0]]);
+  ok(!!straight && straight.error === 0 && Math.abs(straight.power - 1) < 0.01, `swipe: straight down and up is pure at 100% (${straight?.label})`);
+  const tilted = swipe([[0, 0, 0], [30, 300, 0.8], [0, -40, 1.0]]);
+  ok(!!tilted && tilted.error === 0, 'swipe: a slanted line, retraced, is still square');
+  const right = swipe([[0, 0, 0], [0, 300, 0.8], [80, -40, 1.0]]);
+  ok(!!right && right.error > 0.12, `swipe: coming down right of the line pushes or slices (${right?.label}, ${right?.error.toFixed(2)})`);
+  const left = swipe([[0, 0, 0], [0, 300, 0.8], [-80, -40, 1.0]]);
+  ok(!!left && left.error < -0.12, `swipe: coming down left of the line pulls or hooks (${left?.label})`);
+  const lazy = swipe([[0, 0, 0], [0, 300, 0.8], [0, -40, 1.8]]);
+  ok(!!lazy && lazy.power < 0.9, `swipe: a slow downswing loses distance (${lazy?.power.toFixed(2)})`);
+  const chunk = swipe([[0, 0, 0], [0, 300, 0.8], [0, 240, 0.9]]);
+  ok(!!chunk && chunk.label === 'Chunked' && chunk.power < 0.7, 'swipe: quitting before the ball chunks it');
+  ok(swipe([[0, 0, 0], [0, 300, 0.8]]) === null, 'swipe: pulling back and letting go is no swing');
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);
     for (const pin of h.pins ?? [h.cup]) ok(!isWater(h, pin) && surfaceAt(h, pin) === 'green', `${h.name}: pin ${pin.x},${pin.y} is on dry green`);
@@ -303,7 +373,7 @@ if (mode === 'all' || mode === 'solve') {
 if (mode === 'all' || mode === 'novice') {
   let over = 0;
   for (const h of holes) {
-    const scores = [1, 2, 3, 4, 5, 6].map((i) => novice(h, `${h.id}:${i}`));
+    const scores = (QUICK ? [1, 2, 3] : [1, 2, 3, 4, 5, 6]).map((i) => novice(h, `${h.id}:${i}`));
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
     over += avg - h.par;
     console.log(`${h.name}: novice ${scores.join(',')} avg ${(avg - h.par).toFixed(1)} vs par`);

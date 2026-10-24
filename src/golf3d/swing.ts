@@ -32,3 +32,66 @@ export function accuracyError(miss: number, half: number) {
   if (m <= half) return Math.sign(miss) * 0.12 * ((m - pure) / (half - pure));
   return Math.sign(miss) * (0.12 + 0.88 * Math.min(1, (m - half) / 0.15));
 }
+
+// ---------- the swipe swing (tour courses) ----------
+// Pull down to take it back (how far is your power), then swipe up through where you started: that's impact.
+// The line of the downswing against the line you took it back on decides the shot: come down right of it and
+// you push or slice it, left and you pull or hook. A lazy downswing loses distance; quitting short of the ball chunks it.
+
+export type SwipePt = { x: number; y: number; t: number }; // screen px (y down) and seconds
+export type Swipe = { power: number; error: number; label: string; sub: string };
+
+// the path tolerance either side of a square swing, in radians, before it starts to curve properly
+export function swipeHalf(club: ClubId, power: number, sweetMul = 1, needle = 1) {
+  const over = Math.max(0, power - 1);
+  return ((CLUBS[club].sweet * 1.6 * sweetMul) / needle) * (1 - over * 4);
+}
+
+export const SLOW_DOWNSWING = 0.6; // seconds from the top to impact before it costs distance
+
+// full: the pull (px) that makes 100% power
+export function swipeResult(club: ClubId, pts: SwipePt[], full: number, sweetMul = 1, needle = 1): Swipe | null {
+  if (pts.length < 3) return null;
+  const start = pts[0];
+  let b = 0;
+  for (let i = 1; i < pts.length; i++) if (pts[i].y > pts[b].y) b = i;
+  const top = pts[b]; // the top of the backswing is the bottom of the swipe
+  const back = top.y - start.y;
+  const power = Math.min(OVERSWING, back / full);
+  if (power < 0.04 || b === pts.length - 1) return null;
+  // impact: where the downswing comes back level with the start, or the release if it never gets there
+  let hit = pts[pts.length - 1];
+  for (let i = b + 1; i < pts.length; i++)
+    if (pts[i].y <= start.y) {
+      const p = pts[i - 1];
+      const q = pts[i];
+      const k = (p.y - start.y) / (p.y - q.y || 1);
+      hit = { x: p.x + (q.x - p.x) * k, y: start.y, t: p.t + (q.t - p.t) * k };
+      break;
+    }
+  const up = top.y - hit.y;
+  if (up < Math.min(12, back * 0.3)) return null; // never really came down: no swing
+  // the square line is straight back down the line you took it back on
+  const backAng = Math.atan2(top.x - start.x, back);
+  const downAng = Math.atan2(hit.x - top.x, up);
+  const path = downAng + backAng; // > 0: came down right of the line you took it back on
+  const half = swipeHalf(club, power, sweetMul, needle);
+  let error = accuracyError(path, half);
+  let p = power;
+  let label = error === 0 ? 'Pure' : Math.abs(error) <= 0.12 ? 'Good' : Math.abs(error) > 0.5 ? (error > 0 ? 'Slice' : 'Hook') : error > 0 ? 'Push' : 'Pull';
+  // quit before the ball: a chunk, fat and short
+  if (up < back * 0.4) {
+    p *= 0.6;
+    error *= 1.3;
+    label = 'Chunked';
+  } else {
+    const dur = hit.t - top.t;
+    if (dur > SLOW_DOWNSWING) {
+      p *= 1 - Math.min(0.2, (dur - SLOW_DOWNSWING) * 0.4);
+      if (error === 0 || Math.abs(error) <= 0.12) label = 'Quit on it';
+    }
+  }
+  const deg = Math.round((path * 180) / Math.PI);
+  const sub = `${Math.round(power * 100)}%${deg ? ` · ${Math.abs(deg)}° ${deg > 0 ? 'right' : 'left'} of your line` : ' · on line'}`;
+  return { power: p, error: Math.max(-1, Math.min(1, error)), label, sub };
+}
