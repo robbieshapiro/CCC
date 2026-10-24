@@ -14,7 +14,7 @@ import { BALL_R, G, launch, lieFactor, simulate, type Result } from './physics';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
-import { accuracyError, goldHalf, OVERSWING, PURE, powerSpeed, returnSpeed } from './swing';
+import { accuracyError, goldHalf, OVERSWING, PURE, powerSpeed, returnSpeed, swipeResult, type SwipePt } from './swing';
 import type { Hole, Shot, V2 } from './types';
 
 export const MAX_OVER = 3; // pick up at par + 3
@@ -96,6 +96,32 @@ function targetMarker() {
   return g;
 }
 
+// The green-reading arrows: one flat arrow, instanced, pointing along +x.
+const SLOPE_MAX = 700;
+function slopeArrows() {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.5, -0.07);
+  shape.lineTo(0.15, -0.07);
+  shape.lineTo(0.15, -0.22);
+  shape.lineTo(0.5, 0);
+  shape.lineTo(0.15, 0.22);
+  shape.lineTo(0.15, 0.07);
+  shape.lineTo(-0.5, 0.07);
+  const geo = new THREE.ShapeGeometry(shape);
+  // lie flat: the shape's y becomes the ground's -z
+  geo.rotateX(-Math.PI / 2);
+  const m = new THREE.InstancedMesh(
+    geo,
+    new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, fog: false }),
+    SLOPE_MAX,
+  );
+  m.count = 0;
+  m.frustumCulled = false;
+  m.renderOrder = 2;
+  m.visible = false;
+  return m;
+}
+
 export class Course3D {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -113,6 +139,7 @@ export class Course3D {
   private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
   private golfer: Golfer;
   private dots: THREE.InstancedMesh;
+  private slopes = slopeArrows(); // reading the green: arrows pointing downhill, on tour courses
   private ring = targetMarker(); // where the shot comes down: a bullseye with a beam you can see from the tee
   private trail: THREE.Line;
   private trailPts: THREE.Vector3[] = [];
@@ -151,7 +178,7 @@ export class Course3D {
   private landing = new THREE.Vector3();
   private orbit = 0;
   private resolve: ((r: HoleResult) => void) | null = null;
-  private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
+  private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' | 'swipe'; pts: SwipePt[] } | null = null;
   private miniBase: HTMLCanvasElement | null = null;
   private faded = new Map<THREE.Object3D, number>();
   private onResize = () => this.resize();
@@ -193,6 +220,7 @@ export class Course3D {
     this.dots.frustumCulled = false;
     this.scene.add(this.dots);
     this.scene.add(this.ring);
+    this.scene.add(this.slopes);
     const tg = new THREE.BufferGeometry();
     tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL * 3), 3));
     tg.setDrawRange(0, 0);
@@ -376,6 +404,7 @@ export class Course3D {
         </div>
         <p data-swing-tip></p>
       </div>
+      <canvas class="g3-trail" data-trail aria-hidden="true"></canvas>
       <div class="g3-callout" data-callout></div>
       <div class="g3-hint" data-hint></div>
       <div class="g3-cart" data-cart hidden></div>
@@ -491,6 +520,7 @@ export class Course3D {
     this.club = c;
     this.power = c === 'putter' ? 0 : this.planFor(c);
     this.golfer.holdClub(c);
+    if (c === 'putter' && this.hole.tour) this.readGreen();
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((x) => x.classList.toggle('on', x.dataset.club === c));
   }
 
@@ -692,9 +722,13 @@ export class Course3D {
     if (dist) dist.textContent = `${Math.round(d)} ft to the pin`;
     const first = this.number === 1 && this.strokes === 0;
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
+    // tour courses use the swipe swing; the putter works the same everywhere
+    const swipe = this.hole.tour && want !== 'putter';
     this.hint(
-      first
-        ? 'Drag sideways to aim, down to plan your power. Then tap to swing.'
+      first || (swipe && this.strokes === 0 && this.number === 1)
+        ? swipe
+          ? 'Drag sideways to aim. To swing, pull straight down, then swipe straight back up through the ball.'
+          : 'Drag sideways to aim, down to plan your power. Then tap to swing.'
         : tip
           ? 'Drag the dot on the ball for spin, or to bend the shot. Mind the wind.'
           : '',
@@ -712,15 +746,25 @@ export class Course3D {
       if (this.mode === 'meter') return this.tapSwing();
       if (this.mode !== 'aim') return;
       el.setPointerCapture(e.pointerId);
-      this.drag = { x: e.clientX, y: e.clientY, aim: this.aim, power: this.power, kind: '' };
+      this.drag = { x: e.clientX, y: e.clientY, aim: this.aim, power: this.power, kind: '', pts: [{ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 }] };
     });
     el.addEventListener('pointermove', (e) => {
       const d = this.drag;
       if (!d || this.mode !== 'aim') return;
       const dx = e.clientX - d.x;
       const dy = e.clientY - d.y;
-      if (!d.kind && Math.hypot(dx, dy) > 10) d.kind = Math.abs(dx) > Math.abs(dy) ? 'aim' : 'power';
+      if (!d.kind && Math.hypot(dx, dy) > 10) d.kind = Math.abs(dx) > Math.abs(dy) ? 'aim' : this.swipes() && dy > 0 ? 'swipe' : 'power';
       if (d.kind === 'aim') this.aim = d.aim + dx * (this.club === 'putter' ? 0.0025 : 0.004);
+      if (d.kind === 'swipe') {
+        d.pts.push({ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 });
+        // until the way down starts, the power follows the finger and the club follows the power
+        const deepest = Math.max(...d.pts.map((q) => q.y)) - d.y;
+        if (e.clientY >= d.y + deepest - 2) {
+          this.power = Math.max(0, Math.min(OVERSWING, deepest / this.fullPull()));
+          this.golfer.takeBack(this.club, Math.min(1, this.power));
+        }
+        this.drawTrail2D(d.pts, false);
+      }
       if (d.kind === 'power') {
         const full = Math.min(window.innerHeight * 0.42, 340);
         // putts pull back from nothing; full swings nudge the plan up (pull down) or down (push up)
@@ -731,6 +775,9 @@ export class Course3D {
       const d = this.drag;
       this.drag = null;
       if (!d || this.mode !== 'aim') return;
+      if (d.kind === 'swipe') return this.swipe(d.pts);
+      // on tour courses a tap doesn't swing: you swipe
+      if (!d.kind && this.swipes()) return this.hint('Pull straight down to take it back, then swipe straight up through the ball.');
       // putts go on release; full swings keep the plan and start with a tap
       if (this.club === 'putter') {
         if (d.kind === 'power' && this.power > 0.03) this.putt();
@@ -739,9 +786,84 @@ export class Course3D {
     };
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', () => {
+      const d = this.drag;
       this.drag = null;
       if (this.club === 'putter') this.power = 0;
+      if (d?.kind === 'swipe') {
+        this.power = this.planFor(this.club);
+        this.golfer.setPose('address');
+      }
     });
+  }
+
+  // The swipe swing is for full swings on tour courses; the keyboard keeps the meter.
+  private swipes() {
+    return !!this.hole.tour && this.club !== 'putter';
+  }
+
+  // how far down you pull for 100% power
+  private fullPull() {
+    return Math.min(window.innerHeight * 0.36, 300);
+  }
+
+  private swipe(pts: SwipePt[]) {
+    const drink = this.drink ? DRINKS[this.drink.kind] : null;
+    const r = swipeResult(this.club, pts, this.fullPull(), drink?.sweet ?? 1, drink?.needle ?? 1);
+    this.drawTrail2D(pts, true);
+    if (!r) {
+      // pulled back and let go without coming down: no swing
+      this.power = this.planFor(this.club);
+      this.golfer.setPose('address');
+      this.hint('Swipe back up through the ball to hit it. A straight line is a straight shot.');
+      return;
+    }
+    this.hint('');
+    this.callout(r.label, r.sub, 1100);
+    this.power = r.power;
+    this.swing(r.error, true);
+  }
+
+  // The swipe as you drew it: the backswing in cream, the downswing in gold, and the square line in a dash.
+  private drawTrail2D(pts: SwipePt[], done: boolean) {
+    const c = this.overlay.querySelector('[data-trail]') as HTMLCanvasElement | null;
+    if (!c || pts.length < 2) return;
+    const r = this.overlay.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (c.width !== Math.round(r.width * dpr)) {
+      c.width = Math.round(r.width * dpr);
+      c.height = Math.round(r.height * dpr);
+    }
+    const x = c.getContext('2d')!;
+    x.setTransform(dpr, 0, 0, dpr, -r.left * dpr, -r.top * dpr);
+    x.clearRect(r.left, r.top, r.width, r.height);
+    let b = 0;
+    pts.forEach((p, i) => (p.y > pts[b].y ? (b = i) : 0));
+    x.lineCap = 'round';
+    x.lineJoin = 'round';
+    const line = (from: number, to: number, color: string, w: number) => {
+      x.strokeStyle = color;
+      x.lineWidth = w;
+      x.beginPath();
+      for (let i = from; i <= to; i++) (i === from ? x.moveTo : x.lineTo).call(x, pts[i].x, pts[i].y);
+      x.stroke();
+    };
+    line(0, b, 'rgba(243,236,220,0.85)', 6);
+    if (b < pts.length - 1) {
+      // the square line: straight back the way you came
+      x.setLineDash([6, 8]);
+      x.strokeStyle = 'rgba(243,236,220,0.6)';
+      x.lineWidth = 2;
+      x.beginPath();
+      x.moveTo(pts[b].x, pts[b].y);
+      x.lineTo(pts[0].x, pts[0].y);
+      x.lineTo(pts[0].x - (pts[b].x - pts[0].x) * 0.4, pts[0].y - (pts[b].y - pts[0].y) * 0.4);
+      x.stroke();
+      x.setLineDash([]);
+      line(b, pts.length - 1, '#e6b84a', 7);
+    }
+    c.classList.toggle('fade', done);
+    c.classList.add('show');
+    if (done) window.setTimeout(() => c.classList.remove('show', 'fade'), 1400);
   }
 
   private key(e: KeyboardEvent) {
@@ -831,13 +953,13 @@ export class Course3D {
     this.swing(error);
   }
 
-  private swing(error: number) {
+  private swing(error: number, fromTop = false) {
     this.mode = 'swing';
     this.setView('play');
     const power = this.power;
     const club = this.club;
-    this.golfer.swingClub(club, power, () => this.hit(club, power, error));
-    if (club !== 'putter') window.setTimeout(() => sfx('whoosh'), 500);
+    this.golfer.swingClub(club, Math.min(1, power), () => this.hit(club, power, error), undefined, fromTop);
+    if (club !== 'putter') window.setTimeout(() => sfx('whoosh'), fromTop ? 60 : 500);
   }
 
   private hit(club: ClubId, power: number, error: number) {
@@ -1111,11 +1233,50 @@ export class Course3D {
 
   // ---------- aim guide ----------
 
+  // Lay arrows on the green around the ball, every 3 ft, each pointing the way the ground falls.
+  // Longer and warmer where it's quicker.
+  private readGreen() {
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0);
+    const sc = new THREE.Vector3();
+    const col = new THREE.Color();
+    const pale = new THREE.Color('#f3ecdc');
+    const hot = new THREE.Color('#f0a040');
+    let n = 0;
+    const R = 36;
+    const gx0 = Math.round(this.pos.x / 3) * 3;
+    const gy0 = Math.round(this.pos.y / 3) * 3;
+    for (let gy = gy0 - R; gy <= gy0 + R; gy += 3)
+      for (let gx = gx0 - R; gx <= gx0 + R; gx += 3) {
+        if (n >= SLOPE_MAX) break;
+        const p = { x: gx, y: gy };
+        if (Math.hypot(gx - this.pos.x, gy - this.pos.y) > R || Math.hypot(gx - this.pos.x, gy - this.pos.y) < 1.5) continue;
+        const s = surfaceAt(this.hole, p);
+        if (s !== 'green' && s !== 'fringe') continue;
+        const g = gradAt(this.hole, gx, gy);
+        const steep = Math.hypot(g.x, g.y);
+        if (steep < 0.004) continue;
+        // downhill is -grad; the arrow is drawn along +x, so turn it to face (-g.x, -g.y) in hole space
+        q.setFromAxisAngle(up, Math.atan2(-g.y, -g.x));
+        const len = Math.min(2.4, 0.7 + steep * 26);
+        sc.set(len, 1, 0.8 + Math.min(0.6, steep * 8));
+        m.compose(w3(gx, gy, heightAt(this.hole, gx, gy) + 0.06), q, sc);
+        this.slopes.setMatrixAt(n, m);
+        this.slopes.setColorAt(n, col.copy(pale).lerp(hot, Math.min(1, steep / 0.06)));
+        n++;
+      }
+    this.slopes.count = n;
+    this.slopes.instanceMatrix.needsUpdate = true;
+    if (this.slopes.instanceColor) this.slopes.instanceColor.needsUpdate = true;
+  }
+
   private guide() {
     const m = new THREE.Matrix4();
     let n = 0;
     const show = this.mode === 'aim' || this.mode === 'meter';
     this.ring.visible = false;
+    this.slopes.visible = show && this.club === 'putter' && !!this.hole.tour;
     if (show) {
       const dx = Math.sin(this.aim);
       const dy = Math.cos(this.aim);
@@ -1132,7 +1293,8 @@ export class Course3D {
         this.landing.copy(w3(this.pos.x + dx * end, this.pos.y + dy * end, heightAt(this.hole, this.pos.x + dx * end, this.pos.y + dy * end)));
       } else {
         // the flight arc and a landing ring sized to the club's spread
-        const power = Math.max(this.power, 0.6);
+        // on tour courses the ring follows your backswing, from nothing; otherwise it shows the plan
+        const power = this.swipes() ? Math.max(this.power, 0.02) : Math.max(this.power, 0.6);
         const v = launch({ angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost() * lieFactor(this.hole, this.pos, this.club), spin: this.spin, shape: this.shape });
         const z0 = heightAt(this.hole, this.pos.x, this.pos.y);
         let landed: V2 | null = null;
@@ -1168,10 +1330,11 @@ export class Course3D {
     this.dots.instanceMatrix.needsUpdate = true;
     const bar = this.overlay.querySelector('[data-power]') as HTMLElement | null;
     if (bar) {
-      bar.style.height = `${Math.round(this.power * 100)}%`;
-      bar.parentElement!.classList.toggle('show', this.mode === 'aim' && this.drag?.kind === 'power');
-      // a full-power driver warns you the needle will be wild
-      bar.parentElement!.classList.toggle('hot', this.club === 'driver' && this.power > 0.85);
+      bar.style.height = `${Math.round(Math.min(1, this.power) * 100)}%`;
+      const kind = this.drag?.kind;
+      bar.parentElement!.classList.toggle('show', this.mode === 'aim' && (kind === 'power' || kind === 'swipe'));
+      // a full-power driver warns you the needle will be wild; on a swipe, past 100% is overswing
+      bar.parentElement!.classList.toggle('hot', (this.club === 'driver' && this.power > 0.85) || this.power > 1);
     }
     const arrow = this.overlay.querySelector('[data-wind-arrow]') as HTMLElement | null;
     if (arrow && this.wind) arrow.style.transform = `rotate(${((this.wind.toward - this.aim) * 180) / Math.PI}deg)`;

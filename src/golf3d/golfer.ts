@@ -203,7 +203,7 @@ export class Golfer {
   private clubId: ClubId | null = null;
   private legs: THREE.Group[] = [];
   private t = 0;
-  private state: { pose: PoseName; swing?: { t: number; back: number; dur: number; impact: () => void; done: () => void; hit: boolean } } = { pose: 'idle' };
+  private state: { pose: PoseName; hold?: number; swing?: { t: number; back: number; dur: number; impact: () => void; done: () => void; hit: boolean } } = { pose: 'idle' };
   private cur = { tilt: 0, phi: 0, twist: 0, bend: 0, knee: 0, headTilt: 0 };
 
   constructor(readonly spec: GolferSpec) {
@@ -427,11 +427,23 @@ export class Golfer {
     return !!this.state.swing;
   }
 
+  // How far back the club goes for this much power.
+  private reach(club: ClubId, power: number) {
+    return club === 'putter' ? 0.25 + power * 0.7 : club === 'wedge' ? 0.8 + power * 1.4 : 1.2 + power * 1.5;
+  }
+
+  // The swipe swing: the club follows your finger back, and waits at the top.
+  takeBack(club: ClubId, power: number) {
+    if (this.state.swing) return;
+    this.state = { pose: 'address', hold: -this.reach(club, power) };
+  }
+
   // Back, down through impact, follow through. `impact` fires as the club meets the ball.
-  swingClub(club: ClubId, power: number, impact: () => void, done: () => void = () => {}) {
+  // fromTop: the backswing has already happened (the swipe swing); start the way down.
+  swingClub(club: ClubId, power: number, impact: () => void, done: () => void = () => {}, fromTop = false) {
     this.holdClub(club);
-    const full = club === 'putter' ? 0.25 + power * 0.7 : club === 'wedge' ? 0.8 + power * 1.4 : 1.2 + power * 1.5;
-    this.state = { pose: 'address', swing: { t: 0, back: -full, dur: club === 'putter' ? 0.9 : 1.25, impact, done, hit: false } };
+    const dur = club === 'putter' ? 0.9 : 1.25;
+    this.state = { pose: 'address', swing: { t: fromTop ? dur * 0.55 : 0, back: -this.reach(club, power), dur, impact, done, hit: false } };
   }
 
   update(dt: number) {
@@ -449,6 +461,10 @@ export class Golfer {
       target.tilt = -(putting ? 0.3 : 0.48) - target.bend;
       target.knee = 0.22;
       target.headTilt = 0.35;
+      if (this.state.hold !== undefined) {
+        target.phi = this.state.hold;
+        target.twist = putting ? 0 : this.state.hold * 0.32;
+      }
     } else if (p === 'cheer') {
       target.tilt = Math.PI * 0.95;
       target.phi = Math.sin(this.t * 7) * 0.25;
