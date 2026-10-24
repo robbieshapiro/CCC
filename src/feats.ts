@@ -11,7 +11,7 @@ export const FEATS: Feat[] = [
   { id: 'amphi', name: 'The Amphitheatre', icon: '🎭', how: 'Feed it off the bank behind The Ridge green' },
   { id: 'blowhole', name: 'Thar She Blows', icon: '🐋', how: 'Ride the blowhole on The Blowhole' },
   { id: 'lavatube', name: 'The Lava Tube', icon: '🌋', how: 'Roll the old lava tube across The Lava Field' },
-  { id: 'rimroad', name: 'The Rim Road', icon: '🛤️', how: 'Take the long way round The Caldera' },
+  { id: 'rimroad', name: 'Island Hopper', icon: '🏝️', how: 'Hold the island in the lava on The Caldera' },
   { id: 'underpar', name: 'Under Par Round', icon: '📉', how: 'Finish a round under par' },
   { id: 'nineteenth', name: 'The Nineteenth Hole', icon: '🍹', how: 'Try all three drinks from the cart' },
   { id: 'champion', name: 'Club Champion', icon: '🏆', how: 'Win a month' },

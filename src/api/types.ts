@@ -75,6 +75,7 @@ export interface Api {
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
   listInvites(session: Session): Promise<Invite[]>;
+  deleteInvite(session: Session, id: string): Promise<void>;
   peekInvite(id: string): Promise<InvitePeek | null>;
   submitFeedback(session: Session, body: string, context: string): Promise<void>;
   listFeedback(session: Session): Promise<Feedback[]>;

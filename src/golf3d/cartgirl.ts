@@ -99,6 +99,8 @@ export class CartGirl {
   }
 
   private chat(card: HTMLElement, talk: CartTalk) {
+    // waved on in the moment between her stopping and starting to talk
+    if (this.waved) return;
     this.stepOff();
     this.talking = true;
     const lines = script(talk);
@@ -163,7 +165,16 @@ export class CartGirl {
         replies.querySelectorAll<HTMLButtonElement>('[data-drink]').forEach((b) => {
           b.onclick = () => {
             const d = b.dataset.drink === 'none' ? null : (b.dataset.drink as Drink);
-            say('you', d ? DRINKS[d].name : 'No thanks, Daisy.');
+            // no thanks: she's off at once and the card goes with her
+            if (!d) {
+              this.waved = true;
+              card.hidden = true;
+              card.innerHTML = '';
+              this.leave();
+              this.onOrder(null);
+              return;
+            }
+            say('you', DRINKS[d].name);
             daisySays(orderReply(d, talk), () =>
               window.setTimeout(() => {
                 if (this.waved) return;

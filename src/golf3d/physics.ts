@@ -8,11 +8,13 @@ export const CUP_R = 0.65;
 // how far a holed ball sits down the cup: deep enough to be in, shallow enough to see the white of it
 const CUP_DEPTH = 0.42;
 // Tour greens: a smaller cup, quicker greens, and a putt has to be dying to drop.
-export const TOUR_CUP_R = 0.5;
+export const TOUR_CUP_R = 0.55;
 export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R);
 // the fastest a ball can roll over the dead centre of a tour cup and still drop (ft/s); it's slower toward the edge
-export const DROP_SPEED = 7.5;
+export const DROP_SPEED = 8.5;
 export const TOUR_GREEN = 3;
+const TOUR_FAIRWAY = 5;
+const TOUR_BITE = 3;
 export const G = 32;
 const DT = 1 / 240;
 const MAX_T = 24;
@@ -105,7 +107,8 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
   let prevGround = z;
   const R = cupR(h);
   const greenF = h.tour ? TOUR_GREEN : FRICTION.green;
-  const friction = (s: Surface) => (s === 'green' ? greenF : FRICTION[s]);
+  // tour fairways are firm and fast: a ball that lands on one runs out
+  const friction = (s: Surface) => (s === 'green' ? greenF : s === 'fairway' && h.tour ? TOUR_FAIRWAY : FRICTION[s]);
   let lipped = false; // it has just caught the cup and spun out; it can't drop again on the same pass
   const vented = new Map<string, number>();
 
@@ -177,15 +180,18 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         // backspin grabs on the first landing: it checks up, or zips back if there's enough of it
         if (flying && spin > 0) {
           const sp = Math.hypot(vx, vy);
-          const check = club.check * spin * GRIP[surf] * (0.35 + 0.65 * shot.power);
+          // tour turf is cut tight and grabs a spinning ball harder
+          const check = club.check * spin * GRIP[surf] * (0.35 + 0.65 * shot.power) * (h.tour ? TOUR_BITE : 1);
           const next = Math.max(sp - check, -0.6 * check);
           if (sp > 1e-6) {
             vx *= next / sp;
             vy *= next / sp;
           }
         }
+        // on tour turf a spinning ball's first bounce is a check, not a hop
+        const deaden = flying && h.tour ? 1 - 0.75 * Math.max(0, shot.spin ?? 0) * GRIP[surf] : 1;
         flying = false;
-        if (vzRel < -9 && surf !== 'sand') vz = -vzRel * 0.24 + (vx * gr.x + vy * gr.y);
+        if (vzRel < -9 && surf !== 'sand') vz = -vzRel * 0.24 * deaden + (vx * gr.x + vy * gr.y);
         else air = false;
       }
     } else {

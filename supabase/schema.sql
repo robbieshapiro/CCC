@@ -203,6 +203,15 @@ begin
   ), '[]');
 end $$;
 
+-- The admin can take back an invitation nobody has used yet; the link stops working.
+create or replace function delete_invite(p_token uuid, p_id text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can remove invitations.'; end if;
+  delete from invitations where id = p_id and group_id = me.group_id and used_by is null;
+end $$;
+
 -- What an invitation link shows: who it's for and the code under the foil. The link itself is the secret.
 create or replace function peek_invite(p_id text) returns json
 language sql stable security definer set search_path = public, extensions as $$
@@ -350,6 +359,7 @@ grant execute on function save_avatar(uuid, jsonb) to anon;
 revoke all on function rand_code(int) from public, anon, authenticated;
 grant execute on function create_invite(uuid, text) to anon;
 grant execute on function list_invites(uuid) to anon;
+grant execute on function delete_invite(uuid, text) to anon;
 grant execute on function peek_invite(text) to anon;
 revoke all on function invite_code() from public, anon, authenticated;
 grant execute on function sign_in(text, text) to anon;

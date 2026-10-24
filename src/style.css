@@ -419,6 +419,8 @@ main.invite { max-width: none; min-height: 100svh; padding-block: 32px; place-it
 .invite-list:empty { display: none; }
 .invite-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
 .invite-list li span { display: grid; line-height: 1.25; }
+.invite-list li .invite-acts { display: flex; align-items: center; gap: 12px; }
+.invite-list li .invite-acts .link { font-size: 13px; color: #8a2f2f; }
 .invite-list li b { font-family: var(--serif); font-size: 19px; color: var(--green); }
 .invite-list li small { color: var(--muted); font-size: 13px; }
 .invite-list li em { font-style: normal; font-weight: 800; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--good); }

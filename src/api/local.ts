@@ -163,6 +163,14 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
       .map(({ groupId: _g, ...i }) => ({ ...i, usedBy: i.usedBy ? (db.players.find((p) => p.id === i.usedBy)?.name ?? null) : null }));
   },
 
+  async deleteInvite(session, id) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can remove invitations.');
+    db.invites = (db.invites ?? []).filter((i) => !(i.id === id && i.groupId === me.groupId && !i.usedBy));
+    save(db);
+  },
+
   async peekInvite(id) {
     const db = load();
     const inv = (db.invites ?? []).find((i) => i.id === id);

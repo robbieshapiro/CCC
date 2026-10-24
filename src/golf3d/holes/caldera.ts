@@ -1,55 +1,26 @@
-// Hole 3, The Caldera (par 3, about 175 ft across and 110 ft down): from the summit rim, down into the crater.
-// The green sits on a rock island in a lake of lava. Short is lava, long is lava, and the drop makes everything fly.
-// The play: a soft iron or a full wedge that comes down steep and stops. The green tips toward the lava on the right.
-// The live hazards: fountains of lava go up out of the lake (scenery), and two steam vents on the island throw a
-// rolling ball about when they go off.
-// The secret: the spiral road. A cinder road leaves the tee on the left, winds down the inside of the crater wall and
-// runs out along a causeway to the island. Putt one down it.
-import { band, blob, circle, rect } from '../terrain';
+// Hole 3, The Caldera (par 5, about 640 ft round the corner): a dogleg right round a lake of lava.
+// The safe way: a drive up the first leg to the corner, an iron along the second, a short iron on. On in three.
+// The gamble: a little island of turf out in the lava, inside the dogleg, about 310 ft from the tee. Land a drive on it
+// and hold it, and the green is a long iron away: on in two. A stock drive skips off the far side into the lava; it
+// takes a near-pure strike with backspin to stop it.
+// The live hazard: a steam vent beside the green goes off on the hole clock and throws a rolling ball about.
+import { band, blob, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
 
-const C = { x: 0, y: 200 }; // the middle of the crater
-const RIM = 125; // the summit rim
-const FLOOR = 4; // the crater floor, under the lava
+const FLOOR = 10; // the turf and rock sit at about this height; the lava lake is cut below it
 const LAVA = 7;
-const ISLAND = { x: 0, y: 194, r: 34, h: 13 };
-const GREEN = { x: 0, y: 196, r: 18 };
+const ISLAND = { x: 166, y: 268, rx: 17, ry: 14 };
+const GREEN = { x: 282, y: 424, r: 22 };
 
-// the spiral road: round the inside of the crater wall from the tee, curling in at the foot onto a causeway across
-// the lava to the island. Sampled every few feet so it's one smooth curve, and graded evenly along its length.
-const curve: V2[] = [];
-for (let k = 0; k <= 1.0001; k += 1 / 40) {
-  const a = (-97 - 78 * k) * (Math.PI / 180);
-  const r = 158 - 42 * k;
-  curve.push({ x: C.x + Math.cos(a) * r, y: C.y + Math.sin(a) * r });
-}
-// at the foot it's heading north along the wall: a wide right-hand bend swings it round until it points at the
-// island, then it runs straight out along the causeway
-const foot = curve[curve.length - 1];
-const BEND = 30;
-const bend: V2[] = [];
-for (let t = Math.PI - 0.12; t > 0; t -= 0.12) {
-  const p = { x: foot.x + BEND + Math.cos(t) * BEND, y: foot.y + Math.sin(t) * BEND };
-  bend.push(p);
-  const heading = Math.atan2(-Math.cos(t), Math.sin(t)); // clockwise round the bend
-  const toIsland = Math.atan2(ISLAND.y - p.y, ISLAND.x - p.x);
-  if (Math.abs(heading - toIsland) < 0.06) break;
-}
-const out = bend[bend.length - 1];
-const reach = Math.hypot(ISLAND.x - out.x, ISLAND.y - out.y) - ISLAND.r + 6;
-const causeway: V2[] = [
-  ...bend,
-  ...[1, 2, 3, 4].map((i) => ({ x: out.x + ((ISLAND.x - out.x) * reach * i) / 4 / Math.hypot(ISLAND.x - out.x, ISLAND.y - out.y), y: out.y + ((ISLAND.y - out.y) * reach * i) / 4 / Math.hypot(ISLAND.x - out.x, ISLAND.y - out.y) })),
-];
-const road = [...curve, ...causeway];
-const along: number[] = [0];
-for (let i = 1; i < curve.length; i++) along.push(along[i - 1] + Math.hypot(curve[i].x - curve[i - 1].x, curve[i].y - curve[i - 1].y));
-// down the wall at an even grade, still falling gently round the bend at the foot, then flat along the causeway
-const BEND_TOP = 21;
-const grade = [
-  ...along.map((d) => RIM - 1 - (RIM - 1 - BEND_TOP) * (d / along[along.length - 1])),
-  ...bend.map((_, i) => BEND_TOP - (BEND_TOP - ISLAND.h - 0.5) * ((i + 1) / bend.length)),
-  ...causeway.slice(bend.length).map(() => ISLAND.h),
+// the two legs of the dogleg, as one fairway line
+const way: V2[] = [
+  { x: 0, y: 14 },
+  { x: 2, y: 200 },
+  { x: 0, y: 320 },
+  { x: 24, y: 384 },
+  { x: 90, y: 414 },
+  { x: 170, y: 424 },
+  { x: 240, y: 426 },
 ];
 
 const vent = (id: string, x: number, y: number, period: number, phase: number, side: number) => ({
@@ -62,91 +33,93 @@ const vent = (id: string, x: number, y: number, period: number, phase: number, s
   erupt: (t: number) => ((t + phase) % period > period - 1.4 ? { x: side * 10, y: 4, z: 16 } : null),
 });
 
-// boulders round the rim
 const rocks: Post[] = [
-  [40, 36, 3.4], [-44, 30, 3], [150, 120, 4], [-160, 300, 3.6], [120, 330, 3.2], [0, 404, 3.8],
+  [-60, 40, 3.4], [-66, 220, 3], [-50, 420, 3.8], [60, 480, 3.2], [340, 360, 3.6], [330, 480, 3],
 ].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
+
+const palms: Post[] = [-70, -40, 120, 200, 320].map((x, i) => ({ x, y: 490 + (i % 2) * 10, r: 1, h: 22, look: 'palm' as const }));
 
 export const caldera: Hole = {
   id: 'caldera',
   name: 'The Caldera',
-  par: 3,
+  par: 5,
   theme: 'volcanic',
   tour: true,
-  maxTime: 40, // the spiral road is a long way down
-  tee: { x: 0, y: 40 },
-  cup: { x: 2, y: 196 },
-  pins: [{ x: 2, y: 196 }, { x: -8, y: 188 }, { x: 8, y: 204 }, { x: -4, y: 206 }],
+  tee: { x: 0, y: 0 },
+  cup: { x: 284, y: 428 },
+  pins: [{ x: 284, y: 428 }, { x: 272, y: 416 }, { x: 294, y: 434 }, { x: 278, y: 436 }],
   aim: 0,
-  bounds: { x0: -240, y0: -40, x1: 240, y1: 440 },
+  bounds: { x0: -100, y0: -40, x1: 370, y1: 530 },
   border: [
-    { x: -236, y: -36 },
-    { x: 236, y: -36 },
-    { x: 236, y: 436 },
-    { x: -236, y: 436 },
+    { x: -96, y: -36 },
+    { x: 366, y: -36 },
+    { x: 366, y: 526 },
+    { x: -96, y: 526 },
   ],
   base: 'rock',
   regions: [
-    { poly: rect(-14, 28, 14, 52), surface: 'fairway' },
-    { poly: band(road, 6), surface: 'cinder' },
-    // the causeway is smooth cooled lava: it runs
-    { poly: band(causeway, 6), surface: 'path' },
-    // the island: rough rock round the edge, then fringe and the green
-    { poly: blob(ISLAND.x, ISLAND.y, ISLAND.r - 2, ISLAND.r - 4, 2, 0.08), surface: 'rough' },
-    // where the causeway lands on the island it's mown, so a ball off the road runs on to the green
-    { poly: band([causeway[causeway.length - 2], { x: GREEN.x - GREEN.r + 2, y: GREEN.y }], 6), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.r + 5, GREEN.r + 4, 3, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.r, GREEN.r - 1, 3, 0.06), surface: 'green' },
-    { poly: blob(-14, 218, 6, 4, 4, 0.15), surface: 'sand' },
+    { poly: rect(-14, -12, 14, 12), surface: 'fairway' },
+    { poly: band(way, 40), surface: 'rough' },
+    { poly: band(way, 30), surface: 'fringe' },
+    { poly: band(way, 26), surface: 'fairway' },
+    // the island: a firm, fast patch of fairway on a rock shelf, just big enough
+    { poly: blob(ISLAND.x, ISLAND.y, ISLAND.rx + 4, ISLAND.ry + 4, 2, 0.1), surface: 'rock' },
+    { poly: blob(ISLAND.x, ISLAND.y, ISLAND.rx, ISLAND.ry, 2, 0.1), surface: 'fairway' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.r + 6, GREEN.r + 5, 5, 0.08), surface: 'rough' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.r + 4, GREEN.r + 3, 5, 0.06), surface: 'fringe' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.r, GREEN.r - 1, 5, 0.06), surface: 'green' },
+    { poly: blob(254, 404, 7, 5, 6, 0.15), surface: 'sand' },
+    { poly: blob(18, 352, 9, 6, 7, 0.15), surface: 'sand' },
   ],
   water: [
-    // the lava lake fills the crater floor, swelling and settling
-    { poly: circle(C.x, C.y, 116, 40), level: LAVA, look: 'lava', tide: { amp: 0.5, period: 9 } },
+    // the lake of lava inside the dogleg
+    { poly: rect(40, 20, 262, 386), level: LAVA, look: 'lava', tide: { amp: 0.5, period: 11 } },
+    // a pool behind the green
+    { poly: rect(250, 456, 340, 500), level: LAVA, look: 'lava' },
   ],
   terrain: [
-    // the outer flanks of the volcano
-    { kind: 'ramp', x0: -240, y0: -40, x1: 240, y1: 440, axis: 'y', h0: 70, h1: 70, op: 'set' },
-    // the summit: a broad rim all round the crater
-    { kind: 'disc', x: C.x, y: C.y, r: 210, h: RIM, edge: 45, op: 'set' },
-    // the crater: steep walls down to a flat floor
-    { kind: 'disc', x: C.x, y: C.y, r: 168, h: FLOOR, edge: 52, op: 'set' },
-    // the tee: a flat pad right on the lip
-    { kind: 'disc', x: 0, y: 40, r: 16, h: RIM + 1, edge: 8, op: 'set' },
-    // the spiral road, cut into the wall as a shelf
-    { kind: 'embankment', pts: road, h: grade, width: 10, edge: 10 },
-    // the island in the lava
-    { kind: 'disc', x: ISLAND.x, y: ISLAND.y, r: ISLAND.r, h: ISLAND.h, edge: 8, op: 'set' },
-    // the green tips toward the lava on the right
-    { kind: 'ramp', x0: GREEN.x - 26, y0: GREEN.y - 26, x1: GREEN.x + 26, y1: GREEN.y + 26, axis: 'x', h0: 0.5, h1: -0.5, op: 'add' },
-    { kind: 'hill', x: GREEN.x - 6, y: GREEN.y + 6, r: 10, h: 0.4 },
-    // bunker
-    { kind: 'disc', x: -14, y: 218, r: 6, h: -1.1, edge: 3, op: 'add' },
-    // the road is sunk in a groove, so a ball on it stays on it; the groove runs out at the island
-    { kind: 'channel', pts: road, width: 7, depth: 3, taper: 45 },
+    { kind: 'ramp', x0: -100, y0: -40, x1: 370, y1: 530, axis: 'y', h0: FLOOR, h1: FLOOR + 2, op: 'set' },
+    // the volcano's slopes rise round the outside of the dogleg
+    { kind: 'hill', x: -200, y: 250, r: 180, h: 40 },
+    { kind: 'hill', x: 150, y: 680, r: 200, h: 46 },
+    // the lake inside the corner
+    { kind: 'box', x0: 44, y0: 24, x1: 258, y1: 382, h: -7, edge: 14, op: 'add' },
+    { kind: 'box', x0: 254, y0: 452, x1: 344, y1: 504, h: -6, edge: 8, op: 'add' },
+    // the island: a low shelf of rock with turf on top, sides that drop straight into the lava
+    { kind: 'disc', x: ISLAND.x, y: ISLAND.y, r: ISLAND.rx + 5, h: FLOOR, edge: 4, op: 'set' },
+    // rolls in the fairway
+    { kind: 'hill', x: 14, y: 240, r: 30, h: 1.2 },
+    { kind: 'hill', x: 140, y: 430, r: 26, h: 1 },
+    // the green: two tiers, the back one higher, tipped toward the lava behind
+    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.r + 10, h: FLOOR + 2.4, edge: 10, op: 'set' },
+    { kind: 'ramp', x0: GREEN.x - 32, y0: GREEN.y - 2, x1: GREEN.x + 32, y1: GREEN.y + 6, axis: 'y', h0: 0, h1: 0.9, op: 'add' },
+    { kind: 'box', x0: GREEN.x - 32, y0: GREEN.y + 6, x1: GREEN.x + 32, y1: GREEN.y + 32, h: 0.9, edge: 0.5, op: 'add' },
+    { kind: 'ramp', x0: GREEN.x - 32, y0: GREEN.y - 32, x1: GREEN.x + 32, y1: GREEN.y + 32, axis: 'x', h0: 0.4, h1: -0.4, op: 'add' },
+    // bunkers
+    ...[[254, 404, 7], [18, 352, 9]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.1, edge: 3, op: 'add' as const })),
   ],
   walls: [],
-  posts: rocks,
+  posts: [...rocks, ...palms],
   movers: [],
-  pushes: [vent('west', -26, 180, 6, 0, -1), vent('east', 26, 210, 7.5, 2.5, 1)],
-  zones: [{ id: 'rimroad', poly: band([...curve.slice(24), ...causeway.slice(0, 2)], 3.4) }],
+  pushes: [vent('vent', 308, 410, 7, 0, 1)],
+  zones: [{ id: 'rimroad', poly: blob(ISLAND.x, ISLAND.y, ISLAND.rx + 2, ISLAND.ry + 2, 2, 0.1) }],
   secret: {
-    name: 'The Spiral Road',
+    name: 'Island Hopper',
     zone: 'rimroad',
-    hint: 'A cinder road leaves the tee on the left and winds all the way down to the lava. There is a causeway at the bottom.',
+    hint: "There's an island in the lava inside the dogleg. Hit it, hold it, and you're on in two. It takes backspin.",
   },
   flyover: [
-    { x: 0, y: -20 },
-    { x: 60, y: 90 },
-    { x: 40, y: 200 },
-    { x: 2, y: 196 },
+    { x: 0, y: -30 },
+    { x: 60, y: 200 },
+    { x: 180, y: 360 },
+    { x: 284, y: 428 },
   ],
   decor: [
-    { kind: 'teebox', x: 0, y: 40 },
-    { kind: 'sign', x: 20, y: 30, rot: 0 },
-    { kind: 'bench', x: -22, y: 26, rot: 0 },
-    { kind: 'lavafount', x: -64, y: 160, scale: 1.2 },
-    { kind: 'lavafount', x: 70, y: 236, scale: 1 },
-    { kind: 'lavafount', x: 24, y: 290, scale: 1.4 },
-    { kind: 'lavafount', x: -50, y: 270, scale: 0.8 },
+    { kind: 'teebox', x: 0, y: 0 },
+    { kind: 'sign', x: 20, y: -10, rot: 0 },
+    { kind: 'bench', x: -22, y: -12, rot: 0 },
+    { kind: 'lavafount', x: 110, y: 150, scale: 1 },
+    { kind: 'lavafount', x: 220, y: 300, scale: 1.2 },
+    { kind: 'lavafount', x: 90, y: 330, scale: 0.8 },
   ],
 };
