@@ -1,4 +1,4 @@
-import type { Hole, Piece, Surface, V2 } from './types';
+import type { Hole, Piece, Surface, V2, Water } from './types';
 
 const smooth = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
@@ -41,12 +41,46 @@ function piece(p: Piece, x: number, y: number): [number, number] {
       const v = p.h0 + (p.h1 - p.h0) * t;
       return [v, 1];
     }
+    case 'embankment': {
+      let best = Infinity;
+      let at = 0;
+      for (let i = 0; i < p.pts.length - 1; i++) {
+        const a = p.pts[i];
+        const b = p.pts[i + 1];
+        const abx = b.x - a.x;
+        const aby = b.y - a.y;
+        const t = Math.max(0, Math.min(1, ((x - a.x) * abx + (y - a.y) * aby) / (abx * abx + aby * aby || 1)));
+        const d = Math.hypot(x - (a.x + abx * t), y - (a.y + aby * t));
+        if (d < best) {
+          best = d;
+          at = p.h[i] + (p.h[i + 1] - p.h[i]) * t;
+        }
+      }
+      const wide = p.width + (p.wobble ? (p.wobble * (Math.sin(x * 0.071 + y * 0.023) + Math.sin(y * 0.093 - x * 0.031 + 1.3))) / 2 : 0);
+      const w = smooth((wide + p.edge - best) / p.edge);
+      return [at, w];
+    }
     case 'channel': {
       let d = Infinity;
-      for (let i = 0; i < p.pts.length - 1; i++) d = Math.min(d, segDist({ x, y }, p.pts[i], p.pts[i + 1]));
+      let along = 0; // how far along the line the nearest point is
+      let run = 0;
+      for (let i = 0; i < p.pts.length - 1; i++) {
+        const a = p.pts[i];
+        const b = p.pts[i + 1];
+        const len = Math.hypot(b.x - a.x, b.y - a.y);
+        const di = segDist({ x, y }, a, b);
+        if (di < d) {
+          d = di;
+          const t = Math.max(0, Math.min(1, ((x - a.x) * (b.x - a.x) + (y - a.y) * (b.y - a.y)) / (len * len || 1)));
+          along = run + t * len;
+        }
+        run += len;
+      }
       if (d >= p.width) return [0, 0];
       const k = d / p.width;
-      return [-p.depth * (1 - k * k), 1];
+      // a tapered groove runs out to nothing at its far end, so a ball rolls straight out of it
+      const fade = p.taper ? Math.min(1, (run - along) / p.taper) : 1;
+      return [-p.depth * (1 - k * k) * fade, 1];
     }
   }
 }
@@ -56,7 +90,7 @@ export function heightAt(h: Hole, x: number, y: number): number {
   for (const p of h.terrain) {
     const [v, w] = piece(p, x, y);
     if (!w) continue;
-    if (p.kind !== 'tilt' && p.kind !== 'channel' && p.op === 'set') z += (v - z) * w;
+    if (p.kind === 'embankment' || (p.kind !== 'tilt' && p.kind !== 'channel' && p.op === 'set')) z += (v - z) * w;
     else z += v;
   }
   return z;
@@ -77,11 +111,19 @@ export function inPoly(p: V2, poly: V2[]): boolean {
   return inside;
 }
 
+// Where a lake's surface sits at time t on the hole clock: tides come in and out, lava swells and settles.
+export const levelOf = (w: Water, t = 0) => (w.tide ? w.level + w.tide.amp * Math.sin((2 * Math.PI * t) / w.tide.period) : w.level);
+
 // Wet means under the surface you can see: islands, banks and bridges are dry by their height, not by a list.
-export function isWater(h: Hole, p: V2): boolean {
-  if (!h.water.length) return false;
+export function isWater(h: Hole, p: V2, t = 0): boolean {
+  return !!wetIn(h, p, t);
+}
+
+// The lake (or sea, or lava) a point is under, if any.
+export function wetIn(h: Hole, p: V2, t = 0): Water | undefined {
+  if (!h.water.length) return undefined;
   const g = heightAt(h, p.x, p.y);
-  return h.water.some((w) => g < w.level - 0.25 && inPoly(p, w.poly));
+  return h.water.find((w) => g < levelOf(w, t) - 0.25 && inPoly(p, w.poly));
 }
 
 export function surfaceAt(h: Hole, p: V2): Surface {
@@ -113,3 +155,10 @@ export const band = (pts: V2[], width: number): V2[] => {
   });
   return [...left, ...right.reverse()];
 };
+// a lumpy oval, for greens, fairways and islands that shouldn't look drawn with a compass
+export const blob = (cx: number, cy: number, rx: number, ry: number, seed = 0, wobble = 0.1, n = 40): V2[] =>
+  Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2;
+    const k = 1 + wobble * (Math.sin(a * 3 + seed) * 0.6 + Math.sin(a * 5 + seed * 2.3) * 0.4);
+    return { x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * ry * k };
+  });

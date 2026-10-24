@@ -285,7 +285,7 @@ begin
     clean := clean || greatest(1, least(p_pars[i] + 3, p_holes[i]));
     par := par + p_pars[i];
   end loop;
-  f := array(select distinct x from unnest(coalesce(p_feats, '{}')) x where x in ('ace', 'chipin', 'cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'nineteenth'));
+  f := array(select distinct x from unnest(coalesce(p_feats, '{}')) x where x in ('ace', 'chipin', 'cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'nineteenth'));
   if (select sum(x) from unnest(clean) x) < par then f := f || 'underpar'::text; end if;
   -- one spot per hole, numbers only, clamped to the map
   if jsonb_typeof(p_spots) = 'array' and jsonb_array_length(p_spots) = n then

@@ -3,7 +3,7 @@ import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { crest } from '../brand';
 import { featById } from '../feats';
-import { courseFor } from '../golf3d/courses';
+import { courseFor, drafts } from '../golf3d/courses';
 import { hostChip, REGINALD, type Mood } from '../host';
 import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
 import { bindInviteMaker, inviteMaker } from './invite';
@@ -102,6 +102,7 @@ export function home(snap: Snapshot) {
         <ol>${plaque}</ol>
       </section>
       ${noticeComposer(!!snap.admin)}
+      ${previewPanel(!!snap.admin)}
       ${inviteMaker(!!snap.admin)}
       ${feedbackPanel(!!snap.admin)}
       <p class="fine feedback-link"><button class="link" id="send-feedback">Leave feedback</button></p>
@@ -116,4 +117,15 @@ export function home(snap: Snapshot) {
     localApi.seedDemo(requireSession());
     home(await refresh());
   });
+}
+
+// For the admin only: courses being built, before they're on the calendar. Preview rounds aren't posted.
+function previewPanel(admin: boolean) {
+  const list = drafts();
+  if (!admin || !list.length) return '';
+  return `
+    <section class="panel invite-maker">
+      <div><h2>Preview the next course</h2><p class="muted">Only you can see this. Preview rounds are not posted to the board.</p></div>
+      ${list.map((c) => `<a class="btn" href="#/preview/${c.id}">Play ${esc(c.name)}</a><p class="fine">${esc(c.tagline)}</p>`).join('')}
+    </section>`;
 }

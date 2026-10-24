@@ -374,3 +374,70 @@ export function mountain(height: number, radius: number, seed = 0) {
   g.add(cap);
   return g;
 }
+
+// A coconut palm: a curved, ringed trunk and a crown of drooping fronds.
+export function palm(scale = 1, seed = 0) {
+  const g = new THREE.Group();
+  const bark = mat('#7a5f43');
+  const lean = 0.18 + (seed % 3) * 0.06;
+  let top = new THREE.Vector3();
+  for (let i = 0; i < 7; i++) {
+    const seg = mesh(new THREE.CylinderGeometry(0.42 - i * 0.03, 0.5 - i * 0.03, 3.1, 7), i % 2 ? bark : mat('#6b5239'));
+    const k = i / 6;
+    seg.position.set(Math.sin(k * 1.2) * lean * 14, 1.5 + i * 2.9, 0);
+    seg.rotation.z = -Math.cos(k * 1.2) * lean;
+    g.add(seg);
+    top = seg.position.clone().add(new THREE.Vector3(0, 1.6, 0));
+  }
+  const frond = new THREE.BufferGeometry();
+  // a long leaf that droops: a strip from the crown out and down
+  const pts: number[] = [];
+  for (let i = 0; i < 6; i++) {
+    const t0 = i / 6;
+    const t1 = (i + 1) / 6;
+    const y = (t: number) => Math.sin(t * Math.PI * 0.9) * 2.2 - t * t * 3;
+    const w = (t: number) => Math.sin(t * Math.PI) * 1.3 + 0.1;
+    pts.push(t0 * 9, y(t0), -w(t0), t1 * 9, y(t1), -w(t1), t1 * 9, y(t1), w(t1), t0 * 9, y(t0), -w(t0), t1 * 9, y(t1), w(t1), t0 * 9, y(t0), w(t0));
+  }
+  frond.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  frond.computeVertexNormals();
+  const leafs = [mat('#3f7d36'), mat('#4f9141')];
+  for (let i = 0; i < 9; i++) {
+    const f = new THREE.Mesh(frond, leafs[i % 2]);
+    (f.material as THREE.Material).side = THREE.DoubleSide;
+    f.castShadow = true;
+    f.position.copy(top);
+    f.rotation.set(0, (i / 9) * Math.PI * 2 + seed, -0.15 + (i % 3) * 0.12);
+    g.add(f);
+  }
+  for (let i = 0; i < 3; i++) g.add(mesh(new THREE.SphereGeometry(0.45, 6, 5), mat('#5a4126')).translateX(top.x + Math.cos(i * 2.1) * 0.6).translateY(top.y - 0.6).translateZ(Math.sin(i * 2.1) * 0.6));
+  g.scale.setScalar(scale);
+  return g;
+}
+
+// The volcano on the skyline: a dark cone with a broken top, hazy, outside the fog. The plume is animated by the scene.
+export function volcano(height: number, radius: number) {
+  const g = new THREE.Group();
+  const haze = (c: string) => new THREE.MeshBasicMaterial({ color: c, fog: false });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.16, radius, height, 11, 1), haze('#8a8d99'));
+  body.position.y = height / 2;
+  g.add(body);
+  const shoulder = new THREE.Mesh(new THREE.ConeGeometry(radius * 1.25, height * 0.45, 9, 1), haze('#959aa5'));
+  shoulder.position.set(radius * 0.4, height * 0.22, radius * 0.1);
+  g.add(shoulder);
+  const glow = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.15, radius * 0.15, 4, 11), haze('#ff7a2e'));
+  glow.position.y = height + 1;
+  g.add(glow);
+  return g;
+}
+
+// A sea stack: a column of rock standing in the sea, for the skyline.
+export function seaStack(height: number, seed = 0) {
+  const g = new THREE.Group();
+  const haze = new THREE.MeshBasicMaterial({ color: seed % 2 ? '#6f7377' : '#7c8084', fog: false });
+  const s = new THREE.Mesh(new THREE.CylinderGeometry(height * 0.18, height * 0.3, height, 6 + (seed % 3)), haze);
+  s.position.y = height / 2 - 4;
+  s.rotation.y = seed;
+  g.add(s);
+  return g;
+}

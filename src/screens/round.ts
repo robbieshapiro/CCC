@@ -1,4 +1,5 @@
 // A full round: every hole of this month's course in one go, then the card goes up on the board.
+// A preview round (the admin, on a course that isn't on the calendar yet) is played the same way but never posted.
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { crest } from '../brand';
@@ -6,7 +7,7 @@ import { sfx } from '../fx/sound';
 import { Course3D, scoreName, type Ghost } from '../golf3d/engine';
 import { todayInGameTz } from '../day';
 import type { Spot } from '../api/types';
-import { courseFor } from '../golf3d/courses';
+import { courseFor, type Course } from '../golf3d/courses';
 import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
@@ -36,9 +37,10 @@ function todaysField(snap: Snapshot): Ghost[] {
   });
 }
 
-export async function round(snap: Snapshot) {
+export async function round(snap: Snapshot, opts: { course?: Course } = {}) {
   closeRound();
-  const course = courseFor(snap.month);
+  const preview = !!opts.course;
+  const course = opts.course ?? courseFor(snap.month);
   const me = snap.players.find((p) => p.id === snap.me)!;
   const before = myBest(snap);
   render(`<div class="g3" id="g3"></div>`);
@@ -56,7 +58,8 @@ export async function round(snap: Snapshot) {
     render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/">Back to the club</a></main>`);
     return;
   }
-  game.setGhosts(todaysField(snap));
+  // today's players are on this month's course, not the preview
+  if (!preview) game.setGhosts(todaysField(snap));
   const scores: number[] = [];
   const spots: Spot[] = [];
   const feats = new Set<string>();
@@ -71,13 +74,14 @@ export async function round(snap: Snapshot) {
   }
   const total = scores.reduce((a, b) => a + b, 0);
   const toPar = total - course.par;
-  const best = !before || toPar < before.total - before.par;
+  const best = !preview && (!before || toPar < before.total - before.par);
   let posted = true;
-  try {
-    await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots });
-  } catch {
-    posted = false;
-  }
+  if (!preview)
+    try {
+      await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots });
+    } catch {
+      posted = false;
+    }
   sfx(best ? 'cheer' : 'ooh');
   const sheet = document.createElement('div');
   sheet.className = 'summary';
@@ -90,13 +94,13 @@ export async function round(snap: Snapshot) {
       <table class="scorecard"><thead><tr>${course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('')}<th class="num">Tot</th></tr></thead>
         <tbody><tr class="par">${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num">${course.par}</td></tr>
         <tr>${scores.map((s, i) => `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>
-      ${hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry')}
-      <p class="fine">${posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
+      ${preview ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry') : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry')}
+      <p class="fine">${preview ? 'Preview round, not counted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
       <div class="summary-actions"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the club</button></div>
       <button class="link" data-feedback>Leave feedback</button>
     </div>`;
   el.appendChild(sheet);
-  sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => round(await refresh());
+  sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => round(await refresh(), opts);
   sheet.querySelector<HTMLButtonElement>('[data-feedback]')!.onclick = () => openFeedback(`After a ${total} (${toParLabel(toPar)}) on ${course.name}`, el);
   sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {
     closeRound();
