@@ -180,23 +180,25 @@ function solve(h: Hole, opts: { exclude?: string; via?: V2[] } = {}) {
 }
 
 // Where each secret starts, and the clubs that can use it from there (and the hole clock, for the ones that keep time).
-const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, number]; clock?: number }> = {
+// near: how close it has to leave you to count as worth finding (default 60 ft, 160 on a par 5)
+const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, number]; clock?: number; spin?: number; near?: number }> = {
   summit: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [30, 75] },
   island: { from: { x: -24, y: 58 }, clubs: ['putter'], angles: [-6, 6] },
   ridge: { from: { x: -50, y: 318 }, clubs: ['iron', 'wedge'], angles: [-110, -70] },
   blowhole: { from: { x: 14, y: 316 }, clubs: ['putter'], angles: [-110, -80], clock: 4.6 },
   lavafield: { from: { x: 80, y: 424 }, clubs: ['putter'], angles: [-4, 12] },
-  caldera: { from: { x: 0, y: 40 }, clubs: ['putter'], angles: [-100, -50] },
+  // the island leaves a long iron in: on in two, which is the prize
+  caldera: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [28, 35], spin: 1, near: 220 },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
 function secretBest(h: Hole) {
-  const { from, clubs, angles, clock = 0 } = SECRET_FROM[h.id];
+  const { from, clubs, angles, clock = 0, spin = 0 } = SECRET_FROM[h.id];
   let best = { d: Infinity, shot: null as Shot | null };
   for (const club of clubs)
     for (let a = angles[0]; a <= angles[1]; a += club === 'putter' ? 0.25 : 1)
       for (let p = 0.3; p <= 1.001; p += 0.02) {
-        const shot: Shot = { angle: (a * Math.PI) / 180, power: p, club, error: 0, clock };
+        const shot: Shot = { angle: (a * Math.PI) / 180, power: p, club, error: 0, clock, spin };
         const r = simulate(h, from, shot, false);
         if (!r.zones.includes(h.secret.zone) || r.penalty) continue;
         const d = r.holed ? 0 : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y);
@@ -329,8 +331,8 @@ if (mode === 'all' || mode === 'basic') {
   ok(dying.holed, `tour green: a putt dying at the hole drops (ends ${dying.end.x.toFixed(1)},${dying.end.y.toFixed(1)})`);
   const firm = putt(Math.sqrt(2 * 3 * 20) * 1.5);
   ok(!firm.holed, `tour green: a putt 1.5x too firm hops the hole (ends ${firm.end.y.toFixed(1)})`);
-  const edge = putt(Math.sqrt(2 * 3 * 24), cupR(tour) * 0.8);
-  ok(!edge.holed && Math.abs(edge.end.x - cupR(tour) * 0.8) > 0.5, `tour green: a medium putt on the edge lips out (ends ${edge.end.x.toFixed(1)},${edge.end.y.toFixed(1)})`);
+  const edge = putt(Math.sqrt(2 * 3 * 28), cupR(tour) * 0.8);
+  ok(!edge.holed && Math.abs(edge.end.x - cupR(tour) * 0.8) > 0.5, `tour green: a firm putt on the edge lips out (ends ${edge.end.x.toFixed(1)},${edge.end.y.toFixed(1)})`);
   const flatFirm = simulate({ ...tour, tour: false }, { x: 0, y: 0 }, { angle: 0, power: (Math.sqrt(2 * 4.2 * 20) * 1.5 - 1.5) / 32.5, club: 'putter', error: 0, clock: 0 }, false);
   ok(flatFirm.holed, `classic greens are unchanged: the firm putt still drops (cap ${DROP_SPEED} ft/s only on tour)`);
   // the vertical meter gives you a good deal longer to find the gold
@@ -345,6 +347,22 @@ if (mode === 'all' || mode === 'basic') {
       const r = simulate(lava, lava.tee, { angle: 0, power, club: 'driver', error: 0, clock: 0 }, false);
       ok(!r.penalty && r.end.y > 280, `${lava.name}: a ${Math.round(power * 100)}% driver clears the flow (${r.end.x.toFixed(0)},${r.end.y.toFixed(0)})`);
     }
+  // the Caldera's island: only a drive with backspin holds it
+  const cal = course.holes.find((h) => h.id === 'caldera');
+  if (cal) {
+    const holds = (spin: number) => {
+      let n = 0;
+      for (let a = 28; a <= 35; a += 1)
+        for (let p = 0.8; p <= 0.93; p += 0.02) {
+          const r = simulate(cal, cal.tee, { angle: (a * Math.PI) / 180, power: p, club: 'driver', error: 0, clock: 0, spin }, false);
+          if (!r.penalty && r.zones.includes(cal.secret.zone)) n++;
+        }
+      return n;
+    };
+    const stock = holds(0);
+    const spun = holds(1);
+    ok(stock === 0 && spun >= 3, `${cal.name}: a stock drive never holds the island (${stock}), a backspin drive can (${spun})`);
+  }
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);
     for (const pin of h.pins ?? [h.cup]) ok(!isWater(h, pin) && surfaceAt(h, pin) === 'green', `${h.name}: pin ${pin.x},${pin.y} is on dry green`);
@@ -357,7 +375,7 @@ if (mode === 'all' || mode === 'solve') {
     ok(normal.strokes <= h.par, `${h.name} par ${h.par}: solver ${normal.strokes} the normal way`);
     // the secret should be worth finding: it leaves you close
     const best = secretBest(h);
-    const near = h.par >= 5 ? 160 : 60;
+    const near = SECRET_FROM[h.id].near ?? (h.par >= 5 ? 160 : 60);
     ok(best.d < near, `${h.name}: ${h.secret.name} finishes ${best.d.toFixed(0)} ft from the pin ${best.shot ? `(${best.shot.club} ${Math.round((best.shot.angle * 180) / Math.PI)}° ${best.shot.power.toFixed(2)})` : ''}`);
   }
 }

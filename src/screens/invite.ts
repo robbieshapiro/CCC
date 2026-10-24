@@ -213,10 +213,22 @@ export async function bindInviteMaker() {
       .map(
         (i) => `<li class="${i.id === fresh ? 'fresh' : ''}">
           <span><b>${esc(i.name)}</b><small>${i.usedBy ? `Accepted${i.usedBy !== i.name ? ` as ${esc(i.usedBy)}` : ''}` : 'Waiting to be opened'}</small></span>
-          ${i.usedBy ? '<em>Member</em>' : `<button class="btn ghost" data-send="${i.id}">${canShare() ? 'Share' : 'Copy link'}</button>`}
+          ${i.usedBy ? '<em>Member</em>' : `<span class="invite-acts"><button class="btn ghost" data-send="${i.id}">${canShare() ? 'Share' : 'Copy link'}</button><button class="link" data-remove="${i.id}" data-name="${esc(i.name)}">Remove</button></span>`}
         </li>`,
       )
       .join('');
+    // take back an invitation nobody has opened: the link stops working
+    list.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach((b) => {
+      b.onclick = async () => {
+        if (!confirm(`Remove the invitation for ${b.dataset.name}? The link will stop working.`)) return;
+        try {
+          await api.deleteInvite(s, b.dataset.remove!);
+          draw(await api.listInvites(s));
+        } catch (x) {
+          err.textContent = (x as Error).message;
+        }
+      };
+    });
     list.querySelectorAll<HTMLButtonElement>('[data-send]').forEach((b) => {
       b.onclick = async () => {
         const url = inviteLink(b.dataset.send!);

@@ -18,7 +18,6 @@ import { accuracyError, goldHalf, OVERSWING, PURE, powerSpeed, returnSpeed, type
 import type { Hole, Shot, V2 } from './types';
 
 export const MAX_OVER = 3; // pick up at par + 3
-const TOUR_PUTT_LINE = 12; // ft: the longest the putting line grows on a tour green
 const TRAIL = 60;
 
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
@@ -97,32 +96,6 @@ function targetMarker() {
   return g;
 }
 
-// The green-reading arrows: one flat arrow, instanced, pointing along +x.
-const SLOPE_MAX = 700;
-function slopeArrows() {
-  const shape = new THREE.Shape();
-  shape.moveTo(-0.5, -0.07);
-  shape.lineTo(0.15, -0.07);
-  shape.lineTo(0.15, -0.22);
-  shape.lineTo(0.5, 0);
-  shape.lineTo(0.15, 0.22);
-  shape.lineTo(0.15, 0.07);
-  shape.lineTo(-0.5, 0.07);
-  const geo = new THREE.ShapeGeometry(shape);
-  // lie flat: the shape's y becomes the ground's -z
-  geo.rotateX(-Math.PI / 2);
-  const m = new THREE.InstancedMesh(
-    geo,
-    new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, fog: false }),
-    SLOPE_MAX,
-  );
-  m.count = 0;
-  m.frustumCulled = false;
-  m.renderOrder = 2;
-  m.visible = false;
-  return m;
-}
-
 // When the ball has as good as stopped: the first moment after which it moves less than half a foot.
 // A holed or lost ball plays out in full.
 function settleTime(r: Result) {
@@ -167,10 +140,10 @@ export class Course3D {
   private slow = 0; // seconds of slow frames, for the automatic quality drop
 
   private glow = ballGlow();
+  private ballSink = 0; // how far the drawn ball is lowered to sit a smaller ball on the ground
   private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
   private golfer: Golfer;
   private dots: THREE.InstancedMesh;
-  private slopes = slopeArrows(); // reading the green: arrows pointing downhill, on tour courses
   private ring = targetMarker(); // where the shot comes down: a bullseye with a beam you can see from the tee
   private trail: THREE.Line;
   private trailPts: THREE.Vector3[] = [];
@@ -264,7 +237,6 @@ export class Course3D {
     this.dots.frustumCulled = false;
     this.scene.add(this.dots);
     this.scene.add(this.ring);
-    this.scene.add(this.slopes);
     const tg = new THREE.BufferGeometry();
     tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL * 3), 3));
     tg.setDrawRange(0, 0);
@@ -564,7 +536,6 @@ export class Course3D {
     this.club = c;
     this.power = c === 'putter' ? 0 : this.planFor(c);
     this.golfer.holdClub(c);
-    if (c === 'putter' && this.hole.tour) this.readGreen();
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((x) => x.classList.toggle('on', x.dataset.club === c));
   }
 
@@ -917,14 +888,9 @@ export class Course3D {
     this.swing(error, this.style() === 'vertical' ? 'impact' : 'start');
   }
 
-  // On tour greens the stroke isn't perfect: the harder you hit it, the more it can wander off line and off pace.
+  // A putt goes where you aim it, as hard as you pulled it back.
   private putt() {
-    if (!this.hole.tour) return this.swing(0);
-    const shake = this.power ** 1.5;
-    const error = (Math.random() * 2 - 1) * shake;
-    this.power = Math.max(0.02, Math.min(1, this.power * (1 + (Math.random() * 2 - 1) * 0.06 * shake)));
-    if (Math.abs(error) > 0.5) this.callout(error > 0 ? 'Pushed it' : 'Pulled it', '', 800);
-    this.swing(error);
+    this.swing(0);
   }
 
   private swing(error: number, from: 'start' | 'impact' = 'start') {
@@ -954,13 +920,21 @@ export class Course3D {
       r.zones.forEach((z) => this.zones.add(z));
     }
     this.mode = 'roll';
-    // on tour courses, a pure strike gets the slow-motion treatment round the top of its flight, unless it's going to end in trouble
+    // on tour courses, an approach that might go in gets the slow-motion treatment as it tracks toward the hole:
+    // one that drops, or one that comes within a couple of feet of it
     let slow: { from: number; to: number } | null = null;
-    if (full && error === 0 && !r.penalty && this.hole.tour) {
-      const land = r.frames.findIndex((f, i) => i > 2 && f.z <= heightAt(this.hole, f.x, f.y) + 0.05);
-      const flight = r.frames.slice(0, land > 0 ? land : r.frames.length);
-      const apex = flight.reduce((top, f) => (f.z > top.z ? f : top), flight[0]);
-      if (apex) slow = { from: Math.max(0.15, apex.t - 0.5), to: apex.t + 0.8 };
+    if (full && !r.penalty && this.hole.tour) {
+      let near = r.frames[0];
+      let gap = Infinity;
+      for (const f of r.frames) {
+        const d = Math.hypot(f.x - this.hole.cup.x, f.y - this.hole.cup.y);
+        if (d < gap) {
+          gap = d;
+          near = f;
+        }
+      }
+      const at = r.holed ? r.duration : near.t;
+      if (r.holed || gap < 2.5) slow = { from: Math.max(0.1, at - 1.6), to: at + 0.3 };
     }
     this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice, clock: shot.clock, settle: settleTime(r), slow };
     this.trailPts = [];
@@ -1010,6 +984,7 @@ export class Course3D {
     const z = a.z + (b.z - a.z) * k;
     const prev = this.ball.position.clone();
     this.ball.position.copy(w3(x, y, z + BALL_R));
+    this.ballSink = 0;
     const mv = this.ball.position.clone().sub(prev);
     mv.y = 0;
     if (mv.lengthSq() > 1e-4) this.follow.lerp(mv.normalize(), Math.min(1, dt * 2.5)).normalize();
@@ -1163,6 +1138,18 @@ export class Course3D {
   private placeBall() {
     const z = heightAt(this.hole, this.pos.x, this.pos.y);
     this.ball.position.copy(w3(this.pos.x, this.pos.y, z + BALL_R));
+    this.ballSink = 0;
+  }
+
+  // On a tour green the ball is drawn smaller while you putt, so it doesn't look like a beach ball up close.
+  // It still sits on the ground: the drop is kept separate from the position the shot sets each frame.
+  private sizeBall() {
+    const putting = !!this.hole?.tour && (this.shot ? this.shot.club === 'putter' : this.club === 'putter' && (this.mode === 'aim' || this.mode === 'swing'));
+    const k = putting ? 0.6 : 1;
+    this.ball.scale.setScalar(k);
+    const sink = -BALL_R * (1 - k);
+    this.ball.position.y += sink - this.ballSink;
+    this.ballSink = sink;
   }
 
   // The golfer stands side-on to the line, ball in front, target to their left.
@@ -1233,59 +1220,20 @@ export class Course3D {
 
   // ---------- aim guide ----------
 
-  // Lay arrows on the green around the ball, every 3 ft, each pointing the way the ground falls.
-  // Longer and warmer where it's quicker.
-  private readGreen() {
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const up = new THREE.Vector3(0, 1, 0);
-    const sc = new THREE.Vector3();
-    const col = new THREE.Color();
-    const pale = new THREE.Color('#f3ecdc');
-    const hot = new THREE.Color('#f0a040');
-    let n = 0;
-    const R = 36;
-    const gx0 = Math.round(this.pos.x / 3) * 3;
-    const gy0 = Math.round(this.pos.y / 3) * 3;
-    for (let gy = gy0 - R; gy <= gy0 + R; gy += 3)
-      for (let gx = gx0 - R; gx <= gx0 + R; gx += 3) {
-        if (n >= SLOPE_MAX) break;
-        const p = { x: gx, y: gy };
-        if (Math.hypot(gx - this.pos.x, gy - this.pos.y) > R || Math.hypot(gx - this.pos.x, gy - this.pos.y) < 1.5) continue;
-        const s = surfaceAt(this.hole, p);
-        if (s !== 'green' && s !== 'fringe') continue;
-        const g = gradAt(this.hole, gx, gy);
-        const steep = Math.hypot(g.x, g.y);
-        if (steep < 0.004) continue;
-        // downhill is -grad; the arrow is drawn along +x, so turn it to face (-g.x, -g.y) in hole space
-        q.setFromAxisAngle(up, Math.atan2(-g.y, -g.x));
-        const len = Math.min(2.4, 0.7 + steep * 26);
-        sc.set(len, 1, 0.8 + Math.min(0.6, steep * 8));
-        m.compose(w3(gx, gy, heightAt(this.hole, gx, gy) + 0.06), q, sc);
-        this.slopes.setMatrixAt(n, m);
-        this.slopes.setColorAt(n, col.copy(pale).lerp(hot, Math.min(1, steep / 0.06)));
-        n++;
-      }
-    this.slopes.count = n;
-    this.slopes.instanceMatrix.needsUpdate = true;
-    if (this.slopes.instanceColor) this.slopes.instanceColor.needsUpdate = true;
-  }
-
   private guide() {
     const m = new THREE.Matrix4();
     let n = 0;
     const show = this.mode === 'aim' || this.mode === 'meter';
     this.ring.visible = false;
-    this.slopes.visible = show && this.club === 'putter' && !!this.hole.tour;
     if (show) {
       const dx = Math.sin(this.aim);
       const dy = Math.cos(this.aim);
       if (this.club === 'putter') {
         // a dotted line that hugs the ground; longer as you pull back. On tour greens it starts from nothing and runs
-        // out as far as the putt would roll on a flat green, up to 12 ft: past that you judge it yourself
+        // out as far as the putt would roll on a flat green: the break you read for yourself
         const v = carryOf('putter', this.power);
-        const len = this.hole.tour ? (this.power > 0 ? Math.min(TOUR_PUTT_LINE, (v * v) / (2 * TOUR_GREEN)) : 0) : 8 + this.power * 30;
-        const gap = this.hole.tour ? 0.7 : 1.1;
+        const len = this.hole.tour ? (this.power > 0 ? (v * v) / (2 * TOUR_GREEN) : 0) : 8 + this.power * 30;
+        const gap = this.hole.tour ? Math.max(0.7, len / 70) : 1.1;
         for (let d = this.hole.tour ? 0.6 : 1.5; d < len && n < 80; d += gap) {
           const x = this.pos.x + dx * d;
           const y = this.pos.y + dy * d;
@@ -1478,6 +1426,7 @@ export class Course3D {
     this.golfer.update(dt);
     this.updateGhosts(dt);
 
+    this.sizeBall();
     this.guide();
     this.fadeOccluders(dt);
     this.effects(dt);

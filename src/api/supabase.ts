@@ -51,6 +51,7 @@ export const supabaseApi: Api = {
   },
   createInvite: (s, name) => rpc('create_invite', { p_token: s.token, p_name: name }),
   listInvites: (s) => rpc<Invite[]>('list_invites', { p_token: s.token }),
+  deleteInvite: (s, id) => rpc('delete_invite', { p_token: s.token, p_id: id }),
   peekInvite: (id) => rpc<InvitePeek | null>('peek_invite', { p_id: id }),
   submitFeedback: async (s, body, context) => {
     await rpc('submit_feedback', { p_token: s.token, p_body: body, p_context: context });
