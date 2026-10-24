@@ -10,7 +10,7 @@ import { CartGirl } from './cartgirl';
 import { conditionsFor, withPin, type Conditions } from './conditions';
 import { BAG, carryOf, CLUBS, DRINKS, type ClubId, type Drink } from './clubs';
 import { Golfer } from './golfer';
-import { BALL_R, G, launch, lieFactor, simulate, type Result } from './physics';
+import { BALL_R, G, launch, lieFactor, simulate, TOUR_GREEN, type Result } from './physics';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
@@ -18,6 +18,7 @@ import { accuracyError, goldHalf, OVERSWING, PURE, powerSpeed, returnSpeed, type
 import type { Hole, Shot, V2 } from './types';
 
 export const MAX_OVER = 3; // pick up at par + 3
+const TOUR_PUTT_LINE = 12; // ft: the longest the putting line grows on a tour green
 const TRAIL = 60;
 
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
@@ -571,7 +572,8 @@ export class Course3D {
   private planFor(c: ClubId) {
     const [lo, hi] = CLUBS[c].carry;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    return Math.max(0.15, Math.min(1, (d / (this.boost() * lieFactor(this.hole, this.pos, c)) - lo) / (hi - lo)));
+    // on tour courses the plan goes all the way down, so even a short chip can be aimed at the hole
+    return Math.max(this.hole.tour ? 0 : 0.15, Math.min(1, (d / (this.boost() * lieFactor(this.hole, this.pos, c)) - lo) / (hi - lo)));
   }
 
   // Which clubs this lie allows, and a sensible default for the distance.
@@ -657,7 +659,7 @@ export class Course3D {
             ? wet.look === 'lava'
               ? '#e0662a'
               : '#4d8193'
-            : ({ green: '#86c977', fairway: '#62a957', fringe: '#4f8f47', rough: '#3a6533', path: '#cbb88f', wood: '#a77a4e', stone: '#d8cfbd', sand: '#e8d8a8', rock: '#3b3633' } as Record<string, string>)[surf];
+            : ({ green: '#86c977', fairway: '#62a957', fringe: '#4f8f47', rough: '#3a6533', path: '#cbb88f', wood: '#a77a4e', stone: '#d8cfbd', sand: '#e8d8a8', rock: '#3b3633', cinder: '#6a4436' } as Record<string, string>)[surf];
           const [a, bb] = px(p);
           g.fillRect(a, bb - 2, 2.2, 2.2);
         }
@@ -1279,9 +1281,12 @@ export class Course3D {
       const dx = Math.sin(this.aim);
       const dy = Math.cos(this.aim);
       if (this.club === 'putter') {
-        // a dotted line that hugs the ground; longer as you pull back. On tour greens it only shows the start line.
-        const len = this.hole.tour ? 6 : 8 + this.power * 30;
-        for (let d = 1.5; d < len && n < 80; d += 1.1) {
+        // a dotted line that hugs the ground; longer as you pull back. On tour greens it starts from nothing and runs
+        // out as far as the putt would roll on a flat green, up to 12 ft: past that you judge it yourself
+        const v = carryOf('putter', this.power);
+        const len = this.hole.tour ? (this.power > 0 ? Math.min(TOUR_PUTT_LINE, (v * v) / (2 * TOUR_GREEN)) : 0) : 8 + this.power * 30;
+        const gap = this.hole.tour ? 0.7 : 1.1;
+        for (let d = this.hole.tour ? 0.6 : 1.5; d < len && n < 80; d += gap) {
           const x = this.pos.x + dx * d;
           const y = this.pos.y + dy * d;
           m.setPosition(w3(x, y, heightAt(this.hole, x, y) + 0.2));
@@ -1291,7 +1296,8 @@ export class Course3D {
         this.landing.copy(w3(this.pos.x + dx * end, this.pos.y + dy * end, heightAt(this.hole, this.pos.x + dx * end, this.pos.y + dy * end)));
       } else {
         // the flight arc and a landing ring sized to the club's spread
-        const power = Math.max(this.power, 0.6);
+        // the ring shows where the plan carries: on tour courses that's the real plan, however short
+        const power = this.hole.tour ? this.power : Math.max(this.power, 0.6);
         const v = launch({ angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost() * lieFactor(this.hole, this.pos, this.club), spin: this.spin, shape: this.shape });
         const z0 = heightAt(this.hole, this.pos.x, this.pos.y);
         let landed: V2 | null = null;
@@ -1386,6 +1392,15 @@ export class Course3D {
     const ground = heightAt(this.hole, this.camPos.x, -this.camPos.z);
     this.camPos.y = Math.max(this.camPos.y, ground + 3.5);
     this.camLook.copy(ball).addScaledVector(dir, long && this.mode !== 'roll' ? 40 : 16).add(new THREE.Vector3(0, -2, 0));
+    // on a tour course with the green far below (the summit tee), look down at the pin rather than out at the far wall
+    if (this.hole.tour && this.mode !== 'roll') {
+      const cupZ = heightAt(this.hole, this.hole.cup.x, this.hole.cup.y);
+      if (ball.y - cupZ > 30) {
+        // up over the golfer's shoulder, high enough to see over the lip
+        this.camPos.copy(ball).addScaledVector(dir, -12).add(new THREE.Vector3(0, 24, 0));
+        this.camLook.copy(w3(this.hole.cup.x, this.hole.cup.y, cupZ)).lerp(ball, 0.2);
+      }
+    }
   }
 
   // ---------- frame loop ----------

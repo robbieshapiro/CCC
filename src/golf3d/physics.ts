@@ -11,18 +11,18 @@ const CUP_DEPTH = 0.42;
 export const TOUR_CUP_R = 0.5;
 export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R);
 // the fastest a ball can roll over the dead centre of a tour cup and still drop (ft/s); it's slower toward the edge
-export const DROP_SPEED = 6;
-const TOUR_GREEN = 3;
+export const DROP_SPEED = 7.5;
+export const TOUR_GREEN = 3;
 export const G = 32;
 const DT = 1 / 240;
 const MAX_T = 24;
 const CURB_H = 0.9;
 const ROLL = 5 / 7; // a rolling ball feels 5/7 of the slope's pull
-const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40, rock: 7 };
+const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40, rock: 7, cinder: 4.5 };
 // how much of a landing ball's speed each surface lets it keep
-const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.45, path: 1, stone: 1, wood: 1, sand: 0.1, rock: 1 };
+const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.45, path: 1, stone: 1, wood: 1, sand: 0.1, rock: 1, cinder: 0.95 };
 // how well each surface grabs a spinning ball: soft greens bite, rough and sand eat the spin
-const GRIP: Record<Surface, number> = { green: 1, fairway: 0.8, fringe: 0.6, rough: 0.25, path: 0.4, stone: 0.4, wood: 0.4, sand: 0, rock: 0.3 };
+const GRIP: Record<Surface, number> = { green: 1, fairway: 0.8, fringe: 0.6, rough: 0.25, path: 0.4, stone: 0.4, wood: 0.4, sand: 0, rock: 0.3, cinder: 0.4 };
 
 export type Frame = { x: number; y: number; z: number; t: number };
 export type Sound = { t: number; s: 'wall' | 'post' | 'land' | 'splash' | 'cup' | 'sand' | 'lip' | 'hop' | 'vent' };
@@ -119,7 +119,8 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
     return { end: penalty ? from : { x, y }, holed, penalty, zones: [...zones], frames, sounds, duration: t };
   };
 
-  while (t < MAX_T) {
+  const limit = h.maxTime ?? MAX_T;
+  while (t < limit) {
     t += DT;
     step++;
     const clock = shot.clock + t;
