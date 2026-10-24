@@ -11,7 +11,8 @@ import { ridge } from './holes/ridge';
 import { summit } from './holes/summit';
 import type { Hole } from './types';
 
-export type Course = { id: string; month: string; name: string; tagline: string; holes: Hole[]; par: number; draft?: boolean };
+// previewHoles: before its month starts, members can practise this many of its holes; the admin can play them all.
+export type Course = { id: string; month: string; name: string; tagline: string; holes: Hole[]; par: number; draft?: boolean; previewHoles?: number };
 
 const par = (holes: Hole[]) => holes.reduce((a, h) => a + h.par, 0);
 
@@ -26,8 +27,9 @@ const COURSES: Course[] = [
   },
   {
     id: 'caldera',
-    month: '',
-    draft: true,
+    // November's course: it takes over from the Highlands at midnight Eastern as October closes
+    month: '2026-11',
+    previewHoles: 3,
     name: 'The Caldera Course',
     tagline: 'A volcanic island. Sea cliffs, lava fields, a gorge, an alley of steam and a tee inside a lava tube. Tour greens: they are quick.',
     holes: [blowhole, lavafield, caldera, lavalift, geyseralley, lavatube],
@@ -43,4 +45,10 @@ export function courseFor(month: string): Course {
 }
 
 export const courseById = (id: string) => COURSES.find((c) => c.id === id);
-export const drafts = () => COURSES.filter((c) => c.draft);
+// The next course on the calendar after this month's, if there is one: members can practise its first holes.
+export function nextCourse(month: string): Course | undefined {
+  return COURSES.filter((c) => !c.draft && c.month > month).sort((a, b) => a.month.localeCompare(b.month))[0];
+}
+
+// Courses not yet being played: anything still a draft, or on the calendar for a later month. The admin can play them.
+export const upcoming = (month: string) => COURSES.filter((c) => c.draft || c.month > month);

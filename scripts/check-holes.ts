@@ -2,6 +2,7 @@
 // Run: npm run check-holes
 import { BAG, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor } from '../src/golf3d/courses';
+import { monthClosesAt } from '../src/day';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
 import { CUP_R, cupR, curbs, DROP_SPEED, simulate } from '../src/golf3d/physics';
 import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type MeterStyle } from '../src/golf3d/swing';
@@ -343,6 +344,9 @@ if (mode === 'all' || mode === 'basic') {
     const ms = (style: MeterStyle) => (goldHalf(club, 1, 1, style) / returnSpeed(club, 1, 1, style)) * 1000;
     ok(ms('vertical') >= ms('classic') * 1.9, `vertical meter: ${club} gold window ±${ms('vertical').toFixed(0)} ms (classic ±${ms('classic').toFixed(0)})`);
   }
+  // the calendar: October closes at midnight Eastern and the Caldera takes over
+  ok(monthClosesAt('2026-10').toISOString() === '2026-11-01T04:00:00.000Z' && monthClosesAt('2026-11').toISOString() === '2026-12-01T05:00:00.000Z', 'months close at midnight Eastern, either side of the clocks changing');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-11').id === 'caldera', 'October is the Highlands, November the Caldera');
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)

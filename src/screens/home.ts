@@ -3,7 +3,8 @@ import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { crest } from '../brand';
 import { featById } from '../feats';
-import { courseFor, drafts } from '../golf3d/courses';
+import { courseFor, nextCourse, upcoming, type Course } from '../golf3d/courses';
+import { monthClosesAt } from '../day';
 import { hostChip, REGINALD, type Mood } from '../host';
 import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
 import { bindInviteMaker, inviteMaker } from './invite';
@@ -88,6 +89,7 @@ export function home(snap: Snapshot) {
         </div>
       </section>
       <section class="board">
+        ${countdown(snap.month, course)}
         <div class="board-head"><h2>The Board</h2><span>${monthName(snap.month)} · best round counts</span></div>
         <div class="table-wrap"><table class="scorecard">
           <thead><tr><th></th><th>Member</th>${head}<th class="num">Tot</th><th class="num">±</th></tr></thead>
@@ -97,18 +99,20 @@ export function home(snap: Snapshot) {
           </tbody>
         </table></div>
       </section>
+      ${comingSoon(snap.month)}
       <section class="plaque">
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
       </section>
       ${noticeComposer(!!snap.admin)}
-      ${previewPanel(!!snap.admin)}
+      ${previewPanel(!!snap.admin, snap.month)}
       ${inviteMaker(!!snap.admin)}
       ${feedbackPanel(!!snap.admin)}
       <p class="fine feedback-link"><button class="link" id="send-feedback">Leave feedback</button></p>
       ${!useSupabase && snap.players.length < 2 ? `<p class="fine">Local mode. <button class="link" id="demo">Add Sean, Danny and PJ</button> to see a full board.</p>` : ''}
     </main>`);
 
+  tickCountdown();
   void bindInviteMaker();
   void bindFeedbackPanel();
   void bindNotices();
@@ -119,13 +123,69 @@ export function home(snap: Snapshot) {
   });
 }
 
-// For the admin only: courses being built, before they're on the calendar. Preview rounds aren't posted.
-function previewPanel(admin: boolean) {
-  const list = drafts();
+// For the admin only: every hole of the courses still to come. Preview rounds aren't posted.
+function previewPanel(admin: boolean, month: string) {
+  const list = upcoming(month);
   if (!admin || !list.length) return '';
   return `
     <section class="panel invite-maker">
-      <div><h2>Preview the next course</h2><p class="muted">Only you can see this. Preview rounds are not posted to the board.</p></div>
-      ${list.map((c) => `<a class="btn" href="#/preview/${c.id}">Play ${esc(c.name)}</a><p class="fine">${esc(c.tagline)}</p>`).join('')}
+      <div><h2>Preview the next course</h2><p class="muted">Only you can see this. Every hole, and preview rounds are not posted to the board.</p></div>
+      ${list.map((c) => `<a class="btn" href="#/preview/${c.id}">Play all ${c.holes.length} holes of ${esc(c.name)}</a><p class="fine">${esc(c.tagline)}</p>`).join('')}
+    </section>`;
+}
+
+// The month's clock: how long until the board closes and the champion goes up.
+function countdown(month: string, course: Course) {
+  const ends = monthClosesAt(month);
+  const day = new Date(ends.getTime() - 1).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
+  return `<div class="countdown" data-countdown="${ends.getTime()}">
+    <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
+    <small>${monthName(month).split(' ')[0]}'s champion is crowned at midnight ET, ${day}.</small>
+  </div>`;
+}
+
+// One clock for the page, however often the home page redraws: it finds the countdown each second.
+let clock = 0;
+function tickCountdown() {
+  const draw = () => {
+    const el = document.querySelector<HTMLElement>('[data-countdown]');
+    if (!el) {
+      window.clearInterval(clock);
+      clock = 0;
+      return;
+    }
+    const left = Number(el.dataset.countdown) - Date.now();
+    const out = el.querySelector('[data-left]')!;
+    el.classList.toggle('final', left < 3_600_000);
+    if (left <= 0) {
+      out.textContent = 'Closed';
+      el.querySelector('small')!.textContent = 'The champion is being crowned.';
+      return;
+    }
+    const s = Math.floor(left / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    out.textContent = `${d ? `${d}d ` : ''}${h}h ${String(m).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}s`;
+  };
+  draw();
+  if (!clock) clock = window.setInterval(draw, 1000);
+}
+
+// The next course on the calendar: a few of its holes to practise before it counts.
+function comingSoon(month: string) {
+  const next = nextCourse(month);
+  if (!next) return '';
+  const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
+  const starts = monthName(next.month).split(' ')[0];
+  return `
+    <section class="panel coming-soon">
+      <div>
+        <p class="eyebrow">Next course · from 1 ${esc(starts)}</p>
+        <h2>${esc(next.name)}</h2>
+        <p class="muted">${esc(next.tagline)}</p>
+        <p class="fine">A ${n}-hole practice preview. Nothing you play here goes on the board.</p>
+      </div>
+      <a class="btn" href="#/practice/${next.id}">Play practice</a>
     </section>`;
 }

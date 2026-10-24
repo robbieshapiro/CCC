@@ -7,8 +7,8 @@ import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
-import { closeRound, round } from './screens/round';
-import { courseById } from './golf3d/courses';
+import { closeRound, practice, round } from './screens/round';
+import { courseById, nextCourse, upcoming } from './golf3d/courses';
 import { leaveLockers, lockers } from './screens/lockers';
 import { leaveMember, member } from './screens/member';
 import { onSnapshot, refresh, startPolling } from './state';
@@ -44,10 +44,17 @@ async function router() {
       return welcome(s);
     }
     if (page === 'round') return round(s);
-    // the admin's look at a course before it's on the calendar
+    // the admin's look at every hole of a course still to come
     if (page === 'preview') {
       const c = courseById(arg ?? '');
-      if (s.admin && c?.draft) return round(s, { course: c });
+      if (s.admin && c && upcoming(s.month).includes(c)) return round(s, { course: c });
+      location.hash = '#/';
+      return;
+    }
+    // any member's practice on the first holes of the next course, before it counts
+    if (page === 'practice') {
+      const c = nextCourse(s.month);
+      if (c && c.id === arg) return practice(s, c);
       location.hash = '#/';
       return;
     }
