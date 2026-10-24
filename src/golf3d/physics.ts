@@ -5,6 +5,8 @@ import type { Hole, Post, Shot, Surface, V2, Wall } from './types';
 
 export const BALL_R = 0.3;
 export const CUP_R = 0.65;
+// how far a holed ball sits down the cup: deep enough to be in, shallow enough to see the white of it
+const CUP_DEPTH = 0.42;
 // Tour greens: a smaller cup, quicker greens, and a putt has to be dying to drop.
 export const TOUR_CUP_R = 0.5;
 export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R);
@@ -153,7 +155,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         if (Math.hypot(x - h.cup.x, y - h.cup.y) < R) {
           x = h.cup.x;
           y = h.cup.y;
-          z -= 0.6;
+          z -= CUP_DEPTH;
           sounds.push({ t, s: 'cup' });
           return finish(true, false);
         }
@@ -226,7 +228,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         if (Math.hypot(vx, vy) <= cap) {
           x = h.cup.x;
           y = h.cup.y;
-          z = heightAt(h, x, y) - 0.6;
+          z = heightAt(h, x, y) - CUP_DEPTH;
           sounds.push({ t, s: 'cup' });
           return finish(true, false);
         }

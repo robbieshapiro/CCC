@@ -201,6 +201,9 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-power.show { opacity: 1; }
 .g3-power i { display: block; width: 100%; background: linear-gradient(#e6cf9f, var(--gold)); }
 .g3-power.hot i { background: linear-gradient(#f0a070, #b8352b); }
+/* slow motion on a pure strike: the world falls into shadow round the ball */
+.g3-focus { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.35s; background: radial-gradient(circle at var(--fx, 50%) var(--fy, 45%), rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) 7%, rgba(5, 10, 8, 0.55) 22%, rgba(5, 10, 8, 0.82) 60%); }
+.g3-focus.on { opacity: 1; }
 .g3-hint { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); text-align: center; font-weight: 700; font-size: 14px; padding: 8px 14px; border-radius: 999px; background: rgba(15, 42, 31, 0.6); }
 .g3-hint:empty { display: none; }
 .g3-bottom {
