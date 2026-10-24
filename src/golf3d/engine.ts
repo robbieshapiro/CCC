@@ -123,6 +123,35 @@ function slopeArrows() {
   return m;
 }
 
+// When the ball has as good as stopped: the first moment after which it moves less than half a foot.
+// A holed or lost ball plays out in full.
+function settleTime(r: Result) {
+  const f = r.frames;
+  if (r.holed || r.penalty || f.length < 2) return r.duration;
+  const end = f[f.length - 1];
+  let i = f.length - 1;
+  while (i > 0 && Math.hypot(f[i - 1].x - end.x, f[i - 1].y - end.y) < 0.5) i--;
+  return Math.min(r.duration, f[i].t);
+}
+
+// A soft halo for the ball in slow motion.
+function ballGlow() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.25, 'rgba(255,244,210,0.8)');
+  grad.addColorStop(1, 'rgba(255,230,160,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthTest: false, transparent: true, fog: false }));
+  s.scale.setScalar(3.2);
+  s.renderOrder = 11;
+  s.visible = false;
+  return s;
+}
+
 export class Course3D {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -137,6 +166,7 @@ export class Course3D {
   private clock = 0; // hole clock: drives movers, matches the physics
   private slow = 0; // seconds of slow frames, for the automatic quality drop
 
+  private glow = ballGlow();
   private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
   private golfer: Golfer;
   private dots: THREE.InstancedMesh;
@@ -169,7 +199,19 @@ export class Course3D {
   private strokes = 0;
   private zones = new Set<string>();
   private drink: { kind: Drink; shots: number } | null = null;
-  private shot: { r: Result; t: number; from: V2; club: ClubId; next: number; practice: boolean; clock: number } | null = null;
+  // settle: when the ball has as good as stopped (the last creep down a slope isn't worth waiting for)
+  // slow: the slow-motion window on a pure strike, in shot time
+  private shot: {
+    r: Result;
+    t: number;
+    from: V2;
+    club: ClubId;
+    next: number;
+    practice: boolean;
+    clock: number;
+    settle: number;
+    slow: { from: number; to: number } | null;
+  } | null = null;
   private practice = false; // warm-up swings on the first tee: they don't count
   private fly: { curve: THREE.CatmullRomCurve3; t: number } | null = null;
   private follow = new THREE.Vector3(0, 0, -1);
@@ -212,6 +254,7 @@ export class Course3D {
     pm.dispose();
 
     this.ball.castShadow = true;
+    this.ball.add(this.glow);
     this.scene.add(this.ball);
     this.golfer = new Golfer(specOf(avatar));
     this.golfer.holdClub('driver');
@@ -382,6 +425,7 @@ export class Course3D {
     const h = this.hole;
     const diff = total.strokes - total.par;
     this.overlay.innerHTML = `
+      <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-top">
         <button class="g3-pill" data-quit>Leave</button>
         <div class="g3-title"><small>Hole ${this.number} of 3</small><b>${h.name}</b><span>Par ${h.par} · <i data-dist></i></span></div>
@@ -715,6 +759,8 @@ export class Course3D {
     if (practice) practice.hidden = !(this.number === 1 && this.strokes === 0);
     this.mode = 'aim';
     this.power = 0;
+    // after the tee shot, every shot starts lined up on the pin
+    if (this.strokes > 0) this.aim = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
     const { allowed, want, d } = this.lie();
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.disabled = !allowed.includes(b.dataset.club as ClubId)));
     this.setClub(want);
@@ -905,7 +951,15 @@ export class Course3D {
       r.zones.forEach((z) => this.zones.add(z));
     }
     this.mode = 'roll';
-    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice, clock: shot.clock };
+    // a pure strike gets the slow-motion treatment round the top of its flight, unless it's going to end in trouble
+    let slow: { from: number; to: number } | null = null;
+    if (full && error === 0 && !r.penalty) {
+      const land = r.frames.findIndex((f, i) => i > 2 && f.z <= heightAt(this.hole, f.x, f.y) + 0.05);
+      const flight = r.frames.slice(0, land > 0 ? land : r.frames.length);
+      const apex = flight.reduce((top, f) => (f.z > top.z ? f : top), flight[0]);
+      if (apex) slow = { from: Math.max(0.15, apex.t - 0.5), to: apex.t + 0.8 };
+    }
+    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice, clock: shot.clock, settle: settleTime(r), slow };
     this.trailPts = [];
     this.power = 0;
     sfx(club === 'putter' ? 'tick' : club === 'driver' ? 'crack' : 'thump');
@@ -914,7 +968,9 @@ export class Course3D {
 
   private stepShot(dt: number) {
     const s = this.shot!;
-    s.t += dt;
+    const slow = !!s.slow && s.t >= s.slow.from && s.t < s.slow.to;
+    this.focus(slow);
+    s.t += dt * (slow ? 0.28 : 1);
     const f = s.r.frames;
     while (s.next < s.r.sounds.length && s.r.sounds[s.next].t <= s.t) {
       const k = s.r.sounds[s.next++].s;
@@ -959,7 +1015,23 @@ export class Course3D {
     this.trailPts.push(this.ball.position.clone());
     if (this.trailPts.length > TRAIL) this.trailPts.shift();
     this.drawTrail();
-    if (s.t >= s.r.duration + 0.3) this.endShot();
+    if (s.t >= s.settle + 0.3) {
+      this.focus(false);
+      this.endShot();
+    }
+  }
+
+  // Tiger vision: the world falls into shadow round the ball, and the ball glows
+  private focus(on: boolean) {
+    this.glow.visible = on;
+    const el = this.overlay.querySelector('[data-focus]') as HTMLElement | null;
+    if (!el) return;
+    el.classList.toggle('on', on);
+    if (on) {
+      const v = this.ball.position.clone().project(this.camera);
+      el.style.setProperty('--fx', `${((v.x + 1) / 2) * 100}%`);
+      el.style.setProperty('--fy', `${((1 - v.y) / 2) * 100}%`);
+    }
   }
 
   private endShot() {
