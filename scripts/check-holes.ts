@@ -108,20 +108,43 @@ function clubsFor(h: Hole, pos: V2): ClubId[] {
 
 type Cand = { d: number; shot: Shot };
 
+// QUICK=1 (npm run check-holes quick): a coarse sweep of directions, then a closer look round the best few,
+// instead of every direction at every power. Close to the full search's picks, at a fraction of the cost.
+const QUICK = !!process.env.QUICK;
+
 function candidates(h: Hole, pos: V2, nav: (p: V2) => number, clock: number, step: number, exclude?: string, only?: ClubId) {
   const out: Cand[] = [];
   const toCup = Math.atan2(h.cup.x - pos.x, h.cup.y - pos.y);
-  for (const club of only ? [only] : clubsFor(h, pos))
-    for (let a = -180; a < 180; a += club === 'putter' && Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40 ? step / 4 : step)
+  const near = Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40;
+  for (const club of only ? [only] : clubsFor(h, pos)) {
+    const putt = club === 'putter' && near;
+    // try every power (and spin) in one direction; true if one of them holes out
+    const tryAt = (a: number) => {
       for (const power of club === 'putter' && h.tour ? TOUR_PUTTS : POWERS[club])
-      for (const spin of h.greenFirm && (club === 'iron' || club === 'wedge') ? [0, 1] : [0]) {
-        const angle = club === 'putter' && Math.hypot(h.cup.x - pos.x, h.cup.y - pos.y) < 40 ? toCup + ((a / 4) * Math.PI) / 180 : (a * Math.PI) / 180;
-        const shot: Shot = { angle, power, club, error: 0, clock, spin };
-        const r = simulate(h, pos, shot, false);
-        if (exclude && r.zones.includes(exclude)) continue;
-        out.push({ d: r.holed ? -1 : r.penalty ? Infinity : nav(r.end), shot });
-        if (r.holed) return out;
-      }
+        for (const spin of h.greenFirm && (club === 'iron' || club === 'wedge') ? [0, 1] : [0]) {
+          const angle = putt ? toCup + ((a / 4) * Math.PI) / 180 : (a * Math.PI) / 180;
+          const shot: Shot = { angle, power, club, error: 0, clock, spin };
+          const r = simulate(h, pos, shot, false);
+          if (exclude && r.zones.includes(exclude)) continue;
+          out.push({ d: r.holed ? -1 : r.penalty ? Infinity : nav(r.end), shot });
+          if (r.holed) return true;
+        }
+      return false;
+    };
+    if (!QUICK || putt) {
+      for (let a = -180; a < 180; a += putt ? step / 4 : step) if (tryAt(a)) return out;
+      continue;
+    }
+    const from = out.length;
+    for (let a = -180; a < 180; a += 15) if (tryAt(a)) return out;
+    const best = out
+      .slice(from)
+      .sort((x, y) => x.d - y.d)
+      .map((c) => Math.round((c.shot.angle * 180) / Math.PI))
+      .filter((a, i, all) => all.findIndex((b) => Math.abs(b - a) < 12) === i)
+      .slice(0, 3);
+    for (const b of best) for (let a = b - 12; a <= b + 12; a += step) if (a !== b && tryAt(a)) return out;
+  }
   return out;
 }
 
@@ -251,6 +274,28 @@ function novice(base: Hole, seed: string) {
 
 const course = process.env.COURSE ? courseById(process.env.COURSE)! : courseFor('2026-10');
 const mode = process.argv[2] ?? 'all';
+
+// quick: every hole at once, each in its own process, in quick mode; prints each hole's report as it lands
+if (mode === 'quick') {
+  const { spawn } = await import('node:child_process');
+  const ids = course.holes.map((h) => h.id).filter((id) => !process.argv[3] || id === process.argv[3]);
+  const run = (args: string[]) =>
+    new Promise<string>((done) => {
+      const kid = spawn(process.execPath, [process.argv[1], ...args], { env: { ...process.env, QUICK: '1' } });
+      let text = '';
+      kid.stdout.on('data', (d) => (text += d));
+      kid.stderr.on('data', (d) => (text += d));
+      kid.on('close', (code) => {
+        if (code) process.exitCode = 1;
+        done(text);
+      });
+    });
+  const started = Date.now();
+  const jobs = [run(['basic', '-']), ...ids.flatMap((id) => [run(['solve', id]), run(['novice', id])])];
+  for (const job of jobs) process.stdout.write((await job).split('\n').filter((l) => !l.startsWith('  ')).join('\n'));
+  console.log(`\nquick check done in ${Math.round((Date.now() - started) / 1000)}s`);
+  process.exit();
+}
 const only = process.argv[3];
 const holes = course.holes.filter((h) => !only || h.id === only);
 
@@ -324,7 +369,7 @@ if (mode === 'all' || mode === 'solve') {
 if (mode === 'all' || mode === 'novice') {
   let over = 0;
   for (const h of holes) {
-    const scores = [1, 2, 3, 4, 5, 6].map((i) => novice(h, `${h.id}:${i}`));
+    const scores = (QUICK ? [1, 2, 3] : [1, 2, 3, 4, 5, 6]).map((i) => novice(h, `${h.id}:${i}`));
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
     over += avg - h.par;
     console.log(`${h.name}: novice ${scores.join(',')} avg ${(avg - h.par).toFixed(1)} vs par`);
