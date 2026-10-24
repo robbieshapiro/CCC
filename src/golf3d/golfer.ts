@@ -31,6 +31,7 @@ export type GolferSpec = {
   crestBag?: boolean;
   bowtie?: boolean;
   monocle?: boolean;
+  hand?: 'right' | 'left'; // which way they play: a righty's swing meter stands on the left of the screen
 };
 
 export const SKIN_TONES = ['#f6d7bf', '#eac09a', '#d29a6e', '#a8704a', '#7a4e33', '#563726'];
@@ -50,6 +51,7 @@ export const LOCKED_TOPS: Partial<Record<Top, number>> = { blazer: 2, cashmere: 
 export const LOCKED_BOTTOMS: Partial<Record<Bottoms, number>> = { tartan: 1, skirt: 0 };
 
 export const DEFAULT_SPEC: GolferSpec = {
+  hand: 'right',
   skin: SKIN_TONES[1],
   build: 'regular',
   height: 1,
