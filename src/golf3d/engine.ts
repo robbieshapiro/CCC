@@ -605,9 +605,11 @@ export class Course3D {
   // Which clubs this lie allows, and a sensible default for the distance.
   private lie() {
     const s = surfaceAt(this.hole, this.pos);
-    const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : BAG;
+    // the chipper is in the bag on tour courses (the Caldera) and at the practice facility, not the Highlands
+    const chip = !!this.hole.tour;
+    const allowed = ((s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : BAG) as ClubId[]).filter((c) => chip || c !== 'chip');
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
+    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : chip && d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
     return { allowed, want, d };
   }
 
@@ -789,7 +791,10 @@ export class Course3D {
     // after the tee shot, every shot starts lined up on the pin
     if (this.strokes > 0) this.aim = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
     const { allowed, want, d } = this.lie();
-    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.disabled = !allowed.includes(b.dataset.club as ClubId)));
+    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
+      b.disabled = !allowed.includes(b.dataset.club as ClubId);
+      b.hidden = b.dataset.club === 'chip' && !this.hole.tour;
+    });
     this.setClub(want);
     const dist = this.overlay.querySelector('[data-dist]');
     if (dist) dist.textContent = this.drill ? `${Math.round(d)} ft` : `${Math.round(d)} ft to the pin`;

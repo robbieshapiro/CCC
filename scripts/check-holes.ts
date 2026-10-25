@@ -101,11 +101,11 @@ const POWERS: Record<ClubId, number[]> = {
 const TOUR_PUTTS = [...Array.from({ length: 29 }, (_, i) => 0.03 + i * 0.02), 0.7, 0.8, 1];
 
 // Clubs a player could pick from this lie: wedge or iron from sand, putter, chip or wedge on the green.
+// The chip is only in the bag on tour courses.
 function clubsFor(h: Hole, pos: V2): ClubId[] {
   const s = surfaceAt(h, pos);
-  if (s === 'sand') return ['wedge', 'iron'];
-  if (s === 'green') return ['putter', 'chip', 'wedge'];
-  return BAG;
+  const bag: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : BAG;
+  return bag.filter((c) => h.tour || c !== 'chip');
 }
 
 type Cand = { d: number; shot: Shot };
