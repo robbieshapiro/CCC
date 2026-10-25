@@ -67,17 +67,27 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const scores: number[] = [];
   const spots: Spot[] = [];
   const feats = new Set<string>();
-  for (let i = 0; i < course.holes.length; i++) {
+  // the admin's preview can jump to any hole, or start the one they're on over
+  let jump: ((i: number) => void) | null = null;
+  if (preview && !opts.practice) game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
+  for (let i = 0; i < course.holes.length; ) {
     const h = course.holes[i];
-    const par = course.holes.slice(0, i).reduce((a, x) => a + x.par, 0);
-    const r = await game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i > 0, of: course.holes.length });
+    const par = course.holes.reduce((a, x, j) => a + (scores[j] === undefined ? 0 : x.par), 0);
+    const jumped = new Promise<number>((res) => (jump = res));
+    const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i > 0, of: course.holes.length });
+    const r = await Promise.race([played, jumped]);
     if (quit || !game) return;
-    scores.push(r.strokes);
-    spots.push(r.spot);
+    if (typeof r === 'number') {
+      i = r;
+      continue;
+    }
+    scores[i] = r.strokes;
+    spots[i] = r.spot;
     r.feats.forEach((f) => feats.add(f));
+    i++;
   }
   const total = scores.reduce((a, b) => a + b, 0);
-  const toPar = total - course.par;
+  const toPar = total - course.holes.reduce((a, h, i) => a + (scores[i] === undefined ? 0 : h.par), 0);
   const best = !preview && (!before || toPar < before.total - before.par);
   let posted = true;
   if (!preview)
@@ -97,7 +107,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       ${best ? '<p class="stamp">Personal best</p>' : ''}
       <table class="scorecard"><thead><tr>${course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('')}<th class="num">Tot</th></tr></thead>
         <tbody><tr class="par">${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num">${course.par}</td></tr>
-        <tr>${scores.map((s, i) => `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>
+        <tr>${course.holes.map((_, i) => scores[i]).map((s, i) => s === undefined ? '<td class="num">–</td>' : `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>
       ${
         opts.practice
           ? hostChip('Practice. Nobody is keeping score, least of all me. Come November it counts.', 'dry')
