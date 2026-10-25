@@ -177,6 +177,8 @@ export class Course3D {
   private landing = new THREE.Vector3();
   private orbit = 0;
   private resolve: ((r: HoleResult) => void) | null = null;
+  // the admin's list of holes, for jumping about a preview round
+  private menu: { names: string[]; pick: (i: number) => void } | null = null;
   private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
   private miniBase: HTMLCanvasElement | null = null;
   private faded = new Map<THREE.Object3D, number>();
@@ -257,6 +259,10 @@ export class Course3D {
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.host.innerHTML = '';
+  }
+
+  setHoleMenu(names: string[], pick: (i: number) => void) {
+    this.menu = { names, pick };
   }
 
   // Plays one hole to completion. The beverage cart may stop by on the tee.
@@ -387,7 +393,7 @@ export class Course3D {
     this.overlay.innerHTML = `
       <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-top">
-        <button class="g3-pill" data-quit>Leave</button>
+        <div class="g3-left"><button class="g3-pill" data-quit>Leave</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}</div>
         <div class="g3-title"><small>Hole ${this.number} of ${this.holesInRound}</small><b>${h.name}</b><span>Par ${h.par} · <i data-dist></i></span></div>
         <div class="g3-score"><small>Stroke</small><b data-strokes>0</b><span>${total.par ? `Round ${diff === 0 ? 'E' : diff > 0 ? `+${diff}` : diff}` : ''}</span></div>
       </div>
@@ -428,6 +434,7 @@ export class Course3D {
     q('[data-quit]').onclick = () => {
       if (confirm('Leave the round? An unfinished round does not count.')) this.onQuit();
     };
+    if (this.menu) q('[data-holes]').onclick = () => this.holeMenu();
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
       b.onclick = () => {
         if (this.mode !== 'aim' || b.disabled) return;
@@ -1054,7 +1061,25 @@ export class Course3D {
     const pin = this.world?.root.getObjectByName('pin');
     if (pin) pin.position.y += 1.2;
     this.orbit = 0;
-    window.setTimeout(() => this.resolve?.({ strokes: this.strokes, feats: [...new Set(feats)], spot: this.spot ?? null }), 2800 + delay);
+    // a hole the admin jumped away from never reports
+    const done = this.resolve;
+    window.setTimeout(() => this.resolve === done && done?.({ strokes: this.strokes, feats: [...new Set(feats)], spot: this.spot ?? null }), 2800 + delay);
+  }
+
+  // any hole, any time: the one you're on starts over
+  private holeMenu() {
+    const m = this.menu!;
+    const sheet = document.createElement('div');
+    sheet.className = 'g3-holes';
+    const row = (n: string, i: number) =>
+      `<button data-i="${i}"${i + 1 === this.number ? ' class="on"' : ''}><b>${i + 1}</b>${n}${i + 1 === this.number ? '<em>Restart</em>' : ''}</button>`;
+    sheet.innerHTML = `<div class="g3-holes-card"><small>Go to hole</small>${m.names.map(row).join('')}</div>`;
+    sheet.onclick = (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-i]');
+      sheet.remove();
+      if (b) m.pick(Number(b.dataset.i));
+    };
+    this.overlay.appendChild(sheet);
   }
 
   private drawTrail() {
