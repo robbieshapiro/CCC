@@ -401,6 +401,9 @@ export class Course3D {
   private hud(total: { strokes: number; par: number }) {
     const h = this.hole;
     const diff = total.strokes - total.par;
+    // tour courses tuck the strike ball up out of the thumb's way, on the far side from the hand you hit with
+    this.overlay.classList.toggle('tour', !!h.tour);
+    this.overlay.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.overlay.innerHTML = `
       <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-top">

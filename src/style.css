@@ -314,6 +314,25 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 @media (max-height: 500px) {
   .g3-strike { top: auto; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: none; }
 }
+/* tour courses: a smaller strike ball, tucked up under the map so the lower half of the screen is free for the swing taps.
+   Righties keep it on the right, under the map; lefties have it up on the left. */
+.g3-ui.tour .g3-strike { top: calc(240px + env(safe-area-inset-top, 0px)); bottom: auto; transform: none; gap: 0 3px; }
+.g3-ui.tour.lefty .g3-strike { right: auto; left: max(14px, env(safe-area-inset-left, 0px)); }
+.g3-ui.tour .g3-ball { width: 50px; height: 50px; background-size: 100% 100%, 6px 6px; }
+.g3-ui.tour .g3-ball::before { top: 6px; bottom: 6px; }
+.g3-ui.tour .g3-ball::after { left: 6px; right: 6px; }
+.g3-ui.tour .g3-ball i { width: 12px; height: 12px; margin: -6px 0 0 -6px; }
+.g3-ui.tour .g3-strike { grid-template-areas: 'ball' 'lab'; grid-template-columns: 50px; }
+.g3-ui.tour .g3-strike small { display: none; }
+.g3-ui.tour .g3-strike b { margin-top: 2px; font-size: 10px; padding: 2px 8px; }
+@media (max-width: 520px) {
+  .g3-ui.tour .g3-strike { top: calc(198px + env(safe-area-inset-top, 0px)); grid-template-columns: 46px; right: max(18px, env(safe-area-inset-right, 0px)); }
+  .g3-ui.tour .g3-ball { width: 46px; height: 46px; }
+}
+@media (max-height: 500px) {
+  .g3-ui.tour .g3-strike { top: calc(70px + env(safe-area-inset-top, 0px)); }
+  .g3-ui.tour:not(.lefty) .g3-strike { right: calc(110px + max(18px, env(safe-area-inset-right, 0px))); }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
