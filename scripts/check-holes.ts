@@ -92,6 +92,7 @@ function navField(h: Hole, target: V2 = h.cup) {
 const POWERS: Record<ClubId, number[]> = {
   putter: [0.04, 0.08, 0.13, 0.2, 0.28, 0.38, 0.5, 0.64, 0.8, 1],
   wedge: [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1],
+  chip: [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1],
   iron: [0.2, 0.4, 0.55, 0.7, 0.85, 1],
   driver: [0.4, 0.6, 0.8, 0.9, 1],
 };
@@ -99,11 +100,11 @@ const POWERS: Record<ClubId, number[]> = {
 // tour greens need a finer touch on the putter to find the speed that drops
 const TOUR_PUTTS = [...Array.from({ length: 29 }, (_, i) => 0.03 + i * 0.02), 0.7, 0.8, 1];
 
-// Clubs a player could pick from this lie: wedge or iron from sand, putter or wedge on the green.
+// Clubs a player could pick from this lie: wedge or iron from sand, putter, chip or wedge on the green.
 function clubsFor(h: Hole, pos: V2): ClubId[] {
   const s = surfaceAt(h, pos);
   if (s === 'sand') return ['wedge', 'iron'];
-  if (s === 'green') return ['putter', 'wedge'];
+  if (s === 'green') return ['putter', 'chip', 'wedge'];
   return BAG;
 }
 

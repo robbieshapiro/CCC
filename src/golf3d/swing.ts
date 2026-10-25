@@ -6,7 +6,7 @@ import { CLUBS, type ClubId } from './clubs';
 export const OVERSWING = 1.1; // the bar runs past 100% to here
 
 // how fast the power bar fills, in power per second; it speeds up toward the top
-const FILL: Record<ClubId, number> = { driver: 0.9, iron: 0.75, wedge: 0.6, putter: 0 };
+const FILL: Record<ClubId, number> = { driver: 0.9, iron: 0.75, wedge: 0.6, chip: 0.85, putter: 0 };
 export const powerSpeed = (club: ClubId, p: number) => FILL[club] * (0.6 + 1.4 * p * p);
 
 // The meter comes in two styles. Classic runs left to right. The vertical meter (tour courses, and every course
@@ -14,10 +14,10 @@ export const powerSpeed = (club: ClubId, p: number) => FILL[club] * (0.6 + 1.4 *
 // about ±55 ms to find it with a full driver, ±90 ms with an iron, ±140 ms with a wedge, against ±19, ±37 and ±69.
 export type MeterStyle = 'classic' | 'vertical';
 const SLOWER = 0.75;
-const WIDER: Record<ClubId, number> = { driver: 2.15, iron: 1.85, wedge: 1.5, putter: 1 };
+const WIDER: Record<ClubId, number> = { driver: 2.15, iron: 1.85, wedge: 1.5, chip: 1.5, putter: 1 };
 
 // how fast the needle comes back for the accuracy tap, in bar-lengths per second
-const RETURN: Record<ClubId, number> = { driver: 1.0, iron: 0.84, wedge: 0.72, putter: 0 };
+const RETURN: Record<ClubId, number> = { driver: 1.0, iron: 0.84, wedge: 0.72, chip: 0.9, putter: 0 };
 export function returnSpeed(club: ClubId, power: number, needle = 1, style: MeterStyle = 'classic') {
   const over = Math.max(0, power - 1);
   return RETURN[club] * (0.7 + 0.6 * Math.min(1, power)) * (1 + over * 10) * needle * (style === 'vertical' ? SLOWER : 1);

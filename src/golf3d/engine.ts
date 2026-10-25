@@ -68,7 +68,7 @@ export function scoreName(strokes: number, par: number) {
   return d <= -3 ? 'Albatross' : d === -2 ? 'Eagle' : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey' : d === 2 ? 'Double bogey' : 'Triple bogey';
 }
 
-const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', putter: 'Putter' };
+const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', chip: 'Chip', putter: 'Putter' };
 
 // The swing bar: the impact point sits near the left end; power runs from there to the right, overswing last.
 const IMPACT = 0.12;
@@ -605,9 +605,9 @@ export class Course3D {
   // Which clubs this lie allows, and a sensible default for the distance.
   private lie() {
     const s = surfaceAt(this.hole, this.pos);
-    const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'wedge'] : BAG;
+    const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : BAG;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
+    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
     return { allowed, want, d };
   }
 
@@ -992,7 +992,7 @@ export class Course3D {
     // on tour courses, an approach that might go in gets the slow-motion treatment as it tracks toward the hole:
     // one that drops, or one that comes within a couple of feet of it
     let slow: { from: number; to: number } | null = null;
-    if (full && !r.penalty && this.hole.tour) {
+    if (full && !r.penalty && this.hole.tour && !this.drill) {
       let near = r.frames[0];
       let gap = Infinity;
       for (const f of r.frames) {
@@ -1097,7 +1097,7 @@ export class Course3D {
       window.setTimeout(() => sfx('cheer'), 250);
       const feats = [...this.zones];
       if (this.strokes === 1) feats.push('ace');
-      if (s.club === 'wedge') feats.push('chipin');
+      if (s.club === 'wedge' || s.club === 'chip') feats.push('chipin');
       return this.finish(feats);
     }
     if (r.penalty) {

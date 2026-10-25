@@ -2,7 +2,7 @@ export type Feat = { id: string; name: string; icon: string; how: string };
 
 export const FEATS: Feat[] = [
   { id: 'ace', name: 'Hole in One', icon: '⛳', how: 'Ace any hole' },
-  { id: 'chipin', name: 'Wedge Hole-out', icon: '🪶', how: 'Hole out with the wedge' },
+  { id: 'chipin', name: 'Wedge Hole-out', icon: '🪶', how: 'Hole out with the wedge or chip' },
   { id: 'cartpath', name: 'Cart Path Bank', icon: '🛞', how: 'Ride the cart path on The Azalea' },
   { id: 'bridge', name: 'Over the Bridge', icon: '🌉', how: 'Fly the gap on The Island' },
   { id: 'terrace', name: 'Terrace Route', icon: '🏛️', how: 'Take the veranda on The Clubhouse' },
