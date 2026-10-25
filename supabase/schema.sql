@@ -405,6 +405,59 @@ begin
   );
 end $$;
 
+-- Member activity, for the admin only and kept coarse: when each member was last in, and one row per member
+-- per day with counts. No screens, no timings, nothing about shots. Rows older than 90 days are cleared.
+alter table players add column if not exists last_seen_at timestamptz;
+
+create table if not exists member_days (
+  player_id uuid not null references players on delete cascade,
+  group_id uuid not null references groups on delete cascade,
+  day date not null,
+  visits int not null default 0,
+  lockers int not null default 0,
+  primary key (player_id, day)
+);
+alter table member_days enable row level security;
+
+-- The app calls this at most once an hour per kind: 'visit' when a member opens it, 'locker' in the locker room.
+create or replace function touch(p_token uuid, p_kind text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if p_kind not in ('visit', 'locker') then return; end if;
+  update players set last_seen_at = now() where id = me.id;
+  insert into member_days (player_id, group_id, day, visits, lockers)
+  values (me.id, me.group_id, game_today(), (p_kind = 'visit')::int, (p_kind = 'locker')::int)
+  on conflict (player_id, day) do update set visits = member_days.visits + excluded.visits, lockers = member_days.lockers + excluded.lockers;
+  delete from member_days where player_id = me.id and day < game_today() - 90;
+end $$;
+
+-- This month, member by member (the admin left out): last in, days active, rounds, practice, locker visits.
+create or replace function activity_report(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); m text := game_month();
+  since timestamptz := (date_trunc('month', now() at time zone 'America/New_York')) at time zone 'America/New_York';
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see member activity.'; end if;
+  return coalesce((
+    select json_agg(x order by x."lastSeen" desc nulls last, x.name) from (
+      select pl.name,
+        greatest(pl.last_seen_at,
+          (select max(created_at) from rounds where player_id = pl.id),
+          (select max(started_at) from practice_sessions where player_id = pl.id)) as "lastSeen",
+        (select count(*) from (
+            select day from member_days where player_id = pl.id and day >= since::date
+            union select (created_at at time zone 'America/New_York')::date from rounds where player_id = pl.id and month = m
+            union select (started_at at time zone 'America/New_York')::date from practice_sessions where player_id = pl.id and started_at >= since
+          ) d) as days,
+        (select count(*) from rounds where player_id = pl.id and month = m) as rounds,
+        (select count(*) from practice_sessions where player_id = pl.id and started_at >= since) as practice,
+        (select coalesce(sum(lockers), 0) from member_days where player_id = pl.id and day >= since::date) as lockers
+      from players pl where pl.group_id = me.group_id and pl.role <> 'admin'
+    ) x
+  ), '[]');
+end $$;
+
 revoke all on function player_for(uuid) from public, anon, authenticated;
 revoke all on function month_bests(uuid) from public, anon, authenticated;
 grant execute on function join_group(text, text, text) to anon;
@@ -427,6 +480,8 @@ grant execute on function take_down_notice(uuid, bigint) to anon;
 grant execute on function start_practice(uuid, text) to anon;
 grant execute on function end_practice(uuid, bigint, int) to anon;
 grant execute on function practice_report(uuid) to anon;
+grant execute on function touch(uuid, text) to anon;
+grant execute on function activity_report(uuid) to anon;
 
 -- Create your group (change the name and code). The first person to join with the code runs the club;
 -- after that, new members need a personal invitation from them. Share https://YOUR-SITE/#/join/<code> to start:
