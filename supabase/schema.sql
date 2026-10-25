@@ -350,6 +350,61 @@ begin
   );
 end $$;
 
+-- Practice: a session each time a member joins the range, the short game area or a practice round of the next
+-- course, ended when they leave. Nothing here touches the board; the admin sees who has been practising.
+create table if not exists practice_sessions (
+  id bigserial primary key,
+  group_id uuid not null references groups on delete cascade,
+  player_id uuid not null references players on delete cascade,
+  kind text not null check (kind in ('caldera', 'range', 'shortgame')),
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  shots int not null default 0
+);
+alter table practice_sessions enable row level security;
+
+create or replace function start_practice(p_token uuid, p_kind text) returns bigint
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); new_id bigint;
+begin
+  insert into practice_sessions (group_id, player_id, kind) values (me.group_id, me.id, p_kind) returning id into new_id;
+  return new_id;
+end $$;
+
+create or replace function end_practice(p_token uuid, p_id bigint, p_shots int) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  update practice_sessions set ended_at = now(), shots = greatest(0, least(p_shots, 5000))
+  where id = p_id and player_id = me.id and ended_at is null;
+end $$;
+
+-- This month's practice, members only (the admin's own sessions are left out).
+create or replace function practice_report(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); since timestamptz := (date_trunc('month', now() at time zone 'America/New_York')) at time zone 'America/New_York';
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see the practice log.'; end if;
+  return (
+    with s as (
+      select ps.*, p.name from practice_sessions ps join players p on p.id = ps.player_id
+      where ps.group_id = me.group_id and p.role <> 'admin' and ps.started_at >= since
+    )
+    select json_build_object(
+      'kinds', coalesce((select json_agg(json_build_object('kind', k.kind, 'sessions', k.n, 'members', k.m, 'minutes', k.mins)) from (
+        select kind, count(*) as n, count(distinct player_id) as m,
+          round(coalesce(sum(least(extract(epoch from ended_at - started_at), 10800)), 0) / 60)::int as mins
+        from s group by kind) k), '[]'),
+      'members', coalesce((select json_agg(json_build_object('name', x.name, 'caldera', x.c, 'range', x.r, 'shortgame', x.g, 'lastAt', x.last) order by x.last desc) from (
+        select name, count(*) filter (where kind = 'caldera') as c, count(*) filter (where kind = 'range') as r,
+          count(*) filter (where kind = 'shortgame') as g, max(started_at) as last
+        from s group by player_id, name) x), '[]'),
+      'recent', coalesce((select json_agg(json_build_object('name', r.name, 'kind', r.kind, 'startedAt', r.started_at, 'endedAt', r.ended_at, 'shots', r.shots) order by r.started_at desc) from (
+        select * from s order by started_at desc limit 20) r), '[]')
+    )
+  );
+end $$;
+
 revoke all on function player_for(uuid) from public, anon, authenticated;
 revoke all on function month_bests(uuid) from public, anon, authenticated;
 grant execute on function join_group(text, text, text) to anon;
@@ -369,6 +424,9 @@ grant execute on function set_feedback_done(uuid, bigint, boolean) to anon;
 grant execute on function post_notice(uuid, text, boolean) to anon;
 grant execute on function list_notices(uuid) to anon;
 grant execute on function take_down_notice(uuid, bigint) to anon;
+grant execute on function start_practice(uuid, text) to anon;
+grant execute on function end_practice(uuid, bigint, int) to anon;
+grant execute on function practice_report(uuid) to anon;
 
 -- Create your group (change the name and code). The first person to join with the code runs the club;
 -- after that, new members need a personal invitation from them. Share https://YOUR-SITE/#/join/<code> to start:

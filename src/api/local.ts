@@ -5,13 +5,14 @@ import { courseFor, monthOf } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
-import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type Round } from './types';
+import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
 type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[] };
+type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[] };
 
 const KEY = 'ccc-local-db';
 
@@ -236,6 +237,50 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     const n = (db.notices ?? []).find((x) => x.id === id && x.groupId === me.groupId);
     if (n) n.live = false;
     save(db);
+  },
+
+  async startPractice(session, kind) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const list = (db.practice ??= []);
+    const id = list.length + 1;
+    list.push({ id, groupId: me.groupId, playerId: me.id, kind, startedAt: new Date().toISOString(), endedAt: null, shots: 0 });
+    save(db);
+    return id;
+  },
+
+  async endPractice(session, id, shots) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const p = (db.practice ?? []).find((x) => x.id === id && x.playerId === me.id && !x.endedAt);
+    if (p) Object.assign(p, { endedAt: new Date().toISOString(), shots: Math.max(0, Math.min(shots, 5000)) });
+    save(db);
+  },
+
+  async practiceReport(session): Promise<PracticeReport> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see the practice log.');
+    const month = new Date().toISOString().slice(0, 7);
+    const name = (id: string) => db.players.find((p) => p.id === id)?.name ?? '';
+    const s = (db.practice ?? []).filter((x) => x.groupId === me.groupId && !db.players.find((p) => p.id === x.playerId)?.admin && x.startedAt.startsWith(month));
+    const mins = (x: DbPractice) => (x.endedAt ? Math.min(10800, (Date.parse(x.endedAt) - Date.parse(x.startedAt)) / 1000) : 0);
+    const kinds = (['caldera', 'range', 'shortgame'] as const).flatMap((kind) => {
+      const k = s.filter((x) => x.kind === kind);
+      return k.length ? [{ kind, sessions: k.length, members: new Set(k.map((x) => x.playerId)).size, minutes: Math.round(k.reduce((a, x) => a + mins(x), 0) / 60) }] : [];
+    });
+    const members = [...new Set(s.map((x) => x.playerId))]
+      .map((id) => {
+        const m = s.filter((x) => x.playerId === id);
+        const n = (k: PracticeKind) => m.filter((x) => x.kind === k).length;
+        return { name: name(id), caldera: n('caldera'), range: n('range'), shortgame: n('shortgame'), lastAt: m.map((x) => x.startedAt).sort().pop()! };
+      })
+      .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+    const recent = [...s]
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+      .slice(0, 20)
+      .map((x) => ({ name: name(x.playerId), kind: x.kind, startedAt: x.startedAt, endedAt: x.endedAt, shots: x.shots }));
+    return { kinds, members, recent };
   },
 
   // Adds Sean, Danny and PJ with a few rounds this month and a past champion.

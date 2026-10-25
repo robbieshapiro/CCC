@@ -431,7 +431,7 @@ export class Golfer {
 
   // How far back the club goes for this much power.
   private reach(club: ClubId, power: number) {
-    return club === 'putter' ? 0.25 + power * 0.7 : club === 'wedge' ? 0.8 + power * 1.4 : 1.2 + power * 1.5;
+    return club === 'putter' ? 0.08 + power * 0.85 : club === 'wedge' ? 0.8 + power * 1.4 : 1.2 + power * 1.5;
   }
 
   // The vertical meter: the club follows the meter back and down, and waits wherever it is.
@@ -443,10 +443,12 @@ export class Golfer {
 
   // Back, down through impact, follow through. `impact` fires as the club meets the ball.
   // from 'impact': the meter has already taken the club back and down; strike it and follow through.
-  swingClub(club: ClubId, power: number, impact: () => void, done: () => void = () => {}, from: 'start' | 'impact' = 'start') {
+  // from 'top': the club is already back (a putt pulled back); bring it through from there.
+  swingClub(club: ClubId, power: number, impact: () => void, done: () => void = () => {}, from: 'start' | 'top' | 'impact' = 'start') {
     this.holdClub(club);
-    const dur = club === 'putter' ? 0.9 : 1.25;
-    this.state = { pose: 'address', swing: { t: from === 'impact' ? dur * 0.72 : 0, back: -this.reach(club, power), dur, impact, done, hit: false } };
+    const dur = club === 'putter' ? (from === 'top' ? 1.4 : 0.9) : 1.25;
+    const t = from === 'impact' ? dur * 0.72 : from === 'top' ? dur * 0.55 : 0;
+    this.state = { pose: 'address', swing: { t, back: -this.reach(club, power), dur, impact, done, hit: false } };
   }
 
   update(dt: number) {

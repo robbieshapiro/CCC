@@ -14,11 +14,15 @@ import { myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { esc, navigate, render } from '../ui';
 import { openFeedback } from './feedback';
+import { joinPractice, leavePractice } from './practice';
+import { range, TARGETS } from '../golf3d/practice/range';
+import { shortgame, STATIONS } from '../golf3d/practice/shortgame';
 import { scoreClass } from './home';
 
 let game: Course3D | null = null;
 
 export function closeRound() {
+  leavePractice();
   game?.destroy();
   game = null;
   document.body.classList.remove('court-open');
@@ -62,6 +66,11 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/">Back to the club</a></main>`);
     return;
   }
+  // a practice round is a practice session: joined here, ended when they leave or finish
+  if (opts.practice) {
+    game.leaveText = 'Leave practice';
+    game.onShot = joinPractice('caldera').shot;
+  }
   // today's players are on this month's course, not the preview
   if (!preview) game.setGhosts(todaysField(snap));
   const scores: number[] = [];
@@ -86,6 +95,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     r.feats.forEach((f) => feats.add(f));
     i++;
   }
+  if (opts.practice) leavePractice();
   const total = scores.reduce((a, b) => a + b, 0);
   const toPar = total - course.holes.reduce((a, h, i) => a + (scores[i] === undefined ? 0 : h.par), 0);
   const best = !preview && (!before || toPar < before.total - before.par);
@@ -156,7 +166,7 @@ export function practice(snap: Snapshot, next: Course) {
           <li>Firm putts can hop the hole. Let it die in.</li>
         </ul>
       </div>
-      <div class="notes-foot"><button class="btn" data-go>Got it, let's play</button></div>
+      <div class="notes-foot"><button class="btn" data-go>Join practice</button></div>
     </div>`;
   document.body.appendChild(sheet);
   const close = () => sheet.remove();
@@ -166,4 +176,27 @@ export function practice(snap: Snapshot, next: Course) {
   };
   // leaving the page by any other way takes the sheet with it
   window.addEventListener('hashchange', close, { once: true });
+}
+
+// The range or the short game area at the practice facility: a session from the moment you step on to when you leave.
+export function practiceArea(snap: Snapshot, kind: 'range' | 'shortgame') {
+  closeRound();
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  try {
+    game = new Course3D(el, me.avatar, () => {
+      closeRound();
+      navigate('#/facility');
+    });
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/">Back to the club</a></main>`);
+    return;
+  }
+  game.leaveText = 'Leave practice';
+  game.onShot = joinPractice(kind).shot;
+  if (kind === 'range') game.practiceArea(range, { title: 'Driving range', stations: [{ name: 'From the mat', at: range.tee }], targets: TARGETS });
+  else game.practiceArea(shortgame, { title: 'Short game', stations: STATIONS });
 }
