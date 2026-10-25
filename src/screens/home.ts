@@ -4,7 +4,7 @@ import { portrait } from '../avatar';
 import { crest } from '../brand';
 import { featById } from '../feats';
 import { courseFor, nextCourse, upcoming, type Course } from '../golf3d/courses';
-import { monthClosesAt } from '../day';
+import { GAME_TZ, monthClosesAt } from '../day';
 import { hostChip, REGINALD, type Mood } from '../host';
 import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
 import { bindPracticeLog, facilityPanel, practiceLogPanel } from './practice';
@@ -20,11 +20,8 @@ export function scoreClass(strokes: number, par: number) {
   return d <= -2 ? 'eagle' : d === -1 ? 'birdie' : d === 0 ? 'par' : d === 1 ? 'bogey' : 'double';
 }
 
-const when = (iso: string) => {
-  const d = new Date(iso);
-  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
-  return days <= 0 ? 'today' : days === 1 ? 'yesterday' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
+// Last round's date on the club's (Eastern) calendar, e.g. "Oct 24".
+const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: GAME_TZ });
 
 export function home(snap: Snapshot) {
   const player = (id: string) => snap.players.find((p) => p.id === id);
@@ -54,7 +51,7 @@ export function home(snap: Snapshot) {
       const feats = p.feats.map((f) => featById(f)?.icon ?? '').join('');
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${feats ? ` <small>${feats}</small>` : ''}<em>${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · ${when(r.last!)}` : 'yet to play'}</em></span></a></td>
+        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${feats ? ` <small>${feats}</small>` : ''}<em>${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last!)}` : 'yet to play'}</em></span></a></td>
         ${cells}
         <td class="num tot">${r.best ? r.best.total : ''}</td>
         <td class="num topar ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>
