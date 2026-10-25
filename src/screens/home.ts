@@ -9,6 +9,7 @@ import { hostChip, REGINALD, type Mood } from '../host';
 import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
 import { bindPracticeLog, facilityPanel, practiceLogPanel } from './practice';
 import { activityPanel, bindActivity } from './activity';
+import { bindClubMaker, clubMaker } from './clubs';
 import { bindInviteMaker, inviteMaker } from './invite';
 import { bindNotices, noticeComposer, noticesStrip } from './notices';
 import { board, monthName, myBest, toParLabel } from '../standings';
@@ -110,6 +111,7 @@ export function home(snap: Snapshot) {
       ${practiceLogPanel(!!snap.admin)}
       ${inviteMaker(!!snap.admin)}
       ${feedbackPanel(!!snap.admin)}
+      ${clubMaker(!!snap.admin)}
       <p class="fine feedback-link"><button class="link" id="send-feedback">Leave feedback</button></p>
       ${!useSupabase && snap.players.length < 2 ? `<p class="fine">Local mode. <button class="link" id="demo">Add Sean, Danny and PJ</button> to see a full board.</p>` : ''}
     </main>`);
@@ -119,6 +121,7 @@ export function home(snap: Snapshot) {
   void bindFeedbackPanel();
   void bindPracticeLog();
   void bindActivity();
+  bindClubMaker();
   void bindNotices();
   document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {

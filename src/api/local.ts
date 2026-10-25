@@ -87,6 +87,27 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     return { token: p.token, playerId: p.id, groupId: p.groupId, groupName: group.name };
   },
 
+  async myClubs(name, pin) {
+    const db = load();
+    return db.players
+      .filter((p) => p.name.toLowerCase() === name.trim().toLowerCase() && p.pin === pin)
+      .map((p) => ({ token: p.token, playerId: p.id, groupId: p.groupId, groupName: Object.values(db.groups).find((g) => g.id === p.groupId)!.name }));
+  },
+
+  async createClub(session, name) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can start a new club.');
+    const clean = name.trim();
+    if (!clean || clean.length > 40) throw new Error('Club name must be 1-40 characters.');
+    const code = rand(10);
+    const group = (db.groups[code] = { id: uid(), name: clean });
+    const p: DbPlayer = { id: uid(), groupId: group.id, name: me.name, pin: me.pin, token: uid(), avatar: me.avatar, joined: new Date().toISOString(), admin: true };
+    db.players.push(p);
+    save(db);
+    return { token: p.token, playerId: p.id, groupId: group.id, groupName: group.name };
+  },
+
   async snapshot(session) {
     const db = load();
     const me = playerByToken(db, session.token);

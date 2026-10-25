@@ -18,7 +18,34 @@ export function getSession(): Session | null {
   }
 }
 
+// Every club this device is signed in to. Most members have one; the admin may run several.
+const CLUBS_KEY = 'dt-clubs';
+
+export function listSessions(): Session[] {
+  let list: Session[] = [];
+  try {
+    list = JSON.parse(store.get(CLUBS_KEY) ?? '[]');
+  } catch {
+    /* start again */
+  }
+  const active = getSession();
+  if (active && !list.some((s) => s.groupId === active.groupId)) list.push(active);
+  return list;
+}
+
+// Make s the active club and remember it. null signs this device out of every club.
 export function setSession(s: Session | null) {
+  if (!s) {
+    store.remove(SESSION_KEY);
+    store.remove(CLUBS_KEY);
+    return;
+  }
+  const list = listSessions().filter((x) => x.groupId !== s.groupId);
+  store.set(CLUBS_KEY, JSON.stringify([...list, s]));
+  store.set(SESSION_KEY, JSON.stringify(s));
+}
+
+export function switchClub(groupId: string) {
+  const s = listSessions().find((x) => x.groupId === groupId);
   if (s) store.set(SESSION_KEY, JSON.stringify(s));
-  else store.remove(SESSION_KEY);
 }

@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Api, Feedback, Invite, InvitePeek, MemberActivity, Notice, PracticeReport, Snapshot } from './types';
+import type { Api, Feedback, Invite, InvitePeek, MemberActivity, Notice, PracticeReport, Session, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -35,6 +35,16 @@ export const supabaseApi: Api = {
   mode: 'supabase',
   join: (invite, name, pin) => rpc('join_group', { p_invite: invite, p_name: name, p_pin: pin }),
   signIn: (name, pin) => rpc('sign_in', { p_name: name, p_pin: pin }),
+  myClubs: async (name, pin) => {
+    try {
+      return await rpc<Session[]>('my_clubs', { p_name: name, p_pin: pin });
+    } catch (err) {
+      // a database without clubs yet: the one-club sign-in still works
+      if (!/my_clubs|function|schema cache/i.test((err as Error).message)) throw err;
+      return [await rpc<Session>('sign_in', { p_name: name, p_pin: pin })];
+    }
+  },
+  createClub: (s, name) => rpc<Session>('create_club', { p_token: s.token, p_name: name }),
   snapshot: (s) => rpc<Snapshot>('get_snapshot', { p_token: s.token }),
   submitRound: async (s, r) => {
     const args = { p_token: s.token, p_course: r.course, p_holes: r.holes, p_pars: r.pars, p_feats: r.feats };

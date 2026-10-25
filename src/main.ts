@@ -1,7 +1,7 @@
 import './style.css';
 import { inject, pageview } from '@vercel/analytics';
 import { favicon } from './brand';
-import { getSession } from './api';
+import { getSession, switchClub } from './api';
 import { setSound, soundOn } from './fx/sound';
 import { home } from './screens/home';
 import { invite } from './screens/invite';
@@ -16,7 +16,7 @@ import { leaveMember, member } from './screens/member';
 import { checkIn } from './screens/activity';
 import { onSnapshot, refresh, startPolling } from './state';
 import { store } from './storage';
-import { esc, muteButton, render } from './ui';
+import { esc, muteButton, navigate, render } from './ui';
 
 let route = '';
 let routing = false; // the router draws the page itself; the refresh hook mustn't draw it a second time
@@ -87,6 +87,14 @@ async function router() {
 // Live-update the home page as polls come in; never interrupt a shot.
 onSnapshot((s) => {
   if (route === 'home' && !routing) home(s);
+});
+
+// The admin's club switcher, in the header: a whole other club, so start again from its home page.
+document.addEventListener('change', (e) => {
+  const sel = (e.target as HTMLElement).closest<HTMLSelectElement>('[data-club-switch]');
+  if (!sel) return;
+  switchClub(sel.value);
+  navigate('#/');
 });
 
 // Sound toggle lives in the header on every screen.
