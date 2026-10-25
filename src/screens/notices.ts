@@ -27,7 +27,7 @@ export function noticesStrip() {
 export function noticeComposer(admin: boolean) {
   if (!admin) return '';
   return `
-    <section class="panel notice-composer">
+    <section class="panel admin notice-composer">
       <div><h2>Post a notice</h2><p class="muted">Shows at the top of every member's home page until you take it down.</p></div>
       <form id="notice-form" class="stack">
         <textarea id="notice-body" maxlength="1000" rows="3" required placeholder="The Highlands closes Sunday. Get your rounds in."></textarea>

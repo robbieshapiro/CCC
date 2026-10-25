@@ -149,7 +149,7 @@ function limb(a: THREE.Vector3, b: THREE.Vector3, r: number, mt: THREE.Material,
 
 export function buildClub(id: ClubId, gold = false) {
   const g = new THREE.Group();
-  const len = id === 'driver' ? 3.7 : id === 'iron' ? 3.3 : id === 'wedge' ? 3.1 : 2.9;
+  const len = id === 'driver' ? 3.7 : id === 'iron' ? 3.3 : id === 'wedge' || id === 'chip' ? 3.1 : 2.9;
   g.add(limb(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -len, 0), 0.035, m('#c9ccd1', 0.25, { metalness: 0.8 })));
   g.add(limb(new THREE.Vector3(0, 0.05, 0), new THREE.Vector3(0, -0.75, 0), 0.06, m('#1b1b1b', 0.9)));
   let head: THREE.Mesh;
@@ -162,7 +162,7 @@ export function buildClub(id: ClubId, gold = false) {
     head.position.set(0.15, -len, 0);
   } else {
     head = mesh(new THREE.BoxGeometry(0.36, 0.08, 0.2), m('#c9ccd1', 0.2, { metalness: 0.9 }));
-    head.rotation.z = id === 'wedge' ? 0.9 : 0.55;
+    head.rotation.z = id === 'wedge' ? 0.9 : id === 'chip' ? 0.7 : 0.55;
     head.position.set(0.14, -len + 0.03, 0);
   }
   g.add(head);
@@ -431,7 +431,7 @@ export class Golfer {
 
   // How far back the club goes for this much power.
   private reach(club: ClubId, power: number) {
-    return club === 'putter' ? 0.08 + power * 0.85 : club === 'wedge' ? 0.8 + power * 1.4 : 1.2 + power * 1.5;
+    return club === 'putter' ? 0.08 + power * 0.85 : club === 'chip' ? 0.4 + power * 0.9 : club === 'wedge' ? 0.8 + power * 1.4 : 1.2 + power * 1.5;
   }
 
   // The vertical meter: the club follows the meter back and down, and waits wherever it is.

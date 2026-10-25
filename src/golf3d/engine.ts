@@ -68,7 +68,7 @@ export function scoreName(strokes: number, par: number) {
   return d <= -3 ? 'Albatross' : d === -2 ? 'Eagle' : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey' : d === 2 ? 'Double bogey' : 'Triple bogey';
 }
 
-const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', putter: 'Putter' };
+const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', chip: 'Chip', putter: 'Putter' };
 
 // The swing bar: the impact point sits near the left end; power runs from there to the right, overswing last.
 const IMPACT = 0.12;
@@ -605,9 +605,11 @@ export class Course3D {
   // Which clubs this lie allows, and a sensible default for the distance.
   private lie() {
     const s = surfaceAt(this.hole, this.pos);
-    const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'wedge'] : BAG;
+    // the chipper is in the bag on tour courses (the Caldera) and at the practice facility, not the Highlands
+    const chip = !!this.hole.tour;
+    const allowed = ((s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : BAG) as ClubId[]).filter((c) => chip || c !== 'chip');
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
+    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : chip && d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
     return { allowed, want, d };
   }
 
@@ -789,7 +791,10 @@ export class Course3D {
     // after the tee shot, every shot starts lined up on the pin
     if (this.strokes > 0) this.aim = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
     const { allowed, want, d } = this.lie();
-    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.disabled = !allowed.includes(b.dataset.club as ClubId)));
+    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
+      b.disabled = !allowed.includes(b.dataset.club as ClubId);
+      b.hidden = b.dataset.club === 'chip' && !this.hole.tour;
+    });
     this.setClub(want);
     const dist = this.overlay.querySelector('[data-dist]');
     if (dist) dist.textContent = this.drill ? `${Math.round(d)} ft` : `${Math.round(d)} ft to the pin`;
@@ -992,7 +997,7 @@ export class Course3D {
     // on tour courses, an approach that might go in gets the slow-motion treatment as it tracks toward the hole:
     // one that drops, or one that comes within a couple of feet of it
     let slow: { from: number; to: number } | null = null;
-    if (full && !r.penalty && this.hole.tour) {
+    if (full && !r.penalty && this.hole.tour && !this.drill) {
       let near = r.frames[0];
       let gap = Infinity;
       for (const f of r.frames) {
@@ -1097,7 +1102,7 @@ export class Course3D {
       window.setTimeout(() => sfx('cheer'), 250);
       const feats = [...this.zones];
       if (this.strokes === 1) feats.push('ace');
-      if (s.club === 'wedge') feats.push('chipin');
+      if (s.club === 'wedge' || s.club === 'chip') feats.push('chipin');
       return this.finish(feats);
     }
     if (r.penalty) {
@@ -1175,7 +1180,7 @@ export class Course3D {
     sheet.className = 'g3-holes';
     const row = (n: string, i: number) =>
       `<button data-i="${i}"${i + 1 === this.number ? ' class="on"' : ''}><b>${i + 1}</b>${n}${i + 1 === this.number ? '<em>Restart</em>' : ''}</button>`;
-    sheet.innerHTML = `<div class="g3-holes-card"><small>Go to hole</small>${m.names.map(row).join('')}</div>`;
+    sheet.innerHTML = `<div class="g3-holes-card admin"><small>Go to hole</small>${m.names.map(row).join('')}</div>`;
     sheet.onclick = (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-i]');
       sheet.remove();

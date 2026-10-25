@@ -1,6 +1,6 @@
 // The bag. Bigger clubs go farther but have a smaller sweet spot on the swing meter.
 // The driver's needle also speeds up with power: a full rip is a lottery ticket.
-export type ClubId = 'driver' | 'iron' | 'wedge' | 'putter';
+export type ClubId = 'driver' | 'iron' | 'wedge' | 'chip' | 'putter';
 
 export type Club = {
   id: ClubId;
@@ -20,10 +20,12 @@ export const CLUBS: Record<ClubId, Club> = {
   driver: { id: 'driver', name: 'Driver', carry: [110, 340], loft: 15, keep: 0.22, sweet: 0.05, curve: 26, push: 0.06, check: 5, release: 0.05, bend: 28 },
   iron: { id: 'iron', name: 'Iron', carry: [50, 180], loft: 30, keep: 0.18, sweet: 0.08, curve: 20, push: 0.04, check: 12, release: 0.08, bend: 18 },
   wedge: { id: 'wedge', name: 'Wedge', carry: [8, 90], loft: 52, keep: 0.08, sweet: 0.13, curve: 8, push: 0.02, check: 15, release: 0.14, bend: 9 },
+  // the chipper: a low runner that lands soft and rolls out, with a quick needle and a forgiving gold zone
+  chip: { id: 'chip', name: 'Chip', carry: [3, 32], loft: 30, keep: 0.24, sweet: 0.15, curve: 6, push: 0.02, check: 4, release: 0.18, bend: 6 },
   putter: { id: 'putter', name: 'Putter', carry: [1.5, 34], loft: 0, keep: 1, sweet: 1, curve: 0, push: 0.04, check: 0, release: 0, bend: 0 },
 };
 
-export const BAG: ClubId[] = ['driver', 'iron', 'wedge', 'putter'];
+export const BAG: ClubId[] = ['driver', 'iron', 'wedge', 'chip', 'putter'];
 
 export const carryOf = (club: ClubId, power: number, boost = 1) => {
   const c = CLUBS[club].carry;
