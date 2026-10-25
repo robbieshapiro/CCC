@@ -91,8 +91,9 @@ export function lockers(snap: Snapshot) {
     camera.aspect = w / h;
     camera.fov = w < h ? 60 : 46;
     camera.updateProjectionMatrix();
-    // wide screens see the whole row at once; narrow ones walk along it
-    const halfW = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect * 34;
+    // wide screens see the whole row at once; narrow ones walk along it. Measured where the members stand
+    // (21.5 ft from the wide camera), not at the lockers behind them, or the end members get cut off
+    const halfW = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect * 21.5;
     wide = halfW * 2 > hi - lo + 8;
     want = clamp(want);
   };
