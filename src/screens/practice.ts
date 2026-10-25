@@ -38,14 +38,10 @@ export function facility() {
       <p class="eyebrow">Practice facility</p>
       <h1>Warm up, or work on it</h1>
       <p class="muted">Nothing here goes on the board. Same turf and greens as the Caldera.</p>
-      <section class="panel facility-area">
-        <div><h2>Driving range</h2><p class="muted">Flags at 60, 120, 180, 240 and 300 ft. See your carry and total after every shot.</p></div>
-        <a class="btn" href="#/facility/range">Join the range</a>
-      </section>
-      <section class="panel facility-area">
-        <div><h2>Short game</h2><p class="muted">A quick practice green. Chip, pitch, splash out of the bunker, and putt from 6, 15 and 28 ft.</p></div>
-        <a class="btn" href="#/facility/shortgame">Join the short game</a>
-      </section>
+      <div class="facility-choice">
+        <a class="panel" href="#/facility/range"><h2>Driving range</h2><p class="muted">Flags from 60 to 300 ft</p></a>
+        <a class="panel" href="#/facility/shortgame"><h2>Short game</h2><p class="muted">Chip, pitch, bunker and putt</p></a>
+      </div>
       <p><a class="link" href="#/">Back to the club</a></p>
     </main>`);
 }
@@ -59,7 +55,7 @@ export function facilityPanel() {
         <h2>Range &amp; short game</h2>
         <p class="muted">Hit balls, chip and putt. Nothing goes on the board.</p>
       </div>
-      <a class="btn" href="#/facility">Go practise</a>
+      <a class="btn" href="#/facility">Hit the range</a>
     </section>`;
 }
 
