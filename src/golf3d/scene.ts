@@ -117,6 +117,39 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
   return t;
 }
 
+// A small tile of fine grain: blades of turf and grit, seamless, laid over the ground every 7 ft.
+let detailTex: THREE.CanvasTexture | null = null;
+function detailTexture() {
+  if (detailTex) return detailTex;
+  const N = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d')!;
+  g.fillStyle = 'rgb(128,128,128)';
+  g.fillRect(0, 0, N, N);
+  const rng = makeRng('detail');
+  // short strokes, light and dark, wrapped at the edges so the tile repeats without a seam
+  for (let i = 0; i < 9000; i++) {
+    const x = rng.next() * N;
+    const y = rng.next() * N;
+    const v = Math.round(70 + rng.next() * 120);
+    g.strokeStyle = `rgba(${v},${v},${v},0.55)`;
+    g.lineWidth = 0.6 + rng.next() * 0.8;
+    const a = -Math.PI / 2 + (rng.next() - 0.5) * 0.9;
+    const l = 2 + rng.next() * 5;
+    for (const [ox, oy] of [[0, 0], [-N, 0], [0, -N], [-N, -N]]) {
+      g.beginPath();
+      g.moveTo(x + ox, y + oy);
+      g.lineTo(x + ox + Math.cos(a) * l, y + oy + Math.sin(a) * l);
+      g.stroke();
+    }
+  }
+  detailTex = new THREE.CanvasTexture(c);
+  detailTex.wrapS = detailTex.wrapT = THREE.RepeatWrapping;
+  detailTex.anisotropy = 16;
+  return detailTex;
+}
+
 function terrainMesh(h: Hole) {
   const { x0, y0, x1, y1 } = h.bounds;
   // about 150k vertices whatever the hole's size: 1 ft on small holes, a little coarser on long ones
@@ -125,7 +158,7 @@ function terrainMesh(h: Hole) {
   const ny = Math.ceil((y1 - y0) / S) + 1;
   const pos = new Float32Array(nx * ny * 3);
   const bed = new THREE.Color('#58705a');
-  const beds: Record<string, THREE.Color> = { lake: bed, sea: new THREE.Color('#2f5560'), lava: new THREE.Color('#5a1d0e') };
+  const beds: Record<string, THREE.Color> = { lake: bed, sea: new THREE.Color('#2f5560'), lava: new THREE.Color('#1a0d09') };
   const cliff = h.theme === 'volcanic' ? BASALT : ROCK;
   for (let j = 0; j < ny; j++)
     for (let i = 0; i < nx; i++) {
@@ -170,11 +203,104 @@ function terrainMesh(h: Hole) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx);
   geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.92, map }));
+  const material = new THREE.MeshStandardMaterial({ roughness: 0.92, map });
+  // tour courses: a fine grain tiled over the painted ground, so turf and rock stay crisp right up close
+  if (h.tour) {
+    const detail = detailTexture();
+    material.onBeforeCompile = (sh) => {
+      sh.uniforms.detailMap = { value: detail };
+      sh.uniforms.detailRepeat = { value: new THREE.Vector2((x1 - x0) / 7, (y1 - y0) / 7) };
+      sh.fragmentShader = 'uniform sampler2D detailMap;\nuniform vec2 detailRepeat;\n' + sh.fragmentShader.replace(
+        '#include <map_fragment>',
+        '#include <map_fragment>\ndiffuseColor.rgb *= 0.84 + 0.32 * texture2D(detailMap, vMapUv * detailRepeat).r;',
+      );
+    };
+  }
+  const m = new THREE.Mesh(geo, material);
   m.receiveShadow = true;
   let low = Infinity;
   for (let k = 1; k < pos.length; k += 3) low = Math.min(low, pos[k]);
   return { mesh: m, low };
+}
+
+// Lava: cooled basalt plates, near black, split by thin cracks of molten rock, with the odd pool where the crust has
+// broken open. Two tiling textures (the crust, and the glow) cover LAVA_TILE ft each; built once and shared.
+const LAVA_TILE = 90;
+let lavaTex: { map: THREE.CanvasTexture; glow: THREE.CanvasTexture } | null = null;
+function lavaTextures() {
+  if (lavaTex) return lavaTex;
+  const N = 1024;
+  const G = 8; // cells across the tile, one plate each: about 11 ft
+  const rng = makeRng('lava');
+  const pts: V2[] = [];
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) pts.push({ x: (i + 0.05 + rng.next() * 0.9) / G, y: (j + 0.05 + rng.next() * 0.9) / G });
+  const shade = pts.map(() => rng.next());
+  // smooth noise that tiles (whole numbers of waves across the tile), to bend the plates and vary the heat
+  const wave = (u: number, v: number, f: number, o: number) => Math.sin((u * f + o) * Math.PI * 2) * Math.sin((v * f + o * 1.7) * Math.PI * 2);
+  const crust = document.createElement('canvas');
+  const glow = document.createElement('canvas');
+  crust.width = crust.height = glow.width = glow.height = N;
+  const ci = crust.getContext('2d')!.createImageData(N, N);
+  const gi = glow.getContext('2d')!.createImageData(N, N);
+  for (let y = 0; y < N; y++)
+    for (let x = 0; x < N; x++) {
+      const u0 = x / N;
+      const v0 = y / N;
+      // warp the space first, so the plate edges wander instead of running straight
+      const u = u0 + wave(u0, v0, 3, 0.2) * 0.018 + wave(u0, v0, 11, 0.6) * 0.006;
+      const v = v0 + wave(v0, u0, 3, 0.45) * 0.018 + wave(v0, u0, 13, 0.1) * 0.006;
+      // the nearest two plate centres, wrapping so the tile repeats seamlessly
+      const cx = Math.floor(u * G);
+      const cy = Math.floor(v * G);
+      let d1 = 9;
+      let d2 = 9;
+      let near = 0;
+      for (let dj = -1; dj <= 1; dj++)
+        for (let di = -1; di <= 1; di++) {
+          const ii = (((cx + di) % G) + G) % G;
+          const jj = (((cy + dj) % G) + G) % G;
+          const p = pts[jj * G + ii];
+          const d = Math.hypot(u - (p.x + (cx + di - ii) / G), v - (p.y + (cy + dj - jj) / G));
+          if (d < d1) {
+            d2 = d1;
+            d1 = d;
+            near = jj * G + ii;
+          } else if (d < d2) d2 = d;
+        }
+      const edge = (d2 - d1) * G; // 0 on a crack, ~0.5 in the middle of a plate
+      // some cracks run hot, most have crusted over to a dull red; the odd one has closed up
+      const run = 0.5 + wave(u0, v0, 5, 0.35) * 0.35 + wave(u0, v0, 9, 0.8) * 0.15;
+      const width = 0.012 + Math.max(0, run) * 0.035;
+      const crack = Math.max(0, 1 - edge / width);
+      const pool = Math.max(0, (wave(u0, v0, 2, 0.1) * 0.6 + wave(u0, v0, 3, 0.55) * 0.4 - 0.72) / 0.22);
+      const heat = Math.min(1, crack ** 1.4 * (0.35 + run * 0.8) + pool * 0.9);
+      // fine pitting on the crust
+      const grit = wave(u0, v0, 61, 0.3) * 0.5 + wave(u0, v0, 97, 0.9) * 0.5;
+      const mott = 0.7 + shade[near] * 0.4 + grit * 0.12 + edge * 0.5;
+      const k = (y * N + x) * 4;
+      // crust: near-black basalt, a little warm where the heat comes through
+      const base = 13 * mott;
+      ci.data[k] = base + 40 * heat;
+      ci.data[k + 1] = base * 0.92 + 10 * heat;
+      ci.data[k + 2] = base * 0.88;
+      ci.data[k + 3] = 255;
+      // glow: deep red at the edge of a crack, orange, then yellow-white only in the hottest cores
+      gi.data[k] = 255 * Math.min(1, heat * 1.5);
+      gi.data[k + 1] = 255 * Math.max(0, heat - 0.45) * 1.1;
+      gi.data[k + 2] = 255 * Math.max(0, heat - 0.88) * 2.5;
+      gi.data[k + 3] = 255;
+    }
+  crust.getContext('2d')!.putImageData(ci, 0, 0);
+  glow.getContext('2d')!.putImageData(gi, 0, 0);
+  const tex = (c: HTMLCanvasElement) => {
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 16;
+    return t;
+  };
+  lavaTex = { map: tex(crust), glow: tex(glow) };
+  return lavaTex;
 }
 
 // Each lake is a flat sheet at its level; the banks hide what's under them. The sea rides its tide; lava glows.
@@ -206,23 +332,21 @@ function waterMesh(h: Hole, w: Water) {
   geo.computeVertexNormals();
   const look = w.look ?? 'lake';
   if (look === 'lava') {
-    // cooling crust over the molten flow: dark plates with hot seams between them
-    const hot = new THREE.Color('#ffb03a');
-    const crust = new THREE.Color('#3b2620');
-    const col: number[] = [];
-    const c = new THREE.Color();
-    for (let i = 0; i < verts.length; i += 3) {
-      const x = verts[i];
-      const y = -verts[i + 2];
-      const n = Math.sin(x * 0.21 + Math.sin(y * 0.13) * 2) * Math.sin(y * 0.17 + Math.sin(x * 0.11) * 2);
-      c.copy(hot).lerp(crust, Math.min(1, Math.max(0, n * 1.8 + 0.35)));
-      col.push(c.r, c.g, c.b);
-    }
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    // the crust and its cracks tile across the flow
+    const uv: number[] = [];
+    for (let i = 0; i < verts.length; i += 3) uv.push(verts[i] / LAVA_TILE, -verts[i + 2] / LAVA_TILE);
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   }
   const material =
     look === 'lava'
-      ? new THREE.MeshStandardMaterial({ vertexColors: true, emissive: new THREE.Color('#a8300c'), emissiveIntensity: 0.9, roughness: 0.7 })
+      ? new THREE.MeshStandardMaterial({
+          map: lavaTextures().map,
+          emissiveMap: lavaTextures().glow,
+          emissive: new THREE.Color('#ff6a1c'),
+          emissiveIntensity: 1.8,
+          roughness: 0.95,
+          metalness: 0,
+        })
       : new THREE.MeshStandardMaterial({
           color: look === 'sea' ? '#2b6d84' : '#3a6f80',
           roughness: 0.05,
@@ -314,6 +438,7 @@ export function buildWorld(h: Hole, number: number): World {
     const water = waterMesh(h, w);
     if (!water) continue;
     root.add(water);
+    if (w.look === 'lava') root.add(lavaSmoke(h, w, anim));
     const posAttr = water.geometry.attributes.position as THREE.BufferAttribute;
     const base = Float32Array.from(posAttr.array as Float32Array);
     const lava = w.look === 'lava';
@@ -322,11 +447,18 @@ export function buildWorld(h: Hole, number: number): World {
       // the whole sheet rides the tide (or the swell of the lava); ripples on top
       water.position.y = levelOf(w, clock) - w.level;
       const a = posAttr.array as Float32Array;
-      const speed = lava ? 0.5 : 1.6;
-      const amp = lava ? 0.12 : 0.06;
+      const speed = lava ? 0.35 : 1.6;
+      const amp = lava ? 0.05 : 0.06;
       for (let i = 0; i < a.length; i += 3) a[i + 1] = base[i + 1] + Math.sin(clock * speed + base[i] * 0.35 + base[i + 2] * 0.22) * amp;
       posAttr.needsUpdate = true;
-      if (lava) material.emissiveIntensity = 0.8 + Math.sin(clock * 1.3) * 0.25;
+      // the cracks breathe, slowly and not quite in time
+      if (lava) {
+        // the flow creeps along
+        const t = lavaTextures();
+        t.map.offset.set(clock * 0.0025, clock * 0.001);
+        t.glow.offset.copy(t.map.offset);
+      }
+      if (lava) material.emissiveIntensity = 1.75 + Math.sin(clock * 0.9) * 0.3 + Math.sin(clock * 2.3) * 0.12;
     });
   }
 
@@ -654,6 +786,46 @@ export function buildWorld(h: Hole, number: number): World {
 }
 
 // A steam vent: a ring of dark rock with a wisp coming off it and, every so often, a tall plume. Scenery only.
+// Smoke off the lava: soft grey plumes that rise, spread and thin out, a few to each flow.
+let smokeTex: THREE.CanvasTexture | null = null;
+function lavaSmoke(h: Hole, w: Water, anim: ((c: number, dt: number) => void)[]) {
+  if (!smokeTex) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(70,64,60,0.9)');
+    grad.addColorStop(0.5, 'rgba(70,64,60,0.45)');
+    grad.addColorStop(1, 'rgba(70,64,60,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    smokeTex = new THREE.CanvasTexture(c);
+  }
+  const xs = w.poly.map((p) => p.x);
+  const ys = w.poly.map((p) => p.y);
+  const area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+  const rng = makeRng(`smoke:${h.id}:${xs[0]}:${ys[0]}`);
+  const g = new THREE.Group();
+  const n = Math.min(14, Math.max(3, Math.round(area / 4000)));
+  for (let i = 0, tries = 0; i < n && tries < 400; tries++) {
+    const p = { x: Math.min(...xs) + rng.next() * (Math.max(...xs) - Math.min(...xs)), y: Math.min(...ys) + rng.next() * (Math.max(...ys) - Math.min(...ys)) };
+    if (!inPoly(p, w.poly) || !inPoly(p, h.border) || heightAt(h, p.x, p.y) > w.level) continue;
+    i++;
+    const m = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0 });
+    const sp = new THREE.Sprite(m);
+    g.add(sp);
+    const period = 9 + rng.next() * 6;
+    const phase = rng.next() * period;
+    anim.push((clock) => {
+      const k = ((clock + phase) % period) / period;
+      sp.position.set(p.x + Math.sin(clock * 0.2 + i) * 3 + k * 6, w.level + 1 + k * 30, -p.y - k * 4);
+      sp.scale.setScalar(6 + k * 22);
+      m.opacity = Math.sin(k * Math.PI) * 0.4;
+    });
+  }
+  return g;
+}
+
 function steamVent(anim: ((c: number, dt: number) => void)[], phase: number) {
   const g = new THREE.Group();
   const ring = mesh(new THREE.TorusGeometry(2.2, 0.5, 6, 14), mat('#2a2523'));
