@@ -1,4 +1,4 @@
-import { api, getSession } from './api';
+import { api, getSession, setSession } from './api';
 import type { Session, Snapshot } from './api/types';
 import { processSnapshot } from './nudges';
 
@@ -14,7 +14,10 @@ export function requireSession(): Session {
 }
 
 export async function refresh(): Promise<Snapshot> {
-  const snap = await api.snapshot(requireSession());
+  const session = requireSession();
+  const snap = await api.snapshot(session);
+  // a club renamed since this device signed in: keep the saved name (and the club switcher) up to date
+  if (snap.groupName && snap.groupName !== session.groupName) setSession({ ...session, groupName: snap.groupName });
   current = snap;
   processSnapshot(snap);
   for (const fn of listeners) fn(snap);
