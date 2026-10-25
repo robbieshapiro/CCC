@@ -527,17 +527,16 @@ td.who a:hover span { text-decoration: underline; }
 
 /* what's different before a practice round */
 .practice-notes {
-  position: fixed; inset: 0; z-index: 30; display: grid; justify-items: center; align-items: start;
-  padding: max(16px, env(safe-area-inset-top, 0px)) 16px 0;
-  background: rgba(15, 42, 31, 0.6); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  position: fixed; inset: 0; z-index: 50; display: flex; justify-content: center; align-items: center;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px));
+  background: rgba(15, 42, 31, 0.6);
 }
-.practice-notes .summary-card { position: relative; max-width: 460px; margin: auto 0; text-align: left; justify-items: stretch; padding-bottom: 0; }
-.practice-notes .notes-close { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
-.practice-notes .notes-close:hover, .practice-notes .notes-close:focus-visible { background: rgba(0, 0, 0, 0.06); outline: none; }
+/* the card never grows past the screen: its notes scroll inside it, and the button sits below them */
+.notes-card { display: flex; flex-direction: column; width: min(460px, 100%); max-height: 100%; background: var(--paper); color: var(--ink); border-radius: 8px; border-top: 4px solid var(--gold); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); overflow: hidden; }
+.notes-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 20px 20px 8px; }
+.notes-body h2 { margin: 4px 0; }
+.notes-body p { margin: 0 0 4px; }
+.notes-foot { flex: 0 0 auto; padding: 12px 20px 16px; border-top: 1px solid var(--line); }
+.notes-foot .btn { width: 100%; }
 .practice-notes h3 { margin: 14px 0 4px; font-family: var(--serif); color: var(--green); }
 .practice-notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
-.practice-notes .summary-actions {
-  position: sticky; bottom: 0; margin: 8px -20px 0; padding: 12px 20px max(14px, env(safe-area-inset-bottom, 0px));
-  flex-wrap: nowrap; background: var(--paper); border-radius: 0 0 8px 8px; box-shadow: 0 -10px 14px -6px var(--paper);
-}
-.practice-notes .summary-actions .btn { flex: 1 1 0; min-width: 0; padding-left: 10px; padding-right: 10px; white-space: nowrap; }

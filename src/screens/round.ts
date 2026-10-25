@@ -125,26 +125,28 @@ export function practice(snap: Snapshot, next: Course) {
   render(`<main class="narrow"></main>`);
   const sheet = document.createElement('div');
   sheet.className = 'practice-notes';
+  // a column the height of the screen: the notes scroll, the one button is always there at the bottom
   sheet.innerHTML = `
-    <div class="summary-card">
-      <button class="notes-close" data-back aria-label="Close">✕</button>
-      <p class="eyebrow">Practice · ${n} holes · not counted</p>
-      <h2>${esc(next.name)}</h2>
-      <p class="muted">It plays differently from the Highlands. Two things to know before you tee off.</p>
-      <h3>The swing meter</h3>
-      <ul>
-        <li>It stands beside your golfer, and the club swings with it.</li>
-        <li>Tap once to start the backswing, again on your gold line to set the power, and again in the gold at the bottom to strike it.</li>
-        <li>You have more time to find the gold than on the Highlands.</li>
-        <li>Righty or lefty? Set it under Gear on your member card. The meter sits on the left for righties, the right for lefties.</li>
-      </ul>
-      <h3>Putting</h3>
-      <ul>
-        <li>There is no aim line. Judge the pace off the power bar as you pull back.</li>
-        <li>Read the break from the grid on the green: amber is above your ball, blue is below.</li>
-        <li>Firm putts can hop the hole. Let it die in.</li>
-      </ul>
-      <div class="summary-actions"><button class="btn" data-go>Continue to round</button><button class="btn ghost" data-back>Not now</button></div>
+    <div class="notes-card">
+      <div class="notes-body">
+        <p class="eyebrow">Practice · ${n} holes · not counted</p>
+        <h2>${esc(next.name)}</h2>
+        <p class="muted">It plays differently from the Highlands.</p>
+        <h3>The swing meter</h3>
+        <ul>
+          <li>It stands beside your golfer, and the club swings with it.</li>
+          <li>Tap to start the backswing, tap on your gold line for power, tap in the gold at the bottom to strike.</li>
+          <li>More time to find the gold than on the Highlands.</li>
+          <li>Righty or lefty? Set it under Gear on your member card.</li>
+        </ul>
+        <h3>Putting</h3>
+        <ul>
+          <li>No aim line: judge the pace off the power bar.</li>
+          <li>Read the break from the grid: amber is above your ball, blue below.</li>
+          <li>Firm putts can hop the hole. Let it die in.</li>
+        </ul>
+      </div>
+      <div class="notes-foot"><button class="btn" data-go>Got it, let's play</button></div>
     </div>`;
   document.body.appendChild(sheet);
   const close = () => sheet.remove();
@@ -152,15 +154,6 @@ export function practice(snap: Snapshot, next: Course) {
     close();
     void round(snap, { course: next, holes: n, practice: true });
   };
-  // the ✕, Not now, or a tap on the dimmed backdrop all take you back to the club
-  const back = () => {
-    close();
-    navigate('#/');
-  };
-  sheet.querySelectorAll<HTMLButtonElement>('[data-back]').forEach((b) => (b.onclick = back));
-  sheet.addEventListener('click', (e) => {
-    if (e.target === sheet) back();
-  });
   // leaving the page by any other way takes the sheet with it
   window.addEventListener('hashchange', close, { once: true });
 }
