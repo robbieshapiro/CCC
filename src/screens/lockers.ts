@@ -76,14 +76,17 @@ export function lockers(snap: Snapshot) {
   });
 
   // the camera slides along the row; it starts in front of your own locker
+  // measured from the members themselves: a small club stands at the first few lockers, off to one side
   const xs = row.slice(0, members.length).map((l) => OX + l.x);
-  const lo = Math.min(...xs, OX);
-  const hi = Math.max(...xs, OX);
+  const lo = Math.min(...xs);
+  const hi = Math.max(...xs);
+  const mid = (lo + hi) / 2;
   const mine = members.findIndex((p) => p.id === snap.me);
-  let camX = mine >= 0 ? xs[mine] : OX;
+  let camX = mine >= 0 ? xs[mine] : mid;
   let want = camX;
-  let wide = true;
-  const clamp = (x: number) => (wide ? OX : Math.max(lo, Math.min(hi, x)));
+  let wide = false; // set by resize(), which centres the view when the whole row fits
+  // you can always drag along the row; when it all fits, the view starts in the middle of it
+  const clamp = (x: number) => Math.max(lo, Math.min(hi, x));
   const resize = () => {
     const w = host.clientWidth || innerWidth;
     const h = host.clientHeight || 360;
@@ -94,7 +97,9 @@ export function lockers(snap: Snapshot) {
     // wide screens see the whole row at once; narrow ones walk along it. Measured where the members stand
     // (21.5 ft from the wide camera), not at the lockers behind them, or the end members get cut off
     const halfW = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect * 21.5;
-    wide = halfW * 2 > hi - lo + 8;
+    const fits = halfW * 2 > hi - lo + 8;
+    if (fits && !wide) camX = want = mid;
+    wide = fits;
     want = clamp(want);
   };
   resize();
