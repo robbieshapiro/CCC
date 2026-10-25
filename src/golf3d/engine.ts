@@ -226,6 +226,19 @@ export class Course3D {
     host.appendChild(this.renderer.domElement);
     this.overlay = html(`<div class="g3-ui"></div>`);
     host.appendChild(this.overlay);
+    // If the device drops the graphics (low memory, often on iPad), say so rather than sit on a blank screen.
+    // three.js redraws on its own when they come back; if they don't, a reload brings the club back.
+    const dark = html(`<div class="g3-dark" hidden><p>The course went dark.</p><button class="btn">Reload</button></div>`);
+    dark.querySelector('button')!.addEventListener('click', () => location.reload());
+    host.appendChild(dark);
+    let darkTimer = 0;
+    this.renderer.domElement.addEventListener('webglcontextlost', () => {
+      darkTimer = window.setTimeout(() => (dark.hidden = false), 2500);
+    });
+    this.renderer.domElement.addEventListener('webglcontextrestored', () => {
+      clearTimeout(darkTimer);
+      dark.hidden = true;
+    });
 
     this.sky();
     this.scene.add(new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25));

@@ -114,6 +114,7 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 16;
+  t.userData.ownCanvas = true; // this hole's alone: its canvas is let go when the hole is
   return t;
 }
 
@@ -776,11 +777,25 @@ export function buildWorld(h: Hole, number: number): World {
     root,
     occluders,
     update: (clock, dt) => anim.forEach((f) => f(clock, dt)),
+    // Let go of everything the hole drew with, textures included. The ground alone can be a 4096 px image, and
+    // phones and iPads have little graphics memory: keep a few old holes and the next one comes out scrambled or blank.
+    // Shared materials and textures are fine to dispose too; three.js uploads them again the next time they're drawn.
     dispose: () => {
+      const textures = new Set<THREE.Texture>();
       root.traverse((o) => {
         const m = o as THREE.Mesh;
         m.geometry?.dispose();
+        for (const mat of ([] as (THREE.Material | undefined)[]).concat(m.material)) {
+          if (!mat) continue;
+          for (const v of Object.values(mat)) if (v instanceof THREE.Texture) textures.add(v);
+          mat.dispose();
+        }
       });
+      for (const t of textures) {
+        t.dispose();
+        // and the canvas behind it: iPads cap the total canvas memory a page can hold
+        if (t.userData.ownCanvas && t.image instanceof HTMLCanvasElement) t.image.width = t.image.height = 0;
+      }
     },
   };
 }
