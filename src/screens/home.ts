@@ -129,7 +129,7 @@ function previewPanel(admin: boolean, month: string) {
   const list = upcoming(month);
   if (!admin || !list.length) return '';
   return `
-    <section class="panel invite-maker">
+    <section class="panel admin invite-maker">
       <div><h2>Preview the next course</h2><p class="muted">Only you can see this. Every hole, and preview rounds are not posted to the board.</p></div>
       ${list.map((c) => `<a class="btn" href="#/preview/${c.id}">Play all ${c.holes.length} holes of ${esc(c.name)}</a><p class="fine">${esc(c.tagline)}</p>`).join('')}
     </section>`;

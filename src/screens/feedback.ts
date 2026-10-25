@@ -43,7 +43,7 @@ export function openFeedback(context: string, host: HTMLElement = document.body)
 // The admin's inbox on the home page.
 export function feedbackPanel(admin: boolean) {
   if (!admin) return '';
-  return `<section class="panel feedback-panel"><div class="board-head"><h2>Member feedback</h2><span id="fb-count"></span></div><ul class="feedback-list" id="fb-list"><li class="muted">Loading…</li></ul></section>`;
+  return `<section class="panel admin feedback-panel"><div class="board-head"><h2>Member feedback</h2><span id="fb-count"></span></div><ul class="feedback-list" id="fb-list"><li class="muted">Loading…</li></ul></section>`;
 }
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });

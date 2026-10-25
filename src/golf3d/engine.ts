@@ -1175,7 +1175,7 @@ export class Course3D {
     sheet.className = 'g3-holes';
     const row = (n: string, i: number) =>
       `<button data-i="${i}"${i + 1 === this.number ? ' class="on"' : ''}><b>${i + 1}</b>${n}${i + 1 === this.number ? '<em>Restart</em>' : ''}</button>`;
-    sheet.innerHTML = `<div class="g3-holes-card"><small>Go to hole</small>${m.names.map(row).join('')}</div>`;
+    sheet.innerHTML = `<div class="g3-holes-card admin"><small>Go to hole</small>${m.names.map(row).join('')}</div>`;
     sheet.onclick = (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-i]');
       sheet.remove();

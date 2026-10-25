@@ -184,7 +184,7 @@ export async function invite(id: string) {
 export function inviteMaker(admin: boolean) {
   if (!admin) return '';
   return `
-    <section class="panel invite-maker">
+    <section class="panel admin invite-maker">
       <div><h2>Put up a friend</h2><p class="muted">Each invitation is a private link with a code that works once, for that person only.</p></div>
       <form id="invite-form" class="invite-form">
         <input id="invite-name" maxlength="20" placeholder="Their first name" autocomplete="off" aria-label="Friend's name" required />

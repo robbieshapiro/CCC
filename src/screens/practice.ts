@@ -69,7 +69,7 @@ const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'sh
 // For the admin: who has been practising this month. Their own sessions are left out.
 export function practiceLogPanel(admin: boolean) {
   if (!admin) return '';
-  return `<section class="panel practice-log"><div class="board-head"><h2>Practice log</h2><span class="muted">This month, members only</span></div><div id="pl-body"><p class="muted">Loading…</p></div></section>`;
+  return `<section class="panel admin practice-log"><div class="board-head"><h2>Practice log</h2><span class="muted">This month, members only</span></div><div id="pl-body"><p class="muted">Loading…</p></div></section>`;
 }
 
 export async function bindPracticeLog() {
