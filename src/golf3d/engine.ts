@@ -107,24 +107,6 @@ function settleTime(r: Result) {
   return Math.min(r.duration, f[i].t);
 }
 
-// A soft halo for the ball in slow motion.
-function ballGlow() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const g = c.getContext('2d')!;
-  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(0.25, 'rgba(255,244,210,0.8)');
-  grad.addColorStop(1, 'rgba(255,230,160,0)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 64, 64);
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthTest: false, transparent: true, fog: false }));
-  s.scale.setScalar(3.2);
-  s.renderOrder = 11;
-  s.visible = false;
-  return s;
-}
-
 export class Course3D {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -139,7 +121,6 @@ export class Course3D {
   private clock = 0; // hole clock: drives movers, matches the physics
   private slow = 0; // seconds of slow frames, for the automatic quality drop
 
-  private glow = ballGlow();
   private ballSink = 0; // how far the drawn ball is lowered to sit a smaller ball on the ground
   private grid: THREE.LineSegments | null = null; // the contour grid laid over a tour green while you putt
   private holesInRound = 3;
@@ -229,7 +210,6 @@ export class Course3D {
     pm.dispose();
 
     this.ball.castShadow = true;
-    this.ball.add(this.glow);
     this.scene.add(this.ball);
     this.golfer = new Golfer(specOf(avatar));
     this.golfer.holdClub('driver');
@@ -956,7 +936,7 @@ export class Course3D {
     const s = this.shot!;
     const slow = !!s.slow && s.t >= s.slow.from && s.t < s.slow.to;
     this.focus(slow);
-    s.t += dt * (slow ? 0.28 : 1);
+    s.t += dt * (slow ? 0.4 : 1);
     const f = s.r.frames;
     while (s.next < s.r.sounds.length && s.r.sounds[s.next].t <= s.t) {
       const k = s.r.sounds[s.next++].s;
@@ -1008,17 +988,9 @@ export class Course3D {
     }
   }
 
-  // Tiger vision: the world falls into shadow round the ball, and the ball glows
+  // Tiger vision: the edges of the screen fall into shadow
   private focus(on: boolean) {
-    this.glow.visible = on;
-    const el = this.overlay.querySelector('[data-focus]') as HTMLElement | null;
-    if (!el) return;
-    el.classList.toggle('on', on);
-    if (on) {
-      const v = this.ball.position.clone().project(this.camera);
-      el.style.setProperty('--fx', `${((v.x + 1) / 2) * 100}%`);
-      el.style.setProperty('--fy', `${((1 - v.y) / 2) * 100}%`);
-    }
+    this.overlay.querySelector('[data-focus]')?.classList.toggle('on', on);
   }
 
   private endShot() {
