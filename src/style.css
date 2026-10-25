@@ -553,10 +553,11 @@ td.who a:hover span { text-decoration: underline; }
 
 /* the practice facility, and the admin's practice log */
 .facility-panel { border-top-color: var(--gold); }
-.facility .facility-area { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin: 12px 0; }
-.facility .facility-area > div { flex: 1 1 240px; }
-.facility .facility-area h2 { margin: 0 0 4px; }
-.facility .facility-area p { margin: 0; }
+.facility-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; }
+.facility-choice a { display: grid; gap: 4px; border-top: 3px solid var(--gold); transition: border-color 0.15s, transform 0.15s; }
+.facility-choice a:hover, .facility-choice a:focus-visible { border-color: var(--green); transform: translateY(-1px); }
+.facility-choice h2 { margin: 0; color: var(--green); }
+.facility-choice p { margin: 0; }
 .practice-log { border-top: 3px solid var(--gold); }
 .practice-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 6px 0 10px; }
 .practice-table th, .practice-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; }
