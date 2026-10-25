@@ -8,6 +8,7 @@ import { GAME_TZ, monthClosesAt } from '../day';
 import { hostChip, REGINALD, type Mood } from '../host';
 import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
 import { bindPracticeLog, facilityPanel, practiceLogPanel } from './practice';
+import { activityPanel, bindActivity } from './activity';
 import { bindInviteMaker, inviteMaker } from './invite';
 import { bindNotices, noticeComposer, noticesStrip } from './notices';
 import { board, monthName, myBest, toParLabel } from '../standings';
@@ -105,6 +106,7 @@ export function home(snap: Snapshot) {
       </section>
       ${noticeComposer(!!snap.admin)}
       ${previewPanel(!!snap.admin, snap.month)}
+      ${activityPanel(!!snap.admin)}
       ${practiceLogPanel(!!snap.admin)}
       ${inviteMaker(!!snap.admin)}
       ${feedbackPanel(!!snap.admin)}
@@ -116,6 +118,7 @@ export function home(snap: Snapshot) {
   void bindInviteMaker();
   void bindFeedbackPanel();
   void bindPracticeLog();
+  void bindActivity();
   void bindNotices();
   document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {

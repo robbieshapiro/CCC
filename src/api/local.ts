@@ -5,14 +5,14 @@ import { courseFor, monthOf } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
-import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type PracticeKind, type PracticeReport, type Round } from './types';
+import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
 type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[] };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string> };
 
 const KEY = 'ccc-local-db';
 
@@ -281,6 +281,44 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
       .slice(0, 20)
       .map((x) => ({ name: name(x.playerId), kind: x.kind, startedAt: x.startedAt, endedAt: x.endedAt, shots: x.shots }));
     return { kinds, members, recent };
+  },
+
+  async touch(session, kind) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const day = todayInGameTz();
+    (db.seen ??= {})[me.id] = new Date().toISOString();
+    const days = (db.days ??= []);
+    let d = days.find((x) => x.playerId === me.id && x.day === day);
+    if (!d) days.push((d = { playerId: me.id, day, visits: 0, lockers: 0 }));
+    if (kind === 'visit') d.visits++;
+    else d.lockers++;
+    save(db);
+  },
+
+  async activityReport(session): Promise<MemberActivity[]> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see member activity.');
+    const month = monthOf(todayInGameTz());
+    return db.players
+      .filter((p) => p.groupId === me.groupId && !p.admin)
+      .map((p) => {
+        const rounds = db.rounds.filter((r) => r.playerId === p.id);
+        const practice = (db.practice ?? []).filter((x) => x.playerId === p.id);
+        const days = (db.days ?? []).filter((x) => x.playerId === p.id && x.day.startsWith(month));
+        const lastSeen = [db.seen?.[p.id], ...rounds.map((r) => r.createdAt), ...practice.map((x) => x.startedAt)].filter(Boolean).sort().pop() ?? null;
+        const active = new Set([...days.map((x) => x.day), ...rounds.filter((r) => r.month === month).map((r) => todayInGameTz(new Date(r.createdAt))), ...practice.filter((x) => x.startedAt.startsWith(month)).map((x) => todayInGameTz(new Date(x.startedAt)))]);
+        return {
+          name: p.name,
+          lastSeen,
+          days: active.size,
+          rounds: rounds.filter((r) => r.month === month).length,
+          practice: practice.filter((x) => x.startedAt.startsWith(month)).length,
+          lockers: days.reduce((a, x) => a + x.lockers, 0),
+        };
+      })
+      .sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? '') || a.name.localeCompare(b.name));
   },
 
   // Adds Sean, Danny and PJ with a few rounds this month and a past champion.

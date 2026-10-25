@@ -13,7 +13,9 @@ import { facility } from './screens/practice';
 import { courseById, nextCourse, upcoming } from './golf3d/courses';
 import { leaveLockers, lockers } from './screens/lockers';
 import { leaveMember, member } from './screens/member';
+import { checkIn } from './screens/activity';
 import { onSnapshot, refresh, startPolling } from './state';
+import { store } from './storage';
 import { esc, muteButton, render } from './ui';
 
 let route = '';
@@ -39,6 +41,13 @@ async function router() {
     routing = true;
     const s = await refresh().finally(() => (routing = false));
     const me = s.players.find((p) => p.id === s.me);
+    // the admin's own comings and goings stay out of the activity log and Vercel's numbers
+    if (s.admin) store.set('ccc-admin', '1');
+    else {
+      store.remove('ccc-admin');
+      checkIn('visit');
+      if (page === 'lockers') checkIn('locker');
+    }
     // new members get the tour first; it lives at #/ for them, so mark the route or the minute-by-minute
     // refresh would redraw the home page over the top of it
     if (page === 'welcome' || (me && !me.avatar.onboarded && page !== 'card')) {
@@ -93,7 +102,7 @@ const screen = () => {
   const [page, arg] = location.hash.replace(/^#\/?/, '').split('/');
   return `/${page || ''}${page === 'facility' && arg ? `/${arg}` : ''}`;
 };
-inject({ disableAutoTrack: true, beforeSend: (e) => ({ ...e, url: location.origin + screen() }) });
+inject({ disableAutoTrack: true, beforeSend: (e) => (store.get('ccc-admin') ? null : { ...e, url: location.origin + screen() }) });
 const view = () => pageview({ route: screen(), path: screen() });
 view();
 window.addEventListener('hashchange', view);

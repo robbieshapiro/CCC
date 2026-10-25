@@ -71,6 +71,9 @@ export type PracticeReport = {
   members: { name: string; caldera: number; range: number; shortgame: number; lastAt: string }[];
   recent: { name: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number }[];
 };
+// Member activity this month, for the admin only. Counts, never a trail.
+export type ActivityKind = 'visit' | 'locker';
+export type MemberActivity = { name: string; lastSeen: string | null; days: number; rounds: number; practice: number; lockers: number };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -93,4 +96,6 @@ export interface Api {
   startPractice(session: Session, kind: PracticeKind): Promise<number>;
   endPractice(session: Session, id: number, shots: number): Promise<void>;
   practiceReport(session: Session): Promise<PracticeReport>;
+  touch(session: Session, kind: ActivityKind): Promise<void>;
+  activityReport(session: Session): Promise<MemberActivity[]>;
 }
