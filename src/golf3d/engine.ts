@@ -68,6 +68,10 @@ export function scoreName(strokes: number, par: number) {
   return d <= -3 ? 'Albatross' : d === -2 ? 'Eagle' : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey' : d === 2 ? 'Double bogey' : 'Triple bogey';
 }
 
+// Distances on screen: yards, except a putt, which is feet. The course itself is measured in feet.
+const yd = (ft: number) => `${Math.round(ft / 3)} yd`;
+const away = (ft: number, putt: boolean) => (putt ? `${Math.round(ft)} ft` : yd(ft));
+
 const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', chip: 'Chip', putter: 'Putter' };
 
 // The swing bar: the impact point sits near the left end; power runs from there to the right, overswing last.
@@ -477,7 +481,7 @@ export class Course3D {
       <div class="g3-cart" data-cart hidden></div>
       <div class="g3-bottom">
         <div class="g3-club" role="group" aria-label="Club">
-          ${BAG.map((c) => `<button data-club="${c}"><b>${LABEL[c]}</b><small>${c === 'putter' ? 'roll' : `${CLUBS[c].carry[1]} ft`}</small></button>`).join('')}
+          ${BAG.map((c) => `<button data-club="${c}"><b>${LABEL[c]}</b><small>${c === 'putter' ? 'roll' : yd(CLUBS[c].carry[1])}</small></button>`).join('')}
         </div>
         <div class="g3-aim">
           <button data-nudge="-1" aria-label="Aim left">◀</button>
@@ -792,7 +796,8 @@ export class Course3D {
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.disabled = !allowed.includes(b.dataset.club as ClubId)));
     this.setClub(want);
     const dist = this.overlay.querySelector('[data-dist]');
-    if (dist) dist.textContent = this.drill ? `${Math.round(d)} ft` : `${Math.round(d)} ft to the pin`;
+    const putt = surfaceAt(this.hole, this.pos) === 'green';
+    if (dist) dist.textContent = this.drill ? away(d, putt) : `${away(d, putt)} to the pin`;
     const first = this.number === 1 && this.strokes === 0 && !this.drill;
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
     this.hint(
@@ -1083,7 +1088,7 @@ export class Course3D {
       const d = Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y));
       const lost = r.penalty ? this.lost(last, s.clock + r.duration) : '';
       if (this.drill?.targets) this.rangeReport(s.from, r, lost);
-      else this.callout(r.holed ? 'In the hole!' : lost || `${d} ft from the pin`, 'Practice', 1600);
+      else this.callout(r.holed ? 'In the hole!' : lost || `${away(d, surfaceAt(this.hole, last) === 'green')} from the pin`, 'Practice', 1600);
       this.pos = this.drill ? { ...this.drill.stations[this.drill.at].at } : { ...this.hole.tee };
       this.placeBall();
       this.trailPts = [];
@@ -1148,9 +1153,9 @@ export class Course3D {
     const at = land ? (r.frames.find((f) => f.t >= land.t) ?? last) : last;
     const carry = Math.round(Math.hypot(at.x - from.x, at.y - from.y));
     const total = Math.round(Math.hypot(last.x - from.x, last.y - from.y));
-    if (lost) return this.callout(`${carry} ft carry`, lost, 2200);
+    if (lost) return this.callout(`${yd(carry)} carry`, lost, 2200);
     const near = this.drill!.targets!.map((t) => ({ t, d: Math.hypot(last.x - t.at.x, last.y - t.at.y) })).sort((a, b) => a.d - b.d)[0];
-    this.callout(`${carry} ft carry`, `${total} ft total${near && near.d < 30 ? ` · ${Math.round(near.d)} ft from the ${near.t.label}` : ''}`, 2200);
+    this.callout(`${yd(carry)} carry`, `${yd(total)} total${near && near.d < 30 ? ` · ${yd(near.d)} from the ${near.t.label}` : ''}`, 2200);
   }
 
   // The short game: on to the next spot round the practice green.
