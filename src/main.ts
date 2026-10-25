@@ -7,7 +7,8 @@ import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
-import { closeRound, practice, round } from './screens/round';
+import { closeRound, practice, practiceArea, round } from './screens/round';
+import { facility } from './screens/practice';
 import { courseById, nextCourse, upcoming } from './golf3d/courses';
 import { leaveLockers, lockers } from './screens/lockers';
 import { leaveMember, member } from './screens/member';
@@ -50,6 +51,11 @@ async function router() {
       if (s.admin && c && upcoming(s.month).includes(c)) return round(s, { course: c });
       location.hash = '#/';
       return;
+    }
+    // the practice facility, open to every member
+    if (page === 'facility') {
+      if (arg === 'range' || arg === 'shortgame') return practiceArea(s, arg);
+      return facility();
     }
     // any member's practice on the first holes of the next course, before it counts
     if (page === 'practice') {

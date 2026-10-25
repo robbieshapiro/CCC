@@ -20,6 +20,8 @@ import type { Hole, Shot, V2 } from './types';
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
 
+// A practice area: the stations you can hit from (the short game), and the flags out on the range.
+export type Drill = { title: string; stations: { name: string; at: V2 }[]; targets?: { label: string; at: V2 }[]; at: number };
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
 // A member who played today, standing where their tee shot finished on each hole.
 export type Ghost = { name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
@@ -107,6 +109,23 @@ function settleTime(r: Result) {
   return Math.min(r.duration, f[i].t);
 }
 
+// A soft round dot for the green read.
+let dotTex: THREE.Texture | null = null;
+function dotSprite() {
+  if (dotTex) return dotTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.55, 'rgba(255,255,255,0.9)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 32, 32);
+  dotTex = new THREE.CanvasTexture(c);
+  return dotTex;
+}
+
 export class Course3D {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -122,7 +141,9 @@ export class Course3D {
   private slow = 0; // seconds of slow frames, for the automatic quality drop
 
   private ballSink = 0; // how far the drawn ball is lowered to sit a smaller ball on the ground
-  private grid: THREE.LineSegments | null = null; // the contour grid laid over a tour green while you putt
+  // the green read on a tour green while you putt: dots streaming downhill, quicker where it's steeper
+  private grid: THREE.Points | null = null;
+  private flow: { at: Float32Array; dir: Float32Array; speed: Float32Array; phase: Float32Array; z: Float32Array; t: number } | null = null;
   private holesInRound = 3;
   private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
   private golfer: Golfer;
@@ -179,6 +200,12 @@ export class Course3D {
   private resolve: ((r: HoleResult) => void) | null = null;
   // the admin's list of holes, for jumping about a preview round
   private menu: { names: string[]; pick: (i: number) => void } | null = null;
+  // the practice facility: no score, the ball comes back after every shot, to the station you're working from
+  private drill: Drill | null = null;
+  // practice of any kind: the Leave button says so and doesn't ask
+  leaveText = '';
+  // told after every swing, for the practice log
+  onShot: (() => void) | null = null;
   private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
   private miniBase: HTMLCanvasElement | null = null;
   private faded = new Map<THREE.Object3D, number>();
@@ -261,6 +288,12 @@ export class Course3D {
     this.host.innerHTML = '';
   }
 
+  // The range or the short game area. Plays like a hole that never ends: leave when you're done.
+  practiceArea(hole: Hole, drill: Omit<Drill, 'at'>) {
+    this.drill = { ...drill, at: 0 };
+    void this.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
+  }
+
   setHoleMenu(names: string[], pick: (i: number) => void) {
     this.menu = { names, pick };
   }
@@ -276,7 +309,7 @@ export class Course3D {
     this.cart?.dispose();
     this.cart = null;
     // today's pin and wind, the same for every member
-    this.wind = conditionsFor(hole, todayInGameTz());
+    this.wind = this.drill ? { pin: hole.cup, mph: 0, toward: 0, accel: { x: 0, y: 0 } } : conditionsFor(hole, todayInGameTz());
     hole = withPin(hole, this.wind);
     this.hole = hole;
     this.number = number;
@@ -290,10 +323,10 @@ export class Course3D {
     this.clock = 0;
     this.strokes = 0;
     this.spot = undefined;
-    this.practice = false;
+    this.practice = !!this.drill;
     this.zones = new Set();
-    this.pos = { ...hole.tee };
-    this.aim = hole.aim;
+    this.pos = this.drill ? { ...this.drill.stations[this.drill.at].at } : { ...hole.tee };
+    this.aim = this.drill && this.drill.at ? Math.atan2(hole.cup.x - this.pos.x, hole.cup.y - this.pos.y) : hole.aim;
     this.power = 0;
     this.shot = null;
     this.setView('play');
@@ -307,6 +340,8 @@ export class Course3D {
     this.placeGhosts();
     if (opts.cart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k));
     this.startFlyover();
+    // the practice areas skip the flyover and get straight to it
+    if (this.drill) this.endFlyover();
     return new Promise((res) => (this.resolve = res));
   }
 
@@ -393,9 +428,14 @@ export class Course3D {
     this.overlay.innerHTML = `
       <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-top">
-        <div class="g3-left"><button class="g3-pill" data-quit>Leave</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}</div>
-        <div class="g3-title"><small>Hole ${this.number} of ${this.holesInRound}</small><b>${h.name}</b><span>Par ${h.par} · <i data-dist></i></span></div>
-        <div class="g3-score"><small>Stroke</small><b data-strokes>0</b><span>${total.par ? `Round ${diff === 0 ? 'E' : diff > 0 ? `+${diff}` : diff}` : ''}</span></div>
+        <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}</div>
+        ${
+          this.drill
+            ? `<div class="g3-title"><small>Practice facility</small><b>${this.drill.title}</b><span><em data-station-name>${this.drill.stations[this.drill.at].name}</em>${this.drill.stations.length > 1 ? ' · <i data-dist></i>' : ''}</span></div>
+        <div class="g3-score"><small>Shots</small><b data-shots>0</b><span></span></div>`
+            : `<div class="g3-title"><small>Hole ${this.number} of ${this.holesInRound}</small><b>${h.name}</b><span>Par ${h.par} · <i data-dist></i></span></div>
+        <div class="g3-score"><small>Stroke</small><b data-strokes>0</b><span>${total.par ? `Round ${diff === 0 ? 'E' : diff > 0 ? `+${diff}` : diff}` : ''}</span></div>`
+        }
       </div>
       <canvas class="g3-mini" width="132" height="168" aria-hidden="true"></canvas>
       <div class="g3-drink" data-drink hidden></div>
@@ -427,13 +467,15 @@ export class Course3D {
           <button data-nudge="1" aria-label="Aim right">▶</button>
         </div>
         <button class="g3-pill" data-practice aria-pressed="false" hidden>Practice</button>
+        ${this.drill && this.drill.stations.length > 1 ? '<button class="g3-pill" data-station>Next spot</button>' : ''}
         <button class="g3-pill" data-view aria-pressed="false">Target</button>
       </div>
       <button class="g3-skip" data-skip>Skip flyover</button>`;
     const q = (s: string) => this.overlay.querySelector(s) as HTMLElement;
     q('[data-quit]').onclick = () => {
-      if (confirm('Leave the round? An unfinished round does not count.')) this.onQuit();
+      if (this.leaveText || confirm('Leave the round? An unfinished round does not count.')) this.onQuit();
     };
+    if (this.drill && this.drill.stations.length > 1) q('[data-station]').onclick = () => this.nextStation();
     if (this.menu) q('[data-holes]').onclick = () => this.holeMenu();
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
       b.onclick = () => {
@@ -685,7 +727,7 @@ export class Course3D {
     this.fly = { curve: new THREE.CatmullRomCurve3(pts), t: 0 };
     this.mode = 'fly';
     this.overlay.querySelector('[data-skip]')?.classList.add('show');
-    this.callout(this.hole.name, `Hole ${this.number} · Par ${this.hole.par}`, 3200);
+    this.callout(this.hole.name, this.drill ? 'Practice facility' : `Hole ${this.number} · Par ${this.hole.par}`, 3200);
     this.hint('');
     this.golfer.setPose('idle');
     sfx('whoosh');
@@ -724,7 +766,7 @@ export class Course3D {
     }
     // practice is only on offer before the first counted stroke of the round
     const practice = this.overlay.querySelector('[data-practice]') as HTMLElement | null;
-    if (practice) practice.hidden = !(this.number === 1 && this.strokes === 0);
+    if (practice) practice.hidden = !!this.drill || !(this.number === 1 && this.strokes === 0);
     this.mode = 'aim';
     this.power = 0;
     // after the tee shot, every shot starts lined up on the pin
@@ -733,8 +775,8 @@ export class Course3D {
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.disabled = !allowed.includes(b.dataset.club as ClubId)));
     this.setClub(want);
     const dist = this.overlay.querySelector('[data-dist]');
-    if (dist) dist.textContent = `${Math.round(d)} ft to the pin`;
-    const first = this.number === 1 && this.strokes === 0;
+    if (dist) dist.textContent = this.drill ? `${Math.round(d)} ft` : `${Math.round(d)} ft to the pin`;
+    const first = this.number === 1 && this.strokes === 0 && !this.drill;
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
     this.hint(
       first
@@ -769,6 +811,8 @@ export class Course3D {
         const full = Math.min(window.innerHeight * 0.42, 340);
         // putts pull back from nothing; full swings nudge the plan up (pull down) or down (push up)
         this.power = Math.max(0, Math.min(1, (this.club === 'putter' ? 0 : d.power) + dy / full));
+        // the putter goes back as far as you pull
+        if (this.club === 'putter') this.golfer.takeBack('putter', this.power);
       }
     });
     const up = () => {
@@ -778,13 +822,19 @@ export class Course3D {
       // putts go on release; full swings keep the plan and start with a tap
       if (this.club === 'putter') {
         if (d.kind === 'power' && this.power > 0.03) this.putt();
-        else this.power = 0;
+        else {
+          this.power = 0;
+          this.golfer.setPose('address');
+        }
       } else if (!d.kind) this.startSwing();
     };
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', () => {
       this.drag = null;
-      if (this.club === 'putter') this.power = 0;
+      if (this.club === 'putter' && this.mode === 'aim') {
+        this.power = 0;
+        this.golfer.setPose('address');
+      }
     });
   }
 
@@ -885,11 +935,12 @@ export class Course3D {
   }
 
   // A putt goes where you aim it, as hard as you pulled it back.
+  // The putter is already back where you pulled it to: let go and it comes through.
   private putt() {
-    this.swing(0);
+    this.swing(0, 'top');
   }
 
-  private swing(error: number, from: 'start' | 'impact' = 'start') {
+  private swing(error: number, from: 'start' | 'top' | 'impact' = 'start') {
     this.mode = 'swing';
     this.setView('play');
     const power = this.power;
@@ -905,6 +956,11 @@ export class Course3D {
     // every shot starts from a stock strike
     this.setStrike(0, 0);
     const practice = this.practice;
+    if (this.drill) {
+      const el = this.overlay.querySelector('[data-shots]');
+      if (el) el.textContent = String(Number(el.textContent) + 1);
+    }
+    this.onShot?.();
     if (this.drink && club !== 'putter' && !practice) {
       this.drink.shots--;
       if (this.drink.shots <= 0) this.drink = null;
@@ -1008,8 +1064,10 @@ export class Course3D {
       // tell them how it went, then put the ball back on the tee
       const last = r.frames[r.frames.length - 1];
       const d = Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y));
-      this.callout(r.holed ? 'In the hole!' : r.penalty ? this.lost(last, s.clock + r.duration) : `${d} ft from the pin`, 'Practice', 1600);
-      this.pos = { ...this.hole.tee };
+      const lost = r.penalty ? this.lost(last, s.clock + r.duration) : '';
+      if (this.drill?.targets) this.rangeReport(s.from, r, lost);
+      else this.callout(r.holed ? 'In the hole!' : lost || `${d} ft from the pin`, 'Practice', 1600);
+      this.pos = this.drill ? { ...this.drill.stations[this.drill.at].at } : { ...this.hole.tee };
       this.placeBall();
       this.trailPts = [];
       this.drawTrail();
@@ -1064,6 +1122,33 @@ export class Course3D {
     // a hole the admin jumped away from never reports
     const done = this.resolve;
     window.setTimeout(() => this.resolve === done && done?.({ strokes: this.strokes, feats: [...new Set(feats)], spot: this.spot ?? null }), 2800 + delay);
+  }
+
+  // On the range: how far it carried, how far it went, and which flag it finished by.
+  private rangeReport(from: V2, r: Result, lost: string) {
+    const last = r.frames[r.frames.length - 1];
+    const land = r.sounds.find((x) => x.s === 'land' || x.s === 'sand' || x.s === 'splash');
+    const at = land ? (r.frames.find((f) => f.t >= land.t) ?? last) : last;
+    const carry = Math.round(Math.hypot(at.x - from.x, at.y - from.y));
+    const total = Math.round(Math.hypot(last.x - from.x, last.y - from.y));
+    if (lost) return this.callout(`${carry} ft carry`, lost, 2200);
+    const near = this.drill!.targets!.map((t) => ({ t, d: Math.hypot(last.x - t.at.x, last.y - t.at.y) })).sort((a, b) => a.d - b.d)[0];
+    this.callout(`${carry} ft carry`, `${total} ft total${near && near.d < 30 ? ` · ${Math.round(near.d)} ft from the ${near.t.label}` : ''}`, 2200);
+  }
+
+  // The short game: on to the next spot round the practice green.
+  private nextStation() {
+    const d = this.drill;
+    if (!d || this.mode !== 'aim') return;
+    d.at = (d.at + 1) % d.stations.length;
+    this.pos = { ...d.stations[d.at].at };
+    this.aim = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
+    this.placeBall();
+    const el = this.overlay.querySelector('[data-station-name]');
+    if (el) el.textContent = d.stations[d.at].name;
+    this.toAim();
+    this.snapCamera();
+    sfx('tick');
   }
 
   // any hole, any time: the one you're on starts over
@@ -1162,8 +1247,13 @@ export class Course3D {
   private placeGolfer() {
     const a = this.aim;
     const front = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
-    const reach = this.club === 'putter' ? 2.2 : this.club === 'driver' ? 3.1 : 2.7;
-    const at = w3(this.pos.x, this.pos.y, 0).addScaledVector(front, -reach * this.golfer.spec.height);
+    const reach = this.club === 'putter' ? 3 : this.club === 'driver' ? 3.1 : 2.7;
+    // the putter's face sits just behind the ball, on the line
+    const back = this.club === 'putter' ? 0.42 : 0;
+    const along = new THREE.Vector3(Math.sin(a), 0, -Math.cos(a));
+    const at = w3(this.pos.x, this.pos.y, 0)
+      .addScaledVector(front, -reach * this.golfer.spec.height)
+      .addScaledVector(along, -back * this.golfer.spec.height);
     at.y = heightAt(this.hole, at.x, -at.z);
     this.golfer.group.position.copy(at);
     this.golfer.group.rotation.y = Math.PI / 2 - a;
@@ -1226,59 +1316,70 @@ export class Course3D {
 
   // ---------- aim guide ----------
 
-  // Reading the green: a grid draped over the green round the ball, every foot and a half, coloured by how far
-  // above (warm) or below (cool) the ball the ground is. Where the lines bend and the colour runs is the break.
+  // Reading the green: dots every 3 ft round the ball, each sliding 2 ft downhill and fading out, over and over.
+  // The way they run is the break; the quicker they run, the steeper it is. Flat ground has none.
   private readGreen() {
     this.clearGrid();
     const R = 40;
-    const step = 1.5;
-    const sub = 0.75;
-    const base = heightAt(this.hole, this.pos.x, this.pos.y);
-    const low = new THREE.Color('#8fd3ff');
-    const mid = new THREE.Color('#f3ecdc');
-    const high = new THREE.Color('#ffb347');
-    const c = new THREE.Color();
-    const pos: number[] = [];
-    const col: number[] = [];
-    const on = (x: number, y: number) => {
-      if (Math.hypot(x - this.pos.x, y - this.pos.y) > R) return false;
-      const s = surfaceAt(this.hole, { x, y });
-      return s === 'green' || s === 'fringe';
-    };
-    const vert = (x: number, y: number) => {
-      const z = heightAt(this.hole, x, y);
-      pos.push(...w3(x, y, z + 0.05).toArray());
-      const t = Math.max(-1, Math.min(1, (z - base) / 0.8));
-      c.copy(mid).lerp(t < 0 ? low : high, Math.abs(t));
-      col.push(c.r, c.g, c.b);
-    };
-    const x0 = Math.floor((this.pos.x - R) / step) * step;
-    const y0 = Math.floor((this.pos.y - R) / step) * step;
-    for (let a = x0; a <= this.pos.x + R; a += step)
-      for (let b = y0; b <= this.pos.y + R; b += sub) {
-        // a short run along y at this x, and one along x at this y
-        if (on(a, b) && on(a, b + sub)) {
-          vert(a, b);
-          vert(a, b + sub);
-        }
-        const bx = Math.floor(b / step) * step;
-        if (Math.abs(bx - b) < 1e-6 && on(a, b) && on(a + sub, b)) {
-          for (let k = 0; k < 2; k++) {
-            vert(a + k * sub, b);
-            vert(a + (k + 1) * sub, b);
-          }
-        }
+    const step = 3;
+    const at: number[] = [];
+    const dir: number[] = [];
+    const speed: number[] = [];
+    const phase: number[] = [];
+    const z: number[] = [];
+    for (let x = Math.round(this.pos.x / step) * step - R; x <= this.pos.x + R; x += step)
+      for (let y = Math.round(this.pos.y / step) * step - R; y <= this.pos.y + R; y += step) {
+        if (Math.hypot(x - this.pos.x, y - this.pos.y) > R) continue;
+        const s = surfaceAt(this.hole, { x, y });
+        if (s !== 'green' && s !== 'fringe') continue;
+        const g = gradAt(this.hole, x, y);
+        const m = Math.hypot(g.x, g.y);
+        if (m < 0.004) continue;
+        at.push(x, y);
+        dir.push(-g.x / m, -g.y / m);
+        speed.push(Math.min(4, 0.8 + m * 70));
+        phase.push(((x * 0.37 + y * 0.61) % 1 + 1) % 1);
+        // the ground height along the 2 ft run, in eighths, so the dots hug the green without sampling it every frame
+        for (let k = 0; k <= 8; k++) z.push(heightAt(this.hole, x - (g.x / m) * (k / 4), y - (g.y / m) * (k / 4)));
       }
+    const n = at.length / 2;
+    if (!n) return;
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    this.grid = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false }));
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3));
+    const mat = new THREE.PointsMaterial({ size: 0.42, map: dotSprite(), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    this.grid = new THREE.Points(geo, mat);
+    this.grid.frustumCulled = false;
     this.grid.renderOrder = 2;
     this.grid.visible = false;
+    this.flow = { at: new Float32Array(at), dir: new Float32Array(dir), speed: new Float32Array(speed), phase: new Float32Array(phase), z: new Float32Array(z), t: 0 };
     this.scene.add(this.grid);
   }
 
+  private flowGreen(dt: number) {
+    const f = this.flow;
+    if (!f || !this.grid?.visible) return;
+    f.t += dt;
+    const pos = this.grid.geometry.attributes.position as THREE.BufferAttribute;
+    const col = this.grid.geometry.attributes.color as THREE.BufferAttribute;
+    const v = new THREE.Vector3();
+    for (let i = 0; i < f.speed.length; i++) {
+      const k = (f.phase[i] + (f.t * f.speed[i]) / 2) % 1; // 0..1 along the 2 ft run
+      const d = k * 2;
+      const zi = k * 8;
+      const z0 = f.z[i * 9 + Math.floor(zi)];
+      const z1 = f.z[i * 9 + Math.min(8, Math.floor(zi) + 1)];
+      v.copy(w3(f.at[i * 2] + f.dir[i * 2] * d, f.at[i * 2 + 1] + f.dir[i * 2 + 1] * d, z0 + (z1 - z0) * (zi % 1) + 0.08));
+      pos.setXYZ(i, v.x, v.y, v.z);
+      const a = Math.sin(k * Math.PI) * 0.95;
+      col.setXYZ(i, a, a, a);
+    }
+    pos.needsUpdate = true;
+    col.needsUpdate = true;
+  }
+
   private clearGrid() {
+    this.flow = null;
     if (!this.grid) return;
     this.scene.remove(this.grid);
     this.grid.geometry.dispose();
@@ -1495,6 +1596,7 @@ export class Course3D {
 
     this.sizeBall();
     this.guide();
+    this.flowGreen(dt);
     this.fadeOccluders(dt);
     this.effects(dt);
     this.mini();

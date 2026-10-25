@@ -64,6 +64,13 @@ export type Invite = { id: string; name: string; code: string; createdAt: string
 export type Feedback = { id: number; from: string | null; body: string; context: string | null; done: boolean; createdAt: string };
 // Club news from the admin, signed as Reginald or as themselves.
 export type Notice = { id: number; body: string; asReginald: boolean; author: string | null; createdAt: string };
+// Practice on the range, the short game area, or a practice round of the next course. Never on the board.
+export type PracticeKind = 'caldera' | 'range' | 'shortgame';
+export type PracticeReport = {
+  kinds: { kind: PracticeKind; sessions: number; members: number; minutes: number }[];
+  members: { name: string; caldera: number; range: number; shortgame: number; lastAt: string }[];
+  recent: { name: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number }[];
+};
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -83,4 +90,7 @@ export interface Api {
   postNotice(session: Session, body: string, asReginald: boolean): Promise<void>;
   listNotices(session: Session): Promise<Notice[]>;
   takeDownNotice(session: Session, id: number): Promise<void>;
+  startPractice(session: Session, kind: PracticeKind): Promise<number>;
+  endPractice(session: Session, id: number, shots: number): Promise<void>;
+  practiceReport(session: Session): Promise<PracticeReport>;
 }

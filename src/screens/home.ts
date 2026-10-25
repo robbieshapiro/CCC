@@ -7,6 +7,7 @@ import { courseFor, nextCourse, upcoming, type Course } from '../golf3d/courses'
 import { monthClosesAt } from '../day';
 import { hostChip, REGINALD, type Mood } from '../host';
 import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
+import { bindPracticeLog, facilityPanel, practiceLogPanel } from './practice';
 import { bindInviteMaker, inviteMaker } from './invite';
 import { bindNotices, noticeComposer, noticesStrip } from './notices';
 import { board, monthName, myBest, toParLabel } from '../standings';
@@ -100,12 +101,14 @@ export function home(snap: Snapshot) {
         </table></div>
       </section>
       ${comingSoon(snap.month)}
+      ${facilityPanel()}
       <section class="plaque">
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
       </section>
       ${noticeComposer(!!snap.admin)}
       ${previewPanel(!!snap.admin, snap.month)}
+      ${practiceLogPanel(!!snap.admin)}
       ${inviteMaker(!!snap.admin)}
       ${feedbackPanel(!!snap.admin)}
       <p class="fine feedback-link"><button class="link" id="send-feedback">Leave feedback</button></p>
@@ -115,6 +118,7 @@ export function home(snap: Snapshot) {
   tickCountdown();
   void bindInviteMaker();
   void bindFeedbackPanel();
+  void bindPracticeLog();
   void bindNotices();
   document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {

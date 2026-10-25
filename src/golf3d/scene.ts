@@ -398,6 +398,16 @@ export function buildWorld(h: Hole, number: number): World {
     } else if (d.kind === 'fountain') {
       o = props.fountain();
       o.add(jets(anim));
+    } else if (d.kind === 'target') {
+      // a range flag: a pin with its distance on the flag
+      o = new THREE.Group();
+      o.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 7.5, 6), mat(P.white, { rough: 0.3 })).translateY(3.75));
+      const tex = props.textTexture([{ text: d.label ?? '', font: '600 64px Georgia, serif', color: P.gold, y: 68 }], 192, 128);
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.7, 10, 3), new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.9 }));
+      cloth.geometry.translate(1.3, 0, 0);
+      cloth.position.y = 6.6;
+      o.add(cloth);
+      waveCloth(cloth, anim, 1);
     } else if (d.kind === 'steamvent') {
       o = steamVent(anim, d.x * 0.29 + d.y * 0.13);
     } else if (d.kind === 'lavafount') {
@@ -568,7 +578,7 @@ export function buildWorld(h: Hole, number: number): World {
   root.add(liner);
   const pin = new THREE.Group();
   pin.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 7.5, 6), mat(P.white, { rough: 0.3 })).translateY(3.75));
-  const flagTex = props.textTexture([{ text: String(number), font: '600 90px Georgia, serif', color: P.gold, y: 68 }], 192, 128);
+  const flagTex = props.textTexture([{ text: h.flag ?? String(number), font: `600 ${h.flag ? 64 : 90}px Georgia, serif`, color: P.gold, y: 68 }], 192, 128);
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.7, 10, 3), new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide, roughness: 0.9 }));
   flag.geometry.translate(1.3, 0, 0);
   flag.position.y = 6.6;

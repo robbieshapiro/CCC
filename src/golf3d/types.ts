@@ -37,7 +37,7 @@ export type Push = {
   erupt?: (t: number) => { x: number; y: number; z: number } | null;
 };
 
-export type Decor = { kind: string; x: number; y: number; rot?: number; scale?: number; color?: string };
+export type Decor = { kind: string; x: number; y: number; rot?: number; scale?: number; color?: string; label?: string };
 
 export type Hole = {
   id: string;
@@ -50,6 +50,7 @@ export type Hole = {
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
   theme?: 'highland' | 'volcanic';
+  flag?: string; // what the pin's flag says, if not the hole number
   aim: number; // initial aim angle (radians, 0 = straight up the hole)
   bounds: { x0: number; y0: number; x1: number; y1: number };
   border: V2[]; // closed outline, edged with a low curb
