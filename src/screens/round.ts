@@ -127,6 +127,7 @@ export function practice(snap: Snapshot, next: Course) {
   sheet.className = 'practice-notes';
   sheet.innerHTML = `
     <div class="summary-card">
+      <button class="notes-close" data-back aria-label="Close">✕</button>
       <p class="eyebrow">Practice · ${n} holes · not counted</p>
       <h2>${esc(next.name)}</h2>
       <p class="muted">It plays differently from the Highlands. Two things to know before you tee off.</p>
@@ -143,7 +144,7 @@ export function practice(snap: Snapshot, next: Course) {
         <li>Read the break from the grid on the green: amber is above your ball, blue is below.</li>
         <li>Firm putts can hop the hole. Let it die in.</li>
       </ul>
-      <div class="summary-actions"><button class="btn" data-go>Let's play</button><button class="btn ghost" data-back>Back to the club</button></div>
+      <div class="summary-actions"><button class="btn" data-go>Continue to round</button><button class="btn ghost" data-back>Not now</button></div>
     </div>`;
   document.body.appendChild(sheet);
   const close = () => sheet.remove();
@@ -151,10 +152,15 @@ export function practice(snap: Snapshot, next: Course) {
     close();
     void round(snap, { course: next, holes: n, practice: true });
   };
-  sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {
+  // the ✕, Not now, or a tap on the dimmed backdrop all take you back to the club
+  const back = () => {
     close();
     navigate('#/');
   };
+  sheet.querySelectorAll<HTMLButtonElement>('[data-back]').forEach((b) => (b.onclick = back));
+  sheet.addEventListener('click', (e) => {
+    if (e.target === sheet) back();
+  });
   // leaving the page by any other way takes the sheet with it
   window.addEventListener('hashchange', close, { once: true });
 }
