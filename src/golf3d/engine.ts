@@ -333,6 +333,7 @@ export class Course3D {
     this.trailPts = [];
     this.drawTrail();
     this.placeBall();
+    this.sharpen(!!hole.tour);
     this.fitShadows();
     this.petalsFor(hole);
     this.hud(total);
@@ -368,6 +369,22 @@ export class Course3D {
     const sun = new THREE.Mesh(new THREE.SphereGeometry(40, 16, 10), new THREE.MeshBasicMaterial({ color: '#fff3d6', fog: false }));
     sun.position.set(-900, 700, 1200);
     this.scene.add(sun);
+  }
+
+  // Tour courses draw at the phone's full resolution, with finer shadows. The frame-rate guard in the loop still
+  // steps the resolution down on a phone that can't keep up.
+  private sharp: boolean | null = null;
+  private sharpen(on: boolean) {
+    if (this.sharp === on) return;
+    this.sharp = on;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, on ? 3 : 2));
+    const size = on ? 4096 : 2048;
+    if (this.sun.shadow.mapSize.x !== size) {
+      this.sun.shadow.mapSize.set(size, size);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+    }
+    this.resize();
   }
 
   private fitShadows() {
@@ -666,7 +683,7 @@ export class Course3D {
           const wet = wetIn(this.hole, p);
           g.fillStyle = wet
             ? wet.look === 'lava'
-              ? '#e0662a'
+              ? Math.sin(p.x * 12.9898 + p.y * 78.233) * 43758.5453 % 1 > 0.7 ? '#a8381a' : '#2e1510'
               : '#4d8193'
             : ({ green: '#86c977', fairway: '#62a957', fringe: '#4f8f47', rough: '#3a6533', path: '#cbb88f', wood: '#a77a4e', stone: '#d8cfbd', sand: '#e8d8a8', rock: '#3b3633', cinder: '#6a4436' } as Record<string, string>)[surf];
           const [a, bb] = px(p);
@@ -1316,12 +1333,12 @@ export class Course3D {
 
   // ---------- aim guide ----------
 
-  // Reading the green: dots every 3 ft round the ball, each sliding 2 ft downhill and fading out, over and over.
+  // Reading the green: small dots every 4 ft round the ball, each sliding 2 ft downhill and fading out, over and over.
   // The way they run is the break; the quicker they run, the steeper it is. Flat ground has none.
   private readGreen() {
     this.clearGrid();
     const R = 40;
-    const step = 3;
+    const step = 4;
     const at: number[] = [];
     const dir: number[] = [];
     const speed: number[] = [];
@@ -1347,7 +1364,7 @@ export class Course3D {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3));
-    const mat = new THREE.PointsMaterial({ size: 0.42, map: dotSprite(), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const mat = new THREE.PointsMaterial({ size: 0.2, map: dotSprite(), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
     this.grid = new THREE.Points(geo, mat);
     this.grid.frustumCulled = false;
     this.grid.renderOrder = 2;
@@ -1371,7 +1388,7 @@ export class Course3D {
       const z1 = f.z[i * 9 + Math.min(8, Math.floor(zi) + 1)];
       v.copy(w3(f.at[i * 2] + f.dir[i * 2] * d, f.at[i * 2 + 1] + f.dir[i * 2 + 1] * d, z0 + (z1 - z0) * (zi % 1) + 0.08));
       pos.setXYZ(i, v.x, v.y, v.z);
-      const a = Math.sin(k * Math.PI) * 0.95;
+      const a = Math.sin(k * Math.PI) * 0.55;
       col.setXYZ(i, a, a, a);
     }
     pos.needsUpdate = true;
