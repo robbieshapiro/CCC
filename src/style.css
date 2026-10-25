@@ -578,3 +578,7 @@ td.who a:hover span { text-decoration: underline; }
   background: #8a6a3e; color: #faf6ec; font: 800 10px/1.2 var(--font); letter-spacing: 0.18em; text-transform: uppercase;
 }
 .panel.admin .practice-table th, .panel.admin .practice-table td, .panel.admin .invite-list li { border-color: #d6c19c; }
+
+/* the admin's club switcher under the crest */
+.brand > a { display: flex; }
+.club-switch { font: 700 11px var(--font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); background: transparent; border: 1px dashed #8a6a3e; border-radius: 4px; padding: 2px 4px; max-width: 220px; cursor: pointer; }

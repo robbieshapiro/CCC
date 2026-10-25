@@ -38,7 +38,10 @@ export function landing() {
     const btn = signin.querySelector('button')!;
     btn.disabled = true;
     try {
-      setSession(await api.signIn(String(fd.get('name')), String(fd.get('pin'))));
+      // someone in more than one club is signed in to all of them, starting with the first they joined
+      const clubs = await api.myClubs(String(fd.get('name')), String(fd.get('pin')));
+      if (!clubs.length) throw new Error('No member by that name and PIN. Check both and try again.');
+      [...clubs.slice(1), clubs[0]].forEach(setSession);
       navigate('#/');
     } catch (err) {
       document.getElementById('err')!.innerHTML = esc((err as Error).message);

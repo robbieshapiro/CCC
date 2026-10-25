@@ -176,6 +176,35 @@ begin
   return json_build_object('token', p.token, 'playerId', p.id, 'groupId', p.group_id, 'groupName', (select name from groups where id = p.group_id));
 end $$;
 
+-- Every club a name and PIN belong to: someone in more than one club (the admin, usually) can move between them.
+create or replace function my_clubs(p_name text, p_pin text) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare clean text := trim(p_name);
+begin
+  return coalesce((
+    select json_agg(json_build_object('token', p.token, 'playerId', p.id, 'groupId', p.group_id, 'groupName', g.name) order by p.created_at)
+    from players p join groups g on g.id = p.group_id
+    where lower(p.name) = lower(clean) and p.pin_hash = crypt(p_pin, p.pin_hash)
+  ), '[]');
+end $$;
+
+-- The admin starts a new club: its own members, board, champions and committee panels, invisible to every
+-- other club. They join it straight away as its admin, with the same name, PIN and golfer.
+create or replace function create_club(p_token uuid, p_name text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); clean text := trim(p_name); g groups; p players; v_code text;
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can start a new club.'; end if;
+  if char_length(clean) not between 1 and 40 then raise exception 'Club name must be 1-40 characters.'; end if;
+  loop
+    v_code := rand_code(10);
+    exit when not exists (select 1 from groups where invite_code = v_code) and not exists (select 1 from invitations where code = v_code);
+  end loop;
+  insert into groups (name, invite_code) values (clean, v_code) returning * into g;
+  insert into players (group_id, name, pin_hash, avatar, role) values (g.id, me.name, me.pin_hash, me.avatar, 'admin') returning * into p;
+  return json_build_object('token', p.token, 'playerId', p.id, 'groupId', g.id, 'groupName', g.name);
+end $$;
+
 create or replace function create_invite(p_token uuid, p_name text) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); clean text := trim(p_name); v_code text; v_id text;
@@ -471,6 +500,8 @@ grant execute on function delete_invite(uuid, text) to anon;
 grant execute on function peek_invite(text) to anon;
 revoke all on function invite_code() from public, anon, authenticated;
 grant execute on function sign_in(text, text) to anon;
+grant execute on function my_clubs(text, text) to anon;
+grant execute on function create_club(uuid, text) to anon;
 grant execute on function submit_feedback(uuid, text, text) to anon;
 grant execute on function list_feedback(uuid) to anon;
 grant execute on function set_feedback_done(uuid, bigint, boolean) to anon;
