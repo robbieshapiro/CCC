@@ -1,4 +1,5 @@
 import './style.css';
+import { inject, pageview } from '@vercel/analytics';
 import { favicon } from './brand';
 import { getSession } from './api';
 import { setSound, soundOn } from './fx/sound';
@@ -87,6 +88,15 @@ document.addEventListener('click', (e) => {
   document.querySelectorAll('[data-mute]').forEach((b) => (b.outerHTML = muteButton()));
 });
 
+// Vercel Analytics: a page view for each screen. Invite and join links carry codes, so only the screen's name goes.
+const screen = () => {
+  const [page, arg] = location.hash.replace(/^#\/?/, '').split('/');
+  return `/${page || ''}${page === 'facility' && arg ? `/${arg}` : ''}`;
+};
+inject({ disableAutoTrack: true, beforeSend: (e) => ({ ...e, url: location.origin + screen() }) });
+const view = () => pageview({ route: screen(), path: screen() });
+view();
+window.addEventListener('hashchange', view);
 window.addEventListener('hashchange', router);
 startPolling();
 router();
