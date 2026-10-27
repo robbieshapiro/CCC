@@ -9,6 +9,7 @@ import { hostChip, REGINALD, type Mood } from '../host';
 import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
 import { bindPracticeLog, facilityPanel, practiceLogPanel } from './practice';
 import { activityPanel, bindActivity } from './activity';
+import { bindOpen } from './open';
 import { bindClubMaker, clubMaker } from './clubs';
 import { bindInviteMaker, inviteMaker } from './invite';
 import { bindNotices, noticeComposer, noticesStrip } from './notices';
@@ -74,7 +75,7 @@ export function home(snap: Snapshot) {
     ${header(snap.groupName, 'month')}
     <main>
       ${noticesStrip()}
-      ${hostChip(line, mood)}
+      ${hostChip(line, mood, 'reg-line')}
       <section class="course-card">
         <div class="course-crest">${crest(78, 'cc')}</div>
         <div class="course-body">
@@ -91,13 +92,17 @@ export function home(snap: Snapshot) {
       <section class="board">
         ${countdown(snap.month, course)}
         <div class="board-head"><h2>The Board</h2><span>${monthName(snap.month)} · best round counts</span></div>
-        <div class="table-wrap"><table class="scorecard">
+        <div class="board-tabs" id="board-tabs" role="tablist" hidden>
+          <button role="tab" data-tab="open">The Open</button><button role="tab" data-tab="club">${esc(snap.groupName)}</button>
+        </div>
+        <div id="board-open" hidden></div>
+        <div id="board-club"><div class="table-wrap"><table class="scorecard">
           <thead><tr><th></th><th>Member</th>${head}<th class="num">Tot</th><th class="num">±</th></tr></thead>
           <tbody>
             <tr class="par"><td></td><td>Par</td>${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num">${course.par}</td><td></td></tr>
             ${body}
           </tbody>
-        </table></div>
+        </table></div></div>
       </section>
       ${comingSoon(snap.month)}
       ${facilityPanel()}
@@ -121,6 +126,7 @@ export function home(snap: Snapshot) {
   void bindFeedbackPanel();
   void bindPracticeLog();
   void bindActivity();
+  void bindOpen(snap, line);
   bindClubMaker();
   void bindNotices();
   document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');

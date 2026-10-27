@@ -48,6 +48,8 @@ export function hostChip(text: string, mood: Mood = 'dry', id = ''): string {
   return `<div class="host-chip" ${id ? `id="${id}"` : ''}><span class="host-face">${reginaldSvg(mood, 46)}</span><p><b>Reginald</b> ${text}</p></div>`;
 }
 
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+
 const pick = <T,>(list: T[], seed: string) => list[[...seed].reduce((a, c) => a + c.charCodeAt(0), 0) % list.length];
 
 export const REGINALD = {
@@ -69,5 +71,10 @@ export const REGINALD = {
     : toPar === 2 ? 'A double. We shan’t speak of it.'
     : `A ${strokes}. We shan’t speak of it. Ever.`,
   round: (toPar: string, best: boolean) => (best ? `<b>${toPar}</b>. A personal best. I've informed the Committee, who were thrilled, in their way.` : `<b>${toPar}</b> for the round. Your best still stands, which is something.`),
+  openNobody: () => 'The Open stands empty. Every club in the land, and not one round between them.',
+  openLeading: (toPar: string, day: string) =>
+    pick([`You lead the Open at <b>${toPar}</b>, ahead of every club in the land. Insufferable, I expect.`, `<b>${toPar}</b> and top of the Open. The other clubs have been informed. They took it badly.`], day),
+  openLeads: (who: string, club: string, toPar: string, mine: number | null, n: number) =>
+    `${esc(who)} of ${esc(club)} leads the Open at <b>${toPar}</b>.` + (mine ? ` You sit ${ordinal(mine)} of ${n}.` : ' You have yet to enter. I merely observe.'),
   card: (wins: number) => (wins ? `${wins} monthly ${wins === 1 ? 'title' : 'titles'}. The wardrobe reflects it.` : 'No titles yet. Win a month and the pro shop shall open its doors to you.'),
 };

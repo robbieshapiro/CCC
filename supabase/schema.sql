@@ -209,7 +209,10 @@ create or replace function create_invite(p_token uuid, p_name text) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); clean text := trim(p_name); v_code text; v_id text;
 begin
-  if me.role <> 'admin' then raise exception 'Only the committee can put up new members.'; end if;
+  -- any member can put up a friend for their own club: three unused invitations at a time (the admin, as many as they like)
+  if me.role <> 'admin' and (select count(*) from invitations where created_by = me.id and used_by is null) >= 3 then
+    raise exception 'Three invitations at a time, I''m afraid. One must be accepted, or taken back, first.';
+  end if;
   if char_length(clean) not between 1 and 20 then raise exception 'Name must be 1-20 characters.'; end if;
   loop
     v_code := invite_code();
@@ -224,21 +227,20 @@ create or replace function list_invites(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
 begin
-  if me.role <> 'admin' then raise exception 'Only the committee can see invitations.'; end if;
+  -- the admin sees every invitation in the club; a member, the ones they made
   return coalesce((
     select json_agg(json_build_object('id', i.id, 'name', i.name, 'code', i.code, 'createdAt', i.created_at,
       'usedBy', (select name from players where id = i.used_by), 'usedAt', i.used_at) order by i.created_at desc)
-    from invitations i where i.group_id = me.group_id
+    from invitations i where i.group_id = me.group_id and (me.role = 'admin' or i.created_by = me.id)
   ), '[]');
 end $$;
 
--- The admin can take back an invitation nobody has used yet; the link stops working.
+-- The admin can take back any invitation nobody has used yet, a member their own; the link stops working.
 create or replace function delete_invite(p_token uuid, p_id text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
 begin
-  if me.role <> 'admin' then raise exception 'Only the committee can remove invitations.'; end if;
-  delete from invitations where id = p_id and group_id = me.group_id and used_by is null;
+  delete from invitations where id = p_id and group_id = me.group_id and used_by is null and (me.role = 'admin' or created_by = me.id);
 end $$;
 
 -- What an invitation link shows: who it's for and the code under the foil. The link itself is the secret.
@@ -487,6 +489,63 @@ begin
   ), '[]');
 end $$;
 
+-- The Open: one board across every club. One person is one entry, however many clubs they're in: the same
+-- name with the same PIN hash (create_club copies it), shown under the club they joined first. Their best round
+-- this month across all their clubs counts; lowest to par, earliest breaks a tie, as on a club board.
+-- localId: their member id in the viewer's club, if they're in it (so the card can be opened); null otherwise.
+create or replace function open_board(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); m text := game_month();
+begin
+  return coalesce((
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.group_id as home_group, p.avatar
+      from players p order by lower(p.name), p.pin_hash, p.created_at
+    ), r as (
+      select pe.*, rd.holes, rd.total, rd.par, rd.created_at
+      from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
+      join rounds rd on rd.player_id = p.id and rd.month = m
+    ), best as (
+      select distinct on (home_id) * from r order by home_id, total - par, created_at
+    ), counts as (
+      select home_id, count(*) as n, max(created_at) as last from r group by home_id
+    )
+    select json_agg(json_build_object(
+        'playerId', b.home_id, 'name', b.name, 'club', g.name,
+        'mine', lower(me.name) = b.k and me.pin_hash = b.h,
+        'localId', (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = b.k and p2.pin_hash = b.h),
+        'avatar', b.avatar, 'holes', b.holes, 'total', b.total, 'par', b.par,
+        'rounds', c.n, 'last', c.last, 'createdAt', b.created_at
+      ) order by b.total - b.par, b.created_at)
+    from best b join counts c using (home_id) join groups g on g.id = b.home_group
+  ), '[]');
+end $$;
+
+-- Past Open champions: the lowest best round of each finished month across every club. Ties share it.
+create or replace function open_champions(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); m text := game_month();
+begin
+  return coalesce((
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.group_id as home_group
+      from players p order by lower(p.name), p.pin_hash, p.created_at
+    ), best as (
+      select distinct on (rd.month, pe.home_id) rd.month, pe.home_id, pe.name, g.name as club, rd.total, rd.par
+      from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
+      join rounds rd on rd.player_id = p.id and rd.month < m
+      join groups g on g.id = pe.home_group
+      order by rd.month, pe.home_id, rd.total - rd.par, rd.created_at
+    ), ranked as (
+      select *, rank() over (partition by month order by total - par) as rk from best
+    )
+    select json_agg(c order by c.month desc) from (
+      select month, json_agg(name || ' · ' || club order by name) as names, min(total) as total, min(par) as par
+      from ranked where rk = 1 group by month
+    ) c
+  ), '[]');
+end $$;
+
 revoke all on function player_for(uuid) from public, anon, authenticated;
 revoke all on function month_bests(uuid) from public, anon, authenticated;
 grant execute on function join_group(text, text, text) to anon;
@@ -513,6 +572,8 @@ grant execute on function end_practice(uuid, bigint, int) to anon;
 grant execute on function practice_report(uuid) to anon;
 grant execute on function touch(uuid, text) to anon;
 grant execute on function activity_report(uuid) to anon;
+grant execute on function open_board(uuid) to anon;
+grant execute on function open_champions(uuid) to anon;
 
 -- Create your group (change the name and code). The first person to join with the code runs the club;
 -- after that, new members need a personal invitation from them. Share https://YOUR-SITE/#/join/<code> to start:

@@ -74,6 +74,10 @@ export type PracticeReport = {
 // Member activity this month, for the admin only. Counts, never a trail.
 export type ActivityKind = 'visit' | 'locker';
 export type MemberActivity = { name: string; lastSeen: string | null; days: number; rounds: number; practice: number; lockers: number };
+// The Open: this month's best round per person across every club. One entry a person, under their first club.
+// localId: their member id in the viewer's club, if they're in it.
+export type OpenRow = { playerId: string; name: string; club: string; mine: boolean; localId: string | null; avatar: Avatar; holes: number[]; total: number; par: number; rounds: number; last: string; createdAt: string };
+export type OpenChampion = { month: string; names: string[]; total: number; par: number };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -100,4 +104,6 @@ export interface Api {
   practiceReport(session: Session): Promise<PracticeReport>;
   touch(session: Session, kind: ActivityKind): Promise<void>;
   activityReport(session: Session): Promise<MemberActivity[]>;
+  openBoard(session: Session): Promise<OpenRow[]>;
+  openChampions(session: Session): Promise<OpenChampion[]>;
 }
