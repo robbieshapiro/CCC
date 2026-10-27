@@ -587,3 +587,12 @@ td.who a:hover span { text-decoration: underline; }
 /* the graphics dropped out (low memory): a way back instead of a blank screen */
 .g3-dark { position: absolute; inset: 0; z-index: 20; display: grid; place-content: center; justify-items: center; gap: 14px; background: var(--green); color: var(--cream); font: 600 18px var(--font); }
 .g3-dark p { margin: 0; }
+
+/* The Open and the club board, as tabs on the board */
+.board-tabs { display: flex; gap: 6px; margin: 4px 0 10px; }
+.board-tabs button { cursor: pointer; border: 1px solid rgba(184, 149, 90, 0.5); background: transparent; color: var(--cream); font: 800 12px var(--font); letter-spacing: 0.12em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px; }
+.board-tabs button[aria-selected="true"] { background: var(--gold); border-color: var(--gold); color: var(--green); }
+td.who > div { display: flex; align-items: center; gap: 10px; }
+.club-badge { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(184, 149, 90, 0.55); border-radius: 4px; padding: 1px 5px; margin-left: 4px; white-space: nowrap; vertical-align: 1px; }
+.open-empty { color: #a9b3a5; margin: 8px 0; }
+.plaque .open-champ span { color: var(--gold); }

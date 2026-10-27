@@ -5,7 +5,7 @@ import type { Invite } from '../api/types';
 import { crest } from '../brand';
 import { sfx } from '../fx/sound';
 import { reginaldSvg } from '../host';
-import { requireSession } from '../state';
+import { requireSession, snapshot } from '../state';
 import { esc, render } from '../ui';
 
 export const inviteLink = (id: string) => `${location.origin}${location.pathname}#/invite/${id}`;
@@ -180,12 +180,14 @@ export async function invite(id: string) {
   }
 }
 
-// From the clubhouse, for the admin only: type a friend's name, get their private invitation link.
+// From the clubhouse, for every member: type a friend's name, get their private invitation link into your club.
+// Members can have three unused invitations out at a time and see only their own; the admin, any number and all of them.
 export function inviteMaker(admin: boolean) {
-  if (!admin) return '';
   return `
-    <section class="panel admin invite-maker">
-      <div><h2>Put up a friend</h2><p class="muted">Each invitation is a private link with a code that works once, for that person only.</p></div>
+    <section class="panel ${admin ? 'admin ' : ''}invite-maker">
+      <div><h2>${admin ? 'Put up a friend' : 'Invite a friend'}</h2><p class="muted">${
+        admin ? 'Each invitation is a private link with a code that works once, for that person only.' : 'Bring a friend into the club. Each invitation is a private link that works once, for them only. Up to 3 at a time.'
+      }</p></div>
       <form id="invite-form" class="invite-form">
         <input id="invite-name" maxlength="20" placeholder="Their first name" autocomplete="off" aria-label="Friend's name" required />
         <button class="btn" type="submit">Make invitation</button>
@@ -201,6 +203,8 @@ const canShare = () => typeof navigator.share === 'function' && matchMedia('(poi
 export async function bindInviteMaker() {
   if (!document.getElementById('invite-form')) return;
   const s = requireSession();
+  const snap = snapshot();
+  const me = snap?.players.find((p) => p.id === snap.me)?.name ?? 'A member';
   const first = await api.listInvites(s).catch(() => [] as Invite[]);
   // look the page up after the wait, so we wire whatever is on screen now
   const form = document.getElementById('invite-form') as HTMLFormElement | null;
@@ -233,7 +237,7 @@ export async function bindInviteMaker() {
       b.onclick = async () => {
         const url = inviteLink(b.dataset.send!);
         try {
-          if (canShare()) await navigator.share({ title: 'Claude Country Club', text: 'You have been put up for membership.', url });
+          if (canShare()) await navigator.share({ title: 'Claude Country Club', text: `${me} has put you up for membership.`, url });
           else {
             await navigator.clipboard.writeText(url);
             b.textContent = 'Copied';

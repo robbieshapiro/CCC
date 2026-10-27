@@ -5,11 +5,11 @@ import { courseFor, monthOf } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
-import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type PracticeKind, type PracticeReport, type Round } from './types';
+import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
 type DbRound = Round & { groupId: string };
-type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null };
+type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string> };
@@ -166,10 +166,11 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
   async createInvite(session, name) {
     const db = load();
     const me = playerByToken(db, session.token);
-    if (!me.admin) throw new Error('Only the committee can put up new members.');
+    if (!me.admin && (db.invites ?? []).filter((i) => i.createdBy === me.id && !i.usedBy).length >= 3)
+      throw new Error("Three invitations at a time, I'm afraid. One must be accepted, or taken back, first.");
     const clean = name.trim();
     if (!clean || clean.length > 20) throw new Error('Name must be 1-20 characters.');
-    const inv: DbInvite = { id: rand(10), groupId: me.groupId, name: clean, code: inviteCode(), createdAt: new Date().toISOString(), usedBy: null, usedAt: null };
+    const inv: DbInvite = { id: rand(10), groupId: me.groupId, name: clean, code: inviteCode(), createdAt: new Date().toISOString(), usedBy: null, usedAt: null, createdBy: me.id };
     (db.invites ??= []).push(inv);
     save(db);
     return { id: inv.id, name: inv.name, code: inv.code };
@@ -178,18 +179,16 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
   async listInvites(session) {
     const db = load();
     const me = playerByToken(db, session.token);
-    if (!me.admin) throw new Error('Only the committee can see invitations.');
     return (db.invites ?? [])
-      .filter((i) => i.groupId === me.groupId)
+      .filter((i) => i.groupId === me.groupId && (me.admin || i.createdBy === me.id))
       .reverse()
-      .map(({ groupId: _g, ...i }) => ({ ...i, usedBy: i.usedBy ? (db.players.find((p) => p.id === i.usedBy)?.name ?? null) : null }));
+      .map(({ groupId: _g, createdBy: _c, ...i }) => ({ ...i, usedBy: i.usedBy ? (db.players.find((p) => p.id === i.usedBy)?.name ?? null) : null }));
   },
 
   async deleteInvite(session, id) {
     const db = load();
     const me = playerByToken(db, session.token);
-    if (!me.admin) throw new Error('Only the committee can remove invitations.');
-    db.invites = (db.invites ?? []).filter((i) => !(i.id === id && i.groupId === me.groupId && !i.usedBy));
+    db.invites = (db.invites ?? []).filter((i) => !(i.id === id && i.groupId === me.groupId && !i.usedBy && (me.admin || i.createdBy === me.id)));
     save(db);
   },
 
@@ -302,6 +301,33 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
       .slice(0, 20)
       .map((x) => ({ name: name(x.playerId), kind: x.kind, startedAt: x.startedAt, endedAt: x.endedAt, shots: x.shots }));
     return { kinds, members, recent };
+  },
+
+  // The Open, as in schema.sql: one entry a person (same name and PIN), under the club they joined first.
+  async openBoard(session): Promise<OpenRow[]> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const month = monthOf(todayInGameTz());
+    const key = (p: DbPlayer) => `${p.name.toLowerCase()}|${p.pin}`;
+    const club = (groupId: string) => Object.values(db.groups).find((g) => g.id === groupId)?.name ?? '';
+    const people = new Map<string, DbPlayer[]>();
+    for (const p of [...db.players].sort((a, b) => a.joined.localeCompare(b.joined))) people.set(key(p), [...(people.get(key(p)) ?? []), p]);
+    const rows: OpenRow[] = [];
+    for (const [k, ps] of people) {
+      const rounds = db.rounds.filter((r) => r.month === month && ps.some((p) => p.id === r.playerId));
+      if (!rounds.length) continue;
+      const best = [...rounds].sort((a, b) => a.total - a.par - (b.total - b.par) || a.createdAt.localeCompare(b.createdAt))[0];
+      const home = ps[0];
+      rows.push({
+        playerId: home.id, name: home.name, club: club(home.groupId), mine: k === key(me), localId: ps.find((p) => p.groupId === me.groupId)?.id ?? null,
+        avatar: home.avatar, holes: best.holes, total: best.total, par: best.par, rounds: rounds.length, last: rounds.map((r) => r.createdAt).sort().pop()!, createdAt: best.createdAt,
+      });
+    }
+    return rows.sort((a, b) => a.total - a.par - (b.total - b.par) || a.createdAt.localeCompare(b.createdAt));
+  },
+
+  async openChampions(): Promise<OpenChampion[]> {
+    return []; // local mode keeps one month at a time
   },
 
   async touch(session, kind) {
