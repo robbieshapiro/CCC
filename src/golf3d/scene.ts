@@ -94,14 +94,37 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
       g.restore();
     }
   }
-  // lake beds and scree, from the heightfield
-  g.setTransform(1, 0, 0, 1, 0, 0);
+  // lake beds and scree, from the heightfield: one pixel per terrain cell in a small canvas, then laid over the ground
+  // in a single smoothed draw, so neighbouring cells blend instead of stamping squares (overlapping translucent squares
+  // drew a lattice on steep banks)
+  let cells: { size: number; w: number; h: number; img: ImageData } | null = null;
   shade((x, y, size, color, alpha) => {
-    g.globalAlpha = alpha;
-    g.fillStyle = '#' + color.getHexString();
-    g.fillRect((x - x0 - size / 2) * ppf, (y1 - y - size / 2) * ppf, size * ppf + 1, size * ppf + 1);
+    if (!cells) {
+      const w = Math.ceil((x1 - x0) / size) + 1;
+      const h = Math.ceil((y1 - y0) / size) + 1;
+      cells = { size, w, h, img: new ImageData(w, h) };
+    }
+    const i = Math.round((x - x0) / cells.size);
+    const j = Math.round((y - y0) / cells.size);
+    if (i < 0 || j < 0 || i >= cells.w || j >= cells.h) return;
+    const k = (j * cells.w + i) * 4;
+    cells.img.data[k] = color.r * 255;
+    cells.img.data[k + 1] = color.g * 255;
+    cells.img.data[k + 2] = color.b * 255;
+    cells.img.data[k + 3] = alpha * 255;
   });
-  g.globalAlpha = 1;
+  if (cells) {
+    const { size, w, h, img } = cells as { size: number; w: number; h: number; img: ImageData };
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    off.getContext('2d')!.putImageData(img, 0, 0);
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    // still in course coordinates (y flipped), so row j of the cells lands at y0 + j * size
+    g.drawImage(off, x0 - size / 2, y0 - size / 2, w * size, h * size);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
   // grain, so close-up grass isn't flat colour
   const img = g.getImageData(0, 0, c.width, c.height);
   const rng = makeRng(`grain:${h.id}`);

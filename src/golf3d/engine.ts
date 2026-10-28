@@ -118,23 +118,6 @@ function settleTime(r: Result) {
   return Math.min(r.duration, f[i].t);
 }
 
-// A soft round dot for the green read.
-let dotTex: THREE.Texture | null = null;
-function dotSprite() {
-  if (dotTex) return dotTex;
-  const c = document.createElement('canvas');
-  c.width = c.height = 32;
-  const g = c.getContext('2d')!;
-  const grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
-  grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(0.55, 'rgba(255,255,255,0.9)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 32, 32);
-  dotTex = new THREE.CanvasTexture(c);
-  return dotTex;
-}
-
 export class Course3D {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -151,8 +134,8 @@ export class Course3D {
 
   private ballSink = 0; // how far the drawn ball is lowered to sit a smaller ball on the ground
   // the green read on a tour green while you putt: dots streaming downhill, quicker where it's steeper
-  private grid: THREE.Points | null = null;
-  private flow: { at: Float32Array; dir: Float32Array; speed: Float32Array; phase: Float32Array; z: Float32Array; t: number } | null = null;
+  // the green read on a tour green, Golden Tee style: how much it climbs or falls and breaks between the ball and cup
+  private read: { slope: number; brk: number } | null = null;
   private holesInRound = 3;
   private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
   private golfer: Golfer;
@@ -310,7 +293,7 @@ export class Course3D {
     this.world?.dispose();
     this.cart?.dispose();
     this.clearGhosts();
-    this.clearGrid();
+    this.clearRead();
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.host.innerHTML = '';
@@ -329,7 +312,7 @@ export class Course3D {
   // Plays one hole to completion. The beverage cart may stop by on the tee.
   play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: 'daisy' | 'reginald'; of?: number } = {}): Promise<HoleResult> {
     this.holesInRound = opts.of ?? this.holesInRound;
-    this.clearGrid();
+    this.clearRead();
     if (this.world) {
       this.scene.remove(this.world.root);
       this.world.dispose();
@@ -506,6 +489,7 @@ export class Course3D {
       </div>
       <div class="g3-callout" data-callout></div>
       <div class="g3-hint" data-hint></div>
+      <div class="g3-read" data-read hidden></div>
       <div class="g3-cart" data-cart hidden></div>
       <div class="g3-bottom">
         <div class="g3-club" role="group" aria-label="Club">
@@ -1500,86 +1484,52 @@ export class Course3D {
 
   // ---------- aim guide ----------
 
-  // Reading the green: small dots every 4 ft round the ball, each sliding 2 ft downhill and fading out, over and over.
-  // The way they run is the break; the quicker they run, the steeper it is. Flat ground has none.
+  // Reading the green, the way Golden Tee does it: along the line from the ball to the cup, how many degrees it climbs
+  // or falls, and how many it breaks left or right. The last third counts double: that's where the putt is slowest and
+  // the break bites.
   private readGreen() {
-    this.clearGrid();
-    const R = 40;
-    const step = 6; // a light read: one strand every 6 ft
-    const at: number[] = [];
-    const dir: number[] = [];
-    const speed: number[] = [];
-    const phase: number[] = [];
-    const z: number[] = [];
-    for (let x = Math.round(this.pos.x / step) * step - R; x <= this.pos.x + R; x += step)
-      for (let y = Math.round(this.pos.y / step) * step - R; y <= this.pos.y + R; y += step) {
-        if (Math.hypot(x - this.pos.x, y - this.pos.y) > R) continue;
-        const s = surfaceAt(this.hole, { x, y });
-        if (s !== 'green' && s !== 'fringe') continue;
-        const g = gradAt(this.hole, x, y);
-        const m = Math.hypot(g.x, g.y);
-        if (m < 0.004) continue;
-        at.push(x, y);
-        dir.push(-g.x / m, -g.y / m);
-        speed.push(Math.min(4, 0.8 + m * 70));
-        phase.push(((x * 0.37 + y * 0.61) % 1 + 1) % 1);
-        // the ground height along the 2 ft run, in eighths, so the dots hug the green without sampling it every frame
-        for (let k = 0; k <= 8; k++) z.push(heightAt(this.hole, x - (g.x / m) * (k / 4), y - (g.y / m) * (k / 4)));
-      }
-    const n = at.length / 2;
-    if (!n) return;
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3));
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3));
-    const mat = new THREE.PointsMaterial({ size: 0.2, map: dotSprite(), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-    this.grid = new THREE.Points(geo, mat);
-    this.grid.frustumCulled = false;
-    this.grid.renderOrder = 2;
-    this.grid.visible = false;
-    this.flow = { at: new Float32Array(at), dir: new Float32Array(dir), speed: new Float32Array(speed), phase: new Float32Array(phase), z: new Float32Array(z), t: 0 };
-    this.scene.add(this.grid);
-  }
-
-  private flowGreen(dt: number) {
-    const f = this.flow;
-    if (!f || !this.grid?.visible) return;
-    f.t += dt;
-    const pos = this.grid.geometry.attributes.position as THREE.BufferAttribute;
-    const col = this.grid.geometry.attributes.color as THREE.BufferAttribute;
-    const v = new THREE.Vector3();
-    for (let i = 0; i < f.speed.length; i++) {
-      const k = (f.phase[i] + (f.t * f.speed[i]) / 2) % 1; // 0..1 along the 2 ft run
-      const d = k * 2;
-      const zi = k * 8;
-      const z0 = f.z[i * 9 + Math.floor(zi)];
-      const z1 = f.z[i * 9 + Math.min(8, Math.floor(zi) + 1)];
-      const x = f.at[i * 2] + f.dir[i * 2] * d;
-      const y = f.at[i * 2 + 1] + f.dir[i * 2 + 1] * d;
-      v.copy(w3(x, y, z0 + (z1 - z0) * (zi % 1) + 0.08));
-      pos.setXYZ(i, v.x, v.y, v.z);
-      // faint, and fading away near the ball and the cup, so the line you putt on stays clean
-      const clear = (p: V2) => Math.min(1, Math.max(0, (Math.hypot(x - p.x, y - p.y) - 1) / 3));
-      const a = Math.sin(k * Math.PI) * 0.2 * clear(this.pos) * clear(this.hole.cup);
-      col.setXYZ(i, a, a, a);
+    const from = this.pos;
+    const cup = this.hole.cup;
+    const len = Math.hypot(cup.x - from.x, cup.y - from.y);
+    if (len < 1) return this.clearRead();
+    const d = { x: (cup.x - from.x) / len, y: (cup.y - from.y) / len };
+    let along = 0;
+    let across = 0;
+    let w = 0;
+    const n = Math.max(2, Math.ceil(len));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const g = gradAt(this.hole, from.x + (cup.x - from.x) * t, from.y + (cup.y - from.y) * t);
+      const k = t > 2 / 3 ? 2 : 1;
+      along += (g.x * d.x + g.y * d.y) * k;
+      // positive: the ground is higher on the right of the line, so the putt falls away to the left
+      across += (g.x * d.y - g.y * d.x) * k;
+      w += k;
     }
-    pos.needsUpdate = true;
-    col.needsUpdate = true;
+    const deg = (v: number) => (Math.atan(v / w) * 180) / Math.PI;
+    this.read = { slope: deg(along), brk: deg(across) };
+    const el = this.overlay.querySelector('[data-read]') as HTMLElement | null;
+    if (!el) return;
+    const half = (v: number) => Math.round(Math.abs(v) * 2) / 2;
+    const s = half(this.read.slope);
+    const b = half(this.read.brk);
+    const slope = s < 0.5 ? '<b>Flat</b>' : `<i>${this.read.slope > 0 ? '↑' : '↓'}</i><b>${this.read.slope > 0 ? 'Up' : 'Down'} ${s}°</b>`;
+    const brk = b < 0.5 ? '<b>Straight</b>' : `<i>${this.read.brk > 0 ? '←' : '→'}</i><b>Breaks ${b}° ${this.read.brk > 0 ? 'left' : 'right'}</b>`;
+    el.innerHTML = `<small>The read</small><span>${slope}</span><span>${brk}</span>`;
   }
 
-  private clearGrid() {
-    this.flow = null;
-    if (!this.grid) return;
-    this.scene.remove(this.grid);
-    this.grid.geometry.dispose();
-    (this.grid.material as THREE.Material).dispose();
-    this.grid = null;
+  private clearRead() {
+    this.read = null;
+    const el = this.overlay?.querySelector('[data-read]') as HTMLElement | null;
+    if (el) el.hidden = true;
   }
 
   private guide() {
     const m = new THREE.Matrix4();
     let n = 0;
     const show = this.mode === 'aim' || this.mode === 'meter';
-    if (this.grid) this.grid.visible = this.mode === 'aim' && this.club === 'putter';
+    const read = this.overlay.querySelector('[data-read]') as HTMLElement | null;
+    if (read) read.hidden = !(this.read && this.mode === 'aim' && this.club === 'putter');
     this.ring.visible = false;
     if (show) {
       const dx = Math.sin(this.aim);
@@ -1587,7 +1537,7 @@ export class Course3D {
       if (this.club === 'putter') {
         // a dotted line that hugs the ground; longer as you pull back. On tour greens it starts from nothing and runs
         // out as far as the putt would roll on a flat green: the break you read for yourself
-        // On tour greens there's no line at all: you judge the pace yourself and read the break off the grid.
+        // On tour greens there's no line at all: you judge the pace yourself and play the read.
         const v = carryOf('putter', this.power);
         const len = this.hole.tour ? 0 : 8 + this.power * 30;
         for (let d = 1.5; d < len && n < 80; d += 1.1) {
@@ -1794,7 +1744,6 @@ export class Course3D {
 
     this.sizeBall();
     this.guide();
-    this.flowGreen(dt);
     this.fadeOccluders(dt);
     this.effects(dt);
     this.mini();
