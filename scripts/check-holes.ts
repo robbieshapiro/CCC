@@ -15,7 +15,8 @@ const ok = (c: boolean, m: string) => {
   if (!c) process.exitCode = 1;
 };
 
-// Path distance to a target over a 2 ft grid. Water is crossable (you can chip it) but costs double.
+// Path distance to a target over a 2 ft grid. Water is crossable (you can chip it) but costs double; so is a cliff
+// (you can fly up or down one: the Caldera's crater and its sky islands are all cliff), at four times the cost.
 function navField(h: Hole, target: V2 = h.cup) {
   const C = 2;
   const { x0, y0, x1, y1 } = h.bounds;
@@ -24,9 +25,10 @@ function navField(h: Hole, target: V2 = h.cup) {
   const walls = [...curbs(h), ...h.walls];
   const idx = (x: number, y: number) => Math.floor((x - x0) / C) + Math.floor((y - y0) / C) * W;
   const centre = (i: number) => ({ x: x0 + (i % W) * C + C / 2, y: y0 + Math.floor(i / W) * C + C / 2 });
-  const blocked = (p: V2) => {
+  const blocked = (p: V2) => !inPoly(p, h.border) || h.posts.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < q.r + 0.4);
+  const steep = (p: V2) => {
     const g = gradAt(h, p.x, p.y);
-    return !inPoly(p, h.border) || Math.hypot(g.x, g.y) > 2.5 || h.posts.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < q.r + 0.4);
+    return Math.hypot(g.x, g.y) > 2.5;
   };
   const cross = (a: V2, b: V2) =>
     walls.some((w) => {
@@ -76,7 +78,7 @@ function navField(h: Hole, target: V2 = h.cup) {
       if (n.x < x0 || n.y < y0 || n.x >= x1 || n.y >= y1) continue;
       const j = idx(n.x, n.y);
       if (blocked(n) || cross(p, n)) continue;
-      const nd = d0 + (isWater(h, n) ? C * 2 : C);
+      const nd = d0 + (steep(n) ? C * 4 : isWater(h, n) ? C * 2 : C);
       if (nd < dist[j]) {
         dist[j] = nd;
         push([nd, j]);
@@ -93,8 +95,9 @@ const POWERS: Record<ClubId, number[]> = {
   putter: [0.04, 0.08, 0.13, 0.2, 0.28, 0.38, 0.5, 0.64, 0.8, 1],
   wedge: [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1],
   chip: [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1],
-  iron: [0.2, 0.4, 0.55, 0.7, 0.85, 1],
-  driver: [0.4, 0.6, 0.8, 0.9, 1],
+  // finer steps where the Caldera asks for touch: a short iron down into the crater, a measured hop between islands
+  iron: [0.2, 0.3, 0.4, 0.48, 0.55, 0.62, 0.7, 0.78, 0.85, 0.92, 1],
+  driver: [0.3, 0.36, 0.42, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
 };
 
 // tour greens need a finer touch on the putter to find the speed that drops
@@ -191,9 +194,11 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   lavafield: { from: { x: 80, y: 424 }, clubs: ['putter'], angles: [-4, 12] },
   // the island is the prize: from it the green is one big shot away
   caldera: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [48, 54], spin: 1, near: 340 },
-  lavalift: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [-72, -44] },
+  // the tunnel: from the tee, roll one onto the shelf on the far wall and into the hole
+  lavalift: { from: { x: 0, y: 55 }, clubs: ['driver', 'iron'], angles: [-3, 3], near: 12 },
   geyseralley: { from: { x: -46, y: 124 }, clubs: ['putter'], angles: [-8, 8] },
-  lavatube: { from: { x: -2, y: 462 }, clubs: ['putter'], angles: [44, 64] },
+  // the updraft: from the middle of the last island, roll onto the vent as it blows
+  lavatube: { from: { x: -14, y: 505 }, clubs: ['putter'], angles: [-10, 30], clock: 4.6, near: 40 },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
@@ -340,10 +345,11 @@ if (mode === 'all' || mode === 'basic') {
   ok(!edge.holed && Math.abs(edge.end.x - cupR(tour) * 0.8) > 0.5, `tour green: a firm putt on the edge lips out (ends ${edge.end.x.toFixed(1)},${edge.end.y.toFixed(1)})`);
   const flatFirm = simulate({ ...tour, tour: false }, { x: 0, y: 0 }, { angle: 0, power: (Math.sqrt(2 * 4.2 * 20) * 1.5 - 1.5) / 32.5, club: 'putter', error: 0, clock: 0 }, false);
   ok(flatFirm.holed, `classic greens are unchanged: the firm putt still drops (cap ${DROP_SPEED} ft/s only on tour)`);
-  // the vertical meter gives you a good deal longer to find the gold
+  // the vertical meter is as strict as the classic one with the long clubs, and kinder with the wedge
   for (const club of ['driver', 'iron', 'wedge'] as ClubId[]) {
     const ms = (style: MeterStyle) => (goldHalf(club, 1, 1, style) / returnSpeed(club, 1, 1, style)) * 1000;
-    ok(ms('vertical') >= ms('classic') * 1.9, `vertical meter: ${club} gold window ±${ms('vertical').toFixed(0)} ms (classic ±${ms('classic').toFixed(0)})`);
+    const want = club === 'wedge' ? ms('vertical') >= ms('classic') * 1.9 : Math.abs(ms('vertical') - ms('classic')) < 1;
+    ok(want, `vertical meter: ${club} gold window ±${ms('vertical').toFixed(0)} ms (classic ±${ms('classic').toFixed(0)})`);
   }
   // the calendar: October closes at midnight Eastern and the Caldera takes over
   ok(monthClosesAt('2026-10').toISOString() === '2026-11-01T04:00:00.000Z' && monthClosesAt('2026-11').toISOString() === '2026-12-01T05:00:00.000Z', 'months close at midnight Eastern, either side of the clocks changing');
@@ -388,12 +394,22 @@ if (mode === 'all' || mode === 'basic') {
       }
     ok(best < 30, `${cal.name}: from the island a driver can find the green (${best.toFixed(0)} ft)`);
   }
-  // the Lava Tube: the cave roof clips a full iron, but a driver comes out under it
-  const tube = course.holes.find((h) => h.id === 'lavatube');
-  if (tube) {
-    const iron = simulate(tube, tube.tee, { angle: 0, power: 1, club: 'iron', error: 0, clock: 0 }, false);
-    const drive = simulate(tube, tube.tee, { angle: 0, power: 0.9, club: 'driver', error: 0, clock: 0 }, false);
-    ok(iron.end.y < 120 && drive.end.y > 220, `${tube.name}: the roof clips a full iron (${iron.end.y.toFixed(0)} ft) but not a driver (${drive.end.y.toFixed(0)} ft)`);
+  // the Ascent: every island can be reached from the one before it, with some club
+  const ascent = course.holes.find((h) => h.id === 'lavatube');
+  if (ascent) {
+    const stops = [ascent.tee, { x: 0, y: 180 }, { x: 36, y: 345 }, { x: -14, y: 505 }];
+    for (let i = 0; i < stops.length - 1; i++) {
+      const a = stops[i];
+      const b = stops[i + 1];
+      const angle = Math.atan2(b.x - a.x, b.y - a.y);
+      let best = Infinity;
+      for (const club of ['driver', 'iron'] as ClubId[])
+        for (let p = 0.3; p <= 1.001; p += 0.02) {
+          const r = simulate(ascent, a, { angle, power: p, club, error: 0, clock: 0 }, false);
+          if (!r.penalty) best = Math.min(best, Math.hypot(r.end.x - b.x, r.end.y - b.y));
+        }
+      ok(best < 14, `${ascent.name}: island ${i + 1} can be reached from the ${i ? `island ${i}` : 'tee'} (${best.toFixed(0)} ft from its middle)`);
+    }
   }
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);

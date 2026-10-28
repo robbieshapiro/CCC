@@ -9,7 +9,7 @@ import type { Hole, Post, V2 } from '../types';
 
 const FLOOR = 10; // the turf and rock sit at about this height; the lava lake is cut below it
 const LAVA = 7;
-const ISLAND = { x: 236, y: 190, rx: 17, ry: 14 };
+const ISLAND = { x: 236, y: 190, rx: 19, ry: 16 };
 const GREEN = { x: 480, y: 398, r: 19 };
 
 // the two legs of the dogleg, as one fairway line

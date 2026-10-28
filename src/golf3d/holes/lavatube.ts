@@ -1,142 +1,106 @@
-// Hole 6, The Lava Tube (par 5, about 735 ft, 540 yd as shown): the hardest on the course. Tee off from inside a lava
-// tube, out along the top of a long sea cliff.
-// The cart: a cart works back and forth across the cliff top where a good drive comes down. It's a moving wall: time
-// your second around it, or play it off it.
-// The play: keep it low. The roof of the tube is 16 ft up; a high shot clips it and drops. A driver comes out low
-// enough, an iron has to be punched. Then the fairway bends right round an inlet of the sea to a green out on a point.
-// The secret: a natural arch of rock crosses the inlet. Roll one over it and it cuts the corner to the green.
-import { band, blob, rect } from '../terrain';
-import { extend } from './extend';
-import type { Hole, Post, V2 } from '../types';
+// Hole 6, The Ascent (par 5, about 670 ft, 490 yd as shown): the craziest hole on the course, and the hardest. Three
+// islands of turf stand up out of the sea on spires of rock, each higher than the last, and you hop from one to the next
+// up to the final green: a bowl cut into the side of the volcano itself, which gathers a ball toward the middle. Miss
+// an island and it's the sea, a long way down. A big drive can skip the first island.
+// The stands: the volcano's flank behind the green is a stadium, full of members who have finished the hole this month
+// (their score on it on a card overhead) and the club's patrons.
+// The updraft: a vent on the last island blows every few seconds. Roll onto it as it goes and it lifts you onto the green.
+import { blob, circle, rect } from '../terrain';
+import type { Decor, Hole, Post } from '../types';
 
-const TOP = 30; // the cliff top; the sea is at 0
-const GREEN = { x: 232, y: 368, rx: 22, ry: 20 };
-
-const way: V2[] = [
-  { x: 0, y: 10 },
-  { x: 2, y: 140 },
-  { x: -2, y: 250 },
-  { x: 18, y: 330 },
-  { x: 90, y: 372 },
-  { x: 180, y: 376 },
+// the tee and the three islands: where, how big, how high
+const TEE = { x: 0, y: 0, r: 24, h: 30 };
+const ISLES = [
+  { x: 0, y: 180, r: 30, h: 42 },
+  { x: 36, y: 345, r: 30, h: 56 },
+  { x: -14, y: 505, r: 28, h: 70 },
 ];
-// the arch over the inlet
-const arch: V2[] = [
-  { x: 8, y: 238 },
-  { x: 30, y: 254 },
-  { x: 80, y: 290 },
-  { x: 140, y: 330 },
-  { x: 196, y: 356 },
+const GREEN = { x: 12, y: 665, r: 18, h: 86 };
+const VENT = { x: -10, y: 522, r: 3.2 };
+const PERIOD = 7;
+const firing = (t: number) => t % PERIOD > PERIOD - 1.4;
+
+// the stadium: two banks of seating on the volcano's flank, either side behind the green, facing it
+export const STANDS: Decor[] = [
+  { kind: 'stands', x: -34, y: 714, rot: -0.75 },
+  { kind: 'stands', x: 60, y: 716, rot: 0.75 },
 ];
 
-const rocks: Post[] = [
-  [-60, 30, 3.2], [-70, 200, 3.4], [-60, 380, 3], [120, 440, 3.6], [300, 300, 3.2],
-].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
-const palms: Post[] = [-50, -30, 60, 140].map((x, i) => ({ x, y: 430 + (i % 2) * 8, r: 1, h: 22, look: 'palm' as const }));
+const rocks: Post[] = ISLES.map((s, i) => ({ x: s.x + (i % 2 ? -s.r * 0.6 : s.r * 0.6), y: s.y + 8, r: 2.6, h: 2.6, e: 0.5, look: 'rock' as const }));
 
-const base: Hole = {
+export const lavatube: Hole = {
   id: 'lavatube',
-  name: 'The Lava Tube',
+  name: 'The Ascent',
   par: 5,
   theme: 'volcanic',
   tour: true,
-  tee: { x: 0, y: 0 },
-  cup: { x: 236, y: 372 },
-  pins: [{ x: 236, y: 372 }, { x: 222, y: 362 }, { x: 246, y: 376 }, { x: 230, y: 380 }],
+  noCart: true,
+  tee: { x: TEE.x, y: TEE.y },
+  cup: { x: 14, y: 668 },
+  pins: [{ x: 14, y: 668 }, { x: 6, y: 660 }, { x: 20, y: 662 }, { x: 10, y: 674 }],
   aim: 0,
-  bounds: { x0: -110, y0: -50, x1: 330, y1: 470 },
+  bounds: { x0: -170, y0: -50, x1: 210, y1: 900 },
   border: [
-    { x: -106, y: -46 },
-    { x: 326, y: -46 },
-    { x: 326, y: 466 },
-    { x: -106, y: 466 },
+    { x: -166, y: -46 },
+    { x: 206, y: -46 },
+    { x: 206, y: 896 },
+    { x: -166, y: 896 },
   ],
-  base: 'rough',
+  base: 'rock',
+  maxTime: 30,
   regions: [
-    // the floor of the tube: smooth, dark obsidian
-    { poly: rect(-16, -40, 16, 46), surface: 'stone' },
+    { poly: circle(TEE.x, TEE.y, TEE.r - 2), surface: 'rough' },
     { poly: rect(-12, -10, 12, 10), surface: 'fairway' },
-    { poly: band(way.slice(1), 30), surface: 'fringe' },
-    { poly: band(way.slice(1), 26), surface: 'fairway' },
-    { poly: band(arch, 3.5), surface: 'path' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 2, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 2, 0.06), surface: 'green' },
-    { poly: blob(196, 392, 7, 5, 3, 0.15), surface: 'sand' },
-    { poly: blob(-28, 300, 9, 6, 4, 0.15), surface: 'sand' },
+    ...ISLES.flatMap((s, i) => [
+      { poly: blob(s.x, s.y, s.r - 2, (s.r - 2) * 0.9, 30 + i, 0.08), surface: 'rough' as const },
+      { poly: blob(s.x, s.y, s.r - 7, (s.r - 7) * 0.9, 30 + i, 0.08), surface: 'fairway' as const },
+    ]),
+    { poly: circle(VENT.x, VENT.y, VENT.r + 1.5), surface: 'rock' },
+    // the green, in its bowl on the volcano
+    { poly: circle(GREEN.x, GREEN.y, GREEN.r + 7), surface: 'fringe' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.r, GREEN.r * 0.92, 6, 0.05), surface: 'green' },
+    { poly: blob(GREEN.x - 22, GREEN.y - 14, 5, 4, 7, 0.15), surface: 'sand' },
   ],
-  water: [{ poly: rect(-106, -46, 326, 466), level: 0, look: 'sea', tide: { amp: 1, period: 40 } }],
-  ceilings: [{ poly: rect(-18, -40, 18, 46), h: 16 }],
+  // the sea, a long way down
+  water: [{ poly: rect(-166, -46, 206, 896), level: 0, look: 'sea', tide: { amp: 1, period: 40 } }],
   terrain: [
-    { kind: 'ramp', x0: -110, y0: -50, x1: 330, y1: 470, axis: 'y', h0: -8, h1: -8, op: 'set' },
-    // the headland: the tube comes out of the hillside onto a long cliff top that bends right out to a point
-    { kind: 'embankment', pts: way, h: way.map(() => TOP), width: 54, edge: 12, wobble: 6 },
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: 46, h: TOP + 1, edge: 12, op: 'set' },
-    // the hillside the tube comes out of
-    { kind: 'hill', x: 0, y: -90, r: 120, h: 30 },
-    { kind: 'box', x0: -16, y0: -60, x1: 16, y1: 48, h: TOP, edge: 3, op: 'set' },
-    // the inlet: the sea cuts in inside the bend
-    { kind: 'disc', x: 120, y: 250, r: 86, h: -8, edge: 18, op: 'set' },
-    // the arch across it, a little below the cliff top so a ball runs along it
-    { kind: 'embankment', pts: arch, h: [TOP, TOP - 0.5, TOP - 1, TOP - 1.2, TOP - 0.6], width: 3, edge: 2 },
-    { kind: 'channel', pts: arch, width: 3, depth: 0.6, taper: 12 },
-    // the green, tipped toward the sea on the right
-    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'x', h0: 0.6, h1: -0.6, op: 'add' },
-    { kind: 'hill', x: GREEN.x - 8, y: GREEN.y + 6, r: 10, h: 0.4 },
-    ...[[196, 392, 7], [-28, 300, 9]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.1, edge: 3, op: 'add' as const })),
+    { kind: 'ramp', x0: -170, y0: -50, x1: 210, y1: 900, axis: 'y', h0: -8, h1: -8, op: 'set' },
+    // the volcano, rising out of the sea at the far end
+    { kind: 'disc', x: 30, y: 830, r: 230, h: 170, edge: 170, op: 'set' },
+    // the tee and the islands: spires of rock with flat tops, sheer to the sea
+    { kind: 'disc', x: TEE.x, y: TEE.y, r: TEE.r, h: TEE.h, edge: 5, op: 'set' },
+    ...ISLES.map((s) => ({ kind: 'disc' as const, x: s.x, y: s.y, r: s.r, h: s.h, edge: 5, op: 'set' as const })),
+    // each island lifts a little toward its far side, so a ball coming in low isn't kicked off the back
+    ...ISLES.map((s) => ({ kind: 'hill' as const, x: s.x, y: s.y + s.r * 0.5, r: s.r * 0.8, h: 0.8 })),
+    // the vent's little dip, so a ball near it finds it
+    { kind: 'disc', x: VENT.x, y: VENT.y, r: VENT.r + 3, h: -0.6, edge: 3, op: 'add' },
+    // the green: a terrace cut into the volcano's flank, dished into a bowl
+    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.r + 9, h: GREEN.h, edge: 6, op: 'set' },
+    { kind: 'hill', x: GREEN.x, y: GREEN.y, r: GREEN.r + 6, h: -1.6 },
+    { kind: 'disc', x: GREEN.x - 22, y: GREEN.y - 14, r: 5, h: -1.1, edge: 2, op: 'add' },
   ],
   walls: [],
-  posts: [...rocks, ...palms],
+  posts: rocks,
   movers: [],
-  pushes: [],
-  zones: [{ id: 'seaarch', poly: band(arch.slice(2, 4), 3) }],
-  secret: { name: 'The Sea Arch', zone: 'seaarch', hint: 'A natural arch of rock crosses the inlet. Roll one over it and it cuts the corner.' },
-  flyover: [
-    { x: 0, y: -20 },
-    { x: 0, y: 160 },
-    { x: 100, y: 300 },
-    { x: 236, y: 372 },
-  ],
-  decor: [{ kind: 'teebox', x: 0, y: 0 }],
-};
-
-// 230 ft longer than it was drawn: the straight run along the cliff stretches, and the inlet, the arch and the point
-// slide back with it
-const long = extend(base, 150, 230);
-
-// the cart's run: straight across the cliff top, back and forth
-const CART = { y: 400, x0: -30, x1: 30, period: 9 };
-const cartAt = (t: number) => {
-  const k = (t % CART.period) / CART.period;
-  const s = k < 0.5 ? k * 2 : 2 - k * 2; // there and back
-  const e = s * s * (3 - 2 * s); // it slows at each end
-  return { x: CART.x0 + (CART.x1 - CART.x0) * e, y: CART.y, dir: k < 0.5 ? 1 : -1 };
-};
-
-export const lavatube: Hole = {
-  ...long,
-  movers: [
+  pushes: [
     {
-      id: 'cart',
-      look: 'cart',
-      at: (t) => {
-        const c = cartAt(t);
-        const pos = { x: c.x, y: c.y };
-        // a box of wall the size of the cart: hit it and you bounce off
-        const w = 3.2;
-        const l = 5.5;
-        const corners = [
-          { x: c.x - l, y: c.y - w },
-          { x: c.x + l, y: c.y - w },
-          { x: c.x + l, y: c.y + w },
-          { x: c.x - l, y: c.y + w },
-        ];
-        return {
-          walls: corners.map((a, i) => ({ a, b: corners[(i + 1) % 4], h: 4, look: 'cart' as const })),
-          posts: [],
-          pos,
-          heading: c.dir > 0 ? Math.PI / 2 : -Math.PI / 2,
-        };
-      },
+      id: 'updraft',
+      look: 'geyser',
+      x: VENT.x,
+      y: VENT.y,
+      r: VENT.r,
+      at: () => ({ x: 0, y: 0 }),
+      // up and on toward the green
+      erupt: (t) => (firing(t) ? { x: 10, y: 76, z: 40 } : null),
     },
   ],
+  zones: [{ id: 'liftoff', poly: circle(VENT.x, VENT.y, VENT.r) }],
+  secret: { name: 'The Updraft', zone: 'liftoff', hint: 'There is a vent on the last island. Every few seconds it blows. Some say it blows toward the green.' },
+  flyover: [
+    { x: 0, y: -30 },
+    { x: 0, y: 260 },
+    { x: -10, y: 520 },
+    { x: 12, y: 665 },
+  ],
+  decor: [{ kind: 'teebox', x: 0, y: 0 }, { kind: 'sign', x: 14, y: -8, rot: 0 }, ...STANDS],
 };

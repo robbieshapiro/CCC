@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { makeRng } from '../seed';
 import { cupR, curbs } from './physics';
 import * as props from './props';
+import * as stands from './stands';
 import { mat, mesh, P } from './props';
 import { gradAt, heightAt, inPoly, levelOf, surfaceAt, wetIn } from './terrain';
 import type { Hole, Surface, V2, Wall, Water } from './types';
@@ -523,6 +524,28 @@ export function buildWorld(h: Hole, number: number): World {
     else if (d.kind === 'teebox') {
       for (const side of [-1, 1]) root.add(at(props.teeMarker(), d.x + side * 6, d.y + 2, 0));
       continue;
+    } else if (d.kind === 'stands') {
+      // a bank of stone tiers stepping up the slope away from the green, each sat on the ground under it, with a banner
+      // along the top
+      const f = stands.facing(d);
+      const wide = stands.COLS * stands.SEAT_GAP + 2;
+      let top = 0;
+      for (let r = 0; r < stands.ROWS; r++) {
+        const back = (r + 0.5) * stands.ROW_DEPTH;
+        const cx = d.x - f.x * back;
+        const cy = d.y - f.y * back;
+        top = heightAt(h, cx, cy) + stands.ROW_RISE;
+        const tier = mesh(new THREE.BoxGeometry(wide, 10, stands.ROW_DEPTH), mat(r % 2 ? '#5a4a42' : '#6a5850'));
+        tier.position.copy(w3(cx, cy, top - 5));
+        tier.rotation.y = -(d.rot ?? 0);
+        root.add(tier);
+      }
+      const back = stands.ROWS * stands.ROW_DEPTH + 0.6;
+      const wall = mesh(new THREE.BoxGeometry(wide, 5, 0.8), mat('#7a1f2b'));
+      wall.position.copy(w3(d.x - f.x * back, d.y - f.y * back, top + 2.5));
+      wall.rotation.y = -(d.rot ?? 0);
+      root.add(wall);
+      continue;
     }
     else if (d.kind === 'flagpole') {
       o = props.flagpole();
@@ -604,6 +627,26 @@ export function buildWorld(h: Hole, number: number): World {
       }
       geo.attributes.position.needsUpdate = true;
     });
+  }
+
+  // tunnels: a dark hole ringed with rock where a ball drops in, and a rock arch round the mouth where it comes out
+  for (const pt of h.portals ?? []) {
+    const ring = mesh(new THREE.TorusGeometry(pt.r * 1.05, 0.5, 6, 18), mat('#3a302b'));
+    ring.rotation.x = Math.PI / 2;
+    root.add(at(ring, pt.x, pt.y, 0.12));
+    const hole = new THREE.Mesh(new THREE.CircleGeometry(pt.r, 20), new THREE.MeshBasicMaterial({ color: '#070505' }));
+    hole.rotation.x = -Math.PI / 2;
+    root.add(at(hole, pt.x, pt.y, 0.07));
+    const arch = mesh(new THREE.TorusGeometry(2.6, 0.9, 6, 12, Math.PI), mat('#2e2724'));
+    const mouth = new THREE.Mesh(new THREE.CircleGeometry(2.2, 14, 0, Math.PI), new THREE.MeshBasicMaterial({ color: '#070505' }));
+    const out = new THREE.Group();
+    out.add(arch, mouth);
+    // facing the cup, a step behind where the ball comes to rest
+    const dx = h.cup.x - pt.to.x;
+    const dy = h.cup.y - pt.to.y;
+    const len = Math.hypot(dx, dy) || 1;
+    out.rotation.y = Math.atan2(dx, dy);
+    root.add(at(out, pt.to.x - (dx / len) * 3, pt.to.y - (dy / len) * 3, 0));
   }
 
   // geysers and blowholes: a ring of dark rock round the vent, a wisp of steam, and a burst when it goes

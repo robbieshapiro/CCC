@@ -1,132 +1,110 @@
-// Hole 4, The Lava Lift (par 3, about 240 ft, 175 yd as shown): across a wide gorge of lava to a green on a slab of rock.
-// The play: carry the gorge and hold the slab. It's a driver, eased off; an iron finds the lava. Behind the slab a wall of
-// rock gives a long shot a chance; short is the gorge.
-// The lift: a pillar of rock stands in the gorge with a geyser in its top that goes off every few seconds. Land one on
-// the pillar as it fires and it throws you up onto the slab. Land on it between eruptions and it rolls off into the lava.
-// The live hazard: the lava in the gorge rises and falls. When it's up it floods the slab's front apron, so a shot
-// that comes up just short is gone; when it's down the apron is dry and you can chip from it.
-// The secret: a ledge runs round the left end of the gorge. Roll one along it and it comes in from the side.
-import { band, blob, circle, rect } from '../terrain';
-import { extend } from './extend';
+// Hole 4, The Lava Lift (par 3, about 150 ft down, 110 yd as shown): you tee off on the rim of the volcano and hit down
+// into the crater. The green is a tiny island in the lava lake at the bottom; miss it and it's lava, unless you find
+// one of the little rock islands round it, which have traps of their own. Lava fountains spew from the lake.
+// The tunnel: on the far wall of the crater there's a shelf with a hole in it. Roll one into the hole and it drops
+// down an old lava tube and rolls out beside the green, a few feet from the pin. Never an ace, always a gift.
+import { blob, circle, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
 
-const RIM = 30; // the tee and the far side sit up here; the gorge is cut down to the lava
-const LAVA = 8;
-const SLAB = { x: 6, y: 182 };
-const GREEN = { x: 6, y: 186, rx: 22, ry: 18 };
-
-// the ledge: off the left of the tee, round the end of the gorge and in along the slab's flank
-const ledge: V2[] = [
-  { x: -16, y: 10 },
-  { x: -52, y: 40 },
-  { x: -84, y: 80 },
-  { x: -92, y: 120 },
-  { x: -80, y: 158 },
-  { x: -52, y: 178 },
-  { x: -20, y: 186 },
+const C = { x: 0, y: 200 }; // the crater's centre
+const RIM = 62; // the rim, and the tee on it
+const BOWL = 6; // the crater floor, under the lava
+const LAVA = 12;
+const GREEN = { x: 10, y: 206, r: 12 };
+// the little islands round the green: somewhere to bail out to, each with its trap
+const ISLES = [
+  { x: -62, y: 168, r: 16 },
+  { x: 72, y: 236, r: 15 },
+  { x: -44, y: 270, r: 12 },
 ];
-const ledgeH = ledge.map((_, i) => RIM - 0.5 - (i / (ledge.length - 1)) * 6);
+// the shelf on the far wall, and the hole in it
+const SHELF = { x: 0, y: 316, r: 16, h: 34 };
+const MOUTH = { x: 0, y: 324, r: 2.6 };
+// where the tunnel lets the ball out: on the green, a short putt from the pin
+const OUT: V2 = { x: 4, y: 200 };
 
 const rocks: Post[] = [
-  [40, 20, 3.2], [-30, -20, 3], [110, 230, 3.6], [-110, 240, 3.4], [60, 250, 3],
+  [-40, 6, 3.2], [44, 10, 3], [-150, 200, 3.6], [150, 220, 3.4], [-90, 360, 3], [96, 350, 3.2],
 ].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
 
-const base: Hole = {
+export const lavalift: Hole = {
   id: 'lavalift',
   name: 'The Lava Lift',
   par: 3,
   theme: 'volcanic',
   tour: true,
-  tee: { x: 0, y: 0 },
-  cup: { x: 8, y: 190 },
-  pins: [{ x: 8, y: 190 }, { x: -4, y: 182 }, { x: 18, y: 192 }, { x: 4, y: 198 }],
+  noCart: true,
+  tee: { x: 0, y: 55 },
+  cup: { x: 12, y: 208 },
+  pins: [{ x: 12, y: 208 }, { x: 8, y: 202 }, { x: 14, y: 203 }, { x: 7, y: 210 }],
   aim: 0,
-  bounds: { x0: -140, y0: -40, x1: 140, y1: 290 },
+  bounds: { x0: -200, y0: -40, x1: 200, y1: 400 },
   border: [
-    { x: -136, y: -36 },
-    { x: 136, y: -36 },
-    { x: 136, y: 286 },
-    { x: -136, y: 286 },
+    { x: -196, y: -36 },
+    { x: 196, y: -36 },
+    { x: 196, y: 396 },
+    { x: -196, y: 396 },
   ],
   base: 'rock',
   regions: [
-    { poly: blob(0, 0, 26, 20, 1, 0.1), surface: 'rough' },
-    { poly: rect(-14, -12, 14, 12), surface: 'fairway' },
-    { poly: band(ledge, 4), surface: 'path' },
-    // the slab: an apron that floods at the front, the green on top
-    { poly: blob(SLAB.x, SLAB.y, 44, 36, 2, 0.08), surface: 'rough' },
-    { poly: blob(SLAB.x, SLAB.y - 22, 30, 12, 3, 0.1), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 4, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 4, 0.06), surface: 'green' },
-    { poly: blob(36, 200, 6, 5, 5, 0.15), surface: 'sand' },
+    { poly: blob(0, 55, 20, 14, 1, 0.1), surface: 'rough' },
+    { poly: rect(-12, 45, 12, 65), surface: 'fairway' },
+    // the islands: a skirt of rough, turf on top, and a trap
+    ...ISLES.flatMap((s, i) => [
+      { poly: blob(s.x, s.y, s.r, s.r * 0.85, 10 + i, 0.1), surface: 'rough' as const },
+      { poly: blob(s.x, s.y, s.r - 4, (s.r - 4) * 0.85, 10 + i, 0.1), surface: 'fairway' as const },
+      { poly: blob(s.x + (i % 2 ? -5 : 5), s.y + 3, 4, 3, 20 + i, 0.15), surface: 'sand' as const },
+    ]),
+    // the green island: a ring of fringe and the smallest green on the course
+    { poly: circle(GREEN.x, GREEN.y, GREEN.r + 3.5), surface: 'fringe' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.r, GREEN.r * 0.9, 3, 0.05), surface: 'green' },
+    // the shelf on the far wall
+    { poly: circle(SHELF.x, SHELF.y, SHELF.r), surface: 'path' },
   ],
   water: [
-    // the gorge: the lava swells up over the apron and sinks back
-    { poly: rect(-74, 50, 136, 156), level: LAVA, look: 'lava', tide: { amp: 2.6, period: 14 } },
+    // the lava lake fills the floor of the crater, and breathes
+    { poly: circle(C.x, C.y, 128, 40), level: LAVA, look: 'lava', tide: { amp: 1.1, period: 9 } },
   ],
   terrain: [
-    { kind: 'ramp', x0: -140, y0: -40, x1: 140, y1: 290, axis: 'y', h0: RIM, h1: RIM, op: 'set' },
-    // the gorge, open at the left where the ledge goes round
-    { kind: 'box', x0: -70, y0: 54, x1: 140, y1: 156, h: -RIM + 4, edge: 14, op: 'add' },
-    // the slab: a table of rock whose front slopes down to the lava as an apron
-    { kind: 'disc', x: SLAB.x, y: SLAB.y, r: 46, h: RIM - 10, edge: 10, op: 'set' },
-    { kind: 'ramp', x0: SLAB.x - 50, y0: SLAB.y - 36, x1: SLAB.x + 50, y1: SLAB.y - 12, axis: 'y', h0: -14, h1: 0, op: 'add' },
-    // the green: tipped toward the gorge, with a rise at the back
-    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 26, x1: GREEN.x + 30, y1: GREEN.y + 26, axis: 'y', h0: -0.5, h1: 0.6, op: 'add' },
-    { kind: 'hill', x: GREEN.x + 8, y: GREEN.y + 4, r: 12, h: 0.4 },
-    // a wall of rock behind the slab
-    { kind: 'ramp', x0: -140, y0: 230, x1: 140, y1: 290, axis: 'y', h0: 0, h1: 22, op: 'add' },
-    // the ledge round the end of the gorge, with a groove to keep a ball on it
-    { kind: 'embankment', pts: ledge, h: ledgeH, width: 4, edge: 8 },
-    { kind: 'channel', pts: ledge, width: 4, depth: 0.8, taper: 20 },
-    // bunker
-    { kind: 'disc', x: 36, y: 200, r: 6, h: -1.1, edge: 3, op: 'add' },
+    // the outer slopes of the volcano, up to the rim
+    { kind: 'ramp', x0: -200, y0: -40, x1: 200, y1: 400, axis: 'y', h0: RIM - 44, h1: RIM - 44, op: 'set' },
+    { kind: 'disc', x: C.x, y: C.y, r: 196, h: RIM, edge: 54, op: 'set' },
+    // the crater: a steep bowl down to the lake
+    { kind: 'disc', x: C.x, y: C.y, r: 112, h: BOWL, edge: 34, op: 'set' },
+    // the tee: a flat shelf on the rim
+    { kind: 'disc', x: 0, y: 55, r: 14, h: RIM + 0.5, edge: 6, op: 'set' },
+    // the islands, standing up out of the lava
+    ...ISLES.map((s) => ({ kind: 'disc' as const, x: s.x, y: s.y, r: s.r - 2, h: LAVA + 3, edge: 3, op: 'set' as const })),
+    ...ISLES.map((s, i) => ({ kind: 'disc' as const, x: s.x + (i % 2 ? -5 : 5), y: s.y + 3, r: 4, h: -0.9, edge: 2, op: 'add' as const })),
+    // the green island: flat and small, just clear of the lava
+    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.r + 2.5, h: LAVA + 3.2, edge: 2.5, op: 'set' },
+    // dished, with a lip round it, so a ball that lands on it stays on it more often than not
+    { kind: 'hill', x: GREEN.x, y: GREEN.y, r: GREEN.r + 1, h: -0.9 },
+    { kind: 'ramp', x0: GREEN.x - 12, y0: GREEN.y - 12, x1: GREEN.x + 12, y1: GREEN.y + 12, axis: 'x', h0: 0.2, h1: -0.2, op: 'add' },
+    // the shelf on the far wall, dished toward the hole in it so a ball that reaches it finds its way in
+    { kind: 'disc', x: SHELF.x, y: SHELF.y, r: SHELF.r, h: SHELF.h, edge: 4, op: 'set' },
+    { kind: 'hill', x: MOUTH.x, y: MOUTH.y, r: SHELF.r + 2, h: -3.5 },
   ],
   walls: [],
   posts: rocks,
   movers: [],
   pushes: [],
-  zones: [{ id: 'ledge', poly: band(ledge.slice(2, 6), 3.4) }],
-  secret: { name: 'The Ledge', zone: 'ledge', hint: 'The gorge ends on the left. A ledge runs round it. Roll one along it and let it find the slab.' },
+  portals: [{ id: 'tunnel', x: MOUTH.x, y: MOUTH.y, r: MOUTH.r, to: OUT, delay: 1.6 }],
+  zones: [{ id: 'tunnel', poly: circle(MOUTH.x, MOUTH.y, MOUTH.r) }],
+  secret: { name: 'The Tunnel', zone: 'tunnel', hint: 'There is a hole in the far wall of the crater. They say an old lava tube runs from it to the green.' },
   flyover: [
-    { x: 0, y: -30 },
-    { x: 30, y: 90 },
-    { x: 8, y: 190 },
+    { x: 0, y: 10 },
+    { x: 0, y: 120 },
+    { x: 10, y: 206 },
   ],
   decor: [
-    { kind: 'teebox', x: 0, y: 0 },
-    { kind: 'sign', x: 20, y: -10, rot: 0 },
-    { kind: 'lavafount', x: 70, y: 104, scale: 0.9 },
-    { kind: 'lavafount', x: -30, y: 96, scale: 0.7 },
+    { kind: 'teebox', x: 0, y: 55 },
+    { kind: 'sign', x: 18, y: 47, rot: 0 },
+    // lava spewing from the lake
+    { kind: 'lavafount', x: -30, y: 214, scale: 1.1 },
+    { kind: 'lavafount', x: 44, y: 172, scale: 0.9 },
+    { kind: 'lavafount', x: 26, y: 262, scale: 1 },
+    { kind: 'lavafount', x: -86, y: 222, scale: 0.8 },
+    { kind: 'lavafount', x: 90, y: 196, scale: 0.8 },
   ],
-};
-
-// the gorge is 50 ft wider than it was drawn: everything from its middle on slides back
-const PILLAR = { x: 8, y: 150, r: 8 };
-const VENT_R = 3.2;
-const PERIOD = 6;
-const firing = (t: number) => t % PERIOD > PERIOD - 1.5;
-const long = extend(base, 100, 50);
-
-export const lavalift: Hole = {
-  ...long,
-  terrain: [
-    ...long.terrain,
-    // the pillar: a column of rock up out of the lava, its top domed so a ball that isn't thrown rolls off
-    { kind: 'disc', x: PILLAR.x, y: PILLAR.y, r: PILLAR.r, h: LAVA + 6, edge: 3, op: 'set' },
-    { kind: 'hill', x: PILLAR.x, y: PILLAR.y, r: PILLAR.r, h: 1.6 },
-  ],
-  pushes: [
-    {
-      id: 'lift',
-      look: 'geyser',
-      x: PILLAR.x,
-      y: PILLAR.y,
-      r: VENT_R,
-      at: () => ({ x: 0, y: 0 }),
-      // up and on toward the slab
-      erupt: (t) => (firing(t) ? { x: 0, y: 36, z: 32 } : null),
-    },
-  ],
-  zones: [...long.zones, { id: 'liftoff', poly: circle(PILLAR.x, PILLAR.y, VENT_R) }],
 };

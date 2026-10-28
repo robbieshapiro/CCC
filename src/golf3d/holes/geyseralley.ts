@@ -2,8 +2,10 @@
 // vents. Driver, then iron: the green is out of reach from the tee.
 // The play: find the fairway. It's crowned, so a ball that lands on a shoulder runs off into the black ash either
 // side. The green sits down in a hollow at the end, with steam drifting across it.
-// The geysers: five vents out in the fairway where a drive comes to rest, each on its own clock. Roll over one as it
-// goes and it throws you: some on up the fairway, some off into the ash. Read the rhythm, or trust to luck.
+// The geysers: vents out in the fairway where a drive comes to rest, each on its own clock. Roll over one as it goes
+// and it throws you: most off into the ash. One, Old Faithful, in the middle of the landing zone, is the trick: roll
+// onto it as it goes and it launches you a long way down the gully toward the green.
+// Out wide, past the black ash, run gutters of lava: miss the alley badly and it costs a stroke.
 // The secret: the ash road. A cinder track runs behind the left-hand vents and down into the hollow; a drive that
 // finds it runs a long way.
 import { band, blob, rect } from '../terrain';
@@ -62,8 +64,8 @@ const base: Hole = {
   regions: [
     // black ash either side: a long waste bunker down each flank
     { poly: band(way, 44), surface: 'sand' },
-    { poly: band(way, 22), surface: 'fringe' },
-    { poly: band(way, 17), surface: 'fairway' },
+    { poly: band(way, 19), surface: 'fringe' },
+    { poly: band(way, 15), surface: 'fairway' },
     { poly: band(road, 4), surface: 'path' },
     { poly: blob(0, 0, 26, 20, 1, 0.1), surface: 'rough' },
     { poly: rect(-12, -10, 12, 10), surface: 'fairway' },
@@ -79,7 +81,7 @@ const base: Hole = {
     { kind: 'embankment', pts: way.map((p) => ({ x: p.x - 36, y: p.y })), h: way.map(() => TOP + 3), width: 4, edge: 10 },
     { kind: 'embankment', pts: way.map((p) => ({ x: p.x + 38, y: p.y })), h: way.map(() => TOP + 3), width: 4, edge: 10 },
     // the crown down the middle of the fairway: anything on a shoulder runs off
-    { kind: 'embankment', pts: way, h: way.map(() => TOP + 1.6), width: 2, edge: 18 },
+    { kind: 'embankment', pts: way, h: way.map(() => TOP + 1.9), width: 3, edge: 16 },
     // the hollow the green sits in
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 26, h: TOP - 7, edge: 22, op: 'set' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'x', h0: 0.5, h1: -0.5, op: 'add' },
@@ -117,17 +119,28 @@ const geyser = (id: string, x: number, y: number, period: number, offset: number
   erupt: (t) => ((t + offset) % period > period - 1.3 ? throwTo : null),
 });
 const geysers: Push[] = [
-  geyser('g1', -7, 300, 5, 0, { x: 4, y: 30, z: 18 }),
-  geyser('g2', 8, 336, 6.5, 2, { x: 26, y: 6, z: 16 }),
-  geyser('g3', -4, 372, 5.5, 4, { x: -24, y: 10, z: 16 }),
-  geyser('g4', 6, 404, 7, 1, { x: 0, y: 36, z: 22 }),
-  geyser('g5', -6, 436, 6, 3, { x: -20, y: 18, z: 18 }),
+  geyser('g1', -7, 300, 5, 0, { x: 18, y: 14, z: 16 }),
+  geyser('g2', 8, 334, 6.5, 2, { x: 26, y: 6, z: 16 }),
+  // Old Faithful: dead centre, every 8 seconds, and it throws you down the gully toward the green
+  geyser('faithful', 0, 362, 8, 0, { x: 0, y: 56, z: 26 }),
+  geyser('g3', -6, 396, 5.5, 4, { x: -24, y: 10, z: 16 }),
+  geyser('g5', 7, 428, 6, 3, { x: 22, y: 12, z: 16 }),
 ];
+// the lava gutters out wide, past the ash: on the right all the way, on the left beyond the ash road
+const gutterR: V2[] = [{ x: 54, y: 30 }, { x: 58, y: 220 }, { x: 52, y: 420 }, { x: 46, y: 520 }];
+const gutterL: V2[] = [{ x: -70, y: 30 }, { x: -76, y: 220 }, { x: -74, y: 400 }];
 
 export const geyseralley: Hole = {
   ...long,
+  water: [
+    ...long.water,
+    { poly: band(gutterR, 7), level: TOP - 2, look: 'lava' },
+    { poly: band(gutterL, 7), level: TOP - 2, look: 'lava' },
+  ],
   terrain: [
     ...long.terrain,
+    { kind: 'channel', pts: gutterR, width: 6, depth: 5 },
+    { kind: 'channel', pts: gutterL, width: 6, depth: 5 },
     // a shallow cone round each vent, so a ball rolling close is drawn onto it
     ...geysers.map((g) => ({ kind: 'disc' as const, x: g.x, y: g.y, r: 6, h: -0.35, edge: 4, op: 'add' as const })),
   ],
