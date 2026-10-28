@@ -6,18 +6,18 @@ import { CLUBS, type ClubId } from './clubs';
 export const OVERSWING = 1.1; // the bar runs past 100% to here
 
 // how fast the power bar fills, in power per second; it speeds up toward the top
-const FILL: Record<ClubId, number> = { driver: 0.9, iron: 0.75, wedge: 0.6, chip: 0.85, putter: 0 };
+const FILL: Record<ClubId, number> = { driver: 0.9, wood: 0.85, iron: 0.75, wedge: 0.6, chip: 0.85, putter: 0 };
 export const powerSpeed = (club: ClubId, p: number) => FILL[club] * (0.6 + 1.4 * p * p);
 
 // The meter comes in two styles. Classic runs left to right. The vertical meter (tour courses, and every course
 // from November) swings the club up and down with it. The long clubs are just as unforgiving as on the classic meter
 // (a full driver gives you about ±19 ms to find the gold); only the scoring clubs get a slower needle and wider gold.
 export type MeterStyle = 'classic' | 'vertical';
-const SLOWER: Record<ClubId, number> = { driver: 1, iron: 1, wedge: 0.75, chip: 0.75, putter: 1 };
-const WIDER: Record<ClubId, number> = { driver: 1, iron: 1, wedge: 1.5, chip: 1.5, putter: 1 };
+const SLOWER: Record<ClubId, number> = { driver: 1, wood: 1, iron: 1, wedge: 0.75, chip: 0.75, putter: 1 };
+const WIDER: Record<ClubId, number> = { driver: 1, wood: 1, iron: 1, wedge: 1.5, chip: 1.5, putter: 1 };
 
 // how fast the needle comes back for the accuracy tap, in bar-lengths per second
-const RETURN: Record<ClubId, number> = { driver: 1.0, iron: 0.84, wedge: 0.72, chip: 0.9, putter: 0 };
+const RETURN: Record<ClubId, number> = { driver: 1.0, wood: 0.92, iron: 0.84, wedge: 0.72, chip: 0.9, putter: 0 };
 // fire: you've a lager or a fireball in you, and the overswing zone is the fire. Swinging into it is what the drink
 // is for, so it's only a little harder than a full swing, where a sober overswing is a gamble.
 export function returnSpeed(club: ClubId, power: number, needle = 1, style: MeterStyle = 'classic', fire = false) {

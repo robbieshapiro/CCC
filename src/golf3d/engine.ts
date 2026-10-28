@@ -8,7 +8,7 @@ import { sfx } from '../fx/sound';
 import { todayInGameTz } from '../day';
 import { CartGirl } from './cartgirl';
 import { conditionsFor, withPin, type Conditions } from './conditions';
-import { BAG, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
+import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
 import { Golfer } from './golfer';
 import { BALL_R, G, launch, lieFactor, simulate, TOUR_GREEN, type Result } from './physics';
 import * as stands from './stands';
@@ -72,10 +72,12 @@ export function scoreName(strokes: number, par: number) {
 }
 
 // Distances on screen: real-world yards (the course is a scale model, see SCALE), except a putt, which is feet.
+// a bomb (full-power driver, dead centre) carries this much further: about 300 yd instead of 250
+const BOMB = 1.2;
 const yd = (ft: number) => `${Math.round((ft * SCALE) / 3)} yd`;
 const away = (ft: number, putt: boolean) => (putt ? `${Math.round(ft * SCALE)} ft` : yd(ft));
 
-const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', chip: 'Chip', putter: 'Putter' };
+const LABEL: Record<ClubId, string> = { driver: 'Driver', wood: 'Wood', iron: 'Iron', wedge: 'Wedge', chip: 'Chip', putter: 'Putter' };
 
 // The swing bar: the impact point sits near the left end; power runs from there to the right, overswing last.
 const IMPACT = 0.12;
@@ -159,7 +161,7 @@ export class Course3D {
   private trail: THREE.Line;
   private trailPts: THREE.Vector3[] = [];
   // a bomb: a full-power driver struck dead centre. The downswing goes to slow motion, then the strike flashes, the
-  // camera shakes and the ball goes off in gold. It's all show: the shot flies exactly as it would have anyway.
+  // camera shakes and the ball goes off in gold, and about 20% further (BOMB).
   private bombSwing = false;
   private bombShake = 0;
   private clouds: THREE.Object3D[] = [];
@@ -172,6 +174,8 @@ export class Course3D {
   private total = { strokes: 0, par: 0 };
   private ghosts: Ghost[] = [];
   private onCourse: { golfer: Golfer; objs: THREE.Object3D[]; at: THREE.Vector3 }[] = [];
+  // the rest of a full stadium: simple figures, two instanced meshes for the lot
+  private crowd: THREE.InstancedMesh[] = [];
   private spot: V2 | null | undefined; // the tee shot's resting place, once it has one
 
   private mode: Mode = 'fly';
@@ -505,7 +509,7 @@ export class Course3D {
       <div class="g3-cart" data-cart hidden></div>
       <div class="g3-bottom">
         <div class="g3-club" role="group" aria-label="Club">
-          ${BAG.map((c) => `<button data-club="${c}"><b>${LABEL[c]}</b><small>${c === 'putter' ? 'roll' : yd(CLUBS[c].carry[1])}</small></button>`).join('')}
+          ${this.bag.map((c) => `<button data-club="${c}"><b>${LABEL[c]}</b><small>${c === 'putter' ? 'roll' : yd(CLUBS[c].carry[1])}</small></button>`).join('')}
         </div>
         <div class="g3-aim">
           <button data-nudge="-1" aria-label="Aim left">◀</button>
@@ -660,7 +664,7 @@ export class Course3D {
   // Which clubs this lie allows, and a sensible default for the distance.
   private lie() {
     const s = surfaceAt(this.hole, this.pos);
-    const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : BAG;
+    const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : this.bag;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
     const want: ClubId = s === 'green' ? 'putter' : this.hole.tour && s !== 'sand' && d >= 26 ? this.reachFor(d, s, allowed) : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
     return { allowed, want, d };
@@ -670,7 +674,7 @@ export class Course3D {
   // climb or drop to the pin (the same table the power plan uses). Out of the rough, never the chip.
   private reachFor(d: number, s: string, allowed: ClubId[]): ClubId {
     const drop = Math.round((heightAt(this.hole, this.hole.cup.x, this.hole.cup.y) - heightAt(this.hole, this.pos.x, this.pos.y)) / 2) * 2;
-    for (const c of ['chip', 'wedge', 'iron', 'driver'] as ClubId[]) {
+    for (const c of ['chip', 'wedge', 'iron', 'wood', 'driver'] as ClubId[]) {
       if (!allowed.includes(c) || (c === 'chip' && (s === 'rough' || d > 60))) continue;
       const t = this.stopTable(c, drop);
       if (t[t.length - 1] * this.boost() >= d * 1.02) return c;
@@ -938,7 +942,8 @@ export class Course3D {
       return this.tapSwing();
     }
     if (this.mode !== 'aim') return;
-    const idx = BAG.indexOf(this.club);
+    const bag = this.bag;
+    const idx = bag.indexOf(this.club);
     if (e.key === 'ArrowLeft') this.aim -= e.shiftKey ? 0.003 : 0.012;
     else if (e.key === 'ArrowRight') this.aim += e.shiftKey ? 0.003 : 0.012;
     else if (e.key === 'ArrowUp') this.power = Math.min(1, this.power + 0.02);
@@ -948,7 +953,7 @@ export class Course3D {
         e.key === 'x' ? 0 : this.spin + (e.key === 's' ? 0.5 : e.key === 'w' ? -0.5 : 0),
         e.key === 'x' ? 0 : this.shape + (e.key === 'd' ? 0.5 : e.key === 'a' ? -0.5 : 0),
       );
-    else if (e.key === 'c') this.overlay.querySelector<HTMLButtonElement>(`[data-club="${BAG[(idx + 1) % BAG.length]}"]:not(:disabled)`)?.click();
+    else if (e.key === 'c') this.overlay.querySelector<HTMLButtonElement>(`[data-club="${bag[(idx + 1) % bag.length]}"]:not(:disabled)`)?.click();
     else if (e.key === ' ' && this.club !== 'putter') this.startSwing();
     else if (e.key === ' ' && this.power > 0.03) this.putt();
     else return;
@@ -963,6 +968,11 @@ export class Course3D {
 
   // The vertical meter (tour courses) stands beside the golfer: power fills
   // upward and the club goes back with it, then the needle and the club come down together to the strike.
+  // the clubs in the bag: tour courses and the practice facility carry the wood as well
+  private get bag() {
+    return bagFor(!!this.hole.tour || !!this.drill);
+  }
+
   private style(): MeterStyle {
     return this.hole.tour ? 'vertical' : 'classic';
   }
@@ -1056,7 +1066,7 @@ export class Course3D {
 
   private hit(club: ClubId, power: number, error: number) {
     const full = club !== 'putter';
-    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind?.accel };
+    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind?.accel };
     const r = simulate(this.hole, this.pos, shot);
     // every shot starts from a stock strike
     this.setStrike(0, 0);
@@ -1112,7 +1122,7 @@ export class Course3D {
       const land = r.sounds.find((x) => x.s === 'land' || x.s === 'splash');
       const at = land ? r.frames.find((f) => f.t >= land.t) : null;
       const carry = at ? Math.hypot(at.x - this.shot!.from.x, at.y - this.shot!.from.y) : 0;
-      this.callout('Absolute bomb', carry ? `${yd(carry)} carry` : 'Pure', 3000);
+      this.callout('Absolutely nuked 🚀', carry ? `${yd(carry)} carry` : 'Pure', 3000);
       (this.overlay.querySelector('[data-callout]') as HTMLElement).classList.add('bomb');
     } else sfx(club === 'putter' ? 'tick' : club === 'driver' ? 'crack' : 'thump');
     this.follow.set(Math.sin(this.aim), 0, -Math.cos(this.aim));
@@ -1343,9 +1353,17 @@ export class Course3D {
       this.scene.add(...objs);
       this.onCourse.push({ golfer, objs, at: golfer.group.position.clone() });
     }
+    this.crowd = stands.crowd(all.slice(filled).map((s) => ({ x: s.x, y: s.y, z: heightAt(this.hole, s.x, s.y) + s.lift })), this.hole.id);
+    this.scene.add(...this.crowd);
   }
 
   private clearGhosts() {
+    for (const m of this.crowd) {
+      this.scene.remove(m);
+      m.geometry.dispose();
+      (m.material as THREE.Material).dispose();
+    }
+    this.crowd = [];
     for (const o of this.onCourse) {
       o.objs.forEach((x) => this.scene.remove(x));
       o.golfer.dispose();
@@ -1671,7 +1689,7 @@ export class Course3D {
     }
     const flying = this.mode === 'roll' && this.shot && this.shot.club !== 'putter';
     const dir = this.mode === 'roll' ? this.follow.clone() : new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim));
-    const long = this.club === 'driver' || this.club === 'iron';
+    const long = this.club === 'driver' || this.club === 'wood' || this.club === 'iron';
     const back = this.mode === 'roll' ? (flying ? 34 : 20) : long ? 20 : this.club === 'wedge' ? 17 : 14;
     const up = this.mode === 'roll' ? (flying ? 20 : 12) : long ? 12 : 9.5;
     this.camPos.copy(ball).addScaledVector(dir, -back).add(new THREE.Vector3(0, up + this.power * 2, 0));

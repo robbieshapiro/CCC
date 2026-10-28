@@ -1,6 +1,6 @@
 // Headless checks for the 3D holes: determinism, slopes, secret routes, a greedy solver, and a novice sim.
 // Run: npm run check-holes
-import { BAG, CLUBS, type ClubId } from '../src/golf3d/clubs';
+import { bagFor, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor } from '../src/golf3d/courses';
 import { monthClosesAt } from '../src/day';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
@@ -98,6 +98,7 @@ const POWERS: Record<ClubId, number[]> = {
   // finer steps where the Caldera asks for touch: a short iron down into the crater, a measured hop between islands
   iron: [0.2, 0.3, 0.4, 0.48, 0.55, 0.62, 0.7, 0.78, 0.85, 0.92, 1],
   driver: [0.3, 0.36, 0.42, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+  wood: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
 };
 
 // tour greens need a finer touch on the putter to find the speed that drops
@@ -108,7 +109,7 @@ function clubsFor(h: Hole, pos: V2): ClubId[] {
   const s = surfaceAt(h, pos);
   if (s === 'sand') return ['wedge', 'iron'];
   if (s === 'green') return ['putter', 'chip', 'wedge'];
-  return BAG;
+  return bagFor(!!h.tour);
 }
 
 type Cand = { d: number; shot: Shot };
@@ -186,7 +187,7 @@ function solve(h: Hole, opts: { exclude?: string; via?: V2[] } = {}) {
 
 // Where each secret starts, and the clubs that can use it from there (and the hole clock, for the ones that keep time).
 // near: how close it has to leave you to count as worth finding (default 60 ft, 160 on a par 5)
-const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, number]; clock?: number; spin?: number; near?: number }> = {
+const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, number]; clock?: number; spin?: number; near?: number; boost?: number }> = {
   summit: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [30, 75] },
   island: { from: { x: -24, y: 58 }, clubs: ['putter'], angles: [-6, 6] },
   ridge: { from: { x: -50, y: 318 }, clubs: ['iron', 'wedge'], angles: [-110, -70] },
@@ -194,21 +195,19 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   lavafield: { from: { x: 80, y: 424 }, clubs: ['putter'], angles: [-4, 12] },
   // the island is the prize: from it the green is one big shot away
   caldera: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [48, 54], spin: 1, near: 340 },
-  // the tunnel: from the tee, roll one onto the shelf on the far wall and into the hole
-  lavalift: { from: { x: 0, y: 55 }, clubs: ['driver', 'iron'], angles: [-3, 3], near: 12 },
   geyseralley: { from: { x: -46, y: 124 }, clubs: ['putter'], angles: [-8, 8] },
-  // the culvert: from the right of the fairway short of the barranca, roll one into the drain's mouth
-  lavatube: { from: { x: 30, y: 230 }, clubs: ['putter'], angles: [25, 50] },
+  // the speed slot: a nuked drive (full power, dead centre, 20% further) down the middle finds the gully off the lip
+  lavatube: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [-1, 1], boost: 1.2, near: 120 },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
 function secretBest(h: Hole) {
-  const { from, clubs, angles, clock = 0, spin = 0 } = SECRET_FROM[h.id];
+  const { from, clubs, angles, clock = 0, spin = 0, boost = 1 } = SECRET_FROM[h.id];
   let best = { d: Infinity, shot: null as Shot | null };
   for (const club of clubs)
     for (let a = angles[0]; a <= angles[1]; a += club === 'putter' ? 0.25 : 1)
       for (let p = 0.3; p <= 1.001; p += 0.02) {
-        const shot: Shot = { angle: (a * Math.PI) / 180, power: p, club, error: 0, clock, spin };
+        const shot: Shot = { angle: (a * Math.PI) / 180, power: p, club, error: 0, clock, spin, boost };
         const r = simulate(h, from, shot, false);
         if (!r.zones.includes(h.secret.zone) || r.penalty) continue;
         const d = r.holed ? 0 : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y);
@@ -400,7 +399,7 @@ if (mode === 'all' || mode === 'basic') {
     const drive = (p: number) => simulate(home, home.tee, { angle: 0, power: p, club: 'driver', error: 0, clock: 0 }, false);
     const big = drive(1);
     const mid = drive(0.7);
-    ok(!big.penalty && big.end.y > 320 && mid.end.y < 288, `${home.name}: a full drive carries the barranca (${big.end.y.toFixed(0)} ft), a 70% one stays short (${mid.end.y.toFixed(0)} ft${mid.penalty ? ', in the lava' : ''})`);
+    ok(!big.penalty && big.end.y > 338 && mid.end.y < 318, `${home.name}: a full drive carries the barranca (${big.end.y.toFixed(0)} ft), a 70% one stays short (${mid.end.y.toFixed(0)} ft${mid.penalty ? ', in the lava' : ''})`);
   }
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);
@@ -412,7 +411,8 @@ if (mode === 'all' || mode === 'solve') {
   for (const h of holes) {
     const normal = solve(h, { exclude: h.secret.zone });
     ok(normal.strokes <= h.par, `${h.name} par ${h.par}: solver ${normal.strokes} the normal way`);
-    // the secret should be worth finding: it leaves you close
+    // the secret should be worth finding: it leaves you close (a hole without one skips this)
+    if (!h.secret.zone) continue;
     const best = secretBest(h);
     const near = SECRET_FROM[h.id].near ?? (h.par >= 5 ? 160 : 60);
     ok(best.d < near, `${h.name}: ${h.secret.name} finishes ${best.d.toFixed(0)} ft from the pin ${best.shot ? `(${best.shot.club} ${Math.round((best.shot.angle * 180) / Math.PI)}° ${best.shot.power.toFixed(2)})` : ''}`);

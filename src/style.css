@@ -236,10 +236,13 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-swing-bar .over { right: 0; width: 7.64%; background: repeating-linear-gradient(135deg, #7a1f2b, #7a1f2b 5px, #93303b 5px, #93303b 10px); }
 .g3-swing-bar .fill { background: linear-gradient(90deg, rgba(240, 213, 142, 0.35), rgba(240, 213, 142, 0.75)); }
 .g3-swing.accuracy .fill { opacity: 0.35; }
-.g3-swing-bar .gold { background: linear-gradient(#f0d58e, var(--gold)); }
-.g3-swing-bar .pure { background: linear-gradient(#ffcf4a, #d99a1e); box-shadow: inset 0 0 0 1px rgba(19, 38, 28, 0.55); } /* the heart of the gold: still gold, so it never looks like the needle */
+.g3-swing-bar .gold { overflow: hidden; background: linear-gradient(180deg, #fff3c4 0%, #f3cf6a 22%, #c99a2e 50%, #f1cd66 72%, #a8781f 100%); box-shadow: inset 0 0 0 1px rgba(122, 82, 16, 0.55), 0 0 10px rgba(255, 210, 90, 0.45); }
+/* a glint of light that runs across the gold, so it reads as metal */
+.g3-swing-bar .gold::after { content: ''; position: absolute; inset: -40% auto -40% -60%; width: 45%; background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%); animation: glint 1.8s ease-in-out infinite; }
+@keyframes glint { 0% { left: -60%; } 55%, 100% { left: 130%; } }
+.g3-swing-bar .pure { z-index: 1; background: linear-gradient(180deg, #ffe58a 0%, #ffbf2e 45%, #d48a0c 100%); box-shadow: inset 0 0 0 1px rgba(19, 38, 28, 0.55); } /* the heart of the gold: still gold, so it never looks like the needle */
 .g3-swing-bar .plan { width: 3px; margin-left: -1.5px; background: #ffd23f; box-shadow: 0 0 0 1px #13261c; }
-.g3-swing-bar .needle { width: 4px; margin-left: -2px; top: -2px; bottom: -2px; background: #fff; box-shadow: 0 0 0 1px #13261c, 0 0 8px #fff; }
+.g3-swing-bar .needle { z-index: 2; width: 4px; margin-left: -2px; top: -2px; bottom: -2px; background: #fff; box-shadow: 0 0 0 1px #13261c, 0 0 8px #fff; }
 /* the vertical meter: stood up beside the golfer, impact near the bottom, power climbing to the overswing at the top */
 .g3-swing.vertical { left: max(18px, env(safe-area-inset-left, 0px)); right: auto; top: 50%; bottom: auto; transform: translateY(-55%); width: 64px; justify-items: start; }
 .g3-swing.vertical.lefty { left: auto; right: max(18px, env(safe-area-inset-right, 0px)); justify-items: end; }
@@ -247,7 +250,10 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-swing.vertical .g3-swing-bar span { top: auto; left: 0; right: 0; width: auto; }
 .g3-swing.vertical .g3-swing-bar .over { top: 0; bottom: auto; height: 7.64%; }
 .g3-swing.vertical .g3-swing-bar .fill { background: linear-gradient(0deg, rgba(240, 213, 142, 0.35), rgba(240, 213, 142, 0.75)); }
-.g3-swing.vertical .g3-swing-bar .gold { background: linear-gradient(90deg, #f0d58e, var(--gold)); }
+.g3-swing.vertical .g3-swing-bar .gold { background: linear-gradient(90deg, #fff3c4 0%, #f3cf6a 22%, #c99a2e 50%, #f1cd66 72%, #a8781f 100%); }
+.g3-swing.vertical .g3-swing-bar .gold::after { inset: auto -40% -60% -40%; width: auto; height: 45%; background: linear-gradient(10deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%); animation-name: glint-up; }
+@keyframes glint-up { 0% { bottom: -60%; } 55%, 100% { bottom: 130%; } }
+@media (prefers-reduced-motion: reduce) { .g3-swing-bar .gold::after { animation: none; display: none; } }
 .g3-swing.vertical .g3-swing-bar .plan { height: 3px; margin: 0 0 -1.5px; }
 .g3-swing.vertical .g3-swing-bar .needle { left: -2px; right: -2px; height: 4px; margin: 0 0 -2px; }
 .g3-swing.vertical p { width: 96px; justify-self: start; text-align: left; font-size: 10px; letter-spacing: 0.1em; line-height: 1.3; }
@@ -283,7 +289,7 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 62%, rgba(255, 250, 225, 0.95), rgba(255, 207, 74, 0.55) 35%, rgba(255, 207, 74, 0) 70%); }
 .g3-flash.go { animation: bombflash 0.7s ease-out; }
 @keyframes bombflash { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 0; } }
-.g3-callout.bomb b { color: #ffd76a; font-size: clamp(54px, 12vw, 110px); text-transform: uppercase; letter-spacing: 0.02em; text-shadow: 0 0 28px rgba(255, 150, 30, 0.9), 0 3px 0 #7a3b1a; }
+.g3-callout.bomb b { color: #ffd76a; font-size: clamp(40px, 8vw, 72px); text-shadow: 0 0 20px rgba(255, 150, 30, 0.7), 0 2px 0 #7a3b1a; }
 .g3-callout.bomb.show { animation: bombpop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
 @keyframes bombpop { from { transform: scale(0.4); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .g3-flash.go, .g3-callout.bomb.show { animation: none; } }

@@ -190,12 +190,12 @@ function limb(a: THREE.Vector3, b: THREE.Vector3, r: number, mt: THREE.Material,
 
 export function buildClub(id: ClubId, gold = false) {
   const g = new THREE.Group();
-  const len = id === 'driver' ? 3.7 : id === 'iron' ? 3.3 : id === 'wedge' || id === 'chip' ? 3.1 : 2.9;
+  const len = id === 'driver' ? 3.7 : id === 'wood' ? 3.5 : id === 'iron' ? 3.3 : id === 'wedge' || id === 'chip' ? 3.1 : 2.9;
   g.add(limb(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -len, 0), 0.035, m('#c9ccd1', 0.25, { metalness: 0.8 })));
   g.add(limb(new THREE.Vector3(0, 0.05, 0), new THREE.Vector3(0, -0.75, 0), 0.06, m('#1b1b1b', 0.9)));
   let head: THREE.Mesh;
-  if (id === 'driver') {
-    head = mesh(new THREE.SphereGeometry(0.26, 16, 10), m('#1d1f24', 0.3, { metalness: 0.5 }));
+  if (id === 'driver' || id === 'wood') {
+    head = mesh(new THREE.SphereGeometry(id === 'wood' ? 0.2 : 0.26, 16, 10), m('#1d1f24', 0.3, { metalness: 0.5 }));
     head.scale.set(1.35, 0.7, 1);
     head.position.set(0.2, -len, 0.04);
   } else if (id === 'putter') {
