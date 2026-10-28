@@ -279,6 +279,14 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-skip.show { opacity: 1; pointer-events: auto !important; }
 .g3-callout { position: absolute; left: 0; right: 0; top: 34%; display: grid; justify-items: center; text-align: center; opacity: 0; transform: translateY(8px) scale(0.98); transition: opacity 0.35s, transform 0.35s; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45); }
 .g3-callout.show { opacity: 1; transform: none; }
+/* a bomb: the strike flashes white-gold, and the callout goes big and gold */
+.g3-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 62%, rgba(255, 250, 225, 0.95), rgba(255, 207, 74, 0.55) 35%, rgba(255, 207, 74, 0) 70%); }
+.g3-flash.go { animation: bombflash 0.7s ease-out; }
+@keyframes bombflash { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 0; } }
+.g3-callout.bomb b { color: #ffd76a; font-size: clamp(54px, 12vw, 110px); text-transform: uppercase; letter-spacing: 0.02em; text-shadow: 0 0 28px rgba(255, 150, 30, 0.9), 0 3px 0 #7a3b1a; }
+.g3-callout.bomb.show { animation: bombpop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes bombpop { from { transform: scale(0.4); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .g3-flash.go, .g3-callout.bomb.show { animation: none; } }
 .g3-callout b { font-family: var(--serif); font-size: clamp(44px, 9vw, 84px); font-weight: 700; font-style: italic; }
 .g3-callout span { font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #f0dcae; }
 
