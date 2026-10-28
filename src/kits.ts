@@ -1,5 +1,5 @@
 // The fall kit: a quarter-zip in your school's colours with its letters on the chest. Colours and letters only, no
-// logos. The picker is a searchable sheet used from the home banner and the locker.
+// logos. The picker is a searchable sheet opened from the locker's gear tab.
 // no imports: the golfer reads this list too, and it has to load without the app around it
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
