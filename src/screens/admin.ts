@@ -1,7 +1,8 @@
-// The admin tab: every club the admin runs on one page. Headline numbers, an inbox (open feedback and unused
-// invites), every member, what's happened lately, and below that the tools for the club you're signed into.
-import { api } from '../api';
-import type { AdminOverview, AdminWindow, Snapshot } from '../api/types';
+// The admin tab: every club the admin runs on one page. At the top, what's waiting on you (feedback) and the things
+// you can go do (notice, invite, preview, new club); then activity, every member, and member management (invites
+// nobody has opened yet, with revoke).
+import { api, getSession, listSessions } from '../api';
+import type { AdminOverview, AdminWindow, Notice, Session, Snapshot } from '../api/types';
 import { GAME_TZ } from '../day';
 import { courseById, upcoming } from '../golf3d/courses';
 import { toParLabel } from '../standings';
@@ -10,10 +11,7 @@ import { store } from '../storage';
 import { esc, header, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
-import { bindFeedbackPanel, feedbackPanel } from './feedback';
-import { bindInviteMaker, inviteMaker } from './invite';
-import { bindNotices, noticeComposer } from './notices';
-import { bindPracticeLog, practiceLogPanel } from './practice';
+import { inviteLink } from './invite';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -36,6 +34,7 @@ const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
 ];
 
 export function admin(snap: Snapshot) {
+  const next = upcoming(snap.month)[0];
   render(`
     ${header(snap.groupName, 'admin')}
     <main class="admin-page">
@@ -43,33 +42,165 @@ export function admin(snap: Snapshot) {
         <div><p class="eyebrow">Committee only</p><h1>The Committee Room</h1></div>
         <div class="seg" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
       </div>
+      <section class="adm-card adm-do">
+        <h2>To do</h2>
+        <div id="adm-todo"><p class="muted">Loading…</p></div>
+        <div class="adm-actions">
+          <button class="btn" data-tool="notice">📣 Post a notice</button>
+          <button class="btn" data-tool="invite">✉️ Invite someone</button>
+          ${next ? `<a class="btn ghost" href="#/preview/${next.id}">⛳ Preview ${esc(next.name.replace(/ Course$/, ''))}</a>` : ''}
+          <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
+        </div>
+        <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
+        <div class="adm-tool" data-panel="invite" hidden>${inviteTool()}</div>
+        <div class="adm-tool" data-panel="club" hidden>${clubMaker(true)}</div>
+      </section>
       <div id="adm-body"><p class="muted">Loading every club…</p></div>
-      <h2 class="adm-tools-head">Club tools · ${esc(snap.groupName)}</h2>
-      <p class="fine">These work on the club you're signed into. Switch clubs from the name under the crest.</p>
-      ${noticeComposer(true)}
-      ${previewPanel(snap.month)}
-      ${inviteMaker(true)}
-      ${practiceLogPanel(true)}
-      ${feedbackPanel(true)}
-      ${clubMaker(true)}
     </main>`);
-  void bindInviteMaker();
-  void bindFeedbackPanel();
-  void bindPracticeLog();
+  document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
+    b.onclick = () => {
+      const open = document.querySelector<HTMLElement>(`[data-panel="${b.dataset.tool}"]`)!;
+      const was = !open.hidden;
+      document.querySelectorAll<HTMLElement>('[data-panel]').forEach((x) => (x.hidden = true));
+      document.querySelectorAll('[data-tool]').forEach((x) => x.classList.remove('on'));
+      open.hidden = was;
+      b.classList.toggle('on', !was);
+      if (!was) open.querySelector<HTMLElement>('textarea, input')?.focus();
+    };
+  });
   bindClubMaker();
-  void bindNotices();
+  bindNoticeTool();
+  bindInviteTool();
   void load();
 }
 
-// every hole of the courses still to come; preview rounds aren't posted
-function previewPanel(month: string) {
-  const list = upcoming(month);
-  if (!list.length) return '';
+// The clubs this device can act for: the admin's signed-in clubs. Notices and invites go out through each one.
+const clubs = () => listSessions();
+const sessionFor = (club: string) => clubs().find((c) => c.groupName === club);
+const clubPicker = (name: string, multi: boolean) => {
+  const all = clubs();
+  if (all.length < 2) return '';
+  const on = getSession()?.groupId;
+  return `<div class="adm-chips adm-pick" role="group" aria-label="Which club"><small>${multi ? 'Post to' : 'Club'}</small>${all
+    .map((c) => `<label><input type="${multi ? 'checkbox' : 'radio'}" name="${name}" value="${esc(c.groupId)}" ${multi || c.groupId === on ? 'checked' : ''}><span>${esc(c.groupName)}</span></label>`)
+    .join('')}</div>`;
+};
+const picked = (form: HTMLFormElement, name: string): Session[] => {
+  const all = clubs();
+  if (all.length < 2) return all.filter((c) => c.groupId === getSession()?.groupId);
+  const ids = new FormData(form).getAll(name).map(String);
+  return all.filter((c) => ids.includes(c.groupId));
+};
+
+// Post a notice to one club or all of them at once; live notices underneath, each with Take down.
+function noticeTool() {
   return `
-    <section class="panel admin invite-maker">
-      <div><h2>Preview the next course</h2><p class="muted">Only you can see this. Every hole, and preview rounds are not posted to the board.</p></div>
-      ${list.map((c) => `<a class="btn" href="#/preview/${c.id}">Play all ${c.holes.length} holes of ${esc(c.name)}</a><p class="fine">${esc(c.tagline)}</p>`).join('')}
-    </section>`;
+    <form id="adm-notice" class="stack">
+      <p class="muted">Shows at the top of every member's home page until you take it down.</p>
+      <textarea id="adm-notice-body" maxlength="1000" rows="3" required placeholder="The Highlands closes Sunday. Get your rounds in."></textarea>
+      ${clubPicker('notice-club', true)}
+      <div class="notice-sign" role="radiogroup" aria-label="Sign it as">
+        <label><input type="radio" name="sign" value="reginald" checked> Reginald</label>
+        <label><input type="radio" name="sign" value="me"> Me</label>
+      </div>
+      <p class="error" id="adm-notice-err" role="alert"></p>
+      <button class="btn" type="submit">Post notice</button>
+    </form>
+    <ul class="adm-list" id="adm-notices"></ul>`;
+}
+
+function bindNoticeTool() {
+  const form = document.getElementById('adm-notice') as HTMLFormElement | null;
+  const list = document.getElementById('adm-notices');
+  if (!form || !list) return;
+  const many = clubs().length > 1;
+  const drawLive = async () => {
+    const live = (await Promise.all(clubs().map(async (c) => (await api.listNotices(c).catch(() => [] as Notice[])).map((n) => ({ n, c }))))).flat();
+    list.innerHTML = live.length
+      ? live
+          .map(({ n, c }) => `<li><div>${chip(c.groupName, many)}<small>${n.asReginald ? 'As Reginald' : 'As you'} · ${ago(n.createdAt)}</small><p>${esc(n.body)}</p></div><button class="btn small ghost" data-down="${n.id}" data-club="${esc(c.groupId)}">Take down</button></li>`)
+          .join('')
+      : '';
+    list.querySelectorAll<HTMLButtonElement>('[data-down]').forEach((b) => {
+      b.onclick = async () => {
+        const c = clubs().find((x) => x.groupId === b.dataset.club);
+        if (!c) return;
+        b.disabled = true;
+        await api.takeDownNotice(c, Number(b.dataset.down)).catch(() => (b.disabled = false));
+        void drawLive();
+      };
+    });
+  };
+  void drawLive();
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const body = document.getElementById('adm-notice-body') as HTMLTextAreaElement;
+    const err = document.getElementById('adm-notice-err')!;
+    const to = picked(form, 'notice-club');
+    err.textContent = to.length ? '' : 'Pick at least one club.';
+    if (!to.length) return;
+    try {
+      const asReginald = new FormData(form).get('sign') === 'reginald';
+      for (const c of to) await api.postNotice(c, body.value, asReginald);
+      body.value = '';
+      void drawLive();
+    } catch (x) {
+      err.textContent = (x as Error).message;
+    }
+  };
+}
+
+// Invite someone to a club: the link to send comes up straight away.
+function inviteTool() {
+  return `
+    <form id="adm-invite" class="stack">
+      <p class="muted">A private link with a code that works once, for that person only.</p>
+      ${clubPicker('invite-club', false)}
+      <div class="invite-form"><input id="adm-invite-name" maxlength="20" placeholder="Their first name" autocomplete="off" aria-label="Their first name" required /><button class="btn" type="submit">Make invitation</button></div>
+      <p class="error" id="adm-invite-err" role="alert"></p>
+    </form>
+    <div id="adm-invite-made"></div>`;
+}
+
+function bindInviteTool() {
+  const form = document.getElementById('adm-invite') as HTMLFormElement | null;
+  if (!form) return;
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('adm-invite-name') as HTMLInputElement;
+    const err = document.getElementById('adm-invite-err')!;
+    const [club] = picked(form, 'invite-club');
+    if (!club) return;
+    err.textContent = '';
+    try {
+      const made = await api.createInvite(club, input.value);
+      input.value = '';
+      document.getElementById('adm-invite-made')!.innerHTML = `<ul class="adm-list"><li><div><b>${esc(made.name)}</b> <small>${esc(club.groupName)} · code ${esc(made.code)}</small></div><button class="btn small" data-send="${esc(made.id)}">${canShare() ? 'Share link' : 'Copy link'}</button></li></ul>`;
+      bindSend(document.getElementById('adm-invite-made')!);
+      void load();
+    } catch (x) {
+      err.textContent = (x as Error).message;
+    }
+  };
+}
+
+// phones get the share sheet, desktops copy the link
+const canShare = () => typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
+function bindSend(root: HTMLElement) {
+  root.querySelectorAll<HTMLButtonElement>('[data-send]').forEach((b) => {
+    b.onclick = async () => {
+      const url = inviteLink(b.dataset.send!);
+      try {
+        if (canShare()) await navigator.share({ title: 'Claude Country Club', text: "You've been put up for membership.", url });
+        else {
+          await navigator.clipboard.writeText(url);
+          b.textContent = 'Copied';
+        }
+      } catch {
+        window.prompt('Copy this link', url);
+      }
+    };
+  });
 }
 
 let state: {
@@ -121,26 +252,46 @@ function draw() {
   const sum = (k: 'members' | 'active' | 'rounds' | 'practice') => d.clubs.reduce((a, c) => a + c[k], 0);
   const many = d.clubs.length > 1;
   const win = WINDOWS.find((w) => w.id === state.window)!.label.toLowerCase();
+  const todo = document.getElementById('adm-todo');
+  if (todo) {
+    todo.innerHTML = d.feedback.length
+      ? `<ul class="adm-list">${d.feedback
+          .map(
+            (f) =>
+              `<li><div>${chip(f.club, many)}<b>${esc(f.from ?? 'A member')}</b> <small>${ago(f.createdAt)}${f.context ? ` · ${esc(f.context)}` : ''}</small><p>${esc(f.body)}</p></div><button class="btn small" data-done="${f.id}">✓ Done</button></li>`,
+          )
+          .join('')}</ul>`
+      : '<p class="muted">Nothing waiting on you. No new feedback.</p>';
+    todo.querySelectorAll<HTMLButtonElement>('[data-done]').forEach(
+      (b) =>
+        (b.onclick = async () => {
+          b.disabled = true;
+          await api.adminFeedbackDone(requireSession(), Number(b.dataset.done), true).catch(() => (b.disabled = false));
+          if (b.disabled) {
+            state.data!.feedback = state.data!.feedback.filter((f) => f.id !== Number(b.dataset.done));
+            draw();
+          }
+        }),
+    );
+  }
   body.innerHTML = `
-    <section class="adm-stats">
-      ${stat(sum('members'), 'Members', `${d.clubs.reduce((a, c) => a + c.newMembers, 0)} new`)}
-      ${stat(sum('active'), 'Active', win === 'all time' ? 'ever' : `last ${win}`.replace('last month', 'this month'))}
-      ${stat(sum('rounds'), 'Rounds', 'posted')}
-      ${stat(sum('practice'), 'Practice', 'sessions')}
-    </section>
-    ${
-      many
-        ? `<div class="table-wrap"><table class="practice-table adm-clubs"><thead><tr><th>Club</th><th class="num">Members</th><th class="num">Active</th><th class="num">New</th><th class="num">Rounds</th><th class="num">Practice</th></tr></thead><tbody>${d.clubs
-            .map(
-              (c) =>
-                `<tr><td>${esc(c.name)}</td><td class="num">${c.members}</td><td class="num">${c.active}</td><td class="num">${c.newMembers}</td><td class="num">${c.rounds}</td><td class="num">${c.practice}</td></tr>`,
-            )
-            .join('')}</tbody></table></div>`
-        : ''
-    }
     <section class="adm-card">
-      <h2>Inbox ${d.feedback.length + d.invites.length ? `<span class="adm-count">${d.feedback.length + d.invites.length}</span>` : ''}</h2>
-      ${inbox(d, many)}
+      <h2>Activity</h2>
+      <div class="adm-stats">
+        ${stat(sum('members'), 'Members', `${d.clubs.reduce((a, c) => a + c.newMembers, 0)} new`)}
+        ${stat(sum('active'), 'Active', win === 'all time' ? 'ever' : `last ${win}`.replace('last month', 'this month'))}
+        ${stat(sum('rounds'), 'Rounds', 'posted')}
+        ${stat(sum('practice'), 'Practice', 'sessions')}
+      </div>
+      ${
+        many
+          ? `<div class="table-wrap"><table class="practice-table adm-clubs"><thead><tr><th>Club</th><th class="num">Members</th><th class="num">Active</th><th class="num">New</th><th class="num">Rounds</th><th class="num">Practice</th></tr></thead><tbody>${d.clubs
+              .map((c) => `<tr><td>${esc(c.name)}</td><td class="num">${c.members}</td><td class="num">${c.active}</td><td class="num">${c.newMembers}</td><td class="num">${c.rounds}</td><td class="num">${c.practice}</td></tr>`)
+              .join('')}</tbody></table></div>`
+          : ''
+      }
+      <h3 class="adm-sub">Latest</h3>
+      ${feed(d, many)}
     </section>
     <section class="adm-card">
       <div class="adm-head"><h2>Members</h2>${many ? `<div class="adm-chips">${['', ...d.clubs.map((c) => c.name)].map((c) => `<button data-club="${esc(c)}" class="${state.club === c ? 'on' : ''}">${c ? esc(c) : 'All'}</button>`).join('')}</div>` : ''}</div>
@@ -148,8 +299,9 @@ function draw() {
       <p class="fine">Days: days in the window they opened the club, played or practised. Best: their best round to par in the window.</p>
     </section>
     <section class="adm-card">
-      <h2>Recent activity</h2>
-      ${feed(d, many)}
+      <h2>Member management</h2>
+      <h3 class="adm-sub">Invited, not joined yet${d.invites.length ? ` · ${d.invites.length}` : ''}</h3>
+      ${pending(d, many)}
     </section>`;
   body.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.onclick = () => ((state.club = b.dataset.club!), draw())));
   body.querySelectorAll<HTMLElement>('[data-sort]').forEach(
@@ -161,26 +313,20 @@ function draw() {
         draw();
       }),
   );
-  body.querySelectorAll<HTMLButtonElement>('[data-done]').forEach(
+  bindSend(body);
+  body.querySelectorAll<HTMLButtonElement>('[data-revoke]').forEach(
     (b) =>
       (b.onclick = async () => {
+        const c = sessionFor(b.dataset.club!);
+        if (!c || !confirm(`Revoke the invitation for ${b.dataset.name}? The link stops working.`)) return;
         b.disabled = true;
-        await api.adminFeedbackDone(requireSession(), Number(b.dataset.done), true).catch(() => (b.disabled = false));
-        if (b.disabled) {
-          state.data!.feedback = state.data!.feedback.filter((f) => f.id !== Number(b.dataset.done));
-          draw();
-        }
-      }),
-  );
-  body.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach(
-    (b) =>
-      (b.onclick = async () => {
-        const url = `${location.origin}${location.pathname}#/invite/${b.dataset.copy}`;
         try {
-          await navigator.clipboard.writeText(url);
-          b.textContent = 'Copied';
-        } catch {
-          window.prompt('Copy the invite link', url);
+          await api.deleteInvite(c, b.dataset.revoke!);
+          state.data!.invites = state.data!.invites.filter((i) => i.id !== b.dataset.revoke);
+          draw();
+        } catch (x) {
+          b.disabled = false;
+          alert((x as Error).message);
         }
       }),
   );
@@ -189,22 +335,15 @@ function draw() {
 const stat = (n: number, label: string, sub: string) => `<div class="adm-stat"><b>${n}</b><span>${label}</span><small>${esc(sub)}</small></div>`;
 const chip = (club: string, many: boolean) => (many ? `<span class="adm-club">${esc(club)}</span>` : '');
 
-function inbox(d: AdminOverview, many: boolean) {
-  if (!d.feedback.length && !d.invites.length) return '<p class="muted">Inbox zero.</p>';
-  return `<ul class="adm-list">
-    ${d.feedback
-      .map(
-        (f) =>
-          `<li><div>${chip(f.club, many)}<b>${esc(f.from ?? 'A member')}</b> <small>${ago(f.createdAt)}${f.context ? ` · ${esc(f.context)}` : ''}</small><p>${esc(f.body)}</p></div><button class="btn small" data-done="${f.id}">✓ Done</button></li>`,
-      )
-      .join('')}
-    ${d.invites
-      .map(
-        (i) =>
-          `<li><div>${chip(i.club, many)}<b>${esc(i.name)}</b> <small>invited ${ago(i.createdAt)}, not joined yet · code ${esc(i.code)}</small></div><button class="btn small ghost" data-copy="${esc(i.id)}">Copy link</button></li>`,
-      )
-      .join('')}
-  </ul>`;
+// invitations nobody has opened yet, oldest at the bottom: copy the link again, or revoke it
+function pending(d: AdminOverview, many: boolean) {
+  if (!d.invites.length) return '<p class="muted">Everyone you invited has joined.</p>';
+  return `<ul class="adm-list">${d.invites
+    .map((i) => {
+      const can = !!sessionFor(i.club);
+      return `<li><div>${chip(i.club, many)}<b>${esc(i.name)}</b> <small>invited ${ago(i.createdAt)} · code ${esc(i.code)}</small></div><span class="adm-acts"><button class="btn small ghost" data-send="${esc(i.id)}">${canShare() ? 'Share' : 'Copy link'}</button><button class="link" data-revoke="${esc(i.id)}" data-club="${esc(i.club)}" data-name="${esc(i.name)}" ${can ? '' : 'disabled title="Open this club on this device once to manage it"'}>Revoke</button></span></li>`;
+    })
+    .join('')}</ul>`;
 }
 
 function memberTable(all: Members) {
