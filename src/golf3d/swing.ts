@@ -18,15 +18,17 @@ const WIDER: Record<ClubId, number> = { driver: 1, iron: 1, wedge: 1.5, chip: 1.
 
 // how fast the needle comes back for the accuracy tap, in bar-lengths per second
 const RETURN: Record<ClubId, number> = { driver: 1.0, iron: 0.84, wedge: 0.72, chip: 0.9, putter: 0 };
-export function returnSpeed(club: ClubId, power: number, needle = 1, style: MeterStyle = 'classic') {
+// fire: you've a lager or a fireball in you, and the overswing zone is the fire. Swinging into it is what the drink
+// is for, so it's only a little harder than a full swing, where a sober overswing is a gamble.
+export function returnSpeed(club: ClubId, power: number, needle = 1, style: MeterStyle = 'classic', fire = false) {
   const over = Math.max(0, power - 1);
-  return RETURN[club] * (0.7 + 0.6 * Math.min(1, power)) * (1 + over * 10) * needle * (style === 'vertical' ? SLOWER[club] : 1);
+  return RETURN[club] * (0.7 + 0.6 * Math.min(1, power)) * (1 + over * (fire ? 2.5 : 10)) * needle * (style === 'vertical' ? SLOWER[club] : 1);
 }
 
 // the gold window either side of the impact point, as a share of the bar; overswing shrinks it
-export function goldHalf(club: ClubId, power: number, sweetMul = 1, style: MeterStyle = 'classic') {
+export function goldHalf(club: ClubId, power: number, sweetMul = 1, style: MeterStyle = 'classic', fire = false) {
   const over = Math.max(0, power - 1);
-  return (CLUBS[club].sweet / 2) * sweetMul * (1 - over * 4) * (style === 'vertical' ? WIDER[club] : 1);
+  return (CLUBS[club].sweet / 2) * sweetMul * (1 - over * (fire ? 1.5 : 4)) * (style === 'vertical' ? WIDER[club] : 1);
 }
 export const PURE = 0.3; // the bullseye is this share of the gold
 
