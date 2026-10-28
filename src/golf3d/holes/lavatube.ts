@@ -64,9 +64,9 @@ export const lavatube: Hole = {
   theme: 'volcanic',
   tour: true,
   tee: { x: 0, y: 0 },
-  cup: { x: 10, y: 646 },
-  // two on the lower front tier, two on the upper back one
-  pins: [{ x: 10, y: 646 }, { x: -6, y: 624 }, { x: 26, y: 660 }, { x: 0, y: 662 }],
+  cup: { x: 26, y: 658 },
+  // two on the upper back tier, two on the lower front one
+  pins: [{ x: 26, y: 658 }, { x: 10, y: 622 }, { x: -6, y: 618 }, { x: 0, y: 660 }],
   aim: 0,
   bounds: { x0: -170, y0: -50, x1: 170, y1: 800 },
   border: [
@@ -116,12 +116,13 @@ export const lavatube: Hole = {
     { kind: 'embankment', pts: BERM, h: BERM.map(() => LOW + 12), width: 10, edge: 18 },
     // the green: lower tier in front, upper tier behind, a ridge between, and hollows and humps on both
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.r + 8, h: LOW + 1, edge: 8, op: 'set' },
-    { kind: 'ramp', x0: GREEN.x - 40, y0: GREEN.y - 6, x1: GREEN.x + 40, y1: GREEN.y + 10, axis: 'y', h0: 0, h1: 2.2, op: 'add' },
-    { kind: 'ramp', x0: GREEN.x - 40, y0: GREEN.y - 40, x1: GREEN.x + 40, y1: GREEN.y + 40, axis: 'x', h0: 0.9, h1: -0.9, op: 'add' },
-    { kind: 'hill', x: GREEN.x - 14, y: GREEN.y - 14, r: 9, h: -1 },
-    { kind: 'hill', x: GREEN.x + 16, y: GREEN.y - 8, r: 8, h: 0.9 },
-    { kind: 'hill', x: GREEN.x - 6, y: GREEN.y + 20, r: 10, h: 0.8 },
-    { kind: 'hill', x: GREEN.x + 18, y: GREEN.y + 22, r: 7, h: -0.8 },
+    // the upper tier: the back of the green stands 2 ft above the front, the step between them a curving slope
+    { kind: 'disc', x: GREEN.x, y: GREEN.y + 64, r: 72, h: 2.8, edge: 14, op: 'add' },
+    { kind: 'ramp', x0: GREEN.x - 40, y0: GREEN.y - 40, x1: GREEN.x + 40, y1: GREEN.y + 40, axis: 'x', h0: 1.4, h1: -1.4, op: 'add' },
+    { kind: 'hill', x: GREEN.x - 14, y: GREEN.y - 14, r: 9, h: -1.3 },
+    { kind: 'hill', x: GREEN.x + 16, y: GREEN.y - 8, r: 8, h: 1.3 },
+    { kind: 'hill', x: GREEN.x - 6, y: GREEN.y + 20, r: 10, h: 1.2 },
+    { kind: 'hill', x: GREEN.x + 18, y: GREEN.y + 22, r: 7, h: -1.1 },
     ...[[-30, 616, 8], [48, 628, 9], [-24, 520, 9], [34, 470, 8]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.2, edge: 3, op: 'add' as const })),
   ],
   walls: [],
@@ -135,7 +136,7 @@ export const lavatube: Hole = {
     { x: 0, y: -30 },
     { x: 0, y: 300 },
     { x: 4, y: 520 },
-    { x: 10, y: 646 },
+    { x: 10, y: 622 },
   ],
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
