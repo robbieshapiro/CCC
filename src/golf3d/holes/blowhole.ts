@@ -72,8 +72,8 @@ const base: Hole = {
     { poly: band(armWay, 40), surface: 'fringe' },
     { poly: band(armWay, 36), surface: 'fairway' },
     // across the top to the green: the bold landing sits right on the cliff edge
-    { poly: band(farWay, 24), surface: 'fringe' },
-    { poly: band(farWay, 20), surface: 'fairway' },
+    { poly: band(farWay, 30), surface: 'fringe' },
+    { poly: band(farWay, 26), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.r + 4, GREEN.r + 2, 1, 0.07), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.r, GREEN.r - 2, 1, 0.07), surface: 'green' },
     { poly: blob(-32, 372, 8, 6, 2, 0.15), surface: 'sand' },
@@ -90,7 +90,7 @@ const base: Hole = {
     // the tee and the right-hand arm of the headland: a cliff top that slopes gently down toward the corner
     { kind: 'embankment', pts: arm, h: [27, 26, 24.5, 23, 22], width: 40, edge: 10, wobble: 6 },
     // the far headland the green sits on
-    { kind: 'embankment', pts: far, h: [21, 21, 21, 21.5], width: 52, edge: 10, wobble: 8 },
+    { kind: 'embankment', pts: far, h: [21, 21, 21, 21.5], width: 60, edge: 10, wobble: 8 },
     // the beach: black sand at the foot of the cliff, just above the low tide
     { kind: 'embankment', pts: [{ x: -12, y: 40 }, { x: -14, y: 146 }, { x: -14, y: 250 }], h: [1.5, 1.2, 1.1], width: 7, edge: 14 },
     // rolls in the fairway

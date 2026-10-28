@@ -73,6 +73,21 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   }
   // today's players are on this month's course, not the preview
   if (!preview) game.setGhosts(todaysField(snap));
+  // a hole with a stadium fills its stands with everyone in the Open who has played it this month
+  const standsAt = course.holes.findIndex((h) => h.decor.some((d) => d.kind === 'stands'));
+  if (standsAt >= 0 && !preview) {
+    const g = game;
+    void api
+      .openBoard(requireSession())
+      .then((rows) =>
+        g.setGallery(
+          rows
+            .filter((r) => r.holes[standsAt] !== undefined && r.holes[standsAt] !== null)
+            .map((r) => ({ name: r.name, avatar: r.avatar, label: `${scoreName(r.holes[standsAt], course.holes[standsAt].par)} · ${r.club}` })),
+        ),
+      )
+      .catch(() => {});
+  }
   const scores: number[] = [];
   const spots: Spot[] = [];
   const feats = new Set<string>();

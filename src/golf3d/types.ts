@@ -49,6 +49,7 @@ export type Hole = {
   greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
+  noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)
   theme?: 'highland' | 'volcanic';
   flag?: string; // what the pin's flag says, if not the hole number
   aim: number; // initial aim angle (radians, 0 = straight up the hole)
@@ -64,6 +65,8 @@ export type Hole = {
   pushes: Push[];
   roofs?: { poly: V2[]; h: number }[]; // a ball that comes down on one is lost (penalty)
   ceilings?: { poly: V2[]; h: number }[]; // a cave roof this far above the ground: a ball that rises into it clips it and drops
+  // a hole in the rock: a ball that rolls into it drops down a tunnel and comes out at `to` a moment later, at rest
+  portals?: { id: string; x: number; y: number; r: number; to: V2; delay?: number }[];
   zones: Zone[]; // used to detect secret routes and feats
   secret: { name: string; zone: string; hint: string };
   flyover: V2[]; // camera path for the intro

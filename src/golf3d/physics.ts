@@ -14,7 +14,7 @@ export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R);
 export const DROP_SPEED = 8.5;
 export const TOUR_GREEN = 3;
 const TOUR_FAIRWAY = 5;
-const TOUR_BITE = 3;
+const TOUR_BITE = 1.4; // tour turf grabs a spinning ball a little harder than the Highlands, not three times
 export const G = 32;
 const DT = 1 / 240;
 const MAX_T = 24;
@@ -27,7 +27,7 @@ const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, 
 const GRIP: Record<Surface, number> = { green: 1, fairway: 0.8, fringe: 0.6, rough: 0.25, path: 0.4, stone: 0.4, wood: 0.4, sand: 0, rock: 0.3, cinder: 0.4 };
 
 export type Frame = { x: number; y: number; z: number; t: number };
-export type Sound = { t: number; s: 'wall' | 'post' | 'land' | 'splash' | 'cup' | 'sand' | 'lip' | 'hop' | 'vent' };
+export type Sound = { t: number; s: 'wall' | 'post' | 'land' | 'splash' | 'cup' | 'sand' | 'lip' | 'hop' | 'vent' | 'portal' };
 export type Result = {
   end: V2;
   holed: boolean;
@@ -192,14 +192,14 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
           const sp = Math.hypot(vx, vy);
           // tour turf is cut tight and grabs a spinning ball harder
           const check = club.check * spin * GRIP[surf] * (0.35 + 0.65 * shot.power) * (h.tour ? TOUR_BITE : 1);
-          const next = Math.max(sp - check, -0.6 * check);
+          const next = Math.max(sp - check, -0.35 * check); // it can spin back, but only a little
           if (sp > 1e-6) {
             vx *= next / sp;
             vy *= next / sp;
           }
         }
         // on tour turf a spinning ball's first bounce is a check, not a hop
-        const deaden = flying && h.tour ? 1 - 0.75 * Math.max(0, shot.spin ?? 0) * GRIP[surf] : 1;
+        const deaden = flying && h.tour ? 1 - 0.45 * Math.max(0, shot.spin ?? 0) * GRIP[surf] : 1;
         flying = false;
         if (vzRel < -9 && surf !== 'sand') vz = -vzRel * 0.24 * deaden + (vx * gr.x + vy * gr.y);
         else air = false;
@@ -286,6 +286,18 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         sounds.push({ t, s: 'vent' });
       }
       prevGround = ground;
+      // into a hole in the rock: down the tunnel, and out the far end a moment later
+      for (const pt of h.portals ?? [])
+        if (Math.hypot(x - pt.x, y - pt.y) < pt.r) {
+          zones.add(pt.id);
+          sounds.push({ t, s: 'portal' });
+          if (keepFrames) frames.push({ x, y, z, t });
+          t += pt.delay ?? 1.4;
+          x = pt.to.x;
+          y = pt.to.y;
+          z = heightAt(h, x, y);
+          return finish(false, false);
+        }
       if (!air && isWater(h, { x, y }, clock)) {
         sounds.push({ t, s: 'splash' });
         return finish(false, true);

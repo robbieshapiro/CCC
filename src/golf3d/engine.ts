@@ -11,6 +11,7 @@ import { conditionsFor, withPin, type Conditions } from './conditions';
 import { BAG, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
 import { Golfer } from './golfer';
 import { BALL_R, G, launch, lieFactor, simulate, TOUR_GREEN, type Result } from './physics';
+import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
@@ -25,6 +26,8 @@ export type Drill = { title: string; stations: { name: string; at: V2 }[]; targe
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
 // A member who played today, standing where their tee shot finished on each hole.
 export type Ghost = { name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
+// someone in the stands on a hole that has them: a member who has played it, with their score on it
+export type Spectator = { name: string; avatar: Avatar; label: string };
 type Mode = 'fly' | 'aim' | 'meter' | 'swing' | 'roll' | 'done' | 'cart';
 
 // A floating name card over another member: their name, and what they made on this hole.
@@ -356,7 +359,7 @@ export class Course3D {
     this.hud(total);
     this.miniBase = null;
     this.placeGhosts();
-    if (opts.cart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k));
+    if (opts.cart && !hole.noCart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k));
     this.startFlyover();
     // the practice areas skip the flyover and get straight to it
     if (this.drill) this.endFlyover();
@@ -615,8 +618,31 @@ export class Course3D {
   private planFor(c: ClubId) {
     const [lo, hi] = CLUBS[c].carry;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    // on tour courses the plan goes all the way down, so even a short chip can be aimed at the hole
-    return Math.max(this.hole.tour ? 0 : 0.15, Math.min(1, (d / (this.boost() * lieFactor(this.hole, this.pos, c)) - lo) / (hi - lo)));
+    const reach = d / (this.boost() * lieFactor(this.hole, this.pos, c));
+    if (!this.hole.tour) return Math.max(0.15, Math.min(1, (reach - lo) / (hi - lo)));
+    // on tour courses the plan is where the ball stops, not where it lands: on quick greens a chip runs out two or
+    // three times its carry. The plan goes all the way down, so even a short chip can be aimed at the hole.
+    const stops = this.stopTable(c);
+    if (reach <= stops[0]) return 0;
+    for (let i = 1; i < stops.length; i++)
+      if (reach <= stops[i]) return (i - 1 + (reach - stops[i - 1]) / Math.max(1e-6, stops[i] - stops[i - 1])) / (stops.length - 1);
+    return 1;
+  }
+
+  // How far each club's ball ends up on flat tour ground, at power 0, 0.05 .. 1: onto the green near the pin, or the
+  // fairway if the pin's green isn't what it lands on. Worked out once a hole and kept.
+  private stops = new Map<string, number[]>();
+  private stopTable(c: ClubId) {
+    const key = `${this.hole.id}:${c}`;
+    let t = this.stops.get(key);
+    if (t) return t;
+    const flat: Hole = { ...this.hole, terrain: [], water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], roofs: [], ceilings: [], base: 'green', greenFirm: this.hole.greenFirm, cup: { x: 0, y: 5000 } };
+    t = [];
+    for (let i = 0; i <= 20; i++) t.push(simulate(flat, { x: 0, y: 0 }, { angle: 0, power: i / 20, club: c, error: 0, clock: 0 }, false).end.y);
+    // never shorter than the last: a plan that goes up with the power
+    for (let i = 1; i < t.length; i++) t[i] = Math.max(t[i], t[i - 1] + 0.01);
+    this.stops.set(key, t);
+    return t;
   }
 
   // Which clubs this lie allows, and a sensible default for the distance.
@@ -1059,8 +1085,14 @@ export class Course3D {
       } else if (k === 'vent') {
         sfx('whoosh');
         this.puff(this.ball.position, '#f1efe9');
+      } else if (k === 'portal') {
+        sfx('thump');
+        this.callout('Down the tunnel', '', 1400);
       }
     }
+    // down a tunnel: out of sight until it rolls out of the far end
+    const tunnel = s.r.sounds.find((x) => x.s === 'portal');
+    this.ball.visible = !tunnel || s.t < tunnel.t || s.t >= s.r.duration;
     let i = 0;
     while (i < f.length - 1 && f[i + 1].t < s.t) i++;
     const a = f[i];
@@ -1215,6 +1247,42 @@ export class Course3D {
     this.ghosts = g;
   }
 
+  private gallery: Spectator[] = [];
+  setGallery(g: Spectator[]) {
+    this.gallery = g;
+  }
+
+  // The stadium: members who have played the hole in the front rows with their score on a card overhead, and patrons
+  // in the rest. A few dozen at most, so a phone can keep up.
+  private seatCrowd() {
+    const banks = this.hole.decor.filter((d) => d.kind === 'stands');
+    if (!banks.length) return;
+    const all = banks.flatMap((d, b) => stands.seats(d).map((s, j) => ({ ...s, d, row: Math.floor(j / stands.COLS), k: (j % stands.COLS) * banks.length + b })));
+    // front rows first, alternating banks, so members sit where the cameras can see them
+    all.sort((a, b) => a.row - b.row || a.k - b.k);
+    const named = this.gallery.slice(0, 18);
+    const filled = Math.min(all.length, 34);
+    for (let i = 0; i < filled; i++) {
+      const s = all[i];
+      const who = named[i];
+      const golfer = new Golfer(who ? specOf(who.avatar) : stands.patron(`${this.hole.id}:${i}`));
+      golfer.holdClub(null);
+      golfer.showBag(false);
+      golfer.setPose(i % 4 === 0 ? 'cheer' : 'idle');
+      golfer.group.position.copy(w3(s.x, s.y, heightAt(this.hole, s.x, s.y) + s.lift));
+      const f = stands.facing(s.d);
+      golfer.group.rotation.y = Math.PI / 2 - Math.atan2(f.y, f.x);
+      const objs: THREE.Object3D[] = [golfer.group];
+      if (who) {
+        const tag = nameTag(who.name, who.label);
+        tag.position.copy(golfer.group.position).add(new THREE.Vector3(0, 8.5 * golfer.spec.height, 0));
+        objs.push(tag);
+      }
+      this.scene.add(...objs);
+      this.onCourse.push({ golfer, objs, at: golfer.group.position.clone() });
+    }
+  }
+
   private clearGhosts() {
     for (const o of this.onCourse) {
       o.objs.forEach((x) => this.scene.remove(x));
@@ -1226,6 +1294,7 @@ export class Course3D {
   // Each one stands beside their ball, facing the flag, with their name and score on this hole overhead.
   private placeGhosts() {
     this.clearGhosts();
+    this.seatCrowd();
     const i = this.number - 1;
     for (const g of this.ghosts) {
       const s = g.spots[i];

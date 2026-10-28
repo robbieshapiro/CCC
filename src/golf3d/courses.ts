@@ -31,7 +31,7 @@ const COURSES: Course[] = [
     month: '2026-11',
     previewHoles: 3,
     name: 'The Caldera Course',
-    tagline: 'A volcanic island. Sea cliffs, lava fields, a gorge, an alley of steam and a tee inside a lava tube. Tour greens: they are quick.',
+    tagline: 'A volcanic island. Sea cliffs, lava fields, a crater you hit down into, an alley of geysers, and a climb through the sky to the volcano itself. Tour greens: they are quick.',
     holes: [blowhole, lavafield, caldera, lavalift, geyseralley, lavatube],
     par: par([blowhole, lavafield, caldera, lavalift, geyseralley, lavatube]),
   },

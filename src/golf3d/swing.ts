@@ -10,17 +10,17 @@ const FILL: Record<ClubId, number> = { driver: 0.9, iron: 0.75, wedge: 0.6, chip
 export const powerSpeed = (club: ClubId, p: number) => FILL[club] * (0.6 + 1.4 * p * p);
 
 // The meter comes in two styles. Classic runs left to right. The vertical meter (tour courses, and every course
-// from November) swings the club up and down with it, brings the needle back a touch slower and has wider gold:
-// about ±55 ms to find it with a full driver, ±90 ms with an iron, ±140 ms with a wedge, against ±19, ±37 and ±69.
+// from November) swings the club up and down with it. The long clubs are just as unforgiving as on the classic meter
+// (a full driver gives you about ±19 ms to find the gold); only the scoring clubs get a slower needle and wider gold.
 export type MeterStyle = 'classic' | 'vertical';
-const SLOWER = 0.75;
-const WIDER: Record<ClubId, number> = { driver: 2.15, iron: 1.85, wedge: 1.5, chip: 1.5, putter: 1 };
+const SLOWER: Record<ClubId, number> = { driver: 1, iron: 1, wedge: 0.75, chip: 0.75, putter: 1 };
+const WIDER: Record<ClubId, number> = { driver: 1, iron: 1, wedge: 1.5, chip: 1.5, putter: 1 };
 
 // how fast the needle comes back for the accuracy tap, in bar-lengths per second
 const RETURN: Record<ClubId, number> = { driver: 1.0, iron: 0.84, wedge: 0.72, chip: 0.9, putter: 0 };
 export function returnSpeed(club: ClubId, power: number, needle = 1, style: MeterStyle = 'classic') {
   const over = Math.max(0, power - 1);
-  return RETURN[club] * (0.7 + 0.6 * Math.min(1, power)) * (1 + over * 10) * needle * (style === 'vertical' ? SLOWER : 1);
+  return RETURN[club] * (0.7 + 0.6 * Math.min(1, power)) * (1 + over * 10) * needle * (style === 'vertical' ? SLOWER[club] : 1);
 }
 
 // the gold window either side of the impact point, as a share of the bar; overswing shrinks it
