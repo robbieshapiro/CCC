@@ -75,8 +75,9 @@ export function home(snap: Snapshot) {
     ${header(snap.groupName, 'month')}
     <main>
       ${noticesStrip()}
+      ${launchHero(snap.month)}
       ${hostChip(line, mood, 'reg-line')}
-      <section class="course-card">
+      <section class="course-card${nextCourse(snap.month) ? ' secondary' : ''}${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
         <div class="course-crest">${crest(78, 'cc')}</div>
         <div class="course-body">
           <p class="eyebrow">${monthName(snap.month)}</p>
@@ -84,7 +85,7 @@ export function home(snap: Snapshot) {
           <p class="muted">${esc(course.tagline)}</p>
           <ol class="hole-list">${course.holes.map((h, i) => `<li><span>${i + 1}</span><b>${esc(h.name)}</b><em>Par ${h.par}</em></li>`).join('')}</ol>
           <div class="course-cta">
-            <a class="btn" href="#/round">${mine ? 'Play another round' : 'Play a round'}</a>
+            <a class="btn" href="#/round">${mine ? 'Play another round' : `Play ${esc(shortName(course))}`}</a>
             <span class="muted">${mine ? `Your best: <b>${mine.total}</b> (${toParLabel(mine.total - mine.par)})` : `Par ${course.par} · best round of the month counts`}</span>
           </div>
         </div>
@@ -93,7 +94,7 @@ export function home(snap: Snapshot) {
         ${countdown(snap.month, course)}
         <div class="board-head"><h2>The Board</h2><span>${monthName(snap.month)} · best round counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist" hidden>
-          <button role="tab" data-tab="open">The Open</button><button role="tab" data-tab="club">${esc(snap.groupName)}</button>
+          <button role="tab" data-tab="open">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club">My club</button>
         </div>
         <div id="board-open" hidden></div>
         <div id="board-club"><div class="table-wrap"><table class="scorecard">
@@ -104,7 +105,6 @@ export function home(snap: Snapshot) {
           </tbody>
         </table></div></div>
       </section>
-      ${comingSoon(snap.month)}
       ${facilityPanel()}
       <section class="plaque">
         <h2>Past Champions</h2>
@@ -161,44 +161,53 @@ function countdown(month: string, course: Course) {
 let clock = 0;
 function tickCountdown() {
   const draw = () => {
-    const el = document.querySelector<HTMLElement>('[data-countdown]');
-    if (!el) {
+    const els = document.querySelectorAll<HTMLElement>('[data-countdown]');
+    if (!els.length) {
       window.clearInterval(clock);
       clock = 0;
       return;
     }
-    const left = Number(el.dataset.countdown) - Date.now();
-    const out = el.querySelector('[data-left]')!;
-    el.classList.toggle('final', left < 3_600_000);
-    if (left <= 0) {
-      out.textContent = 'Closed';
-      el.querySelector('small')!.textContent = 'The champion is being crowned.';
-      return;
+    for (const el of els) {
+      const left = Number(el.dataset.countdown) - Date.now();
+      const out = el.querySelector('[data-left]')!;
+      el.classList.toggle('final', left < 3_600_000);
+      if (left <= 0) {
+        out.textContent = el.dataset.done ? '' : 'Closed';
+        el.querySelector('small')!.textContent = el.dataset.done ?? 'The champion is being crowned.';
+        continue;
+      }
+      const s = Math.floor(left / 1000);
+      const d = Math.floor(s / 86400);
+      const h = Math.floor((s % 86400) / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      out.textContent = `${d ? `${d}d ` : ''}${h}h ${String(m).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}s`;
     }
-    const s = Math.floor(left / 1000);
-    const d = Math.floor(s / 86400);
-    const h = Math.floor((s % 86400) / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    out.textContent = `${d ? `${d}d ` : ''}${h}h ${String(m).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}s`;
   };
   draw();
   if (!clock) clock = window.setInterval(draw, 1000);
 }
 
-// The next course on the calendar: a few of its holes to practise before it counts.
-function comingSoon(month: string) {
+const shortName = (c: Course) => c.name.replace(/ Course$/, '');
+
+// The headline at the top of the home page: the next course's Open, counting down to its first day, with its practice
+// preview as the main button. Volcanic courses get the red glow.
+function launchHero(month: string) {
   const next = nextCourse(month);
   if (!next) return '';
   const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
-  const starts = monthName(next.month).split(' ')[0];
+  const starts = monthClosesAt(month);
+  const day = starts.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'long', day: 'numeric' });
   return `
-    <section class="panel coming-soon">
-      <div>
-        <p class="eyebrow">Next course · from 1 ${esc(starts)}</p>
-        <h2>${esc(next.name)}</h2>
-        <p class="muted">${esc(next.tagline)}</p>
-        <p class="fine">A ${n}-hole practice preview. Nothing you play here goes on the board.</p>
+    <section class="launch-hero${next.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
+      <p class="eyebrow">Opens ${esc(day)} · ${next.holes.length} holes · par ${next.par}</p>
+      <h1>${esc(shortName(next))} Open</h1>
+      <div class="hero-clock" data-countdown="${starts.getTime()}" data-done="It's open. Tee off.">
+        <span>Begins in</span><b data-left>…</b><small></small>
       </div>
-      <a class="btn" href="#/practice/${next.id}">Play practice</a>
+      <p class="hero-tag">${esc(next.tagline)}</p>
+      <div class="hero-cta">
+        <a class="btn lava" href="#/practice/${next.id}">Play the preview</a>
+        <span>${n} practice holes now. Nothing counts until ${esc(day)}.</span>
+      </div>
     </section>`;
 }

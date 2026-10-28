@@ -8,7 +8,7 @@ import { sfx } from '../fx/sound';
 import { todayInGameTz } from '../day';
 import { CartGirl } from './cartgirl';
 import { conditionsFor, withPin, type Conditions } from './conditions';
-import { BAG, carryOf, CLUBS, DRINKS, type ClubId, type Drink } from './clubs';
+import { BAG, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
 import { Golfer } from './golfer';
 import { BALL_R, G, launch, lieFactor, simulate, TOUR_GREEN, type Result } from './physics';
 import * as props from './props';
@@ -68,9 +68,9 @@ export function scoreName(strokes: number, par: number) {
   return d <= -3 ? 'Albatross' : d === -2 ? 'Eagle' : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey' : d === 2 ? 'Double bogey' : 'Triple bogey';
 }
 
-// Distances on screen: yards, except a putt, which is feet. The course itself is measured in feet.
-const yd = (ft: number) => `${Math.round(ft / 3)} yd`;
-const away = (ft: number, putt: boolean) => (putt ? `${Math.round(ft)} ft` : yd(ft));
+// Distances on screen: real-world yards (the course is a scale model, see SCALE), except a putt, which is feet.
+const yd = (ft: number) => `${Math.round((ft * SCALE) / 3)} yd`;
+const away = (ft: number, putt: boolean) => (putt ? `${Math.round(ft * SCALE)} ft` : yd(ft));
 
 const LABEL: Record<ClubId, string> = { driver: 'Driver', iron: 'Iron', wedge: 'Wedge', chip: 'Chip', putter: 'Putter' };
 
@@ -1356,7 +1356,7 @@ export class Course3D {
   private readGreen() {
     this.clearGrid();
     const R = 40;
-    const step = 4;
+    const step = 6; // a light read: one strand every 6 ft
     const at: number[] = [];
     const dir: number[] = [];
     const speed: number[] = [];
@@ -1404,9 +1404,13 @@ export class Course3D {
       const zi = k * 8;
       const z0 = f.z[i * 9 + Math.floor(zi)];
       const z1 = f.z[i * 9 + Math.min(8, Math.floor(zi) + 1)];
-      v.copy(w3(f.at[i * 2] + f.dir[i * 2] * d, f.at[i * 2 + 1] + f.dir[i * 2 + 1] * d, z0 + (z1 - z0) * (zi % 1) + 0.08));
+      const x = f.at[i * 2] + f.dir[i * 2] * d;
+      const y = f.at[i * 2 + 1] + f.dir[i * 2 + 1] * d;
+      v.copy(w3(x, y, z0 + (z1 - z0) * (zi % 1) + 0.08));
       pos.setXYZ(i, v.x, v.y, v.z);
-      const a = Math.sin(k * Math.PI) * 0.55;
+      // faint, and fading away near the ball and the cup, so the line you putt on stays clean
+      const clear = (p: V2) => Math.min(1, Math.max(0, (Math.hypot(x - p.x, y - p.y) - 1) / 3));
+      const a = Math.sin(k * Math.PI) * 0.2 * clear(this.pos) * clear(this.hole.cup);
       col.setXYZ(i, a, a, a);
     }
     pos.needsUpdate = true;

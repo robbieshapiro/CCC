@@ -1,15 +1,15 @@
-// The driving range: a wide, flat strip of turf from a mat, with flags out at 20, 40, 60, 80 and 100 yards (60 to 300 ft).
+// The driving range: a wide, flat strip of turf from a mat, with flags out at 45, 90, 130, 175 and 220 yards (as shown in game; the range is a scale model, see SCALE).
 // Caldera turf and greens, so what you learn here is what November plays like.
 import { band, blob, rect } from '../terrain';
 import type { Hole, Post } from '../types';
 
 const FLOOR = 10;
 export const TARGETS = [
-  { label: '20', at: { x: -18, y: 60 } },
-  { label: '40', at: { x: 22, y: 120 } },
-  { label: '60', at: { x: -26, y: 180 } },
-  { label: '80', at: { x: 28, y: 240 } },
-  { label: '100', at: { x: 0, y: 300 } },
+  { label: '45', at: { x: -18, y: 61 } },
+  { label: '90', at: { x: 22, y: 123 } },
+  { label: '130', at: { x: -26, y: 177 } },
+  { label: '175', at: { x: 28, y: 239 } },
+  { label: '220', at: { x: 0, y: 300 } },
 ];
 
 const rocks: Post[] = [
