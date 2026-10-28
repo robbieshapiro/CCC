@@ -76,3 +76,18 @@ export function orderReply(choice: Drink | null, t: CartTalk) {
   if (choice === 'water') return "Sparkling water. Reginald will be thrilled. I'm mildly disappointed.";
   return t.visit > 1 ? "Playing it straight? Fine. I'll save you one for the nineteenth." : "Your loss. I'll be around if you change your mind.";
 }
+
+// Reginald, on the cart for the closing holes, with a tray of something warming.
+export function reginaldScript(t: CartTalk): Exchange[] {
+  return [
+    {
+      daisy: t.diff < 0 ? "Under par, I'm told. The Committee is unsettled. I've brought something to settle it." : "The closing holes. Daisy has gone home, so the tray falls to me. One does what one must.",
+      replies: [
+        { you: "What's on the tray?", daisy: "Fireball. Cinnamon whisky. Strictly medicinal, you understand.", mood: 'laugh' },
+        { you: "You're the last person I expected.", daisy: "Forty years, and the tray still surprises people. I find that rather wounding." },
+      ],
+    },
+  ];
+}
+export const reginaldOrder = () => "One for the drive? It adds a little something. Mostly to the needle.";
+export const reginaldReply = (took: boolean) => (took ? "Down in one. Now hit it before it hits you." : "Very wise. I shall drink it myself, for the good of the club.");

@@ -569,8 +569,12 @@ export function buildWorld(h: Hole, number: number): World {
     } else if (d.kind === 'lavafount') {
       o = lavaFountain(anim, d.scale ?? 1, d.x * 0.37 + d.y * 0.11);
     } else if (d.kind === 'clubhouse') {
-      o = props.clubhouse(420);
-      o.position.copy(w3(d.x + 23, d.y, heightAt(h, d.x - 2, d.y)));
+      // down the side of the hole (the Highlands), or turned to face it from behind a green (rot, and scale for length)
+      o = props.clubhouse(d.scale ?? 420);
+      if (d.rot) {
+        o.position.copy(w3(d.x, d.y, heightAt(h, d.x, d.y)));
+        o.rotation.y = d.rot;
+      } else o.position.copy(w3(d.x + 23, d.y, heightAt(h, d.x - 2, d.y)));
       root.add(o);
       continue;
     } else if (d.kind === 'lights') {
@@ -668,7 +672,8 @@ export function buildWorld(h: Hole, number: number): World {
     const pts = new THREE.Points(geo, steam);
     pts.frustumCulled = false;
     root.add(pts);
-    const tall = p.look === 'blowhole' ? 26 : 20;
+    const big = p.look === 'blowhole' ? Math.max(1, p.r / 4) : 1; // a bigger vent throws a bigger column
+    const tall = (p.look === 'blowhole' ? 26 : 20) * big;
     let burst = 0; // how far through the current burst, 0..1 (and on, while it settles)
     anim.push((clock, dt) => {
       const on = !!erupt(clock);
@@ -678,7 +683,7 @@ export function buildWorld(h: Hole, number: number): World {
         const a = i * 2.39996;
         // a lazy wisp at rest; a column of spray while it goes off
         const h2 = burst > 0.02 ? k * tall * burst : k * 3;
-        const r = (burst > 0.02 ? 0.4 + k * 2.4 : 0.3 + k * 1.2) * (1 + Math.sin(clock * 2 + i) * 0.15);
+        const r = (burst > 0.02 ? 0.4 + k * 2.4 : 0.3 + k * 1.2) * big * (1 + Math.sin(clock * 2 + i) * 0.15);
         arr[i * 3] = p.x + Math.cos(a) * r;
         arr[i * 3 + 1] = base + 0.5 + h2;
         arr[i * 3 + 2] = -(p.y + Math.sin(a) * r);

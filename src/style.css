@@ -629,3 +629,43 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 /* the locker's ways out: straight to the course, the clubhouse, or on to your tee time */
 .intro-builder-exits { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 .intro-builder-head .btn.lava { padding: 9px 14px; font-size: 12px; }
+
+/* Drinks on the swing meter: the bar sits in a track so a flame can burn past its end */
+.g3-swing-track { position: relative; width: 100%; }
+.g3-swing.vertical .g3-swing-track { width: 30px; }
+.g3-flame { display: none; position: absolute; top: 2px; bottom: 2px; left: calc(100% - 4px); width: var(--boost, 15%); border-radius: 0 14px 14px 0; background: linear-gradient(90deg, #f0b13a, #e8501c 60%, rgba(232, 80, 28, 0)); box-shadow: 0 0 14px rgba(255, 106, 44, 0.8); animation: flicker 0.35s ease-in-out infinite alternate; }
+.g3-swing.vertical .g3-flame { top: auto; left: 2px; right: 2px; bottom: calc(100% - 4px); width: auto; height: var(--boost, 15%); border-radius: 14px 14px 0 0; background: linear-gradient(0deg, #f0b13a, #e8501c 60%, rgba(232, 80, 28, 0)); }
+.g3-swing.boost .g3-flame { display: block; }
+.g3-swing.fireball .g3-flame { background: linear-gradient(90deg, #ff7a2c, #d81e05 60%, rgba(216, 30, 5, 0)); box-shadow: 0 0 18px rgba(255, 40, 10, 0.9); }
+.g3-swing.vertical.fireball .g3-flame { background: linear-gradient(0deg, #ff7a2c, #d81e05 60%, rgba(216, 30, 5, 0)); }
+.g3-swing.boost .g3-swing-bar { border-color: #f0b13a; }
+.g3-swing.fireball .g3-swing-bar { border-color: #ff5a1f; }
+/* the Arnold Palmer: the gold glows, and you can see how much wider it is */
+.g3-swing.steady .g3-swing-bar .gold { background: linear-gradient(#bff0d2, #4fbf7f); box-shadow: 0 0 12px rgba(120, 230, 160, 0.9); }
+.g3-swing.steady .g3-swing-bar { border-color: #9fe0b8; }
+.g3-swing-tag { font: 800 10px var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: #ffd9a8; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
+.g3-swing.steady .g3-swing-tag { color: #c9f5d9; }
+.g3-swing.vertical .g3-swing-tag { width: 96px; line-height: 1.3; }
+/* while the meter is up its tag says what you are drinking; the badge would sit on top of it on the vertical meter */
+:has(> .g3-swing:not([hidden])) > .g3-drink { visibility: hidden; }
+@keyframes flicker { from { filter: brightness(1); } to { filter: brightness(1.3); } }
+@media (prefers-reduced-motion: reduce) { .g3-flame { animation: none; } }
+
+/* the fall kit: home banner, school picker sheet, locker chip */
+.kit-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; background: linear-gradient(90deg, #7a3b1a, #b8642a 60%, #c9923f); color: #fff8ec; box-shadow: 0 2px 10px rgba(122, 59, 26, 0.25); }
+.kit-banner .kit-go { flex: 1; text-align: left; background: none; border: 0; color: inherit; font: inherit; font-size: 14px; cursor: pointer; padding: 2px 0; }
+.kit-banner .kit-go b { font-family: var(--serif); font-size: 17px; margin-right: 4px; }
+.kit-banner .link { color: #fff8ec; opacity: 0.8; }
+.kit-sheet { position: fixed; inset: 0; z-index: 200; background: rgba(18, 24, 20, 0.55); display: grid; place-items: end center; }
+.kit-card { width: min(520px, 100%); max-height: 82vh; display: flex; flex-direction: column; gap: 10px; background: var(--paper); border-radius: 14px 14px 0 0; padding: 16px; box-sizing: border-box; }
+@media (min-width: 700px) { .kit-sheet { place-items: center; } .kit-card { border-radius: 14px; } }
+.kit-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.kit-head h3 { margin: 2px 0 0; font-family: var(--serif); font-size: 24px; }
+.kit-card input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.kit-list { overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 4px; }
+.kit-row { display: flex; align-items: center; gap: 12px; padding: 8px; border: 1px solid transparent; border-radius: 8px; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--ink); }
+.kit-row:hover, .kit-row.on { background: #fff; border-color: var(--line); }
+.kit-row span:nth-child(2) { flex: 1; }
+.kit-row i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); }
+.kit-mono, .kit-dot { display: inline-grid; place-items: center; min-width: 42px; height: 30px; padding: 0 4px; border-radius: 6px; font-family: Georgia, serif; font-weight: 700; font-size: 13px; box-sizing: border-box; }
+.kit-dot { min-width: 26px; height: 20px; font-size: 10px; margin-right: 6px; vertical-align: middle; }

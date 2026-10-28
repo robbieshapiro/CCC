@@ -1,8 +1,10 @@
-// Daisy and the beverage cart: drives up to the tee, steps off for a chat and your order, drives off.
+// The beverage cart: drives up to the tee, someone steps off for a chat and your order, drives off. Daisy early in a
+// round with her drinks; Reginald late in a long one, with a tray of fireball.
 import * as THREE from 'three';
 import { sfx } from '../fx/sound';
 import { DRINKS, type Drink } from './clubs';
-import { orderLine, orderReply, script, type CartTalk, type Mood } from './daisy';
+import { orderLine, orderReply, reginaldOrder, reginaldReply, reginaldScript, script, type CartTalk, type Mood } from './daisy';
+import { Golfer, REGINALD_SPEC } from './golfer';
 import { Hostess } from './hostess';
 import * as props from './props';
 import { w3 } from './scene';
@@ -16,7 +18,9 @@ const NO_THANKS = "No thanks, I'm good for now";
 export class CartGirl {
   visited = false;
   private cart = props.cart();
-  private daisy = new Hostess();
+  // who's on the cart: Daisy, or Reginald (a golfer figure, his moods mapped onto its poses)
+  private daisy: { group: THREE.Group; setPose: (m: Mood) => void; update: (dt: number) => void; dispose: () => void };
+  private name: string;
   private group = new THREE.Group();
   private from = new THREE.Vector3();
   private to = new THREE.Vector3();
@@ -28,17 +32,26 @@ export class CartGirl {
   private waved = false; // sent on her way with a "no thanks": anything still queued up stays unsaid
   private fill = new THREE.PointLight('#fff1e2', 0, 26, 1.4);
 
-  constructor(private scene: THREE.Scene, private hole: Hole, private onOrder: (d: Drink | null) => void) {
+  constructor(private scene: THREE.Scene, private hole: Hole, private onOrder: (d: Drink | null) => void, private host: 'daisy' | 'reginald' = 'daisy') {
+    if (host === 'reginald') {
+      const reg = new Golfer(REGINALD_SPEC);
+      reg.holdClub(null);
+      reg.showBag(false);
+      this.daisy = { group: reg.group, setPose: (m) => reg.setPose(m === 'laugh' ? 'cheer' : m === 'wave' ? 'wave' : 'clasp'), update: (dt) => reg.update(dt), dispose: () => reg.dispose() };
+    } else this.daisy = new Hostess();
+    this.name = host === 'reginald' ? 'Reginald' : 'Daisy';
     this.daisy.setPose('idle');
     this.group.add(this.cart, this.daisy.group);
     this.daisy.group.position.set(3.4, 0, 1.5);
     this.daisy.group.rotation.y = 0.6;
-    // a little tray of drinks on the back
-    for (let i = 0; i < 3; i++) {
-      const g = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.6, 10), new THREE.MeshStandardMaterial({ color: ['#c98a3a', '#e8c86a', '#bfe3ec'][i], transparent: true, opacity: 0.85, roughness: 0.1 }));
-      g.position.set(-0.8 + i * 0.8, 2.75, 2.8);
+    // a little tray on the back: Daisy's three drinks, or Reginald's shots of fireball
+    const tray = host === 'reginald' ? ['#c4361b', '#c4361b'] : ['#c98a3a', '#e8c86a', '#bfe3ec'];
+    tray.forEach((color, i) => {
+      const small = host === 'reginald';
+      const g = new THREE.Mesh(new THREE.CylinderGeometry(small ? 0.16 : 0.2, small ? 0.13 : 0.16, small ? 0.35 : 0.6, 10), new THREE.MeshStandardMaterial({ color, transparent: true, opacity: 0.85, roughness: 0.1 }));
+      g.position.set(-0.4 + i * 0.8, small ? 2.62 : 2.75, 2.8);
       this.cart.add(g);
-    }
+    });
     this.group.visible = false;
     scene.add(this.group, this.fill);
   }
@@ -75,7 +88,7 @@ export class CartGirl {
     card.hidden = false;
     card.innerHTML = `
       <div class="cart-card">
-        <div class="cart-head"><p class="eyebrow">The beverage cart</p></div>
+        <div class="cart-head"><p class="eyebrow">${this.host === 'reginald' ? 'Reginald, with a tray' : 'The beverage cart'}</p></div>
         <div class="cart-replies"><button class="reply" data-no-thanks>${NO_THANKS}</button></div>
       </div>`;
     this.bindNoThanks(card);
@@ -103,11 +116,11 @@ export class CartGirl {
     if (this.waved) return;
     this.stepOff();
     this.talking = true;
-    const lines = script(talk);
+    const lines = this.host === 'reginald' ? reginaldScript(talk) : script(talk);
     card.hidden = false;
     card.innerHTML = `
       <div class="cart-card">
-        <div class="cart-head"><p class="eyebrow">The beverage cart</p><span><button class="link" data-skip-chat>Skip to drinks</button> · <button class="link" data-no-thanks>${NO_THANKS}</button></span></div>
+        <div class="cart-head"><p class="eyebrow">${this.host === 'reginald' ? 'Reginald, with a tray' : 'The beverage cart'}</p><span><button class="link" data-skip-chat>Skip to ${this.host === 'reginald' ? 'the tray' : 'drinks'}</button> · <button class="link" data-no-thanks>${NO_THANKS}</button></span></div>
         <div class="cart-log" data-log aria-live="polite"></div>
         <div class="cart-replies" data-replies></div>
       </div>`;
@@ -118,7 +131,7 @@ export class CartGirl {
     let gen = 0; // bumps on skip, so pending lines from the old thread don't land
     const say = (who: 'daisy' | 'you', text: string) => {
       // only the last few lines stay, so the card never covers her
-      log.insertAdjacentHTML('beforeend', who === 'daisy' ? `<p class="msg daisy"><b>Daisy</b> ${esc(text)}</p>` : `<p class="msg you">${esc(text)}</p>`);
+      log.insertAdjacentHTML('beforeend', who === 'daisy' ? `<p class="msg daisy"><b>${this.name}</b> ${esc(text)}</p>` : `<p class="msg you">${esc(text)}</p>`);
       while (log.children.length > 3) log.firstElementChild!.remove();
     };
     const mood = (m: Mood | undefined) => {
@@ -129,7 +142,7 @@ export class CartGirl {
     const daisySays = (text: string, then: () => void, m?: Mood) => {
       const g = gen;
       replies.innerHTML = '';
-      log.insertAdjacentHTML('beforeend', '<p class="msg daisy typing" data-typing><b>Daisy</b> <i>…</i></p>');
+      log.insertAdjacentHTML('beforeend', `<p class="msg daisy typing" data-typing><b>${this.name}</b> <i>…</i></p>`);
       window.setTimeout(() => {
         if (g !== gen || this.waved) return;
         log.querySelector('[data-typing]')?.remove();
@@ -156,12 +169,14 @@ export class CartGirl {
     };
     const menu = () => {
       card.querySelector('[data-skip-chat]')?.parentElement?.remove();
-      daisySays(orderLine(talk), () => {
+      // Daisy pours her three drinks; Reginald has only the fireball
+      const menu: Drink[] = this.host === 'reginald' ? ['fireball'] : (Object.keys(DRINKS) as Drink[]).filter((k) => k !== 'fireball');
+      daisySays(this.host === 'reginald' ? reginaldOrder() : orderLine(talk), () => {
         replies.innerHTML = `
-          <div class="cart-drinks">${(Object.keys(DRINKS) as Drink[])
+          <div class="cart-drinks">${menu
             .map((k) => `<button data-drink="${k}"><b>${DRINKS[k].name}</b><small>${DRINKS[k].blurb}</small></button>`)
             .join('')}</div>
-          <button class="link" data-drink="none">No thanks, Daisy</button>`;
+          <button class="link" data-drink="none">No thanks, ${this.name}</button>`;
         replies.querySelectorAll<HTMLButtonElement>('[data-drink]').forEach((b) => {
           b.onclick = () => {
             const d = b.dataset.drink === 'none' ? null : (b.dataset.drink as Drink);
@@ -175,7 +190,7 @@ export class CartGirl {
               return;
             }
             say('you', DRINKS[d].name);
-            daisySays(orderReply(d, talk), () =>
+            daisySays(this.host === 'reginald' ? reginaldReply(true) : orderReply(d, talk), () =>
               window.setTimeout(() => {
                 if (this.waved) return;
                 card.hidden = true;

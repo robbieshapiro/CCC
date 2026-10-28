@@ -1,5 +1,6 @@
-// Hole 4, The Lava Lift (par 3, about 150 ft down, 110 yd as shown): you tee off on the rim of the volcano and hit down
-// into the crater. The green is a tiny island in the lava lake at the bottom; miss it and it's lava, unless you find
+// Hole 4, The Plunge (par 3, about 150 ft down, 110 yd as shown): you tee off on the rim of the volcano and hit down
+// into the crater: it plays about half its length, the drop does the rest. The green is a big, dished island in the
+// lava lake at the bottom; miss it and it's lava, unless you find
 // one of the little rock islands round it, which have traps of their own. Lava fountains spew from the lake.
 // The tunnel: on the far wall of the crater there's a shelf with a hole in it. Roll one into the hole and it drops
 // down an old lava tube and rolls out beside the green, a few feet from the pin. Never an ace, always a gift.
@@ -10,12 +11,12 @@ const C = { x: 0, y: 200 }; // the crater's centre
 const RIM = 62; // the rim, and the tee on it
 const BOWL = 6; // the crater floor, under the lava
 const LAVA = 12;
-const GREEN = { x: 10, y: 206, r: 12 };
+const GREEN = { x: 10, y: 206, r: 22 };
 // the little islands round the green: somewhere to bail out to, each with its trap
 const ISLES = [
-  { x: -62, y: 168, r: 16 },
-  { x: 72, y: 236, r: 15 },
-  { x: -44, y: 270, r: 12 },
+  { x: -70, y: 160, r: 20 },
+  { x: 80, y: 238, r: 18 },
+  { x: -50, y: 278, r: 15 },
 ];
 // the shelf on the far wall, and the hole in it
 const SHELF = { x: 0, y: 316, r: 16, h: 34 };
@@ -29,14 +30,14 @@ const rocks: Post[] = [
 
 export const lavalift: Hole = {
   id: 'lavalift',
-  name: 'The Lava Lift',
+  name: 'The Plunge',
   par: 3,
   theme: 'volcanic',
   tour: true,
   noCart: true,
   tee: { x: 0, y: 55 },
   cup: { x: 12, y: 208 },
-  pins: [{ x: 12, y: 208 }, { x: 8, y: 202 }, { x: 14, y: 203 }, { x: 7, y: 210 }],
+  pins: [{ x: 12, y: 208 }, { x: 2, y: 198 }, { x: 20, y: 200 }, { x: 6, y: 218 }],
   aim: 0,
   bounds: { x0: -200, y0: -40, x1: 200, y1: 400 },
   border: [
@@ -55,7 +56,7 @@ export const lavalift: Hole = {
       { poly: blob(s.x, s.y, s.r - 4, (s.r - 4) * 0.85, 10 + i, 0.1), surface: 'fairway' as const },
       { poly: blob(s.x + (i % 2 ? -5 : 5), s.y + 3, 4, 3, 20 + i, 0.15), surface: 'sand' as const },
     ]),
-    // the green island: a ring of fringe and the smallest green on the course
+    // the green island: a ring of fringe round a big green
     { poly: circle(GREEN.x, GREEN.y, GREEN.r + 3.5), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.r, GREEN.r * 0.9, 3, 0.05), surface: 'green' },
     // the shelf on the far wall
@@ -80,7 +81,8 @@ export const lavalift: Hole = {
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.r + 2.5, h: LAVA + 3.2, edge: 2.5, op: 'set' },
     // dished, with a lip round it, so a ball that lands on it stays on it more often than not
     { kind: 'hill', x: GREEN.x, y: GREEN.y, r: GREEN.r + 1, h: -0.9 },
-    { kind: 'ramp', x0: GREEN.x - 12, y0: GREEN.y - 12, x1: GREEN.x + 12, y1: GREEN.y + 12, axis: 'x', h0: 0.2, h1: -0.2, op: 'add' },
+    { kind: 'ramp', x0: GREEN.x - 24, y0: GREEN.y - 24, x1: GREEN.x + 24, y1: GREEN.y + 24, axis: 'x', h0: 0.3, h1: -0.3, op: 'add' },
+    { kind: 'hill', x: GREEN.x - 9, y: GREEN.y + 8, r: 8, h: 0.35 },
     // the shelf on the far wall, dished toward the hole in it so a ball that reaches it finds its way in
     { kind: 'disc', x: SHELF.x, y: SHELF.y, r: SHELF.r, h: SHELF.h, edge: 4, op: 'set' },
     { kind: 'hill', x: MOUTH.x, y: MOUTH.y, r: SHELF.r + 2, h: -3.5 },

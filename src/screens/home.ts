@@ -1,6 +1,8 @@
-import { localApi, useSupabase } from '../api';
+import { api, localApi, useSupabase } from '../api';
 import type { Snapshot } from '../api/types';
-import { portrait } from '../avatar';
+import { portrait, specOf } from '../avatar';
+import { pickKit } from '../kits';
+import { store } from '../storage';
 import { crest } from '../brand';
 import { featById } from '../feats';
 import { courseFor, nextCourse, upcoming, type Course } from '../golf3d/courses';
@@ -74,6 +76,7 @@ export function home(snap: Snapshot) {
   render(`
     ${header(snap.groupName, 'month')}
     <main>
+      ${kitBanner(snap)}
       ${noticesStrip()}
       ${launchHero(snap.month)}
       ${hostChip(line, mood, 'reg-line')}
@@ -122,6 +125,7 @@ export function home(snap: Snapshot) {
     </main>`);
 
   tickCountdown();
+  bindKitBanner(snap);
   void bindInviteMaker();
   void bindFeedbackPanel();
   void bindPracticeLog();
@@ -210,4 +214,28 @@ function launchHero(month: string) {
         <span>${n} practice holes now. Nothing counts until ${esc(day)}.</span>
       </div>
     </section>`;
+}
+
+// The fall kit drop: a strip at the top of home until you've claimed a kit or waved it off.
+const KIT_SEEN = 'ccc.kit.dismissed';
+function kitBanner(snap: Snapshot) {
+  const me = snap.players.find((p) => p.id === snap.me);
+  if (!me || me.avatar.golfer?.kit || store.get(KIT_SEEN)) return '';
+  return `<div class="kit-banner" id="kit-banner"><button class="kit-go" id="kit-go">🍂 <b>The fall kit is in.</b> Claim a quarter-zip in your school's colours</button><button class="link" id="kit-x" aria-label="Not now">✕</button></div>`;
+}
+function bindKitBanner(snap: Snapshot) {
+  const me = snap.players.find((p) => p.id === snap.me);
+  document.getElementById('kit-x')?.addEventListener('click', () => {
+    store.set(KIT_SEEN, '1');
+    document.getElementById('kit-banner')?.remove();
+  });
+  document.getElementById('kit-go')?.addEventListener('click', async () => {
+    const kit = await pickKit();
+    if (!kit || !me) return;
+    const avatar = { ...me.avatar, golfer: { ...specOf(me.avatar), top: 'quarterzip' as const, kit: kit.key } };
+    await api.saveAvatar(requireSession(), avatar);
+    me.avatar = avatar;
+    document.getElementById('kit-banner')?.remove();
+    void refresh();
+  });
 }
