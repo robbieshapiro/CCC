@@ -78,6 +78,15 @@ export type MemberActivity = { name: string; lastSeen: string | null; days: numb
 // localId: their member id in the viewer's club, if they're in it.
 export type OpenRow = { playerId: string; name: string; club: string; mine: boolean; localId: string | null; avatar: Avatar; holes: number[]; total: number; par: number; rounds: number; last: string; createdAt: string };
 export type OpenChampion = { month: string; names: string[]; total: number; par: number };
+// The admin tab: every club the admin runs, on one page.
+export type AdminWindow = 'week' | 'month' | 'all';
+export type AdminOverview = {
+  clubs: { id: string; name: string; members: number; active: number; rounds: number; practice: number; newMembers: number }[];
+  members: { club: string; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; best: number | null; practice: number; lockers: number }[];
+  feed: { at: string; kind: 'round' | 'practice' | 'join' | 'feedback'; club: string; name: string; course: string | null; total: number | null; par: number | null; what: string | null; shots: number | null }[];
+  feedback: { id: number; club: string; from: string | null; body: string; context: string | null; createdAt: string }[];
+  invites: { id: string; club: string; name: string; code: string; createdAt: string }[];
+};
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -104,6 +113,8 @@ export interface Api {
   practiceReport(session: Session): Promise<PracticeReport>;
   touch(session: Session, kind: ActivityKind): Promise<void>;
   activityReport(session: Session): Promise<MemberActivity[]>;
+  adminOverview(session: Session, window: AdminWindow): Promise<AdminOverview>;
+  adminFeedbackDone(session: Session, id: number, done: boolean): Promise<void>;
   openBoard(session: Session): Promise<OpenRow[]>;
   openChampions(session: Session): Promise<OpenChampion[]>;
 }

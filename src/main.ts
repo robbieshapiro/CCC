@@ -2,6 +2,7 @@ import './style.css';
 import { inject, pageview } from '@vercel/analytics';
 import { getSession, switchClub } from './api';
 import { setSound, soundOn } from './fx/sound';
+import { admin } from './screens/admin';
 import { home } from './screens/home';
 import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
@@ -74,6 +75,11 @@ async function router() {
     if (page === 'card' || (page === 'member' && arg === s.me)) return card(s);
     if (page === 'member' && arg) return member(s, arg);
     if (page === 'lockers') return lockers(s);
+    if (page === 'admin') {
+      if (s.admin) return admin(s);
+      location.hash = '#/';
+      return;
+    }
     return home(s);
   } catch (err) {
     render(`<main class="narrow"><h1>Something went wrong</h1><p class="error">${esc((err as Error).message)}</p>
@@ -91,7 +97,8 @@ document.addEventListener('change', (e) => {
   const sel = (e.target as HTMLElement).closest<HTMLSelectElement>('[data-club-switch]');
   if (!sel) return;
   switchClub(sel.value);
-  navigate('#/');
+  // in the Committee Room, stay there: its club tools follow the club you switch to
+  navigate(route === 'admin' ? '#/admin' : '#/');
 });
 
 // Sound toggle lives in the header on every screen.

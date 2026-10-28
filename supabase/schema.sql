@@ -578,3 +578,98 @@ grant execute on function open_champions(uuid) to anon;
 -- Create your group (change the name and code). The first person to join with the code runs the club;
 -- after that, new members need a personal invitation from them. Share https://YOUR-SITE/#/join/<code> to start:
 -- insert into groups (name, invite_code) values ('Claude Country Club', 'gentlemen');
+
+-- The admin tab: every club you run, on one page. "You" across clubs is the same name and PIN hash with the
+-- admin role in each (create_club copies them), as on the Open. p_window: 'week', 'month' or 'all'.
+create or replace function admin_clubs(me players) returns setof uuid
+language sql stable security definer set search_path = public, extensions as $$
+  select distinct p.group_id from players p
+  where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash and p.role = 'admin'
+$$;
+
+create or replace function admin_overview(p_token uuid, p_window text) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+  since timestamptz := case p_window
+    when 'week' then now() - interval '7 days'
+    when 'month' then (date_trunc('month', now() at time zone 'America/New_York')) at time zone 'America/New_York'
+    else '-infinity'::timestamptz end;
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
+  return (
+    with g as (select id, name from groups where id in (select admin_clubs(me))),
+    m as (
+      select pl.id, pl.group_id, g.name as club, pl.name, pl.created_at,
+        greatest(pl.last_seen_at,
+          (select max(created_at) from rounds where player_id = pl.id),
+          (select max(started_at) from practice_sessions where player_id = pl.id)) as last_seen
+      from players pl join g on g.id = pl.group_id where pl.role <> 'admin'
+    ),
+    stats as (
+      select m.*,
+        (select count(*) from (
+            select day from member_days where player_id = m.id and day >= (since at time zone 'America/New_York')::date
+            union select (created_at at time zone 'America/New_York')::date from rounds where player_id = m.id and created_at >= since
+            union select (started_at at time zone 'America/New_York')::date from practice_sessions where player_id = m.id and started_at >= since
+          ) d) as days,
+        (select count(*) from rounds where player_id = m.id and created_at >= since) as rounds,
+        (select min(total - par) from rounds where player_id = m.id and created_at >= since) as best,
+        (select count(*) from practice_sessions where player_id = m.id and started_at >= since) as practice,
+        (select coalesce(sum(lockers), 0) from member_days where player_id = m.id and day >= (since at time zone 'America/New_York')::date) as lockers
+      from m
+    ),
+    feed as (
+      select * from (
+        select r.created_at as at, 'round' as kind, g.name as club, p.name, r.course, r.total, r.par, null::text as what, null::int as shots
+          from rounds r join players p on p.id = r.player_id join g on g.id = r.group_id where p.role <> 'admin'
+        union all
+        select s.started_at, 'practice', g.name, p.name, null, null, null, s.kind, s.shots
+          from practice_sessions s join players p on p.id = s.player_id join g on g.id = s.group_id where p.role <> 'admin'
+        union all
+        select p.created_at, 'join', g.name, p.name, null, null, null, null, null
+          from players p join g on g.id = p.group_id where p.role <> 'admin'
+        union all
+        select f.created_at, 'feedback', g.name, coalesce(p.name, 'A member'), null, null, null, left(f.body, 80), null
+          from feedback f join g on g.id = f.group_id left join players p on p.id = f.player_id
+      ) e order by at desc limit 25
+    )
+    select json_build_object(
+      'clubs', coalesce((select json_agg(json_build_object(
+          'id', g.id, 'name', g.name,
+          'members', (select count(*) from m where m.group_id = g.id),
+          'active', (select count(*) from stats s where s.group_id = g.id and s.days > 0),
+          'rounds', (select coalesce(sum(s.rounds), 0) from stats s where s.group_id = g.id),
+          'practice', (select coalesce(sum(s.practice), 0) from stats s where s.group_id = g.id),
+          'newMembers', (select count(*) from m where m.group_id = g.id and m.created_at >= since)
+        ) order by g.name) from g), '[]'),
+      'members', coalesce((select json_agg(json_build_object(
+          'club', s.club, 'name', s.name, 'joined', s.created_at, 'lastSeen', s.last_seen, 'days', s.days,
+          'rounds', s.rounds, 'best', s.best, 'practice', s.practice, 'lockers', s.lockers
+        ) order by s.last_seen desc nulls last, s.name) from stats s), '[]'),
+      'feed', coalesce((select json_agg(json_build_object(
+          'at', e.at, 'kind', e.kind, 'club', e.club, 'name', e.name, 'course', e.course, 'total', e.total,
+          'par', e.par, 'what', e.what, 'shots', e.shots
+        ) order by e.at desc) from feed e), '[]'),
+      'feedback', coalesce((select json_agg(json_build_object(
+          'id', f.id, 'club', g.name, 'from', p.name, 'body', f.body, 'context', f.context, 'createdAt', f.created_at
+        ) order by f.created_at desc) from feedback f join g on g.id = f.group_id left join players p on p.id = f.player_id
+        where not f.done), '[]'),
+      'invites', coalesce((select json_agg(json_build_object(
+          'id', i.id, 'club', g.name, 'name', i.name, 'code', i.code, 'createdAt', i.created_at
+        ) order by i.created_at desc) from invitations i join g on g.id = i.group_id where i.used_by is null), '[]')
+    )
+  );
+end $$;
+
+-- Clear (or reopen) a note from any club you run, without switching to it.
+create or replace function admin_feedback_done(p_token uuid, p_id bigint, p_done boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can manage feedback.'; end if;
+  update feedback set done = p_done where id = p_id and group_id in (select admin_clubs(me));
+end $$;
+
+revoke all on function admin_clubs(players) from public, anon, authenticated;
+grant execute on function admin_overview(uuid, text) to anon;
+grant execute on function admin_feedback_done(uuid, bigint, boolean) to anon;

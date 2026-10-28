@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Api, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PracticeReport, Session, Snapshot } from './types';
+import type { AdminOverview, Api, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PracticeReport, Session, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -86,6 +86,10 @@ export const supabaseApi: Api = {
     await rpc('touch', { p_token: s.token, p_kind: kind });
   },
   activityReport: (s) => rpc<MemberActivity[]>('activity_report', { p_token: s.token }),
+  adminOverview: (s, window) => rpc<AdminOverview>('admin_overview', { p_token: s.token, p_window: window }),
+  adminFeedbackDone: async (s, id, done) => {
+    await rpc('admin_feedback_done', { p_token: s.token, p_id: id, p_done: done });
+  },
   openBoard: (s) => rpc<OpenRow[]>('open_board', { p_token: s.token }),
   openChampions: (s) => rpc<OpenChampion[]>('open_champions', { p_token: s.token }),
 };
