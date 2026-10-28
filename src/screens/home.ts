@@ -9,6 +9,7 @@ import { hostChip, REGINALD, type Mood } from '../host';
 import { openFeedback } from './feedback';
 import { facilityPanel } from './practice';
 import { bindOpen } from './open';
+import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
 import { board, monthName, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
@@ -73,6 +74,7 @@ export function home(snap: Snapshot) {
     <main>
       ${noticesStrip()}
       ${launchHero(snap.month)}
+      ${dailyCard()}
       ${hostChip(line, mood, 'reg-line')}
       <section class="course-card${nextCourse(snap.month) ? ' secondary' : ''}${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
         <div class="course-crest">${crest(78, 'cc')}</div>
@@ -114,6 +116,7 @@ export function home(snap: Snapshot) {
   tickCountdown();
   void bindOpen(snap, line);
   void bindNotices();
+  void bindDaily(snap.today);
   document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {
     localApi.seedDemo(requireSession());

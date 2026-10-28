@@ -87,6 +87,11 @@ export type AdminOverview = {
   feedback: { id: number; club: string; from: string | null; body: string; context: string | null; createdAt: string }[];
   invites: { id: string; club: string; name: string; code: string; createdAt: string }[];
 };
+// The Daily Shot: one shot a day for everyone, three tries, best counts (see daily.ts)
+export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: boolean };
+export type DailyRow = { name: string; club: string; ft: number | null; holed: boolean; tries: number; mine: boolean };
+export type DailyState = { mine: DailyTry[]; board: DailyRow[]; players: number; streak: number };
+export type DailyDay = { day: string; players: number; tries: number };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -115,6 +120,9 @@ export interface Api {
   activityReport(session: Session): Promise<MemberActivity[]>;
   adminOverview(session: Session, window: AdminWindow): Promise<AdminOverview>;
   adminFeedbackDone(session: Session, id: number, done: boolean): Promise<void>;
+  dailyState(session: Session, day: string): Promise<DailyState>;
+  submitDaily(session: Session, day: string, t: DailyTry): Promise<void>;
+  dailyAdmin(session: Session): Promise<DailyDay[]>; // the last 7 days across the admin's clubs
   openBoard(session: Session): Promise<OpenRow[]>;
   openChampions(session: Session): Promise<OpenChampion[]>;
 }

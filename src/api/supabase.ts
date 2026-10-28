@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminOverview, Api, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PracticeReport, Session, Snapshot } from './types';
+import type { AdminOverview, Api, DailyDay, DailyState, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PracticeReport, Session, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -87,6 +87,11 @@ export const supabaseApi: Api = {
   },
   activityReport: (s) => rpc<MemberActivity[]>('activity_report', { p_token: s.token }),
   adminOverview: (s, window) => rpc<AdminOverview>('admin_overview', { p_token: s.token, p_window: window }),
+  dailyState: (s, day) => rpc<DailyState>('daily_state', { p_token: s.token, p_day: day }),
+  submitDaily: async (s, day, t) => {
+    await rpc('submit_daily', { p_token: s.token, p_day: day, p_try: t.try, p_ft: t.ft, p_holed: t.holed, p_lost: t.lost });
+  },
+  dailyAdmin: (s) => rpc<DailyDay[]>('daily_admin', { p_token: s.token }),
   adminFeedbackDone: async (s, id, done) => {
     await rpc('admin_feedback_done', { p_token: s.token, p_id: id, p_done: done });
   },

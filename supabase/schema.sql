@@ -673,3 +673,85 @@ end $$;
 revoke all on function admin_clubs(players) from public, anon, authenticated;
 grant execute on function admin_overview(uuid, text) to anon;
 grant execute on function admin_feedback_done(uuid, bigint, boolean) to anon;
+
+-- The Daily Shot: one shot a day for everyone in every club, three tries, best counts. The shot itself is seeded from
+-- the date in the app (src/daily.ts). One person across clubs is the same name and PIN hash, as on the Open.
+create table if not exists daily_shots (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  day date not null,
+  try int not null check (try between 1 and 3),
+  ft numeric(7, 1) check (ft is null or ft between 0 and 9999),
+  holed boolean not null default false,
+  lost boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (player_id, day, try)
+);
+alter table daily_shots enable row level security;
+
+create or replace function submit_daily(p_token uuid, p_day date, p_try int, p_ft numeric, p_holed boolean, p_lost boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); used int;
+begin
+  if p_day <> (now() at time zone 'America/New_York')::date then raise exception 'That''s not today''s shot.'; end if;
+  if p_try not between 1 and 3 then raise exception 'Three tries a day.'; end if;
+  select count(*) into used from daily_shots d join players p on p.id = d.player_id
+    where d.day = p_day and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash;
+  if used >= 3 then raise exception 'You''ve had your three tries today.'; end if;
+  insert into daily_shots (player_id, day, try, ft, holed, lost)
+    values (me.id, p_day, p_try, case when p_holed then 0 when p_lost then null else round(least(greatest(p_ft, 0), 9999), 1) end, p_holed, p_lost and not p_holed);
+end $$;
+
+create or replace function daily_state(p_token uuid, p_day date) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); streak int := 0; d date := p_day;
+begin
+  -- the streak: consecutive days with a try, up to today (or yesterday, if today's not played yet)
+  if not exists (select 1 from daily_shots s join players p on p.id = s.player_id where s.day = d and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash) then
+    d := d - 1;
+  end if;
+  while exists (select 1 from daily_shots s join players p on p.id = s.player_id where s.day = d and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash) loop
+    streak := streak + 1;
+    d := d - 1;
+  end loop;
+  return (
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.group_id
+      from players p order by lower(p.name), p.pin_hash, p.created_at
+    ), tries as (
+      select pe.k, pe.h, s.* from daily_shots s join players p on p.id = s.player_id
+      join people pe on pe.k = lower(p.name) and pe.h = p.pin_hash where s.day = p_day
+    ), best as (
+      select distinct on (t.k, t.h) t.k, t.h, t.ft, t.holed, (select count(*) from tries t2 where t2.k = t.k and t2.h = t.h) as n
+      from tries t order by t.k, t.h, t.holed desc, (t.lost or t.ft is null), t.ft asc nulls last
+    )
+    select json_build_object(
+      'mine', coalesce((select json_agg(json_build_object('try', t.try, 'ft', t.ft, 'holed', t.holed, 'lost', t.lost) order by t.try)
+        from tries t where t.k = lower(me.name) and t.h = me.pin_hash), '[]'),
+      'board', coalesce((select json_agg(json_build_object('name', pe.name, 'club', g.name, 'ft', b.ft, 'holed', b.holed, 'tries', b.n,
+          'mine', b.k = lower(me.name) and b.h = me.pin_hash)
+        order by b.holed desc, b.ft asc nulls last)
+        from best b join people pe on pe.k = b.k and pe.h = b.h join groups g on g.id = pe.group_id), '[]'),
+      'players', (select count(*) from best),
+      'streak', streak
+    )
+  );
+end $$;
+
+-- the admin: Daily Shot players and tries a day for the last week, across their clubs
+create or replace function daily_admin(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); today date := (now() at time zone 'America/New_York')::date;
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see this.'; end if;
+  return (select json_agg(json_build_object('day', d, 'players', (
+      select count(distinct (lower(p.name), p.pin_hash)) from daily_shots s join players p on p.id = s.player_id
+      where s.day = d and p.group_id in (select admin_clubs(me)) and p.role <> 'admin'),
+    'tries', (select count(*) from daily_shots s join players p on p.id = s.player_id
+      where s.day = d and p.group_id in (select admin_clubs(me)) and p.role <> 'admin')) order by d desc)
+    from generate_series(today - 6, today, interval '1 day') g(d0), lateral (select g.d0::date as d) x);
+end $$;
+
+grant execute on function submit_daily(uuid, date, int, numeric, boolean, boolean) to anon;
+grant execute on function daily_state(uuid, date) to anon;
+grant execute on function daily_admin(uuid) to anon;

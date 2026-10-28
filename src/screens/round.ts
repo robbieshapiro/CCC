@@ -18,6 +18,8 @@ import { joinPractice, leavePractice } from './practice';
 import { range, TARGETS } from '../golf3d/practice/range';
 import { shortgame, STATIONS } from '../golf3d/practice/shortgame';
 import { scoreClass } from './home';
+import { DAILY_TRIES, dailyShot } from '../daily';
+import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
 
@@ -177,7 +179,7 @@ export function practice(snap: Snapshot, next: Course) {
         <h3>Putting</h3>
         <ul>
           <li>No aim line: judge the pace off the power bar.</li>
-          <li>Read the break from the grid: amber is above your ball, blue below.</li>
+          <li>Read the break from the read card: how much it goes up or down, and which way it breaks.</li>
           <li>Firm putts can hop the hole. Let it die in.</li>
         </ul>
       </div>
@@ -214,4 +216,50 @@ export function practiceArea(snap: Snapshot, kind: 'range' | 'shortgame') {
   game.onShot = joinPractice(kind).shot;
   if (kind === 'range') game.practiceArea(range, { title: 'Driving range', stations: [{ name: 'From the mat', at: range.tee }], targets: TARGETS });
   else game.practiceArea(shortgame, { title: 'Short game', stations: STATIONS });
+}
+
+// The Daily Shot: today's shot, with whatever tries you have left. Each try posts as it lands; after the last, how it
+// went and the board.
+export async function dailyRound(snap: Snapshot) {
+  closeRound();
+  const day = snap.today;
+  const state = await api.dailyState(requireSession(), day).catch(() => null);
+  if (!state) {
+    navigate('#/');
+    return;
+  }
+  const done = [...state.mine];
+  const back = () => {
+    closeRound();
+    navigate('#/');
+  };
+  if (done.length >= DAILY_TRIES) return void dailySummary(day, back);
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const shot = dailyShot(day);
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  try {
+    game = new Course3D(el, me.avatar, back);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/">Back to the club</a></main>`);
+    return;
+  }
+  game.leaveText = 'Leave';
+  game.practiceArea(shot.hole, {
+    title: `Daily Shot #${shot.number}`,
+    stations: [{ name: shot.label, at: shot.from }],
+    wind: shot.wind,
+    eyebrow: 'Every club · three tries',
+    tag: () => `Try ${done.length + 1} of ${DAILY_TRIES}`,
+    onResult: (r) => {
+      const t = { try: done.length + 1, ...r };
+      done.push(t);
+      void api.submitDaily(requireSession(), day, t).catch(() => {});
+      if (done.length < DAILY_TRIES) return true;
+      window.setTimeout(() => void dailySummary(day, back), 1900);
+      return false;
+    },
+  });
 }

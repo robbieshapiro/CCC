@@ -8,7 +8,7 @@ import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
-import { closeRound, practice, practiceArea, round } from './screens/round';
+import { closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { facility } from './screens/practice';
 import { courseById, nextCourse, upcoming } from './golf3d/courses';
 import { leaveLockers, lockers } from './screens/lockers';
@@ -53,6 +53,7 @@ async function router() {
       return welcome(s);
     }
     if (page === 'round') return round(s);
+    if (page === 'daily') return dailyRound(s);
     // the admin's look at every hole of a course still to come
     if (page === 'preview') {
       const c = courseById(arg ?? '');

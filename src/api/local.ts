@@ -5,14 +5,14 @@ import { courseFor, monthOf } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type DailyDay, type DailyRow, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
 type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string> };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[] };
 
 const KEY = 'ccc-local-db';
 
@@ -425,6 +425,60 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
         .map((i) => ({ id: i.id, club: club(i.groupId), name: i.name, code: i.code, createdAt: i.createdAt }))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     };
+  },
+
+  async dailyState(session, day): Promise<DailyState> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const key = (p: DbPlayer) => `${p.name.toLowerCase()}|${p.pin}`;
+    const club = (groupId: string) => Object.values(db.groups).find((g) => g.id === groupId)?.name ?? '';
+    const people = new Map<string, DbPlayer[]>();
+    for (const p of [...db.players].sort((a, b) => a.joined.localeCompare(b.joined))) people.set(key(p), [...(people.get(key(p)) ?? []), p]);
+    const of = (ps: DbPlayer[], d: string) => (db.daily ?? []).filter((x) => x.day === d && ps.some((p) => p.id === x.playerId)).map((x) => x.t);
+    const best = (ts: DailyTry[]) => ts.filter((t) => t.holed || (!t.lost && t.ft !== null)).sort((a, b) => Number(b.holed) - Number(a.holed) || (a.ft ?? 0) - (b.ft ?? 0))[0];
+    const board: DailyRow[] = [];
+    for (const [k, ps] of people) {
+      const ts = of(ps, day);
+      if (!ts.length) continue;
+      const b = best(ts);
+      board.push({ name: ps[0].name, club: club(ps[0].groupId), ft: b?.ft ?? null, holed: !!b?.holed, tries: ts.length, mine: k === key(me) });
+    }
+    board.sort((a, b) => Number(b.holed) - Number(a.holed) || (a.ft ?? Infinity) - (b.ft ?? Infinity));
+    const mine = people.get(key(me)) ?? [me];
+    let streak = 0;
+    const d = new Date(`${day}T12:00:00Z`);
+    if (!of(mine, day).length) d.setUTCDate(d.getUTCDate() - 1); // today not played yet: the streak runs to yesterday
+    while (of(mine, d.toISOString().slice(0, 10)).length) {
+      streak++;
+      d.setUTCDate(d.getUTCDate() - 1);
+    }
+    return { mine: of(mine, day).sort((a, b) => a.try - b.try), board, players: board.length, streak };
+  },
+
+  async submitDaily(session, day, t) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (day !== todayInGameTz()) throw new Error("That's not today's shot.");
+    const mine = db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id);
+    const done = (db.daily ?? []).filter((x) => x.day === day && mine.includes(x.playerId));
+    if (done.length >= 3 || done.some((x) => x.t.try === t.try)) throw new Error("You've had your three tries today.");
+    (db.daily ??= []).push({ playerId: me.id, day, t });
+    save(db);
+  },
+
+  async dailyAdmin(session): Promise<DailyDay[]> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see this.');
+    const out: DailyDay[] = [];
+    const d = new Date(`${todayInGameTz()}T12:00:00Z`);
+    for (let i = 0; i < 7; i++) {
+      const day = d.toISOString().slice(0, 10);
+      const rows = (db.daily ?? []).filter((x) => x.day === day);
+      out.push({ day, players: new Set(rows.map((x) => x.playerId)).size, tries: rows.length });
+      d.setUTCDate(d.getUTCDate() - 1);
+    }
+    return out;
   },
 
   async adminFeedbackDone(session, id, done) {
