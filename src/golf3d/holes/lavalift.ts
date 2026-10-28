@@ -1,9 +1,13 @@
-// Hole 4, The Lava Lift (par 3, about 175 ft): across a gorge of lava to a green on a slab of rock.
-// The play: carry the gorge and hold the slab. Behind it a wall of rock gives a long shot a chance; short is the gorge.
+// Hole 4, The Lava Lift (par 3, about 240 ft, 175 yd as shown): across a wide gorge of lava to a green on a slab of rock.
+// The play: carry the gorge and hold the slab. It's a driver, eased off; an iron finds the lava. Behind the slab a wall of
+// rock gives a long shot a chance; short is the gorge.
+// The lift: a pillar of rock stands in the gorge with a geyser in its top that goes off every few seconds. Land one on
+// the pillar as it fires and it throws you up onto the slab. Land on it between eruptions and it rolls off into the lava.
 // The live hazard: the lava in the gorge rises and falls. When it's up it floods the slab's front apron, so a shot
 // that comes up just short is gone; when it's down the apron is dry and you can chip from it.
 // The secret: a ledge runs round the left end of the gorge. Roll one along it and it comes in from the side.
-import { band, blob, rect } from '../terrain';
+import { band, blob, circle, rect } from '../terrain';
+import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 
 const RIM = 30; // the tee and the far side sit up here; the gorge is cut down to the lava
@@ -27,7 +31,7 @@ const rocks: Post[] = [
   [40, 20, 3.2], [-30, -20, 3], [110, 230, 3.6], [-110, 240, 3.4], [60, 250, 3],
 ].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
 
-export const lavalift: Hole = {
+const base: Hole = {
   id: 'lavalift',
   name: 'The Lava Lift',
   par: 3,
@@ -95,4 +99,34 @@ export const lavalift: Hole = {
     { kind: 'lavafount', x: 70, y: 104, scale: 0.9 },
     { kind: 'lavafount', x: -30, y: 96, scale: 0.7 },
   ],
+};
+
+// the gorge is 50 ft wider than it was drawn: everything from its middle on slides back
+const PILLAR = { x: 8, y: 150, r: 8 };
+const VENT_R = 3.2;
+const PERIOD = 6;
+const firing = (t: number) => t % PERIOD > PERIOD - 1.5;
+const long = extend(base, 100, 50);
+
+export const lavalift: Hole = {
+  ...long,
+  terrain: [
+    ...long.terrain,
+    // the pillar: a column of rock up out of the lava, its top domed so a ball that isn't thrown rolls off
+    { kind: 'disc', x: PILLAR.x, y: PILLAR.y, r: PILLAR.r, h: LAVA + 6, edge: 3, op: 'set' },
+    { kind: 'hill', x: PILLAR.x, y: PILLAR.y, r: PILLAR.r, h: 1.6 },
+  ],
+  pushes: [
+    {
+      id: 'lift',
+      look: 'geyser',
+      x: PILLAR.x,
+      y: PILLAR.y,
+      r: VENT_R,
+      at: () => ({ x: 0, y: 0 }),
+      // up and on toward the slab
+      erupt: (t) => (firing(t) ? { x: 0, y: 36, z: 32 } : null),
+    },
+  ],
+  zones: [...long.zones, { id: 'liftoff', poly: circle(PILLAR.x, PILLAR.y, VENT_R) }],
 };

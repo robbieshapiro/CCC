@@ -187,13 +187,13 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   summit: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [30, 75] },
   island: { from: { x: -24, y: 58 }, clubs: ['putter'], angles: [-6, 6] },
   ridge: { from: { x: -50, y: 318 }, clubs: ['iron', 'wedge'], angles: [-110, -70] },
-  blowhole: { from: { x: 14, y: 316 }, clubs: ['putter'], angles: [-110, -80], clock: 4.6 },
+  blowhole: { from: { x: 14, y: 416 }, clubs: ['putter'], angles: [-110, -80], clock: 4.6 },
   lavafield: { from: { x: 80, y: 424 }, clubs: ['putter'], angles: [-4, 12] },
   // the island is the prize: from it the green is one big shot away
   caldera: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [48, 54], spin: 1, near: 340 },
   lavalift: { from: { x: 0, y: 0 }, clubs: ['putter'], angles: [-72, -44] },
   geyseralley: { from: { x: -46, y: 124 }, clubs: ['putter'], angles: [-8, 8] },
-  lavatube: { from: { x: -2, y: 232 }, clubs: ['putter'], angles: [44, 64] },
+  lavatube: { from: { x: -2, y: 462 }, clubs: ['putter'], angles: [44, 64] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
