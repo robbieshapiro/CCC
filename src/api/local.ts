@@ -5,7 +5,7 @@ import { courseFor, monthOf } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
-import { MAX_OVER_PAR, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
 type DbRound = Round & { groupId: string };
@@ -366,6 +366,75 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
         };
       })
       .sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? '') || a.name.localeCompare(b.name));
+  },
+
+  async adminOverview(session, window: AdminWindow): Promise<AdminOverview> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see the admin tab.');
+    // every club run by the same name and PIN, as on the server
+    const clubs = new Set(db.players.filter((p) => p.admin && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.groupId));
+    const club = (id: string) => Object.values(db.groups).find((g) => g.id === id)?.name ?? '?';
+    const since =
+      window === 'week' ? new Date(Date.now() - 7 * 86_400_000).toISOString() : window === 'month' ? `${monthOf(todayInGameTz())}-01` : '';
+    const sinceDay = since.slice(0, 10);
+    const members = db.players.filter((p) => clubs.has(p.groupId) && !p.admin);
+    const stats = members.map((p) => {
+      const rounds = db.rounds.filter((r) => r.playerId === p.id && r.createdAt >= since);
+      const practice = (db.practice ?? []).filter((x) => x.playerId === p.id && x.startedAt >= since);
+      const days = (db.days ?? []).filter((x) => x.playerId === p.id && x.day >= sinceDay);
+      const all = [db.seen?.[p.id], ...db.rounds.filter((r) => r.playerId === p.id).map((r) => r.createdAt), ...(db.practice ?? []).filter((x) => x.playerId === p.id).map((x) => x.startedAt)];
+      const active = new Set([...days.map((x) => x.day), ...rounds.map((r) => todayInGameTz(new Date(r.createdAt))), ...practice.map((x) => todayInGameTz(new Date(x.startedAt)))]);
+      return {
+        groupId: p.groupId,
+        club: club(p.groupId),
+        name: p.name,
+        joined: p.joined,
+        lastSeen: all.filter((x): x is string => !!x).sort().pop() ?? null,
+        days: active.size,
+        rounds: rounds.length,
+        best: rounds.length ? Math.min(...rounds.map((r) => r.total - r.par)) : null,
+        practice: practice.length,
+        lockers: days.reduce((a, x) => a + x.lockers, 0),
+      };
+    });
+    const who = (id: string) => db.players.find((p) => p.id === id);
+    const feed: AdminOverview['feed'] = [
+      ...db.rounds.filter((r) => clubs.has(r.groupId) && !who(r.playerId)?.admin).map((r) => ({ at: r.createdAt, kind: 'round' as const, club: club(r.groupId), name: who(r.playerId)?.name ?? '?', course: r.course, total: r.total, par: r.par, what: null, shots: null })),
+      ...(db.practice ?? []).filter((x) => clubs.has(x.groupId) && !who(x.playerId)?.admin).map((x) => ({ at: x.startedAt, kind: 'practice' as const, club: club(x.groupId), name: who(x.playerId)?.name ?? '?', course: null, total: null, par: null, what: x.kind, shots: x.shots })),
+      ...members.map((p) => ({ at: p.joined, kind: 'join' as const, club: club(p.groupId), name: p.name, course: null, total: null, par: null, what: null, shots: null })),
+      ...(db.feedback ?? []).filter((f) => clubs.has(f.groupId)).map((f) => ({ at: f.createdAt, kind: 'feedback' as const, club: club(f.groupId), name: who(f.playerId)?.name ?? 'A member', course: null, total: null, par: null, what: f.body.slice(0, 80), shots: null })),
+    ]
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .slice(0, 25);
+    return {
+      clubs: [...clubs]
+        .map((id) => {
+          const s = stats.filter((x) => x.groupId === id);
+          return { id, name: club(id), members: s.length, active: s.filter((x) => x.days > 0).length, rounds: s.reduce((a, x) => a + x.rounds, 0), practice: s.reduce((a, x) => a + x.practice, 0), newMembers: s.filter((x) => x.joined >= since).length };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name)),
+      members: stats.map(({ groupId: _g, ...x }) => x).sort((a, b) => (b.lastSeen ?? '').localeCompare(a.lastSeen ?? '') || a.name.localeCompare(b.name)),
+      feed,
+      feedback: (db.feedback ?? [])
+        .filter((f) => clubs.has(f.groupId) && !f.done)
+        .map((f) => ({ id: f.id, club: club(f.groupId), from: who(f.playerId)?.name ?? null, body: f.body, context: f.context, createdAt: f.createdAt }))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      invites: (db.invites ?? [])
+        .filter((i) => clubs.has(i.groupId) && !i.usedBy)
+        .map((i) => ({ id: i.id, club: club(i.groupId), name: i.name, code: i.code, createdAt: i.createdAt }))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    };
+  },
+
+  async adminFeedbackDone(session, id, done) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can manage feedback.');
+    const clubs = new Set(db.players.filter((p) => p.admin && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.groupId));
+    const f = (db.feedback ?? []).find((x) => x.id === id && clubs.has(x.groupId));
+    if (f) f.done = done;
+    save(db);
   },
 
   // Adds Sean, Danny and PJ with a few rounds this month and a past champion.

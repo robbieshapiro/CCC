@@ -1,6 +1,7 @@
 import { getSession, listSessions } from './api';
 import { crest } from './brand';
 import { soundOn } from './fx/sound';
+import { store } from './storage';
 
 export const APP_NAME = 'Claude Country Club';
 
@@ -34,7 +35,9 @@ function clubName(groupName: string) {
     .join('')}</select>`;
 }
 
-export function header(groupName: string, active: 'month' | 'card' | 'lockers'): string {
+// The Admin tab shows for the admin only (main.ts marks the device when the club says you run it).
+export function header(groupName: string, active: 'month' | 'card' | 'lockers' | 'admin'): string {
+  const admin = store.get('ccc-admin') === '1';
   return `
     <header class="top">
       <div class="brand"><a href="#/">${crest(30, 'h')}</a><span><a href="#/"><b>Claude Country Club</b></a>${clubName(groupName)}</span></div>
@@ -42,6 +45,7 @@ export function header(groupName: string, active: 'month' | 'card' | 'lockers'):
         <a href="#/" class="${active === 'month' ? 'on' : ''}">This Month</a>
         <a href="#/lockers" class="${active === 'lockers' ? 'on' : ''}">Locker Room</a>
         <a href="#/card" class="${active === 'card' ? 'on' : ''}">Member Card</a>
+        ${admin ? `<a href="#/admin" class="admin-tab ${active === 'admin' ? 'on' : ''}">Admin</a>` : ''}
         ${muteButton()}
       </nav>
     </header>`;

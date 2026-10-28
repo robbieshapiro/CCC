@@ -45,30 +45,33 @@ export function noticeComposer(admin: boolean) {
 export async function bindNotices() {
   const s = requireSession();
   const first = await api.listNotices(s).catch(() => [] as Notice[]);
-  // look the page up after the wait, so we wire whatever is on screen now
+  // look the page up after the wait, so we wire whatever is on screen now: the strip on the home page, the
+  // composer in the Committee Room
   const box = document.getElementById('notices');
-  if (!box) return;
   const live = document.getElementById('notice-live');
+  if (!box && !live) return;
   const draw = (all: Notice[]) => {
     const seen = dismissed();
     const show = all.filter((n) => !seen.includes(n.id));
-    box.hidden = !show.length;
-    box.innerHTML = show
-      .map(
-        (n) => `<article class="notice">
-          ${n.asReginald ? `<span class="host-face">${reginaldSvg('dry', 46)}</span>` : ''}
-          <div><p class="notice-from"><b>${n.asReginald ? 'Reginald' : esc(n.author ?? 'The Committee')}</b><small>${day(n.createdAt)}</small></p>
-          <p class="notice-body">${esc(n.body)}</p></div>
-          <button class="notice-x" data-dismiss="${n.id}" aria-label="Dismiss">×</button>
-        </article>`,
-      )
-      .join('');
-    box.querySelectorAll<HTMLButtonElement>('[data-dismiss]').forEach((b) => {
-      b.onclick = () => {
-        dismiss(Number(b.dataset.dismiss));
-        draw(all);
-      };
-    });
+    if (box) {
+      box.hidden = !show.length;
+      box.innerHTML = show
+        .map(
+          (n) => `<article class="notice">
+            ${n.asReginald ? `<span class="host-face">${reginaldSvg('dry', 46)}</span>` : ''}
+            <div><p class="notice-from"><b>${n.asReginald ? 'Reginald' : esc(n.author ?? 'The Committee')}</b><small>${day(n.createdAt)}</small></p>
+            <p class="notice-body">${esc(n.body)}</p></div>
+            <button class="notice-x" data-dismiss="${n.id}" aria-label="Dismiss">×</button>
+          </article>`,
+        )
+        .join('');
+      box.querySelectorAll<HTMLButtonElement>('[data-dismiss]').forEach((b) => {
+        b.onclick = () => {
+          dismiss(Number(b.dataset.dismiss));
+          draw(all);
+        };
+      });
+    }
     if (live)
       live.innerHTML = all
         .map((n) => `<li><span>${esc(n.body)}<small>${n.asReginald ? 'As Reginald' : 'As you'} · ${day(n.createdAt)}</small></span><button class="link" data-down="${n.id}">Take down</button></li>`)

@@ -3,16 +3,13 @@ import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { crest } from '../brand';
 import { featById } from '../feats';
-import { courseFor, nextCourse, upcoming, type Course } from '../golf3d/courses';
+import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { GAME_TZ, monthClosesAt } from '../day';
 import { hostChip, REGINALD, type Mood } from '../host';
-import { bindFeedbackPanel, feedbackPanel, openFeedback } from './feedback';
-import { bindPracticeLog, facilityPanel, practiceLogPanel } from './practice';
-import { activityPanel, bindActivity } from './activity';
+import { openFeedback } from './feedback';
+import { facilityPanel } from './practice';
 import { bindOpen } from './open';
-import { bindClubMaker, clubMaker } from './clubs';
-import { bindInviteMaker, inviteMaker } from './invite';
-import { bindNotices, noticeComposer, noticesStrip } from './notices';
+import { bindNotices, noticesStrip } from './notices';
 import { board, monthName, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { esc, header, render } from '../ui';
@@ -110,41 +107,18 @@ export function home(snap: Snapshot) {
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
       </section>
-      ${noticeComposer(!!snap.admin)}
-      ${previewPanel(!!snap.admin, snap.month)}
-      ${activityPanel(!!snap.admin)}
-      ${practiceLogPanel(!!snap.admin)}
-      ${inviteMaker(!!snap.admin)}
-      ${feedbackPanel(!!snap.admin)}
-      ${clubMaker(!!snap.admin)}
       <p class="fine feedback-link"><button class="link" id="send-feedback">Leave feedback</button></p>
       ${!useSupabase && snap.players.length < 2 ? `<p class="fine">Local mode. <button class="link" id="demo">Add Sean, Danny and PJ</button> to see a full board.</p>` : ''}
     </main>`);
 
   tickCountdown();
-  void bindInviteMaker();
-  void bindFeedbackPanel();
-  void bindPracticeLog();
-  void bindActivity();
   void bindOpen(snap, line);
-  bindClubMaker();
   void bindNotices();
   document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {
     localApi.seedDemo(requireSession());
     home(await refresh());
   });
-}
-
-// For the admin only: every hole of the courses still to come. Preview rounds aren't posted.
-function previewPanel(admin: boolean, month: string) {
-  const list = upcoming(month);
-  if (!admin || !list.length) return '';
-  return `
-    <section class="panel admin invite-maker">
-      <div><h2>Preview the next course</h2><p class="muted">Only you can see this. Every hole, and preview rounds are not posted to the board.</p></div>
-      ${list.map((c) => `<a class="btn" href="#/preview/${c.id}">Play all ${c.holes.length} holes of ${esc(c.name)}</a><p class="fine">${esc(c.tagline)}</p>`).join('')}
-    </section>`;
 }
 
 // The month's clock: how long until the board closes and the champion goes up.
