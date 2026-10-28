@@ -8,10 +8,10 @@ export const CUP_R = 0.65;
 // how far a holed ball sits down the cup: deep enough to be in, shallow enough to see the white of it
 const CUP_DEPTH = 0.42;
 // Tour greens: a smaller cup, quicker greens, and a putt has to be dying to drop.
-export const TOUR_CUP_R = 0.55;
+export const TOUR_CUP_R = 0.6;
 export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R);
 // the fastest a ball can roll over the dead centre of a tour cup and still drop (ft/s); it's slower toward the edge
-export const DROP_SPEED = 8.5;
+export const DROP_SPEED = 9.5;
 export const TOUR_GREEN = 3;
 const TOUR_FAIRWAY = 5;
 const TOUR_BITE = 1.4; // tour turf grabs a spinning ball a little harder than the Highlands, not three times
@@ -37,6 +37,36 @@ export type Result = {
   sounds: Sound[];
   duration: number;
 };
+
+// Where a ball that found the lava, the sea or out of bounds is dropped on tour courses: beside the spot where it last
+// crossed dry ground in bounds, a few feet back toward where it was hit from, on ground that stays dry at high tide and
+// isn't a cliff face. Null if there's nowhere sensible: then it's played again from where it was.
+export function dropPoint(h: Hole, frames: Frame[], from: V2): V2 | null {
+  const p = entryDrop(h, frames, from);
+  const toCup = (q: V2) => Math.hypot(q.x - h.cup.x, q.y - h.cup.y);
+  return h.drop && (!p || toCup(h.drop) < toCup(p)) ? { ...h.drop } : p;
+}
+
+function entryDrop(h: Hole, frames: Frame[], from: V2): V2 | null {
+  const dry = (p: V2) =>
+    inPoly(p, h.border) &&
+    !h.water.some((w) => inPoly(p, w.poly) && heightAt(h, p.x, p.y) < w.level + (w.tide?.amp ?? 0) + 0.3) &&
+    Math.hypot(gradAt(h, p.x, p.y).x, gradAt(h, p.x, p.y).y) < 0.6;
+  for (let i = frames.length - 1; i >= 0; i--) {
+    const f = frames[i];
+    if (!dry(f)) continue;
+    // a few feet back toward the shot's start, so it isn't right on the edge
+    const len = Math.hypot(from.x - f.x, from.y - f.y);
+    if (len < 0.5) return { ...from };
+    const d = { x: (from.x - f.x) / len, y: (from.y - f.y) / len };
+    for (let k = 3; k <= Math.min(len, 40); k++) {
+      const p = { x: f.x + d.x * k, y: f.y + d.y * k };
+      if (dry(p)) return p;
+    }
+    return { ...from };
+  }
+  return null;
+}
 
 // An iron out of a bunker is possible, but the sand takes a fifth of the distance.
 export function lieFactor(h: Hole, from: V2, club: Shot['club']) {

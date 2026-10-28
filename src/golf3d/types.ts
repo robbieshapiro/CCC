@@ -69,6 +69,8 @@ export type Hole = {
   portals?: { id: string; x: number; y: number; r: number; to: V2; delay?: number }[];
   zones: Zone[]; // used to detect secret routes and feats
   secret: { name: string; zone: string; hint: string };
+  // a drop zone, as on an island green: a ball in the hazard is dropped here if that's nearer the hole than where it went in
+  drop?: V2;
   flyover: V2[]; // camera path for the intro
   decor: Decor[];
 };
