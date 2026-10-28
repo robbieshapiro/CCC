@@ -55,7 +55,7 @@ main.narrow { max-width: 580px; }
 .brand b { font-family: var(--serif); font-size: 21px; color: var(--green); }
 .brand small { color: var(--muted); font-weight: 700; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
 .top nav { display: flex; gap: 4px; align-items: center; }
-.top nav a { font-weight: 700; font-size: 14px; padding: 7px 12px; border-radius: 999px; color: var(--muted); }
+.top nav a { white-space: nowrap; font-weight: 700; font-size: 14px; padding: 7px 12px; border-radius: 999px; color: var(--muted); }
 .top nav a.on { color: var(--cream); background: var(--green); }
 .mute { cursor: pointer; font-size: 15px; background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; color: var(--ink); }
 
@@ -522,7 +522,10 @@ td.who a:hover span { text-decoration: underline; }
 .stat-row small { color: var(--muted); font-size: 12px; font-weight: 700; }
 .stats .table-wrap { margin-bottom: 16px; }
 @media (max-width: 560px) {
-  .top nav a { padding: 6px 9px; font-size: 13px; }
+  /* phones: one even row of tabs across the full width, short labels */
+  .top nav { width: 100%; justify-content: space-between; }
+  .top nav .wide { display: none; }
+  .top nav a { padding: 6px 12px; font-size: 13px; }
   .stat-row { grid-template-columns: repeat(2, 1fr); }
 }
 
