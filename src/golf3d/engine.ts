@@ -22,7 +22,17 @@ export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
 
 // A practice area: the stations you can hit from (the short game), and the flags out on the range.
-export type Drill = { title: string; stations: { name: string; at: V2 }[]; targets?: { label: string; at: V2 }[]; at: number };
+export type Drill = {
+  title: string;
+  stations: { name: string; at: V2 }[];
+  targets?: { label: string; at: V2 }[];
+  at: number;
+  // the Daily Shot: its own wind, a tag on the result callout, and a say after each try (false: that was the last)
+  wind?: Conditions;
+  tag?: () => string;
+  eyebrow?: string;
+  onResult?: (r: { ft: number | null; holed: boolean; lost: boolean }) => boolean;
+};
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
 // A member who played today, standing where their tee shot finished on each hole.
 export type Ghost = { name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
@@ -320,7 +330,7 @@ export class Course3D {
     this.cart?.dispose();
     this.cart = null;
     // today's pin and wind, the same for every member
-    this.wind = this.drill ? { pin: hole.cup, mph: 0, toward: 0, accel: { x: 0, y: 0 } } : conditionsFor(hole, todayInGameTz());
+    this.wind = this.drill ? (this.drill.wind ?? { pin: hole.cup, mph: 0, toward: 0, accel: { x: 0, y: 0 } }) : conditionsFor(hole, todayInGameTz());
     hole = withPin(hole, this.wind);
     this.hole = hole;
     this.number = number;
@@ -337,7 +347,9 @@ export class Course3D {
     this.practice = !!this.drill;
     this.zones = new Set();
     this.pos = this.drill ? { ...this.drill.stations[this.drill.at].at } : { ...hole.tee };
-    this.aim = this.drill && this.drill.at ? Math.atan2(hole.cup.x - this.pos.x, hole.cup.y - this.pos.y) : hole.aim;
+    // off the tee, the hole's own line; from anywhere else (a practice station, the Daily Shot's approach) at the pin
+    const offTee = this.pos.x !== hole.tee.x || this.pos.y !== hole.tee.y;
+    this.aim = offTee ? Math.atan2(hole.cup.x - this.pos.x, hole.cup.y - this.pos.y) : hole.aim;
     this.power = 0;
     this.shot = null;
     this.setView('play');
@@ -460,7 +472,7 @@ export class Course3D {
         <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}</div>
         ${
           this.drill
-            ? `<div class="g3-title"><small>Practice facility</small><b>${this.drill.title}</b><span><em data-station-name>${this.drill.stations[this.drill.at].name}</em>${this.drill.stations.length > 1 ? ' · <i data-dist></i>' : ''}</span></div>
+            ? `<div class="g3-title"><small>${this.drill.eyebrow ?? 'Practice facility'}</small><b>${this.drill.title}</b><span><em data-station-name>${this.drill.stations[this.drill.at].name}</em>${this.drill.stations.length > 1 ? ' · <i data-dist></i>' : ''}</span></div>
         <div class="g3-score"><small>Shots</small><b data-shots>0</b><span></span></div>`
             : `<div class="g3-title"><small>Hole ${this.number} of ${this.holesInRound}</small><b>${h.name}</b><span>Par ${h.par} · <i data-dist></i></span></div>
         <div class="g3-score"><small>Stroke</small><b data-strokes>0</b><span>${total.par ? `Round ${diff === 0 ? 'E' : diff > 0 ? `+${diff}` : diff}` : ''}</span></div>`
@@ -1187,10 +1199,15 @@ export class Course3D {
     if (s.practice) {
       // tell them how it went, then put the ball back on the tee
       const last = r.frames[r.frames.length - 1];
-      const d = Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y));
+      const d = Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y);
       const lost = r.penalty ? this.lost(last, s.clock + r.duration) : '';
       if (this.drill?.targets) this.rangeReport(s.from, r, lost);
-      else this.callout(r.holed ? 'In the hole!' : lost || `${away(d, surfaceAt(this.hole, last) === 'green')} from the pin`, 'Practice', 1600);
+      else this.callout(r.holed ? 'In the hole!' : lost || `${away(d, surfaceAt(this.hole, last) === 'green')} from the pin`, this.drill?.tag?.() ?? 'Practice', 1600);
+      const more = this.drill?.onResult?.({ ft: r.penalty || r.holed ? (r.holed ? 0 : null) : Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y) * SCALE * 10) / 10, holed: r.holed, lost: r.penalty });
+      if (more === false) {
+        this.mode = 'done';
+        return;
+      }
       this.pos = this.drill ? { ...this.drill.stations[this.drill.at].at } : { ...this.hole.tee };
       this.placeBall();
       this.trailPts = [];

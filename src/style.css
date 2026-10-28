@@ -745,3 +745,27 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .g3-read span + span { padding-left: 12px; border-left: 1px solid rgba(240, 220, 174, 0.35); }
 /* phones: the top is full (title, wind, minimap), so the read sits just above the clubs */
 @media (max-width: 560px) { .g3-read { top: auto; bottom: calc(158px + env(safe-area-inset-bottom, 0px)); } }
+
+/* The Daily Shot: the card on Play, the board, the summary after the last try */
+.daily-card { margin: 0 0 16px; padding: 16px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--gold); }
+.daily-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.daily-head h2 { margin: 2px 0 4px; font-family: var(--serif); }
+.daily-streak { font-weight: 800; font-size: 15px; padding: 4px 10px; border-radius: 999px; background: #fff2dc; border: 1px solid #f0c98a; white-space: nowrap; }
+.daily-mine { font-size: 18px; letter-spacing: 2px; margin: 8px 0; }
+.daily-mine span { font-size: 14px; letter-spacing: 0; margin-left: 8px; }
+.daily-mine.big { font-size: 32px; margin: 10px 0; }
+.daily-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 6px; }
+.daily-board { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; }
+.daily-board li { display: grid; grid-template-columns: 22px 1fr auto auto; align-items: baseline; gap: 8px; padding: 6px 4px; border-top: 1px solid var(--line); font-size: 14px; }
+.daily-board li:first-child { border-top: 0; }
+.daily-board li span { color: var(--muted); font-weight: 800; font-size: 12px; }
+.daily-board li small { color: var(--muted); font-size: 12px; }
+.daily-board li em { font-style: normal; font-weight: 800; }
+.daily-board li.me { background: #fff7e6; border-radius: 6px; }
+.daily-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* the Committee Room's week of Daily Shot players */
+.adm-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 90px; }
+.adm-bars div { height: 100%; display: grid; grid-template-rows: 1fr auto auto; justify-items: center; align-items: end; }
+.adm-bars b { width: 70%; min-height: 2px; background: #8a6a3e; border-radius: 3px 3px 0 0; }
+.adm-bars span { font: 800 11px var(--font); }
+.adm-bars small { color: var(--muted); font-size: 11px; }

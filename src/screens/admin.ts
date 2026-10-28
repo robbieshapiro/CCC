@@ -2,7 +2,7 @@
 // you can go do (notice, invite, preview, new club); then activity, every member, and member management (invites
 // nobody has opened yet, with revoke).
 import { api, getSession, listSessions } from '../api';
-import type { AdminOverview, AdminWindow, Notice, Session, Snapshot } from '../api/types';
+import type { AdminOverview, AdminWindow, DailyDay, Notice, Session, Snapshot } from '../api/types';
 import { GAME_TZ } from '../day';
 import { courseById, upcoming } from '../golf3d/courses';
 import { toParLabel } from '../standings';
@@ -205,12 +205,14 @@ function bindSend(root: HTMLElement) {
 
 let state: {
   data: AdminOverview | null;
+  daily: DailyDay[] | null;
   window: AdminWindow;
   sort: SortKey;
   desc: boolean;
   club: string;
 } = {
   data: null,
+  daily: null,
   window: 'week',
   sort: 'lastSeen',
   desc: true,
@@ -234,7 +236,8 @@ async function load() {
   const body = document.getElementById('adm-body');
   if (!body) return;
   body.classList.add('loading');
-  const data = await api.adminOverview(requireSession(), state.window).catch(() => null);
+  const [data, daily] = await Promise.all([api.adminOverview(requireSession(), state.window).catch(() => null), api.dailyAdmin(requireSession()).catch(() => null)]);
+  state.daily = daily;
   if (!document.getElementById('adm-body')) return; // left the page
   body.classList.remove('loading');
   if (!data) {
@@ -290,6 +293,7 @@ function draw() {
               .join('')}</tbody></table></div>`
           : ''
       }
+      ${dailyBars(state.daily)}
       <h3 class="adm-sub">Latest</h3>
       ${feed(d, many)}
     </section>
@@ -400,4 +404,15 @@ function feed(d: AdminOverview, many: boolean) {
   };
   const icon = { round: '⛳', practice: '🎯', join: '👋', feedback: '✉️' };
   return `<ul class="adm-feed">${d.feed.map((e) => `<li><span class="adm-ico">${icon[e.kind]}</span><div>${chip(e.club, many)}<b>${esc(e.name)}</b> ${line(e)}<small>${when(e.at)}</small></div></li>`).join('')}</ul>`;
+}
+
+// Daily Shot players a day for the last week, oldest on the left
+function dailyBars(days: DailyDay[] | null) {
+  if (!days) return '';
+  const top = Math.max(1, ...days.map((d) => d.players));
+  const day = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'narrow', timeZone: 'UTC' });
+  return `<h3 class="adm-sub">Daily Shot · players a day</h3><div class="adm-bars">${[...days]
+    .reverse()
+    .map((d) => `<div title="${d.day}: ${d.players} players, ${d.tries} tries"><b style="height:${Math.round((d.players / top) * 100)}%"></b><span>${d.players}</span><small>${day(d.day)}</small></div>`)
+    .join('')}</div>`;
 }
