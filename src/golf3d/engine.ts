@@ -979,15 +979,14 @@ export class Course3D {
     m.hidden = false;
     m.classList.remove('accuracy');
     m.classList.toggle('vertical', this.style() === 'vertical');
-    // what you're drinking shows on the meter: the Palmer's wide gold, or for the lager or Reginald's fireball the
+    // what you're drinking shows on the meter: for the lager or Reginald's fireball the
     // overswing at the top of the bar turned to fire (swing into it: that's the extra distance), and a tag saying which
     const kind = this.drink?.kind;
-    m.classList.toggle('steady', kind === 'palmer');
     m.classList.toggle('boost', kind === 'lager' || kind === 'fireball');
     m.classList.toggle('fireball', kind === 'fireball');
     const tag = this.overlay.querySelector('[data-swing-tag]') as HTMLElement;
     tag.hidden = !drink || kind === 'water';
-    if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · wider gold' : kind === 'lager' ? 'Lager · +10% · swing into the fire' : kind === 'fireball' ? 'Fireball · +15% · swing into the fire' : '';
+    if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · a touch slower' : kind === 'lager' ? 'Lager · +10% · swing into the fire' : kind === 'fireball' ? 'Fireball · +15% · swing into the fire' : '';
     // righties have the meter on the left, out of the way of the golfer; lefties on the right
     m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.power));
