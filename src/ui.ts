@@ -42,7 +42,7 @@ export function header(groupName: string, active: 'month' | 'card' | 'lockers' |
     <header class="top">
       <div class="brand"><a href="#/">${crest(30, 'h')}</a><span><a href="#/"><b>Claude Country Club</b></a>${clubName(groupName)}</span></div>
       <nav>
-        <a href="#/" class="${active === 'month' ? 'on' : ''}">This Month</a>
+        <a href="#/" class="${active === 'month' ? 'on' : ''}">Play</a>
         <a href="#/lockers" class="${active === 'lockers' ? 'on' : ''}">Locker Room</a>
         <a href="#/card" class="${active === 'card' ? 'on' : ''}">Member Card</a>
         ${admin ? `<a href="#/admin" class="admin-tab ${active === 'admin' ? 'on' : ''}">Admin</a>` : ''}
