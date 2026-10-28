@@ -12,6 +12,7 @@ export const FEATS: Feat[] = [
   { id: 'blowhole', name: 'Thar She Blows', icon: '🐋', how: 'Ride the blowhole on The Blowhole' },
   { id: 'lavatube', name: 'The Lava Tube', icon: '🌋', how: 'Roll the old lava tube across The Lava Field' },
   { id: 'rimroad', name: 'Island Hopper', icon: '🏝️', how: 'Hold the island in the lava on The Caldera' },
+  { id: 'liftoff', name: 'Lift Off', icon: '🚀', how: 'Ride the geyser in the gorge onto the slab on The Lava Lift' },
   { id: 'ledge', name: 'The Ledge', icon: '🧗', how: 'Roll the ledge round the gorge on The Lava Lift' },
   { id: 'ashroad', name: 'The Ash Road', icon: '♨️', how: 'Run the ash road down Geyser Alley' },
   { id: 'seaarch', name: 'The Sea Arch', icon: '🌉', how: 'Cross the arch on The Lava Tube' },

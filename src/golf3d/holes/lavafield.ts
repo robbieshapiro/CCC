@@ -1,10 +1,12 @@
-// Hole 2, The Lava Field (par 5, about 590 ft): islands of turf in a field of black rock and running lava.
+// Hole 2, The Lava Field (par 5, about 700 ft, 515 yd as shown): islands of turf in a field of black rock and running lava.
+// Past the big island a second, smaller one sits on the rock before the last flow: somewhere to lay up.
 // The play: an iron to the little island short of the second flow, then over it, then over the last one to the green.
 // The gamble: a driver off the tee, carrying the second flow onto the big island. A creek of lava splits that island
 // down the middle, so pick a side. The green is a narrow two-tier island in a lake of lava.
 // The live hazard: the second flow swells and settles, so its banks are wider some moments than others.
 // The secret: an old lava tube still crosses the last flow on the right. Roll a ball along the top of it to the green.
 import { band, blob, rect } from '../terrain';
+import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 
 const GREEN = { x: -6, y: 584, rx: 16, ry: 26 };
@@ -38,7 +40,7 @@ const rocks: Post[] = [
   [-70, 20, 3.4], [70, 26, 3], [-96, 150, 4], [108, 140, 3.6], [-100, 420, 3.2], [-110, 300, 3.4], [112, 340, 3],
 ].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
 
-export const lavafield: Hole = {
+const base: Hole = {
   id: 'lavafield',
   name: 'The Lava Field',
   par: 5,
@@ -128,5 +130,17 @@ export const lavafield: Hole = {
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 20, y: -10, rot: 0 },
     { kind: 'bench', x: -22, y: -12, rot: 0 },
+  ],
+};
+
+// 120 ft longer than it was drawn, between the big island and the last flow, with a layup island in the new stretch
+const long = extend(base, 476, 120);
+export const lavafield: Hole = {
+  ...long,
+  regions: [
+    ...long.regions.slice(0, 7),
+    { poly: blob(-6, 548, 70, 34, 9, 0.1), surface: 'rough' },
+    { poly: blob(-6, 548, 56, 24, 9, 0.1), surface: 'fairway' },
+    ...long.regions.slice(7),
   ],
 };

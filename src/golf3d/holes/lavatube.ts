@@ -1,8 +1,12 @@
-// Hole 6, The Lava Tube (par 4, about 430 ft): tee off from inside a lava tube, out along the top of a sea cliff.
+// Hole 6, The Lava Tube (par 5, about 735 ft, 540 yd as shown): the hardest on the course. Tee off from inside a lava
+// tube, out along the top of a long sea cliff.
+// The cart: a cart works back and forth across the cliff top where a good drive comes down. It's a moving wall: time
+// your second around it, or play it off it.
 // The play: keep it low. The roof of the tube is 16 ft up; a high shot clips it and drops. A driver comes out low
 // enough, an iron has to be punched. Then the fairway bends right round an inlet of the sea to a green out on a point.
 // The secret: a natural arch of rock crosses the inlet. Roll one over it and it cuts the corner to the green.
 import { band, blob, rect } from '../terrain';
+import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 
 const TOP = 30; // the cliff top; the sea is at 0
@@ -30,10 +34,10 @@ const rocks: Post[] = [
 ].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
 const palms: Post[] = [-50, -30, 60, 140].map((x, i) => ({ x, y: 430 + (i % 2) * 8, r: 1, h: 22, look: 'palm' as const }));
 
-export const lavatube: Hole = {
+const base: Hole = {
   id: 'lavatube',
   name: 'The Lava Tube',
-  par: 4,
+  par: 5,
   theme: 'volcanic',
   tour: true,
   tee: { x: 0, y: 0 },
@@ -93,4 +97,46 @@ export const lavatube: Hole = {
     { x: 236, y: 372 },
   ],
   decor: [{ kind: 'teebox', x: 0, y: 0 }],
+};
+
+// 230 ft longer than it was drawn: the straight run along the cliff stretches, and the inlet, the arch and the point
+// slide back with it
+const long = extend(base, 150, 230);
+
+// the cart's run: straight across the cliff top, back and forth
+const CART = { y: 400, x0: -30, x1: 30, period: 9 };
+const cartAt = (t: number) => {
+  const k = (t % CART.period) / CART.period;
+  const s = k < 0.5 ? k * 2 : 2 - k * 2; // there and back
+  const e = s * s * (3 - 2 * s); // it slows at each end
+  return { x: CART.x0 + (CART.x1 - CART.x0) * e, y: CART.y, dir: k < 0.5 ? 1 : -1 };
+};
+
+export const lavatube: Hole = {
+  ...long,
+  movers: [
+    {
+      id: 'cart',
+      look: 'cart',
+      at: (t) => {
+        const c = cartAt(t);
+        const pos = { x: c.x, y: c.y };
+        // a box of wall the size of the cart: hit it and you bounce off
+        const w = 3.2;
+        const l = 5.5;
+        const corners = [
+          { x: c.x - l, y: c.y - w },
+          { x: c.x + l, y: c.y - w },
+          { x: c.x + l, y: c.y + w },
+          { x: c.x - l, y: c.y + w },
+        ];
+        return {
+          walls: corners.map((a, i) => ({ a, b: corners[(i + 1) % 4], h: 4, look: 'cart' as const })),
+          posts: [],
+          pos,
+          heading: c.dir > 0 ? Math.PI / 2 : -Math.PI / 2,
+        };
+      },
+    },
+  ],
 };

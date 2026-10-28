@@ -1,12 +1,14 @@
-// Hole 1, The Blowhole (par 4, about 380 ft round the corner): sea cliffs on a volcanic island.
-// The play: an iron up the right-hand arm of the headland, then a mid-iron across the corner of the cove to the green.
+// Hole 1, The Blowhole (par 4, about 480 ft round the corner, 350 yd as shown): sea cliffs on a volcanic island.
+// The opener, and the kindest hole: a wide arm and a big green. The play: a drive up the right-hand arm of the
+// headland, then a mid-iron across the corner of the cove to the green.
 // The gamble: carry the cove from the tee with a driver, straight at the far headland. Short is the sea.
 // The tide: a black-sand beach at the foot of the cliff dries out and floods on the hole clock.
 // The secret: the blowhole on the far cliff. Roll a ball over it as it goes off and it throws you at the green.
 import { band, blob, circle, rect } from '../terrain';
+import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 
-const GREEN = { x: -62, y: 346, r: 21 };
+const GREEN = { x: -62, y: 346, r: 25 };
 const VENT = { x: -30, y: 310, r: 4 };
 // the blowhole breathes: a slow swell, then a burst
 const PERIOD = 7;
@@ -46,7 +48,7 @@ const rocks: Post[] = [
 // palms along the back of the far headland
 const palms: Post[] = [-126, -98, -30, 2, 34, 60].map((x, i) => ({ x, y: 384 + (i % 2) * 8, r: 1, h: 22, look: 'palm' as const }));
 
-export const blowhole: Hole = {
+const base: Hole = {
   id: 'blowhole',
   name: 'The Blowhole',
   par: 4,
@@ -67,8 +69,8 @@ export const blowhole: Hole = {
   regions: [
     { poly: rect(10, -12, 38, 12), surface: 'fairway' },
     // up the right-hand arm
-    { poly: band(armWay, 32), surface: 'fringe' },
-    { poly: band(armWay, 28), surface: 'fairway' },
+    { poly: band(armWay, 40), surface: 'fringe' },
+    { poly: band(armWay, 36), surface: 'fairway' },
     // across the top to the green: the bold landing sits right on the cliff edge
     { poly: band(farWay, 24), surface: 'fringe' },
     { poly: band(farWay, 20), surface: 'fairway' },
@@ -86,7 +88,7 @@ export const blowhole: Hole = {
     // the sea floor
     { kind: 'ramp', x0: -180, y0: -50, x1: 150, y1: 450, axis: 'y', h0: -8, h1: -8, op: 'set' },
     // the tee and the right-hand arm of the headland: a cliff top that slopes gently down toward the corner
-    { kind: 'embankment', pts: arm, h: [27, 26, 24.5, 23, 22], width: 32, edge: 10, wobble: 6 },
+    { kind: 'embankment', pts: arm, h: [27, 26, 24.5, 23, 22], width: 40, edge: 10, wobble: 6 },
     // the far headland the green sits on
     { kind: 'embankment', pts: far, h: [21, 21, 21, 21.5], width: 52, edge: 10, wobble: 8 },
     // the beach: black sand at the foot of the cliff, just above the low tide
@@ -96,7 +98,7 @@ export const blowhole: Hole = {
     { kind: 'hill', x: 20, y: 316, r: 22, h: 1.2 },
     // the green: a raised shelf, with a ridge through the middle and a false front toward the cove
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.r + 10, h: 22.5, edge: 9, op: 'set' },
-    { kind: 'ramp', x0: GREEN.x - 32, y0: GREEN.y - 32, x1: GREEN.x + 32, y1: GREEN.y + 32, axis: 'y', h0: -0.6, h1: 0.5, op: 'add' },
+    { kind: 'ramp', x0: GREEN.x - 32, y0: GREEN.y - 32, x1: GREEN.x + 32, y1: GREEN.y + 32, axis: 'y', h0: -0.3, h1: 0.3, op: 'add' },
     { kind: 'hill', x: GREEN.x + 6, y: GREEN.y + 2, r: 16, h: 0.7 },
     { kind: 'hill', x: GREEN.x - 14, y: GREEN.y - 12, r: 12, h: -0.5 },
     // bunkers
@@ -134,3 +136,6 @@ export const blowhole: Hole = {
     { kind: 'rock', x: 58, y: -20, scale: 2.6 },
   ],
 };
+
+// 100 ft longer than it was drawn: the arm stretches, and everything from the beach on slides back
+export const blowhole: Hole = extend(base, 150, 100);

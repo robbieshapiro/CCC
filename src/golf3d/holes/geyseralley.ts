@@ -1,10 +1,14 @@
-// Hole 5, Geyser Alley (par 4, about 390 ft): a narrow, crowned fairway between two lines of steaming vents.
+// Hole 5, Geyser Alley (par 4, about 575 ft, 420 yd as shown): a narrow, crowned fairway between two lines of steaming
+// vents. Driver, then iron: the green is out of reach from the tee.
 // The play: find the fairway. It's crowned, so a ball that lands on a shoulder runs off into the black ash either
-// side. The green sits down in a hollow at the end, with steam drifting across it. The vents are only steam.
+// side. The green sits down in a hollow at the end, with steam drifting across it.
+// The geysers: five vents out in the fairway where a drive comes to rest, each on its own clock. Roll over one as it
+// goes and it throws you: some on up the fairway, some off into the ash. Read the rhythm, or trust to luck.
 // The secret: the ash road. A cinder track runs behind the left-hand vents and down into the hollow; a drive that
 // finds it runs a long way.
 import { band, blob, rect } from '../terrain';
-import type { Decor, Hole, Post, V2 } from '../types';
+import { extend } from './extend';
+import type { Decor, Hole, Post, Push, V2 } from '../types';
 
 const TOP = 20;
 const GREEN = { x: 6, y: 384, rx: 20, ry: 22 };
@@ -37,7 +41,7 @@ const rocks: Post[] = [
   [-80, 40, 3.2], [80, 60, 3], [-90, 250, 3.6], [90, 300, 3.4], [-70, 420, 3], [70, 430, 3.2],
 ].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }));
 
-export const geyseralley: Hole = {
+const base: Hole = {
   id: 'geyseralley',
   name: 'Geyser Alley',
   par: 4,
@@ -97,4 +101,35 @@ export const geyseralley: Hole = {
     { x: 8, y: 390 },
   ],
   decor: [{ kind: 'teebox', x: 0, y: 0 }, { kind: 'sign', x: 20, y: -10, rot: 0 }, ...vents, { kind: 'steamvent', x: 40, y: 400 }],
+};
+
+// 185 ft longer than it was drawn: the alley stretches, and the hollow and green slide back out of driving range
+const long = extend(base, 200, 185);
+
+// the live geysers, in the drive zone: where each sits, how often it goes, and which way it throws a ball
+const geyser = (id: string, x: number, y: number, period: number, offset: number, throwTo: { x: number; y: number; z: number }): Push => ({
+  id,
+  look: 'geyser',
+  x,
+  y,
+  r: 3,
+  at: () => ({ x: 0, y: 0 }),
+  erupt: (t) => ((t + offset) % period > period - 1.3 ? throwTo : null),
+});
+const geysers: Push[] = [
+  geyser('g1', -7, 300, 5, 0, { x: 4, y: 30, z: 18 }),
+  geyser('g2', 8, 336, 6.5, 2, { x: 26, y: 6, z: 16 }),
+  geyser('g3', -4, 372, 5.5, 4, { x: -24, y: 10, z: 16 }),
+  geyser('g4', 6, 404, 7, 1, { x: 0, y: 36, z: 22 }),
+  geyser('g5', -6, 436, 6, 3, { x: -20, y: 18, z: 18 }),
+];
+
+export const geyseralley: Hole = {
+  ...long,
+  terrain: [
+    ...long.terrain,
+    // a shallow cone round each vent, so a ball rolling close is drawn onto it
+    ...geysers.map((g) => ({ kind: 'disc' as const, x: g.x, y: g.y, r: 6, h: -0.35, edge: 4, op: 'add' as const })),
+  ],
+  pushes: geysers,
 };

@@ -10,7 +10,7 @@ import type { Hole, Post, V2 } from '../types';
 const FLOOR = 10; // the turf and rock sit at about this height; the lava lake is cut below it
 const LAVA = 7;
 const ISLAND = { x: 236, y: 190, rx: 17, ry: 14 };
-const GREEN = { x: 480, y: 398, r: 22 };
+const GREEN = { x: 480, y: 398, r: 19 };
 
 // the two legs of the dogleg, as one fairway line
 const way: V2[] = [
@@ -52,8 +52,8 @@ export const caldera: Hole = {
   regions: [
     { poly: rect(-14, -12, 14, 12), surface: 'fairway' },
     { poly: band(way, 40), surface: 'rough' },
-    { poly: band(way, 30), surface: 'fringe' },
-    { poly: band(way, 26), surface: 'fairway' },
+    { poly: band(way, 26), surface: 'fringe' },
+    { poly: band(way, 22), surface: 'fairway' },
     // the island: a firm, fast patch of fairway on a rock shelf, just big enough
     { poly: blob(ISLAND.x, ISLAND.y, ISLAND.rx + 4, ISLAND.ry + 4, 2, 0.1), surface: 'rock' },
     { poly: blob(ISLAND.x, ISLAND.y, ISLAND.rx, ISLAND.ry, 2, 0.1), surface: 'fairway' },
