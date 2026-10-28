@@ -4,7 +4,7 @@ import { bagFor, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor } from '../src/golf3d/courses';
 import { monthClosesAt } from '../src/day';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
-import { CUP_R, cupR, curbs, DROP_SPEED, simulate } from '../src/golf3d/physics';
+import { CUP_R, cupR, curbs, DROP_SPEED, dropPoint, simulate } from '../src/golf3d/physics';
 import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type MeterStyle } from '../src/golf3d/swing';
 import { bake, gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
@@ -273,8 +273,11 @@ function novice(base: Hole, seed: string) {
     const r = simulate(h, pos, shot, false);
     log.push(`${shot.club[0]}${r.holed ? '!' : r.penalty ? 'x' : ''}`);
     if (r.holed) break;
-    if (r.penalty) s++; // water or out of bounds costs a stroke
-    else pos = r.end;
+    // water or out of bounds costs a stroke; on tour courses you drop where it went in, as in the game
+    if (r.penalty) {
+      s++;
+      pos = (h.tour && dropPoint(h, r.frames, pos)) || pos;
+    } else pos = r.end;
   }
   if (process.env.TRACE) console.log(`  ${h.id} ${seed}: ${log.join(' ')}`);
   return Math.min(s, h.par + 3);
@@ -344,10 +347,10 @@ if (mode === 'all' || mode === 'basic') {
   ok(!edge.holed && Math.abs(edge.end.x - cupR(tour) * 0.8) > 0.5, `tour green: a firm putt on the edge lips out (ends ${edge.end.x.toFixed(1)},${edge.end.y.toFixed(1)})`);
   const flatFirm = simulate({ ...tour, tour: false }, { x: 0, y: 0 }, { angle: 0, power: (Math.sqrt(2 * 4.2 * 20) * 1.5 - 1.5) / 32.5, club: 'putter', error: 0, clock: 0 }, false);
   ok(flatFirm.holed, `classic greens are unchanged: the firm putt still drops (cap ${DROP_SPEED} ft/s only on tour)`);
-  // the vertical meter is as strict as the classic one with the long clubs, and kinder with the wedge
+  // the vertical meter: a touch kinder than the classic one off the tee, as strict with the iron, much kinder with the wedge
   for (const club of ['driver', 'iron', 'wedge'] as ClubId[]) {
     const ms = (style: MeterStyle) => (goldHalf(club, 1, 1, style) / returnSpeed(club, 1, 1, style)) * 1000;
-    const want = club === 'wedge' ? ms('vertical') >= ms('classic') * 1.9 : Math.abs(ms('vertical') - ms('classic')) < 1;
+    const want = club === 'wedge' ? ms('vertical') >= ms('classic') * 1.9 : club === 'driver' ? Math.abs(ms('vertical') / ms('classic') - 1.25) < 0.02 : Math.abs(ms('vertical') - ms('classic')) < 1;
     ok(want, `vertical meter: ${club} gold window ±${ms('vertical').toFixed(0)} ms (classic ±${ms('classic').toFixed(0)})`);
   }
   // the calendar: October closes at midnight Eastern and the Caldera takes over

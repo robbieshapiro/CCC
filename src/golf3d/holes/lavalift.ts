@@ -52,6 +52,8 @@ export const lavalift: Hole = {
     { poly: blob(GREEN.x, GREEN.y + 4, GREEN.r + 12, GREEN.r + 10, 4, 0.08), surface: 'rough' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.r + 4, GREEN.r + 3.5, 3, 0.05), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.r, GREEN.r * 0.88, 3, 0.05), surface: 'green' },
+    // the drop zone: a small terrace of turf short left of the green, where a ball in the lake is dropped
+    { poly: blob(-30, 256, 8, 6, 12, 0.1), surface: 'fairway' },
     // a pot bunker short right, where the bailout goes
     { poly: blob(GREEN.x + 24, GREEN.y - 18, 6, 4.5, 9, 0.15), surface: 'sand' },
   ],
@@ -75,6 +77,8 @@ export const lavalift: Hole = {
     { kind: 'hill', x: GREEN.x, y: GREEN.y, r: GREEN.r + 2, h: -0.7 },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'y', h0: -0.4, h1: 0.4, op: 'add' },
     { kind: 'disc', x: GREEN.x + 24, y: GREEN.y - 18, r: 6, h: -1, edge: 2, op: 'add' },
+    // the drop zone's terrace
+    { kind: 'disc', x: -30, y: 256, r: 9, h: SHELF - 0.4, edge: 3, op: 'set' },
     // the flow, cut into the shelf's back edge below the lava
     { kind: 'channel', pts: FLOW, width: 5, depth: 5 },
   ],
@@ -84,6 +88,7 @@ export const lavalift: Hole = {
   pushes: [],
   zones: [],
   secret: { name: '', zone: '', hint: '' },
+  drop: { x: -30, y: 256 },
   flyover: [
     { x: 0, y: 10 },
     { x: 0, y: 150 },

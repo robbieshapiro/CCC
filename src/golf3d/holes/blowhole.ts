@@ -80,8 +80,9 @@ const base: Hole = {
   regions: [
     { poly: rect(10, -12, 38, 12), surface: 'fairway' },
     // up the right-hand arm
-    { poly: band(armWay, 40), surface: 'fringe' },
-    { poly: band(armWay, 36), surface: 'fairway' },
+    // wide: the arm is the safe side
+    { poly: band(armWay, 50), surface: 'fringe' },
+    { poly: band(armWay, 46), surface: 'fairway' },
     // across the top to the green: the bold landing sits right on the cliff edge
     { poly: band(farWay, 30), surface: 'fringe' },
     { poly: band(farWay, 26), surface: 'fairway' },
@@ -99,7 +100,7 @@ const base: Hole = {
     // the sea floor
     { kind: 'ramp', x0: -180, y0: -50, x1: 150, y1: 450, axis: 'y', h0: -8, h1: -8, op: 'set' },
     // the tee and the right-hand arm of the headland: a cliff top that slopes gently down toward the corner
-    { kind: 'embankment', pts: arm, h: [27, 26, 24.5, 23, 22], width: 40, edge: 10, wobble: 6 },
+    { kind: 'embankment', pts: arm, h: [27, 26, 24.5, 23, 22], width: 48, edge: 10, wobble: 6 },
     // the far headland the green sits on
     { kind: 'embankment', pts: far, h: [21, 21, 21, 21.5], width: 60, edge: 10, wobble: 8 },
     // the beach: black sand at the foot of the cliff, just above the low tide

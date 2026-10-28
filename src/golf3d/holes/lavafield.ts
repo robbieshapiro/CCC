@@ -10,7 +10,7 @@ import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 
 const GREEN = { x: -6, y: 584, rx: 16, ry: 26 };
-const GREEN_ISLAND = { x: -6, y: 584, r: 34 };
+const GREEN_ISLAND = { x: -6, y: 578, r: 42 }; // big enough for an apron short of the green: a long second that comes up short stays dry
 const FLOOR = 8; // the black rock (and the turf on it) sits at about this height; the flows are cut below it
 const LAVA = FLOOR - 4;
 
@@ -72,6 +72,7 @@ const base: Hole = {
     { poly: blob(48, 372, 28, 70, 4, 0.08), surface: 'fairway' },
     // the green island: narrow, two tiers
     { poly: blob(GREEN_ISLAND.x, GREEN_ISLAND.y, GREEN_ISLAND.r - 4, GREEN_ISLAND.r, 4, 0.08), surface: 'rough' },
+    { poly: blob(GREEN.x, GREEN.y - 34, 18, 10, 6, 0.1), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 5, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 5, 0.06), surface: 'green' },
     { poly: blob(-26, 600, 5, 7, 6, 0.15), surface: 'sand' },

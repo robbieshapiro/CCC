@@ -11,10 +11,11 @@ export const powerSpeed = (club: ClubId, p: number) => FILL[club] * (0.6 + 1.4 *
 
 // The meter comes in two styles. Classic runs left to right. The vertical meter (tour courses, and every course
 // from November) swings the club up and down with it. The long clubs are just as unforgiving as on the classic meter
-// (a full driver gives you about ±19 ms to find the gold); only the scoring clubs get a slower needle and wider gold.
+// (a full driver gives you about ±24 ms to find the gold, a touch kinder than the classic ±19); the scoring clubs get a
+// slower needle and wider gold.
 export type MeterStyle = 'classic' | 'vertical';
 const SLOWER: Record<ClubId, number> = { driver: 1, wood: 1, iron: 1, wedge: 0.75, chip: 0.75, putter: 1 };
-const WIDER: Record<ClubId, number> = { driver: 1, wood: 1, iron: 1, wedge: 1.5, chip: 1.5, putter: 1 };
+const WIDER: Record<ClubId, number> = { driver: 1.25, wood: 1.2, iron: 1, wedge: 1.5, chip: 1.5, putter: 1 };
 
 // how fast the needle comes back for the accuracy tap, in bar-lengths per second
 const RETURN: Record<ClubId, number> = { driver: 1.0, wood: 0.92, iron: 0.84, wedge: 0.72, chip: 0.9, putter: 0 };

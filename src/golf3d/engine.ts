@@ -10,7 +10,7 @@ import { CartGirl } from './cartgirl';
 import { conditionsFor, withPin, type Conditions } from './conditions';
 import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
 import { Golfer } from './golfer';
-import { BALL_R, G, launch, lieFactor, simulate, TOUR_GREEN, type Result } from './physics';
+import { BALL_R, dropPoint, G, launch, lieFactor, simulate, TOUR_GREEN, type Result } from './physics';
 import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
@@ -1022,7 +1022,8 @@ export class Course3D {
     (this.overlay.querySelector('[data-swing]') as HTMLElement).hidden = true;
     const off = Math.round((m.p - this.power) * 100);
     const power = `${Math.round(m.p * 100)}%${Math.abs(off) >= 4 ? (off > 0 ? ' · long' : ' · short') : ''}`;
-    const bomb = this.club === 'driver' && error === 0 && m.p >= 0.97;
+    // a bomb: full power, and the inner part of the bright heart (the vertical meter's gold is wider, the heart isn't)
+    const bomb = this.club === 'driver' && Math.abs(miss) <= m.half * PURE * 0.7 && m.p >= 0.97;
     if (bomb) this.bombSwing = true;
     else if (error === 0) this.callout('Pure', power, 900);
     else if (Math.abs(error) <= 0.12) this.callout('Good', power, 800);
@@ -1211,7 +1212,10 @@ export class Course3D {
       this.setStrokes();
       const last = r.frames[r.frames.length - 1];
       const roof = this.hole.roofs?.some((rf) => inPoly(last, rf.poly));
-      this.callout(roof ? 'On the roof' : this.lost(last, s.clock + r.duration), 'Penalty stroke. Play it again.', 1800);
+      // tour courses: drop beside where it went in, as the real game does; classic courses play it again
+      const drop = this.hole.tour && !roof ? dropPoint(this.hole, r.frames, s.from) : null;
+      if (drop) this.pos = drop;
+      this.callout(roof ? 'On the roof' : this.lost(last, s.clock + r.duration), drop ? 'Penalty stroke. Drop where it went in.' : 'Penalty stroke. Play it again.', 1800);
       sfx('sad');
       this.golfer.setPose('groan');
     } else this.pos = r.end;

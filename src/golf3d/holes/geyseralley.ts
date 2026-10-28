@@ -64,8 +64,8 @@ const base: Hole = {
   regions: [
     // black ash either side: a long waste bunker down each flank
     { poly: band(way, 44), surface: 'sand' },
-    { poly: band(way, 19), surface: 'fringe' },
-    { poly: band(way, 15), surface: 'fairway' },
+    { poly: band(way, 23), surface: 'fringe' },
+    { poly: band(way, 19), surface: 'fairway' },
     { poly: band(road, 4), surface: 'path' },
     { poly: blob(0, 0, 26, 20, 1, 0.1), surface: 'rough' },
     { poly: rect(-12, -10, 12, 10), surface: 'fairway' },
@@ -81,7 +81,7 @@ const base: Hole = {
     { kind: 'embankment', pts: way.map((p) => ({ x: p.x - 36, y: p.y })), h: way.map(() => TOP + 3), width: 4, edge: 10 },
     { kind: 'embankment', pts: way.map((p) => ({ x: p.x + 38, y: p.y })), h: way.map(() => TOP + 3), width: 4, edge: 10 },
     // the crown down the middle of the fairway: anything on a shoulder runs off
-    { kind: 'embankment', pts: way, h: way.map(() => TOP + 1.9), width: 3, edge: 16 },
+    { kind: 'embankment', pts: way, h: way.map(() => TOP + 1.4), width: 3, edge: 18 },
     // the hollow the green sits in
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 26, h: TOP - 7, edge: 22, op: 'set' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'x', h0: 0.5, h1: -0.5, op: 'add' },
