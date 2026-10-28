@@ -1,6 +1,5 @@
 import './style.css';
 import { inject, pageview } from '@vercel/analytics';
-import { favicon } from './brand';
 import { getSession, switchClub } from './api';
 import { setSound, soundOn } from './fx/sound';
 import { home } from './screens/home';
@@ -20,8 +19,6 @@ import { esc, muteButton, navigate, render } from './ui';
 
 let route = '';
 let routing = false; // the router draws the page itself; the refresh hook mustn't draw it a second time
-
-document.querySelector<HTMLLinkElement>('link[rel=icon]')?.setAttribute('href', favicon());
 
 async function router() {
   closeRound();

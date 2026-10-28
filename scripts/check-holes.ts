@@ -197,8 +197,8 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   // the tunnel: from the tee, roll one onto the shelf on the far wall and into the hole
   lavalift: { from: { x: 0, y: 55 }, clubs: ['driver', 'iron'], angles: [-3, 3], near: 12 },
   geyseralley: { from: { x: -46, y: 124 }, clubs: ['putter'], angles: [-8, 8] },
-  // the updraft: from the middle of the last island, roll onto the vent as it blows
-  lavatube: { from: { x: -14, y: 505 }, clubs: ['putter'], angles: [-10, 30], clock: 4.6, near: 40 },
+  // the culvert: from the right of the fairway short of the barranca, roll one into the drain's mouth
+  lavatube: { from: { x: 30, y: 230 }, clubs: ['putter'], angles: [25, 50] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
@@ -394,22 +394,13 @@ if (mode === 'all' || mode === 'basic') {
       }
     ok(best < 30, `${cal.name}: from the island a driver can find the green (${best.toFixed(0)} ft)`);
   }
-  // the Ascent: every island can be reached from the one before it, with some club
-  const ascent = course.holes.find((h) => h.id === 'lavatube');
-  if (ascent) {
-    const stops = [ascent.tee, { x: 0, y: 180 }, { x: 36, y: 345 }, { x: -14, y: 505 }];
-    for (let i = 0; i < stops.length - 1; i++) {
-      const a = stops[i];
-      const b = stops[i + 1];
-      const angle = Math.atan2(b.x - a.x, b.y - a.y);
-      let best = Infinity;
-      for (const club of ['driver', 'iron'] as ClubId[])
-        for (let p = 0.3; p <= 1.001; p += 0.02) {
-          const r = simulate(ascent, a, { angle, power: p, club, error: 0, clock: 0 }, false);
-          if (!r.penalty) best = Math.min(best, Math.hypot(r.end.x - b.x, r.end.y - b.y));
-        }
-      ok(best < 14, `${ascent.name}: island ${i + 1} can be reached from the ${i ? `island ${i}` : 'tee'} (${best.toFixed(0)} ft from its middle)`);
-    }
+  // the Homecoming: a big drive carries the barranca, an ordinary one can't
+  const home = course.holes.find((h) => h.id === 'lavatube');
+  if (home) {
+    const drive = (p: number) => simulate(home, home.tee, { angle: 0, power: p, club: 'driver', error: 0, clock: 0 }, false);
+    const big = drive(1);
+    const mid = drive(0.7);
+    ok(!big.penalty && big.end.y > 320 && mid.end.y < 288, `${home.name}: a full drive carries the barranca (${big.end.y.toFixed(0)} ft), a 70% one stays short (${mid.end.y.toFixed(0)} ft${mid.penalty ? ', in the lava' : ''})`);
   }
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);

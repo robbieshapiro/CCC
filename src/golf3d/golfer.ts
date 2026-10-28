@@ -2,6 +2,7 @@
 // The golfer faces +z with the ball in front; the target is to their left (+x).
 import * as THREE from 'three';
 import type { ClubId } from './clubs';
+import { kitByKey } from '../kits';
 
 export type Build = 'slim' | 'regular' | 'broad';
 export type HairStyle = 'short' | 'side' | 'curly' | 'long' | 'bun' | 'bald';
@@ -31,6 +32,7 @@ export type GolferSpec = {
   crestBag?: boolean;
   bowtie?: boolean;
   monocle?: boolean;
+  kit?: string; // a school's fall kit (see kits.ts): a quarter-zip in its colours with its letters on the chest
   hand?: 'right' | 'left'; // which way they play: a righty's swing meter stands on the left of the screen
 };
 
@@ -71,6 +73,24 @@ export const DEFAULT_SPEC: GolferSpec = {
   putter: 'classic',
 };
 
+// Reginald, the Club Steward: in the welcome tour, and on the cart late in a round.
+export const REGINALD_SPEC: GolferSpec = {
+  ...DEFAULT_SPEC,
+  skin: '#eac09a',
+  hair: 'side',
+  hairColor: '#cfd0cc',
+  face: 'moustache',
+  top: 'tweed',
+  topColor: '#7a6a4f',
+  bottoms: 'trousers',
+  bottomsColor: '#4a4436',
+  hat: 'none',
+  shoes: 'black',
+  glove: false,
+  bowtie: true,
+  monocle: true,
+};
+
 // ---------- materials and textures ----------
 
 const mats = new Map<string, THREE.Material>();
@@ -79,6 +99,27 @@ function m(color: string, rough = 0.75, extra: Partial<THREE.MeshStandardMateria
   let x = mats.get(key);
   if (!x) mats.set(key, (x = new THREE.MeshStandardMaterial({ color, roughness: rough, ...extra })));
   return x;
+}
+
+// a school's letters, for the chest of a fall kit: transparent, so the top shows round them
+function monoTex(text: string, color: string) {
+  const key = `mono|${text}|${color}`;
+  const hit = mats.get(key) as THREE.MeshBasicMaterial | undefined;
+  if (hit) return hit;
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 76;
+  const x = c.getContext('2d')!;
+  x.fillStyle = color;
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.font = `bold ${text.length > 3 ? 44 : text.length > 2 ? 54 : 68}px Georgia, serif`;
+  x.fillText(text, 64, 40);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+  mats.set(key, mat);
+  return mat;
 }
 
 function patternTex(kind: 'argyle' | 'tartan' | 'tweed', a: string, b: string) {
@@ -209,6 +250,8 @@ export class Golfer {
   private cur = { tilt: 0, phi: 0, twist: 0, bend: 0, knee: 0, headTilt: 0 };
 
   constructor(readonly spec: GolferSpec) {
+    const kit = spec.top === 'quarterzip' ? kitByKey(spec.kit) : undefined;
+    if (kit) spec = { ...spec, topColor: kit.primary };
     const s = spec;
     const w = s.build === 'slim' ? 0.88 : s.build === 'broad' ? 1.16 : 1;
     const skin = m(s.skin, 0.6);
@@ -272,8 +315,15 @@ export class Golfer {
       this.spine.add(collar);
     }
     if (s.top === 'quarterzip' || s.top === 'cashmere') {
-      this.spine.add(mesh(new THREE.CylinderGeometry(0.27, 0.3, 0.3, 14), topMat).translateY(1.8));
+      this.spine.add(mesh(new THREE.CylinderGeometry(0.27, 0.3, 0.3, 14), kit ? m(kit.secondary, 0.8) : topMat).translateY(1.8));
       this.spine.add(mesh(new THREE.BoxGeometry(0.04, 0.5, 0.02), m('#b8955a', 0.3, { metalness: 0.7 })).translateY(1.55).translateZ(0.4));
+    }
+    // the kit's letters, on the left of the chest
+    if (kit) {
+      const patch = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.25), monoTex(kit.mono, kit.secondary));
+      patch.position.set(0.2 * w, 1.5, 0.395 * w);
+      patch.rotation.y = 0.3;
+      this.spine.add(patch);
     }
     if (s.top === 'cardigan' || s.top === 'blazer' || s.top === 'goldblazer' || s.top === 'tweed') {
       // shirt and tie showing at the open front, and lapels

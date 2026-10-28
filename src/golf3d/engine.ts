@@ -319,7 +319,7 @@ export class Course3D {
   }
 
   // Plays one hole to completion. The beverage cart may stop by on the tee.
-  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: boolean; of?: number } = {}): Promise<HoleResult> {
+  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: 'daisy' | 'reginald'; of?: number } = {}): Promise<HoleResult> {
     this.holesInRound = opts.of ?? this.holesInRound;
     this.clearGrid();
     if (this.world) {
@@ -359,7 +359,7 @@ export class Course3D {
     this.hud(total);
     this.miniBase = null;
     this.placeGhosts();
-    if (opts.cart && !hole.noCart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k));
+    if (opts.cart && !hole.noCart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k), opts.cart);
     this.startFlyover();
     // the practice areas skip the flyover and get straight to it
     if (this.drill) this.endFlyover();
@@ -485,10 +485,14 @@ export class Course3D {
       </div>
       <div class="g3-wind" data-wind><i data-wind-arrow aria-hidden="true">↑</i><b data-wind-speed></b></div>
       <div class="g3-swing" data-swing hidden>
-        <div class="g3-swing-bar">
-          <span class="over"></span><span class="fill" data-fill></span>
-          <span class="gold" data-gold></span><span class="pure" data-pure></span>
-          <span class="plan" data-plan></span><span class="needle" data-needle></span>
+        <small class="g3-swing-tag" data-swing-tag hidden></small>
+        <div class="g3-swing-track">
+          <div class="g3-swing-bar">
+            <span class="over"></span><span class="fill" data-fill></span>
+            <span class="gold" data-gold></span><span class="pure" data-pure></span>
+            <span class="plan" data-plan></span><span class="needle" data-needle></span>
+          </div>
+          <span class="g3-flame" data-flame></span>
         </div>
         <p data-swing-tip></p>
       </div>
@@ -622,21 +626,25 @@ export class Course3D {
     if (!this.hole.tour) return Math.max(0.15, Math.min(1, (reach - lo) / (hi - lo)));
     // on tour courses the plan is where the ball stops, not where it lands: on quick greens a chip runs out two or
     // three times its carry. The plan goes all the way down, so even a short chip can be aimed at the hole.
-    const stops = this.stopTable(c);
+    const drop = Math.round((heightAt(this.hole, this.hole.cup.x, this.hole.cup.y) - heightAt(this.hole, this.pos.x, this.pos.y)) / 2) * 2;
+    const stops = this.stopTable(c, drop);
     if (reach <= stops[0]) return 0;
     for (let i = 1; i < stops.length; i++)
       if (reach <= stops[i]) return (i - 1 + (reach - stops[i - 1]) / Math.max(1e-6, stops[i] - stops[i - 1])) / (stops.length - 1);
     return 1;
   }
 
-  // How far each club's ball ends up on flat tour ground, at power 0, 0.05 .. 1: onto the green near the pin, or the
-  // fairway if the pin's green isn't what it lands on. Worked out once a hole and kept.
+  // How far each club's ball ends up on tour green, at power 0, 0.05 .. 1, when the green sits `rise` ft above (or
+  // below) where you're standing: a shot down into a crater flies a long way further than the same swing on the level.
+  // Worked out once per club and height (to the nearest 2 ft) and kept.
   private stops = new Map<string, number[]>();
-  private stopTable(c: ClubId) {
-    const key = `${this.hole.id}:${c}`;
+  private stopTable(c: ClubId, rise = 0) {
+    const key = `${this.hole.id}:${c}:${rise}`;
     let t = this.stops.get(key);
     if (t) return t;
-    const flat: Hole = { ...this.hole, terrain: [], water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], roofs: [], ceilings: [], base: 'green', greenFirm: this.hole.greenFirm, cup: { x: 0, y: 5000 } };
+    // level ground where you stand, then a step up or down to the green's height a few feet out
+    const terrain: Hole['terrain'] = rise ? [{ kind: 'box', x0: -2000, y0: 8, x1: 2000, y1: 9000, h: rise, edge: 6, op: 'set' }] : [];
+    const flat: Hole = { ...this.hole, terrain, water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], roofs: [], ceilings: [], portals: [], base: 'green', greenFirm: this.hole.greenFirm, cup: { x: 0, y: 5000 }, bounds: { x0: -100, y0: -50, x1: 100, y1: 9000 }, border: [{ x: -100, y: -50 }, { x: 100, y: -50 }, { x: 100, y: 9000 }, { x: -100, y: 9000 }] };
     t = [];
     for (let i = 0; i <= 20; i++) t.push(simulate(flat, { x: 0, y: 0 }, { angle: 0, power: i / 20, club: c, error: 0, clock: 0 }, false).end.y);
     // never shorter than the last: a plan that goes up with the power
@@ -650,8 +658,20 @@ export class Course3D {
     const s = surfaceAt(this.hole, this.pos);
     const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : BAG;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    const want: ClubId = s === 'green' ? 'putter' : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
+    const want: ClubId = s === 'green' ? 'putter' : this.hole.tour && s !== 'sand' && d >= 26 ? this.reachFor(d, s, allowed) : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
     return { allowed, want, d };
+  }
+
+  // On tour courses: the shortest club that gets there, going by how far each one really goes from here with the
+  // climb or drop to the pin (the same table the power plan uses). Out of the rough, never the chip.
+  private reachFor(d: number, s: string, allowed: ClubId[]): ClubId {
+    const drop = Math.round((heightAt(this.hole, this.hole.cup.x, this.hole.cup.y) - heightAt(this.hole, this.pos.x, this.pos.y)) / 2) * 2;
+    for (const c of ['chip', 'wedge', 'iron', 'driver'] as ClubId[]) {
+      if (!allowed.includes(c) || (c === 'chip' && (s === 'rough' || d > 60))) continue;
+      const t = this.stopTable(c, drop);
+      if (t[t.length - 1] * this.boost() >= d * 1.02) return c;
+    }
+    return allowed.includes('driver') ? 'driver' : 'iron';
   }
 
   private setStrokes() {
@@ -687,11 +707,13 @@ export class Course3D {
     this.overlay.classList.remove('carting');
     if (kind) {
       this.lastDrink = kind;
-      this.drink = { kind, shots: 2 };
+      // Reginald's fireball is good for one swing; Daisy's drinks for two
+      this.drink = { kind, shots: kind === 'fireball' ? 1 : 2 };
       try {
         const k = 'ccc-drinks';
         const had = new Set<string>(JSON.parse(localStorage.getItem(k) || '[]'));
-        had.add(kind);
+        // the Nineteenth Hole is Daisy's three; the fireball doesn't count toward it
+        if (kind !== 'fireball') had.add(kind);
         localStorage.setItem(k, JSON.stringify([...had]));
         if (had.size === 3) this.zones.add('nineteenth');
       } catch {
@@ -836,7 +858,10 @@ export class Course3D {
     this.setClub(want);
     const dist = this.overlay.querySelector('[data-dist]');
     const putt = surfaceAt(this.hole, this.pos) === 'green';
-    if (dist) dist.textContent = this.drill ? away(d, putt) : `${away(d, putt)} to the pin`;
+    // the climb or drop to the pin, when it's enough to matter: it changes how far a shot has to fly
+    const rise = (heightAt(this.hole, this.hole.cup.x, this.hole.cup.y) - heightAt(this.hole, this.pos.x, this.pos.y)) * SCALE;
+    const slope = !putt && Math.abs(rise) >= 6 ? ` · ${Math.round(Math.abs(rise))} ft ${rise < 0 ? 'down' : 'up'}` : '';
+    if (dist) dist.textContent = this.drill ? `${away(d, putt)}${slope}` : `${away(d, putt)} to the pin${slope}`;
     const first = this.number === 1 && this.strokes === 0 && !this.drill;
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
     this.hint(
@@ -955,6 +980,17 @@ export class Course3D {
     m.hidden = false;
     m.classList.remove('accuracy');
     m.classList.toggle('vertical', this.style() === 'vertical');
+    // what you're drinking shows on the meter: the Palmer's wide gold, a flame past the end of the bar for the lager or
+    // Reginald's fireball (how much further it'll go), and a tag saying which
+    const kind = this.drink?.kind;
+    m.classList.toggle('steady', kind === 'palmer');
+    m.classList.toggle('boost', kind === 'lager' || kind === 'fireball');
+    m.classList.toggle('fireball', kind === 'fireball');
+    const flame = this.overlay.querySelector('[data-flame]') as HTMLElement;
+    flame.style.setProperty('--boost', `${Math.round(((drink?.boost ?? 1) - 1) * 100 * 1.6)}%`);
+    const tag = this.overlay.querySelector('[data-swing-tag]') as HTMLElement;
+    tag.hidden = !drink || kind === 'water';
+    if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · wider gold' : kind === 'lager' ? 'Lager · +10% · twitchy' : kind === 'fireball' ? 'Fireball · +15% · lively' : '';
     // righties have the meter on the left, out of the way of the golfer; lefties on the right
     m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.power));

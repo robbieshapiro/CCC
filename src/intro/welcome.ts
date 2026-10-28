@@ -6,29 +6,13 @@ import type { Avatar, Snapshot } from '../api/types';
 import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
 import { courseFor, nextCourse } from '../golf3d/courses';
-import { DEFAULT_SPEC, Golfer, type GolferSpec } from '../golf3d/golfer';
+import { Golfer, REGINALD_SPEC } from '../golf3d/golfer';
 import * as props from '../golf3d/props';
 import { refresh, requireSession } from '../state';
 import { esc, navigate, render } from '../ui';
 import { lockerPanel } from '../screens/locker';
 import { crest } from '../brand';
 
-const REGINALD_SPEC: GolferSpec = {
-  ...DEFAULT_SPEC,
-  skin: '#eac09a',
-  hair: 'side',
-  hairColor: '#cfd0cc',
-  face: 'moustache',
-  top: 'tweed',
-  topColor: '#7a6a4f',
-  bottoms: 'trousers',
-  bottomsColor: '#4a4436',
-  hat: 'none',
-  shoes: 'black',
-  glove: false,
-  bowtie: true,
-  monocle: true,
-};
 
 type Shot = { pos: THREE.Vector3; look: THREE.Vector3 };
 

@@ -9,7 +9,7 @@ import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 
 const GREEN = { x: -62, y: 346, r: 25 };
-const VENT = { x: -30, y: 310, r: 4 };
+const VENT = { x: -22, y: 314, r: 7 };
 // the blowhole breathes: a slow swell, then a burst
 const PERIOD = 7;
 const firing = (t: number) => t % PERIOD > PERIOD - 1.6;
@@ -40,6 +40,17 @@ const farWay: V2[] = [
   { x: -36, y: 322 },
   { x: -80, y: 330 },
 ];
+
+// a crown of rock round the blowhole, open on the green side: a rolling ball can still find the vent, a stray one
+// kicks off the rocks
+const crown: Post[] = [0.6, 1.5, 2.4, 3.3, 4.2].map((a) => ({
+  x: VENT.x + Math.cos(a) * (VENT.r + 6),
+  y: VENT.y + Math.sin(a) * (VENT.r + 6),
+  r: 1.8,
+  h: 2.4,
+  e: 0.5,
+  look: 'rock' as const,
+}));
 
 const rocks: Post[] = [
   [66, 30, 3], [70, 150, 3.4], [-128, 392, 3.6], [74, 380, 3], [-136, 316, 2.8], [62, 232, 2.4],
@@ -104,10 +115,10 @@ const base: Hole = {
     // bunkers
     ...[[-32, 372, 8], [-90, 328, 7], [56, 196, 9]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.1, edge: 3, op: 'add' as const })),
     // the blowhole: a dip in the rock with the vent at the bottom
-    { kind: 'disc', x: VENT.x, y: VENT.y, r: VENT.r + 2, h: -0.8, edge: 4, op: 'add' },
+    { kind: 'disc', x: VENT.x, y: VENT.y, r: VENT.r + 5, h: -1.4, edge: 6, op: 'add' },
   ],
   walls: [],
-  posts: [...rocks, ...palms],
+  posts: [...rocks, ...crown, ...palms],
   movers: [],
   pushes: [
     {

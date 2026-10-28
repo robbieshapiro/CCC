@@ -1,5 +1,6 @@
 // The golfer builder: option tabs plus a 3D turntable. Used by the welcome locker room and the Member Card.
 import * as THREE from 'three';
+import { kitByKey, pickKit } from '../kits';
 import { CLOTH, DEFAULT_SPEC, Golfer, HAIR_COLOURS, LOCKED_BOTTOMS, LOCKED_TOPS, PRESTIGE, SKIN_TONES, type GolferSpec } from '../golf3d/golfer';
 import { esc } from '../ui';
 
@@ -86,6 +87,16 @@ const tabs: { id: string; label: string; fields: Field[] }[] = [
   },
 ];
 
+// The fall kit row on the gear tab: your school, or a button to pick one.
+function kitRow(spec: GolferSpec) {
+  const kit = kitByKey(spec.kit);
+  return `<div class="pick"><span>Fall kit</span><div class="chips-row">${
+    kit
+      ? `<button class="chip-btn on" data-kit-pick><span class="kit-dot" style="background:${kit.primary};color:${kit.secondary}">${esc(kit.mono)}</span>${esc(kit.name)} · change</button><button class="chip-btn" data-kit-off>Take it off</button>`
+      : `<button class="chip-btn" data-kit-pick>🍂 Pick your school</button>`
+  }</div></div>`;
+}
+
 // Builds the option panel. Calls onChange with a fresh spec on every tap.
 export function lockerPanel(start: GolferSpec, wins: number, onChange: (s: GolferSpec) => void): HTMLElement {
   const spec: GolferSpec = { ...DEFAULT_SPEC, ...start };
@@ -98,7 +109,7 @@ export function lockerPanel(start: GolferSpec, wins: number, onChange: (s: Golfe
       tab === 'gear'
         ? `<div class="pick"><span>Pro shop</span><div class="chips-row">${PRESTIGE.filter((p) => ['goldputter', 'crestbag'].includes(p.key))
             .map((p) => `<button class="chip-btn ${p.has(spec) ? 'on' : ''}" data-prestige="${p.key}" ${wins >= p.wins ? '' : 'disabled'}>${wins >= p.wins ? '' : '🔒 '}${p.name}${wins >= p.wins ? '' : ` · ${p.wins} ${p.wins === 1 ? 'title' : 'titles'}`}</button>`)
-            .join('')}</div></div>`
+            .join('')}</div></div>${kitRow(spec)}`
         : '';
     el.innerHTML = `
       <div class="locker-tabs" role="tablist">${tabs.map((x) => `<button role="tab" class="${x.id === tab ? 'on' : ''}" data-tab="${x.id}">${x.label}</button>`).join('')}</div>
@@ -127,6 +138,22 @@ export function lockerPanel(start: GolferSpec, wins: number, onChange: (s: Golfe
   el.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button');
     if (!b || b.disabled) return;
+    if (b.dataset.kitPick !== undefined) {
+      void pickKit(spec.kit).then((kit) => {
+        if (!kit) return;
+        spec.kit = kit.key;
+        spec.top = 'quarterzip';
+        onChange({ ...spec });
+        draw();
+      });
+      return;
+    }
+    if (b.dataset.kitOff !== undefined) {
+      delete spec.kit;
+      onChange({ ...spec });
+      draw();
+      return;
+    }
     if (b.dataset.tab) tab = b.dataset.tab;
     else if (b.dataset.prestige) PRESTIGE.find((p) => p.key === b.dataset.prestige)!.apply(spec);
     else if (b.dataset.key) {

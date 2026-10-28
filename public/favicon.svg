@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="crest" width="64" height="76" viewBox="0 0 120 142" role="img" aria-label="Claude Country Club crest">
+    <defs>
+      <linearGradient id="f-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d4a37"/><stop offset="1" stop-color="#0f2a1f"/></linearGradient>
+    </defs>
+    <!-- crossed putters -->
+    <g stroke="#b8955a" stroke-width="3" stroke-linecap="round">
+      <path d="M14 14 L104 110"/><path d="M106 14 L16 110"/>
+    </g>
+    <path d="M100 106 l12 2 l-2 6 l-12 -2 z M20 106 l-12 2 l2 6 l12 -2 z" fill="#b8955a"/>
+    <!-- laurel -->
+    <ellipse cx="30" cy="98" rx="2.6" ry="6" transform="rotate(-40 30 98)" fill="#b8955a"/><ellipse cx="26" cy="90" rx="2.6" ry="6" transform="rotate(-25 26 90)" fill="#b8955a"/><ellipse cx="24" cy="81" rx="2.6" ry="6" transform="rotate(-10 24 81)" fill="#b8955a"/><ellipse cx="24" cy="72" rx="2.6" ry="6" transform="rotate(5 24 72)" fill="#b8955a"/><ellipse cx="26" cy="63" rx="2.6" ry="6" transform="rotate(20 26 63)" fill="#b8955a"/>
+    <ellipse cx="90" cy="98" rx="2.6" ry="6" transform="rotate(40 90 98)" fill="#b8955a"/><ellipse cx="94" cy="90" rx="2.6" ry="6" transform="rotate(25 94 90)" fill="#b8955a"/><ellipse cx="96" cy="81" rx="2.6" ry="6" transform="rotate(10 96 81)" fill="#b8955a"/><ellipse cx="96" cy="72" rx="2.6" ry="6" transform="rotate(-5 96 72)" fill="#b8955a"/><ellipse cx="94" cy="63" rx="2.6" ry="6" transform="rotate(-20 94 63)" fill="#b8955a"/>
+    <!-- shield -->
+    <path d="M60 10 L96 20 L96 62 Q96 96 60 114 Q24 96 24 62 L24 20 Z" fill="url(#f-g)" stroke="#b8955a" stroke-width="2.5"/>
+    <path d="M60 16 L90 24.5 L90 62 Q90 91 60 107 Q30 91 30 62 L30 24.5 Z" fill="none" stroke="#f3ecdc" stroke-opacity=".35" stroke-width="1"/>
+    <!-- interlocking CCC -->
+    <g fill="none" stroke="#f3ecdc" stroke-width="5" stroke-linecap="round">
+      <path d="M52 48 A13 13 0 1 0 52 72"/>
+      <path d="M67 48 A13 13 0 1 0 67 72" stroke="#b8955a"/>
+      <path d="M82 48 A13 13 0 1 0 82 72"/>
+    </g>
+    <circle cx="60" cy="88" r="2" fill="#b8955a"/>
+    <!-- ribbon -->
+    <path d="M10 118 L22 114 L98 114 L110 118 L104 124 L110 130 L98 128 L22 128 L10 130 L16 124 Z" fill="#f3ecdc" stroke="#b8955a" stroke-width="1.5"/>
+    <text x="60" y="125" text-anchor="middle" font-family="'Cormorant Garamond', Georgia, serif" font-weight="700" font-size="10.5" letter-spacing="3" fill="#163b2c">EST. 2026</text>
+  </svg>
