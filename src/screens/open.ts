@@ -32,7 +32,7 @@ function table(snap: Snapshot, rows: ReturnType<typeof ranked>) {
   const head = course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('');
   const body = rows
     .map((r) => {
-      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)} <i class="club-badge">${esc(r.club)}</i><em>${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
+      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}<em>${esc(r.club)} · ${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
       const link = r.mine ? '#/card' : r.localId ? `#/member/${r.localId}` : '';
       return `<tr class="${r.mine ? 'me' : ''}">
         <td class="rank">${r.rank}</td>

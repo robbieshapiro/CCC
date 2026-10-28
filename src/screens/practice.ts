@@ -39,7 +39,7 @@ export function facility() {
       <h1>Warm up, or work on it</h1>
       <p class="muted">Nothing here goes on the board. Same turf and greens as the Caldera.</p>
       <div class="facility-choice">
-        <a class="panel" href="#/facility/range"><h2>Driving range</h2><p class="muted">Flags from 20 to 100 yd</p></a>
+        <a class="panel" href="#/facility/range"><h2>Driving range</h2><p class="muted">Flags from 45 to 220 yd</p></a>
         <a class="panel" href="#/facility/shortgame"><h2>Short game</h2><p class="muted">Chip, pitch, bunker and putt</p></a>
       </div>
       <p><a class="link" href="#/">Back to the club</a></p>

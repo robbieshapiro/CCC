@@ -25,6 +25,10 @@ export const CLUBS: Record<ClubId, Club> = {
   putter: { id: 'putter', name: 'Putter', carry: [1.5, 34], loft: 0, keep: 1, sweet: 1, curve: 0, push: 0.04, check: 0, release: 0, bend: 0 },
 };
 
+// The courses are scale models: 1 ft of course plays like 2.2 ft of the real thing. Distances on screen are scaled up
+// by this, so a full driver reads about 250 yd. The physics and the holes stay in model feet.
+export const SCALE = 2.2;
+
 export const BAG: ClubId[] = ['driver', 'iron', 'wedge', 'chip', 'putter'];
 
 export const carryOf = (club: ClubId, power: number, boost = 1) => {

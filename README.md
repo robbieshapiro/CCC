@@ -14,7 +14,7 @@ This month's course is **The Founders' Course** (par 13), a pitch-and-putt with 
 
 ## How to play
 
-- **Clubs:** Driver (about 113 yd), Iron (60), Wedge (30), Chip (11) and Putter. Distances show in yards; putts in feet. The game picks a sensible club for your lie and distance.
+- **Clubs:** Driver (about 250 yd), Iron (130), Wedge (65), Chip (25) and Putter. Distances show in real-world yards (the courses are 1:2.2 scale models); putts in feet. The game picks a sensible club for your lie and distance.
   - Sand allows only the wedge.
   - On the green you can putt or wedge.
 - **Aim:** drag sideways, or use ◀ ▶ for fine aim.

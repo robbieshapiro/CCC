@@ -5,7 +5,7 @@ import { api, localApi, useSupabase } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
 import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
-import { courseFor } from '../golf3d/courses';
+import { courseFor, nextCourse } from '../golf3d/courses';
 import { DEFAULT_SPEC, Golfer, type GolferSpec } from '../golf3d/golfer';
 import * as props from '../golf3d/props';
 import { refresh, requireSession } from '../state';
@@ -316,7 +316,7 @@ export async function welcome(snap0: Snapshot) {
       <div class="intro-dialog" data-dialog hidden></div>
       <div class="intro-builder" data-builder hidden></div>
       <div class="intro-card" data-card hidden></div>
-      <button class="g3-pill intro-skip" data-skipall>Skip the tour</button>
+      <button class="g3-pill intro-skip" data-skipall>Skip intro</button>
     </div></div>`);
   document.body.classList.add('court-open');
   const host = document.getElementById('intro')!;
@@ -457,9 +457,12 @@ export async function welcome(snap0: Snapshot) {
   q('[data-skipall]').onclick = (e) => {
     e.stopPropagation();
     skipped = true;
-    finishTour(false);
+    q('[data-skipall]').hidden = true;
+    q('[data-dialog]').hidden = true;
+    title('', '');
+    void suitUp(true);
   };
-  async function finishTour(toRound: boolean) {
+  async function finishTour(to: boolean | string) {
     const avatar: Avatar = { ...me.avatar, golfer: spec, onboarded: true };
     try {
       await api.saveAvatar(requireSession(), avatar);
@@ -467,7 +470,76 @@ export async function welcome(snap0: Snapshot) {
       /* the tour can be retaken from the Member Card */
     }
     closeWelcome();
-    navigate(toRound ? '#/round' : '#/');
+    navigate(typeof to === 'string' ? to : to ? '#/round' : '#/');
+  }
+
+  let inLocker = false;
+  async function suitUp(fast: boolean) {
+    if (inLocker) return;
+    inLocker = true;
+    q('[data-skipall]').hidden = true;
+    // 4. Your locker: build your golfer. "Skip intro" comes straight here (fast), so nobody joins without a golfer.
+    const mx = 2000 + mine.x;
+    if (fast) {
+      cut({ pos: v(mx + 1, 6.2, 3), look: v(mx, 4.6, -11) });
+      engrave();
+    } else {
+      go({ pos: v(mx + 1, 6.2, 3), look: v(mx, 4.6, -11) }, 1.6);
+      await wait(1200);
+      await say('Reginald', 'And this one, I believe, is yours.');
+      if (skipped) return;
+      engrave();
+      sfx('clank');
+      await wait(700);
+      await say('Reginald', 'There. Your name, in brass. The pro shop has left a few things. Do dress for the occasion; we have standards here, however faded.');
+      if (skipped) return;
+    }
+    const b = q('[data-builder]');
+    b.hidden = false;
+    // frame the golfer clear of the builder panel
+    const portrait = host.clientWidth < host.clientHeight;
+    go(portrait ? { pos: v(mx, 7.5, 6), look: v(mx, 2.2, -11) } : { pos: v(mx + 7.5, 6, 6), look: v(mx + 6.5, 4.4, -11) }, 1.2);
+    // three ways out: straight to the course, the clubhouse, or on to your tee time
+    const next = nextCourse(snap.month);
+    const play = next ? `#/practice/${next.id}` : '#/round';
+    b.innerHTML = `<div class="intro-builder-head"><h2>Suit up</h2><button class="btn lava" data-play>Play ${esc((next ?? course).name.replace(/ Course$/, ''))}</button></div>
+      <div class="intro-builder-exits"><button class="btn ghost" data-home>Clubhouse</button><button class="btn" data-done>Ready</button></div>`;
+    (b.querySelector('[data-play]') as HTMLButtonElement).onclick = () => finishTour(play);
+    (b.querySelector('[data-home]') as HTMLButtonElement).onclick = () => finishTour(false);
+    b.appendChild(
+      lockerPanel(spec, me.wins, (next) => {
+        spec = next;
+        scene.remove(you.group);
+        actors.splice(actors.indexOf(you), 1);
+        you.dispose();
+        you = new Golfer(spec);
+        you.holdClub('driver');
+        you.group.position.set(mx, 0, -11);
+        scene.add(you.group);
+        actors.push(you);
+      }),
+    );
+    b.addEventListener('pointerdown', (e) => e.stopPropagation());
+    await new Promise<void>((res) => ((b.querySelector('[data-done]') as HTMLButtonElement).onclick = () => res()));
+    b.hidden = true;
+    you.setPose('cheer');
+    sfx('cheer');
+    await wait(900);
+
+    // 5. Tee time
+    const c = q('[data-card]');
+    c.hidden = false;
+    c.innerHTML = `
+      <div class="tee-card">
+        ${crest(64, 'tt')}
+        <p class="eyebrow">Tee time</p>
+        <h1>${esc(me.name)}, ${teeTime()}</h1>
+        <p>${esc(course.name)} · Hole 1, ${esc(course.holes[0].name)}</p>
+        <div class="summary-actions"><button class="btn" data-tee>Head to the first tee</button><button class="btn ghost" data-later>Later</button></div>
+      </div>`;
+    c.addEventListener('pointerdown', (e) => e.stopPropagation());
+    (c.querySelector('[data-tee]') as HTMLButtonElement).onclick = () => finishTour(true);
+    (c.querySelector('[data-later]') as HTMLButtonElement).onclick = () => finishTour(false);
   }
 
   // 1. Arrival
@@ -518,55 +590,5 @@ export async function welcome(snap0: Snapshot) {
       : "The locker room. Rather quiet at present. You'll be among the founders, which I'm told is an honour.",
   );
   if (skipped) return;
-  // 4. Your locker: build your golfer
-  const mx = 2000 + mine.x;
-  go({ pos: v(mx + 1, 6.2, 3), look: v(mx, 4.6, -11) }, 1.6);
-  await wait(1200);
-  await say('Reginald', 'And this one, I believe, is yours.');
-  if (skipped) return;
-  engrave();
-  sfx('clank');
-  await wait(700);
-  await say('Reginald', 'There. Your name, in brass. The pro shop has left a few things. Do dress for the occasion; we have standards here, however faded.');
-  if (skipped) return;
-  const b = q('[data-builder]');
-  b.hidden = false;
-  // frame the golfer clear of the builder panel
-  const portrait = host.clientWidth < host.clientHeight;
-  go(portrait ? { pos: v(mx, 7.5, 6), look: v(mx, 2.2, -11) } : { pos: v(mx + 7.5, 6, 6), look: v(mx + 6.5, 4.4, -11) }, 1.2);
-  b.innerHTML = `<div class="intro-builder-head"><h2>Suit up</h2><button class="btn" data-done>Ready</button></div>`;
-  b.appendChild(
-    lockerPanel(spec, me.wins, (next) => {
-      spec = next;
-      scene.remove(you.group);
-      actors.splice(actors.indexOf(you), 1);
-      you.dispose();
-      you = new Golfer(spec);
-      you.holdClub('driver');
-      you.group.position.set(mx, 0, -11);
-      scene.add(you.group);
-      actors.push(you);
-    }),
-  );
-  b.addEventListener('pointerdown', (e) => e.stopPropagation());
-  await new Promise<void>((res) => ((b.querySelector('[data-done]') as HTMLButtonElement).onclick = () => res()));
-  b.hidden = true;
-  you.setPose('cheer');
-  sfx('cheer');
-  await wait(900);
-
-  // 5. Tee time
-  const c = q('[data-card]');
-  c.hidden = false;
-  c.innerHTML = `
-    <div class="tee-card">
-      ${crest(64, 'tt')}
-      <p class="eyebrow">Tee time</p>
-      <h1>${esc(me.name)}, ${teeTime()}</h1>
-      <p>${esc(course.name)} · Hole 1, ${esc(course.holes[0].name)}</p>
-      <div class="summary-actions"><button class="btn" data-tee>Head to the first tee</button><button class="btn ghost" data-later>Later</button></div>
-    </div>`;
-  c.addEventListener('pointerdown', (e) => e.stopPropagation());
-  (c.querySelector('[data-tee]') as HTMLButtonElement).onclick = () => finishTour(true);
-  (c.querySelector('[data-later]') as HTMLButtonElement).onclick = () => finishTour(false);
+  await suitUp(false);
 }
