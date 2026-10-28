@@ -158,6 +158,10 @@ export class Course3D {
   private ring = targetMarker(); // where the shot comes down: a bullseye with a beam you can see from the tee
   private trail: THREE.Line;
   private trailPts: THREE.Vector3[] = [];
+  // a bomb: a full-power driver struck dead centre. The downswing goes to slow motion, then the strike flashes, the
+  // camera shakes and the ball goes off in gold. It's all show: the shot flies exactly as it would have anyway.
+  private bombSwing = false;
+  private bombShake = 0;
   private clouds: THREE.Object3D[] = [];
   private birds: THREE.Object3D[] = [];
   private petals: THREE.Points | null = null;
@@ -464,6 +468,7 @@ export class Course3D {
     this.overlay.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.overlay.innerHTML = `
       <div class="g3-focus" data-focus aria-hidden="true"></div>
+      <div class="g3-flash" data-flash aria-hidden="true"></div>
       <div class="g3-top">
         <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}</div>
         ${
@@ -687,11 +692,14 @@ export class Course3D {
     const el = this.overlay.querySelector('[data-callout]') as HTMLElement | null;
     if (!el) return;
     el.innerHTML = `<b>${text}</b>${sub ? `<span>${sub}</span>` : ''}`;
-    el.classList.remove('show');
+    el.classList.remove('show', 'bomb');
     void el.offsetWidth;
     el.classList.add('show');
-    window.setTimeout(() => el.classList.remove('show'), ms);
+    // only the latest callout's timer may hide it, or an old one cuts a new one short
+    window.clearTimeout(this.calloutTimer);
+    this.calloutTimer = window.setTimeout(() => el.classList.remove('show'), ms);
   }
+  private calloutTimer = 0;
 
   private showDrink() {
     const el = this.overlay.querySelector('[data-drink]') as HTMLElement | null;
@@ -1020,12 +1028,15 @@ export class Course3D {
     (this.overlay.querySelector('[data-swing]') as HTMLElement).hidden = true;
     const off = Math.round((m.p - this.power) * 100);
     const power = `${Math.round(m.p * 100)}%${Math.abs(off) >= 4 ? (off > 0 ? ' · long' : ' · short') : ''}`;
-    if (error === 0) this.callout('Pure', power, 900);
+    const bomb = this.club === 'driver' && error === 0 && m.p >= 0.97;
+    if (bomb) this.bombSwing = true;
+    else if (error === 0) this.callout('Pure', power, 900);
     else if (Math.abs(error) <= 0.12) this.callout('Good', power, 800);
     else this.callout(Math.abs(error) > 0.5 ? (error > 0 ? 'Slice' : 'Hook') : error > 0 ? 'Push' : 'Pull', power, 900);
     this.power = m.p;
     // on the vertical meter the club is already back down at the ball: straight into the strike
-    this.swing(error, this.style() === 'vertical' ? 'impact' : 'start');
+    // a bomb starts from the top so you see the whole downswing in slow motion
+    this.swing(error, this.bombSwing ? 'top' : this.style() === 'vertical' ? 'impact' : 'start');
   }
 
   // A putt goes where you aim it, as hard as you pulled it back.
@@ -1085,7 +1096,25 @@ export class Course3D {
     this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice, clock: shot.clock, settle: settleTime(r), slow };
     this.trailPts = [];
     this.power = 0;
-    sfx(club === 'putter' ? 'tick' : club === 'driver' ? 'crack' : 'thump');
+    const trail = this.trail.material as THREE.LineBasicMaterial;
+    trail.color.set(this.bombSwing ? '#ffcf4a' : '#ffffff');
+    trail.opacity = this.bombSwing ? 0.95 : 0.55;
+    if (this.bombSwing) {
+      this.bombSwing = false;
+      this.bombShake = 0.6;
+      sfx('bomb');
+      const flash = this.overlay.querySelector('[data-flash]') as HTMLElement | null;
+      flash?.classList.remove('go');
+      void flash?.offsetWidth;
+      flash?.classList.add('go');
+      // the first moments off the face in slow motion, then let it fly
+      if (!this.shot!.slow) this.shot!.slow = { from: 0, to: 0.9 };
+      const land = r.sounds.find((x) => x.s === 'land' || x.s === 'splash');
+      const at = land ? r.frames.find((f) => f.t >= land.t) : null;
+      const carry = at ? Math.hypot(at.x - this.shot!.from.x, at.y - this.shot!.from.y) : 0;
+      this.callout('Absolute bomb', carry ? `${yd(carry)} carry` : 'Pure', 3000);
+      (this.overlay.querySelector('[data-callout]') as HTMLElement).classList.add('bomb');
+    } else sfx(club === 'putter' ? 'tick' : club === 'driver' ? 'crack' : 'thump');
     this.follow.set(Math.sin(this.aim), 0, -Math.cos(this.aim));
   }
 
@@ -1729,12 +1758,20 @@ export class Course3D {
       const want = this.camLook.clone().sub(this.camera.position).normalize();
       look.lerp(want, Math.min(1, k * 1.4));
       this.camera.lookAt(this.camera.position.clone().add(look));
+      // the bomb's shockwave: a short, sharp shake that dies away
+      if (this.bombShake > 0) {
+        const a = this.bombShake * this.bombShake * 0.5;
+        this.camera.position.x += (Math.random() - 0.5) * a;
+        this.camera.position.y += (Math.random() - 0.5) * a;
+        this.bombShake = Math.max(0, this.bombShake - dt);
+      }
     }
 
     if (this.mode === 'aim' || this.mode === 'meter' || this.mode === 'cart' || this.mode === 'fly') this.placeGolfer();
     // you're the one talking to Daisy, so you step out of her close-up
     this.golfer.group.visible = !(this.mode === 'cart' && this.cart?.closeUp(this.camera.aspect));
-    this.golfer.update(dt);
+    this.golfer.update(this.bombSwing ? dt * 0.3 : dt);
+    if (this.bombSwing) this.focus(true);
     this.updateGhosts(dt);
 
     this.sizeBall();

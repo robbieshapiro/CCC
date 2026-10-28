@@ -86,6 +86,15 @@ const SFX = {
     hiss('highpass', 2500, 0.8, { dur: 0.08, peak: 0.7 });
     tone('square', 900, 300, { dur: 0.05, peak: 0.2 });
   },
+  // a bomb off the tee: a big crack, a low boom under it, the ball tearing away, and the gallery
+  bomb: () => {
+    hiss('highpass', 2200, 0.8, { dur: 0.12, peak: 0.9 });
+    tone('square', 1100, 260, { dur: 0.07, peak: 0.25 });
+    tone('sine', 80, 38, { dur: 0.7, peak: 0.55 });
+    hiss('bandpass', 900, 0.9, { at: 0.08, dur: 1.2, attack: 0.05, peak: 0.3 }, 3800);
+    hiss('bandpass', 500, 4, { at: 0.5, dur: 1.4, attack: 0.3, peak: 0.25 }, 330);
+    hiss('bandpass', 900, 5, { at: 0.5, dur: 1.3, attack: 0.3, peak: 0.15 }, 600);
+  },
   pop: () => hiss('lowpass', 600, 1, { dur: 0.09, peak: 0.6 }),
   whoosh: () => hiss('bandpass', 600, 0.8, { dur: 0.4, attack: 0.15, peak: 0.18 }, 2400),
   ooh: () => {
