@@ -492,7 +492,6 @@ export class Course3D {
             <span class="gold" data-gold></span><span class="pure" data-pure></span>
             <span class="plan" data-plan></span><span class="needle" data-needle></span>
           </div>
-          <span class="g3-flame" data-flame></span>
         </div>
         <p data-swing-tip></p>
       </div>
@@ -980,17 +979,15 @@ export class Course3D {
     m.hidden = false;
     m.classList.remove('accuracy');
     m.classList.toggle('vertical', this.style() === 'vertical');
-    // what you're drinking shows on the meter: the Palmer's wide gold, a flame past the end of the bar for the lager or
-    // Reginald's fireball (how much further it'll go), and a tag saying which
+    // what you're drinking shows on the meter: the Palmer's wide gold, or for the lager or Reginald's fireball the
+    // overswing at the top of the bar turned to fire (swing into it: that's the extra distance), and a tag saying which
     const kind = this.drink?.kind;
     m.classList.toggle('steady', kind === 'palmer');
     m.classList.toggle('boost', kind === 'lager' || kind === 'fireball');
     m.classList.toggle('fireball', kind === 'fireball');
-    const flame = this.overlay.querySelector('[data-flame]') as HTMLElement;
-    flame.style.setProperty('--boost', `${Math.round(((drink?.boost ?? 1) - 1) * 100 * 1.6)}%`);
     const tag = this.overlay.querySelector('[data-swing-tag]') as HTMLElement;
     tag.hidden = !drink || kind === 'water';
-    if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · wider gold' : kind === 'lager' ? 'Lager · +10% · twitchy' : kind === 'fireball' ? 'Fireball · +15% · lively' : '';
+    if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · wider gold' : kind === 'lager' ? 'Lager · +10% · swing into the fire' : kind === 'fireball' ? 'Fireball · +15% · swing into the fire' : '';
     // righties have the meter on the left, out of the way of the golfer; lefties on the right
     m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.power));
@@ -1008,13 +1005,14 @@ export class Course3D {
     if (m.phase === 'power') {
       const drink = this.drink ? DRINKS[this.drink.kind] : null;
       m.phase = 'accuracy';
-      m.half = goldHalf(this.club, m.p, drink?.sweet ?? 1, this.style());
-      m.speed = returnSpeed(this.club, m.p, drink?.needle ?? 1, this.style());
+      const fire = (drink?.boost ?? 1) > 1;
+      m.half = goldHalf(this.club, m.p, drink?.sweet ?? 1, this.style(), fire);
+      m.speed = returnSpeed(this.club, m.p, drink?.needle ?? 1, this.style(), fire);
       const box = this.overlay.querySelector('[data-swing]') as HTMLElement;
       box.classList.add('accuracy');
       this.span(this.overlay.querySelector('[data-gold]') as HTMLElement, IMPACT - m.half, m.half * 2);
       this.span(this.overlay.querySelector('[data-pure]') as HTMLElement, IMPACT - m.half * PURE, m.half * PURE * 2);
-      (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = m.p > 1 ? 'Overswing! Tap in the gold' : 'Tap in the gold';
+      (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = m.p > 1 ? (fire ? 'In the fire! Tap in the gold' : 'Overswing! Tap in the gold') : 'Tap in the gold';
       sfx('tick');
       return;
     }
@@ -1687,8 +1685,10 @@ export class Course3D {
     if (this.mode === 'meter') {
       const m = this.meter;
       if (m.phase === 'power') {
-        // fills faster toward the top; at the end of the overswing it stops on its own
-        m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * dt);
+        // fills faster toward the top; at the end of the overswing it stops on its own. With a lager or a fireball in
+        // you the overswing is the fire, and the bar slows right down in it so you can stop it there
+        const fire = !!this.drink && DRINKS[this.drink.kind].boost > 1 && m.p > 1;
+        m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * dt);
         m.x = barX(m.p);
         if (m.p >= OVERSWING) this.tapSwing();
       } else {

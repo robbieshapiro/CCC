@@ -40,8 +40,8 @@ export const carryOf = (club: ClubId, power: number, boost = 1) => {
 export type Drink = 'palmer' | 'lager' | 'water' | 'fireball';
 export const DRINKS: Record<Drink, { name: string; blurb: string; sweet: number; boost: number; needle: number }> = {
   palmer: { name: 'Arnold Palmer', blurb: 'Steadier hands. A much wider sweet spot for two shots.', sweet: 1.8, boost: 1, needle: 1 },
-  lager: { name: 'Clubhouse Lager', blurb: '+10% distance for two shots. The needle gets twitchy.', sweet: 1, boost: 1.1, needle: 1.35 },
+  lager: { name: 'Clubhouse Lager', blurb: '+10% distance for two shots, and the overswing turns to fire: swing into it. The needle gets a little twitchy.', sweet: 1, boost: 1.1, needle: 1.12 },
   water: { name: 'Sparkling Water', blurb: 'No effect whatsoever. Reginald approves.', sweet: 1, boost: 1, needle: 1 },
   // Reginald's, late in the round: one swing only
-  fireball: { name: 'Fireball', blurb: '+15% on your next drive. The needle gets lively.', sweet: 1, boost: 1.15, needle: 1.35 },
+  fireball: { name: 'Fireball', blurb: '+15% on your next swing, and the overswing turns to fire: swing into it. The needle gets lively.', sweet: 1, boost: 1.15, needle: 1.2 },
 };
