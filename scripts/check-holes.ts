@@ -198,6 +198,10 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   geyseralley: { from: { x: -46, y: 124 }, clubs: ['putter'], angles: [-8, 8] },
   // the speed slot: a nuked drive (full power, dead centre, 20% further) down the middle finds the gully off the lip
   lavatube: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [-1, 1], boost: 1.2, near: 120 },
+  // the Western Reserve: putt through the covered bridge, go long and right off the bank, roll through the barn
+  coveredbridge: { from: { x: -30, y: 226 }, clubs: ['putter'], angles: [-3, 3] },
+  sugarmaple: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [6, 18] },
+  redbarn: { from: { x: 176, y: 330 }, clubs: ['putter'], angles: [86, 94] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
@@ -357,7 +361,7 @@ if (mode === 'all' || mode === 'basic') {
   ok(periodClosesAt('2026-10').toISOString() === '2026-11-01T04:00:00.000Z' && periodClosesAt('2026-11').toISOString() === '2026-11-09T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
   ok(periodOf('2026-10-31') === '2026-10' && periodOf('2026-11-08') === '2026-11' && periodOf('2026-11-09') === '2026-11-09' && periodOf('2026-11-15') === '2026-11-09' && periodOf('2026-11-16') === '2026-11-16', 'weeks start on Monday from November 9');
   ok(periodClosesAt('2026-11-09').toISOString() === '2026-11-16T05:00:00.000Z', 'a week closes at midnight Eastern going into Monday');
-  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-11').id === 'caldera' && courseFor('2026-11-09').id === 'caldera', 'October is the Highlands, then the Caldera until a new course opens');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-11').id === 'caldera' && courseFor('2026-11-09').id === 'westernreserve' && courseFor('2026-11-16').id === 'westernreserve', 'October is the Highlands, Nov 1 to 8 the Caldera, then the Western Reserve until the next course opens');
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)

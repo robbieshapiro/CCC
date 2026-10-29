@@ -184,7 +184,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         flying = false;
         sound('roof', 'wall');
       }
-      if (h.roofs?.some((r) => z - g2 > 4 && inPoly({ x, y }, r.poly))) {
+      if (h.roofs?.some((r) => z - g2 > 4 && (r.top === undefined || z - g2 < r.top) && inPoly({ x, y }, r.poly))) {
         sounds.push({ t, s: 'wall' });
         return finish(false, true);
       }

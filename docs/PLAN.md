@@ -13,6 +13,7 @@ Last updated Oct 29, 2026 (weekly play decided). Pick up from here.
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter, written every Monday by a Vercel cron at 12:17 UTC. |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #79 | The Western Reserve, the first weekly course (opens Nov 9): The Covered Bridge (par 4), Sugar Maple (par 3) and The Red Barn (par 5), in a new autumn look with maples, a creek, a covered bridge, a red barn and silo, and corn. |
 | #78 | Weekly play: from Nov 9 each week has its own board, champion and countdown. Nov 1 to 8 runs as one short week on the Caldera. |
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
@@ -51,7 +52,7 @@ The problem with the new members: once your best round is in, there's no reason 
 
 **Schedule:**
 - **Nov 1 to 8:** the Caldera (all 6 holes) as a normal course. Whoever leads on Nov 9 is the first weekly champion.
-- **Week of Nov 9:** a new course. Robbie's leaning toward a fall, Ohio-style parkland course (maples in color, rolling farmland, a covered bridge or a red barn) over the Caldera's back three. To be confirmed. Its PR needs to be up by about Nov 5 so there's time to preview it.
+- **Week of Nov 9:** The Western Reserve, northeast Ohio in October (#79). Admin → preview it before then; members can practise its first hole from the home page.
 - **From Nov 16:** agent-built courses every week.
 
 **The course pipeline:**
@@ -61,7 +62,7 @@ The problem with the new members: once your best round is in, there's no reason 
 
 **Build steps (one PR each, in order):**
 1. ~~Weeks instead of months.~~ Built in #78. The period still lives in the `month` column: Monday's date from Nov 9, so no data moves. Boards, the Open, the plaque, the countdown, gear thresholds (now 1, 3, 5, 8, 12, 20 titles), and Reginald's and the Chronicle's prompts all follow it. The Chronicle now gets last week's final standings.
-2. The Nov 9 course.
+2. ~~The Nov 9 course.~~ The Western Reserve, #79. New kit for later courses: the `autumn` theme (`src/golf3d/autumn.ts`), `maple` trees, `barn` walls, and roofs with a `top` so a high ball sails over a building.
 3. The scheduled course agent.
 
 ### Smaller changes
