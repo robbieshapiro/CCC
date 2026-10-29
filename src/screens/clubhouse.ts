@@ -1,12 +1,13 @@
 // The Clubhouse: everything off the course, as tabs. The bar (its games), Reginald's weekly Chronicle, your club's
 // members, every club this month, how the game works, and a note to the Committee. Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
+import { periodName, span } from '../day';
 import { api } from '../api';
 import type { Chronicle, ClubRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor } from '../golf3d/courses';
 import { hostChip } from '../host';
-import { board, monthName, toParLabel } from '../standings';
+import { board, toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc, header, render } from '../ui';
 import { barPane, fillBar } from './bar';
@@ -39,7 +40,7 @@ export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'bar', week?: stri
   if (tab === 'feedback') bindFeedback();
 }
 
-// your club this month: best first, then everyone yet to play
+// your club this period: best first, then everyone yet to play
 function members(snap: Snapshot) {
   const rows = board(snap);
   const body = rows
@@ -56,9 +57,9 @@ function members(snap: Snapshot) {
     })
     .join('');
   return `
-    <div class="ch-head"><h1>${esc(snap.groupName)}</h1><p class="muted">${rows.length} ${rows.length === 1 ? 'member' : 'members'} · ${monthName(snap.month)}</p></div>
+    <div class="ch-head"><h1>${esc(snap.groupName)}</h1><p class="muted">${rows.length} ${rows.length === 1 ? 'member' : 'members'} · ${periodName(snap.month)}</p></div>
     ${rows.length ? `<div class="table-wrap"><table class="ch-table">
-      <thead><tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rounds</th><th class="num" title="Monthly wins">🏆</th></tr></thead>
+      <thead><tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rounds</th><th class="num" title="Titles">🏆</th></tr></thead>
       <tbody>${body}</tbody></table></div>` : '<p class="muted">No members yet.</p>'}`;
 }
 
@@ -112,10 +113,10 @@ function thisMonday() {
   return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, '0')}-${String(et.getDate()).padStart(2, '0')}`;
 }
 
-// every club, this month: filled in once the server answers
+// every club, this period: filled in once the server answers
 function clubs(snap: Snapshot) {
   return `
-    <div class="ch-head"><h1>The clubs</h1><p class="muted">${monthName(snap.month)} · ${esc(courseFor(snap.month).name)}</p></div>
+    <div class="ch-head"><h1>The clubs</h1><p class="muted">${periodName(snap.month)} · ${esc(courseFor(snap.month).name)}</p></div>
     <div id="ch-clubs"><p class="muted">Loading…</p></div>`;
 }
 
@@ -143,13 +144,14 @@ async function fillClubs() {
 
 function how(snap: Snapshot) {
   const course = courseFor(snap.month);
+  const per = span(snap.month);
   const rows: [string, string, string][] = [
-    ['⛳', 'One course a month', `${esc(course.name)} this month. Play as often as you like. Your best round counts.`],
-    ['🏆', 'Win the month', 'Lowest round in your club when the month closes goes on the plaque. Midnight ET, last day.'],
+    ['⛳', `One course a ${per}`, `${esc(course.name)} this ${per}. Play as often as you like. Your best round counts.`],
+    ['🏆', `Win the ${per}`, `Lowest round in your club when the ${per} closes goes on the plaque. Midnight ET, ${per === 'week' ? 'Sunday night' : 'last day'}.`],
     ['🌍', 'The Open', 'Every club on one board. Same round, bigger field.'],
     ['🎯', 'Closest to the Pin', 'One shot, three tries, new every day.'],
     ['🎃', 'The bar', 'Haunted mini golf and the long drive. New boards every Monday.'],
-    ['🏌️', 'Practice', 'The range, the short game, and next month’s course before it opens.'],
+    ['🏌️', 'Practice', `The range, the short game, and next ${per}’s course before it opens.`],
     ['🥤', 'The cart', 'Drinks from the cart change your next swings.'],
   ];
   const swing: [string, string, string][] = [

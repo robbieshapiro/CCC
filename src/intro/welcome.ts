@@ -1,5 +1,6 @@
 // The new-member welcome: up the drive, Reginald in the foyer, the locker room, your locker, then your tee time.
 // One renderer; the three sets sit far apart in one scene and the camera travels between them.
+import { span } from '../day';
 import * as THREE from 'three';
 import { api, localApi, useSupabase } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
@@ -544,11 +545,11 @@ export async function welcome(snap0: Snapshot) {
   reg.setPose('clasp');
   const rules = [
     'Reginald, Club Steward. Forty years, man and boy. I keep the place running and I keep the score, which, between ourselves, amounts to the same thing.',
-    `Now then. A new course opens every month. This month it is ${course.name}: three holes, par ${course.par}. Frightfully good fun, provided one keeps it out of the water.`,
-    'Play it as often as you please. Your lowest round of the month goes up on the board, and the lowest of the lot takes the Monthly Championship. Engraved, naturally.',
+    `Now then. A new course opens every ${span(snap.month)}. This ${span(snap.month)} it is ${course.name}: ${course.holes.length} holes, par ${course.par}. Frightfully good fun, provided one keeps it out of the water.`,
+    `Play it as often as you please. Your lowest round of the ${span(snap.month)} goes up on the board, and the lowest of the lot takes the title. Engraved, naturally.`,
     'Full rounds only, mind. Wander off at the turn and it never happened. I have a long memory and a short temper for that sort of thing.',
     'You carry a driver, an iron, a wedge and a putter. Swing the driver flat out and the needle goes positively feral. Tap it in the gold, there\'s a good sort.',
-    'Win a month and the pro shop opens its doors. Gear is earned here, not bought. We are not animals.',
+    `Win a ${span(snap.month)} and the pro shop opens its doors. Gear is earned here, not bought. We are not animals.`,
     "Daisy runs the beverage cart. Her Arnold Palmer is said to steady the hands. Her conversation, rather less so.",
     "And some members claim to have found the odd shortcut. I couldn't possibly comment. Come along, the locker room awaits.",
   ];

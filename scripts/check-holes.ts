@@ -2,7 +2,7 @@
 // Run: npm run check-holes
 import { bagFor, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor } from '../src/golf3d/courses';
-import { monthClosesAt } from '../src/day';
+import { periodClosesAt, periodOf } from '../src/day';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
 import { CUP_R, cupR, curbs, DROP_SPEED, dropPoint, simulate } from '../src/golf3d/physics';
 import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type MeterStyle } from '../src/golf3d/swing';
@@ -353,9 +353,11 @@ if (mode === 'all' || mode === 'basic') {
     const want = club === 'wedge' ? ms('vertical') >= ms('classic') * 1.9 : club === 'driver' ? Math.abs(ms('vertical') / ms('classic') - 1.25) < 0.02 : Math.abs(ms('vertical') - ms('classic')) < 1;
     ok(want, `vertical meter: ${club} gold window ±${ms('vertical').toFixed(0)} ms (classic ±${ms('classic').toFixed(0)})`);
   }
-  // the calendar: October closes at midnight Eastern and the Caldera takes over
-  ok(monthClosesAt('2026-10').toISOString() === '2026-11-01T04:00:00.000Z' && monthClosesAt('2026-11').toISOString() === '2026-12-01T05:00:00.000Z', 'months close at midnight Eastern, either side of the clocks changing');
-  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-11').id === 'caldera', 'October is the Highlands, November the Caldera');
+  // the calendar: October closes at midnight Eastern and the Caldera takes over for November 1 to 8, then weeks
+  ok(periodClosesAt('2026-10').toISOString() === '2026-11-01T04:00:00.000Z' && periodClosesAt('2026-11').toISOString() === '2026-11-09T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
+  ok(periodOf('2026-10-31') === '2026-10' && periodOf('2026-11-08') === '2026-11' && periodOf('2026-11-09') === '2026-11-09' && periodOf('2026-11-15') === '2026-11-09' && periodOf('2026-11-16') === '2026-11-16', 'weeks start on Monday from November 9');
+  ok(periodClosesAt('2026-11-09').toISOString() === '2026-11-16T05:00:00.000Z', 'a week closes at midnight Eastern going into Monday');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-11').id === 'caldera' && courseFor('2026-11-09').id === 'caldera', 'October is the Highlands, then the Caldera until a new course opens');
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)

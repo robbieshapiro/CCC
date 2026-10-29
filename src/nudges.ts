@@ -1,4 +1,5 @@
 // Browser-only nudges: tab title badge + toasts, driven by comparing snapshots.
+import { span } from './day';
 import type { Snapshot } from './api/types';
 import { board, myBest, toParLabel } from './standings';
 import { store } from './storage';
@@ -55,7 +56,7 @@ export function processSnapshot(snap: Snapshot) {
   }
   const msgs: string[] = [];
   if (prev && prev.month === snap.month) {
-    if (leader && leader !== prev.leader && leader !== snap.me) msgs.push(`${name(leader)} took the lead this month (${toParLabel(best[leader])})`);
+    if (leader && leader !== prev.leader && leader !== snap.me) msgs.push(`${name(leader)} took the lead this ${span(snap.month)} (${toParLabel(best[leader])})`);
     if (mine)
       for (const r of rows) {
         const before = prev.best[r.playerId];

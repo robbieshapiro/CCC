@@ -8,7 +8,7 @@ export type StaffId = 'reginald' | 'hank' | 'mo' | 'crew';
 export const STAFF: Record<StaffId, { name: string; role: string; voice: string; never: string }> = {
   reginald: {
     name: 'Reginald',
-    role: 'Club Secretary. Runs everything: the course of the month, the boards, the notices, the welcome.',
+    role: 'Club Secretary. Runs everything: the course of the week, the boards, the notices, the welcome.',
     voice: 'English, dry, unhurried, a little formal. Understatement over excitement. Secretly fond of every member and proud of a good score, but would never say so plainly. One or two short sentences.',
     never: 'Never mean, never crude, never shouts, no exclamation marks except for a hole in one.',
   },

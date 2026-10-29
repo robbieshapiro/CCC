@@ -13,6 +13,7 @@ Last updated Oct 29, 2026 (weekly play decided). Pick up from here.
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter, written every Monday by a Vercel cron at 12:17 UTC. |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #78 | Weekly play: from Nov 9 each week has its own board, champion and countdown. Nov 1 to 8 runs as one short week on the Caldera. |
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
@@ -21,6 +22,7 @@ Last updated Oct 29, 2026 (weekly play decided). Pick up from here.
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
+- [ ] Before Sunday Nov 8: paste all of `supabase/schema.sql` into the SQL Editor and run it (#78, the weekly switch). Until then the database keeps running by the month.
 - [ ] Not needed once the Chronicle goes admin only (see below): `CRON_SECRET` only guards the Monday cron, which is being removed.
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
@@ -58,7 +60,7 @@ The problem with the new members: once your best round is in, there's no reason 
 - Later on, the best members' Design Desk holes could be mixed into a weekly course.
 
 **Build steps (one PR each, in order):**
-1. Weeks instead of months: a `week` (Monday's date) on rounds, `COURSES` keyed by week, weekly bests and champions, the boards, the Open, the plaque, the "crowned at midnight" text, gear thresholds, and Reginald's and the Chronicle's prompts. SQL for Robbie to paste. Must be live by Sunday Nov 8.
+1. ~~Weeks instead of months.~~ Built in #78. The period still lives in the `month` column: Monday's date from Nov 9, so no data moves. Boards, the Open, the plaque, the countdown, gear thresholds (now 1, 3, 5, 8, 12, 20 titles), and Reginald's and the Chronicle's prompts all follow it. The Chronicle now gets last week's final standings.
 2. The Nov 9 course.
 3. The scheduled course agent.
 

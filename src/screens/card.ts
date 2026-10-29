@@ -1,5 +1,6 @@
-// Your Locker: your golfer, how your month is going and your trophies. Edit your look from here. (The club's
+// Your Locker: your golfer, how your week is going and your trophies. Edit your look from here. (The club's
 // members are in the Clubhouse.)
+import { span } from '../day';
 import { api, setSession } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
 import { portrait, specOf } from '../avatar';
@@ -39,7 +40,7 @@ export function card(snap: Snapshot) {
             me.host
               ? ''
               : `<div class="lk-stats">
-            <div><b>${best ? toParLabel(best.total - best.par) : '–'}</b><span>Best this month</span></div>
+            <div><b>${best ? toParLabel(best.total - best.par) : '–'}</b><span>Best this ${span(snap.month)}</span></div>
             <div><b>${mine?.best ? ordinal(mine.rank) : '–'}</b><span>In the club</span></div>
             <div><b>${mine?.rounds ?? 0}</b><span>Rounds</span></div>
           </div>`

@@ -24,7 +24,7 @@ export type Player = {
   name: string;
   avatar: Avatar;
   host?: boolean; // runs this club without playing in it: never on its board
-  wins: number; // months won
+  wins: number; // titles won: periods topped (see src/day.ts)
   feats: string[];
   joined: string; // ISO date, for the member number
   career?: { rounds: number; best: number | null; avg: number | null }; // every round they've played, to par
@@ -33,10 +33,10 @@ export type Player = {
 // Where a tee shot came to rest, in course feet. Null if it found the water or went out.
 export type Spot = { x: number; y: number } | null;
 
-// One finished round: all holes of the month's course in one go.
+// One finished round: all holes of the period's course in one go.
 export type Round = {
   playerId: string;
-  month: string; // YYYY-MM, Eastern time
+  month: string; // the game period, Eastern time: YYYY-MM for months, then the week's Monday YYYY-MM-DD (src/day.ts)
   course: string;
   holes: number[];
   total: number;
@@ -57,8 +57,8 @@ export type Snapshot = {
   homeGroupId?: string; // the club your play counts for (differs when you only run this one)
   homeName?: string;
   players: Player[];
-  rounds: Round[]; // this month, whole group
-  champions: Champion[]; // past months, newest first
+  rounds: Round[]; // this period, whole group
+  champions: Champion[]; // past periods, newest first
 };
 
 // A personal, single-use invitation. The link (#/invite/<id>) shows the code under the foil.

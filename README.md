@@ -61,9 +61,9 @@ With no Supabase keys set, the app runs in **local mode**: data lives in your br
 3. **Vercel** (free): import this repo (`vercel.json` pins the Vite build). Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables, then deploy. If you change the variables later, redeploy.
 4. Open `https://<your-vercel-url>/#/join/gentlemen` yourself first: the first member runs the club. Then put up friends from "Put up a friend" on the home page. Each gets a private invitation link with a single-use code; the group code only signs existing members back in.
 
-## Adding next month's course
+## Adding next week's course
 
-Add hole files under `src/golf3d/holes/`, then add a course to `COURSES` in `src/golf3d/courses.ts` keyed by month (`'2026-11'`). If a month has no course, the most recent one carries over.
+Add hole files under `src/golf3d/holes/`, then add a course to `COURSES` in `src/golf3d/courses.ts` with `opens` set to the Monday it starts (`'2026-11-16'`). If a week has no course, the most recent one carries over. Before November 9 2026 the club ran by the month; `src/day.ts` explains how the two kinds of period share the `month` column.
 
 ## How it works
 

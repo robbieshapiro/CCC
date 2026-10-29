@@ -40,16 +40,17 @@ export const SKIN_TONES = ['#f6d7bf', '#eac09a', '#d29a6e', '#a8704a', '#7a4e33'
 export const HAIR_COLOURS = ['#1e1611', '#4a3022', '#7b5232', '#b78a52', '#e3c48a', '#9c9c98', '#e8e6e0', '#8c3b22'];
 export const CLOTH = ['#163b2c', '#f4f1e8', '#1f2d4a', '#7a1f2b', '#b8955a', '#6e8b74', '#d9c7a3', '#2b2b2b', '#8fb3d9', '#e9b9c2', '#c25b2a', '#4e5d3a'];
 
-// Prestige pieces unlock with monthly titles.
+// Prestige pieces unlock with titles: October's monthly one and every weekly one since count the same. The steps
+// are spaced for about four titles a month across the club.
 export const PRESTIGE: { key: string; name: string; wins: number; apply: (s: GolferSpec) => void; has: (s: GolferSpec) => boolean }[] = [
   { key: 'tartan', name: 'Tartan plus-fours', wins: 1, apply: (s) => (s.bottoms = 'tartan'), has: (s) => s.bottoms === 'tartan' },
-  { key: 'blazer', name: 'Club blazer', wins: 2, apply: (s) => (s.top = 'blazer'), has: (s) => s.top === 'blazer' },
-  { key: 'cashmere', name: 'Cashmere quarter-zip', wins: 3, apply: (s) => (s.top = 'cashmere'), has: (s) => s.top === 'cashmere' },
-  { key: 'goldputter', name: 'Gold putter', wins: 4, apply: (s) => (s.putter = s.putter === 'gold' ? 'classic' : 'gold'), has: (s) => s.putter === 'gold' },
-  { key: 'crestbag', name: 'Crested tour bag', wins: 5, apply: (s) => (s.crestBag = !s.crestBag), has: (s) => !!s.crestBag },
-  { key: 'goldblazer', name: "Members' blazer, gold trim", wins: 6, apply: (s) => (s.top = 'goldblazer'), has: (s) => s.top === 'goldblazer' },
+  { key: 'blazer', name: 'Club blazer', wins: 3, apply: (s) => (s.top = 'blazer'), has: (s) => s.top === 'blazer' },
+  { key: 'cashmere', name: 'Cashmere quarter-zip', wins: 5, apply: (s) => (s.top = 'cashmere'), has: (s) => s.top === 'cashmere' },
+  { key: 'goldputter', name: 'Gold putter', wins: 8, apply: (s) => (s.putter = s.putter === 'gold' ? 'classic' : 'gold'), has: (s) => s.putter === 'gold' },
+  { key: 'crestbag', name: 'Crested tour bag', wins: 12, apply: (s) => (s.crestBag = !s.crestBag), has: (s) => !!s.crestBag },
+  { key: 'goldblazer', name: "Members' blazer, gold trim", wins: 20, apply: (s) => (s.top = 'goldblazer'), has: (s) => s.top === 'goldblazer' },
 ];
-export const LOCKED_TOPS: Partial<Record<Top, number>> = { blazer: 2, cashmere: 3, goldblazer: 6, tweed: 99, uniform: 99 };
+export const LOCKED_TOPS: Partial<Record<Top, number>> = { blazer: 3, cashmere: 5, goldblazer: 20, tweed: 99, uniform: 99 };
 export const LOCKED_BOTTOMS: Partial<Record<Bottoms, number>> = { tartan: 1, skirt: 0 };
 
 export const DEFAULT_SPEC: GolferSpec = {

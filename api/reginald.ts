@@ -15,7 +15,7 @@ const ROUND_NOTES_A_DAY = 12; // per member
 const CLUB_LINES_A_DAY = 400; // across everyone, as a backstop
 
 // Reginald's brief (the same as STAFF.reginald in src/staff.ts)
-const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. A new 3D course each month; members play it as often as they like and their best round counts. There is also the Open (one board across every club), a daily Closest to the Pin, and bar games (mini golf, long drive).
+const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. A new 3D course each week (it was each month until November 2026); members play it as often as they like and their best round counts, and the lowest round when the week closes on Sunday night wins the title. There is also the Open (one board across every club), a daily Closest to the Pin, and bar games (mini golf, long drive).
 
 Who you are: you run everything. English, dry, unhurried, a little formal. Understatement over excitement. Secretly fond of every member and proud of a good score, but you would never say so plainly.
 
@@ -39,6 +39,16 @@ type Course = { name: string; holes: { name: string; par: number }[] };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const clean = (s: unknown, n: number) => String(s ?? '').replace(/[^\p{L}\p{N} '’.,&-]/gu, '').slice(0, n);
+// The game period (src/day.ts has the full rule): 'YYYY-MM' months until November 9 2026, then weeks keyed by Monday.
+// The day the next one starts, and what members call it.
+function periodEnds(period: string) {
+  if (period.length === 10) return new Date(Date.parse(`${period}T12:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
+  if (period === '2026-11') return '2026-11-09';
+  const [y, m] = period.split('-').map(Number);
+  return new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+}
+const span = (period: string) => (period < '2026-11' ? 'month' : 'week');
+
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 const toPar = (d: number) => (d === 0 ? 'level par' : d > 0 ? `${d} over par` : `${-d} under par`);
 
@@ -71,10 +81,8 @@ function facts(snap: Snapshot, open: { name: string; total: number; par: number;
   const behind = mine >= 0 ? bests.find((b) => b.best! > bests[mine].best!) : undefined;
   const leaders = bests.filter((b) => b.best === bests[0]?.best).map((b) => b.name);
   const myRounds = snap.rounds.filter((r) => r.playerId === me.id);
-  const end = new Date(`${snap.month}-01T12:00:00Z`);
-  end.setUTCMonth(end.getUTCMonth() + 1);
-  const daysLeft = Math.max(0, Math.round((end.getTime() - new Date(`${snap.today}T12:00:00Z`).getTime()) / 86400000));
-  // the hole that's cost them most this month, against par
+  const daysLeft = Math.max(0, Math.round((Date.parse(`${periodEnds(snap.month)}T12:00:00Z`) - Date.parse(`${snap.today}T12:00:00Z`)) / 86400000));
+  // the hole that's cost them most this period, against par
   const worst = course.holes
     .map((h, i) => ({ name: h.name, over: myRounds.reduce((a, r) => a + ((r.holes[i] ?? h.par) - h.par), 0) / (myRounds.length || 1) }))
     .sort((a, b) => b.over - a.over)[0];
@@ -86,10 +94,10 @@ function facts(snap: Snapshot, open: { name: string; total: number; par: number;
     club: snap.groupName,
     today: snap.today,
     course: `${course.name}, ${course.holes.length} holes, par ${course.holes.reduce((a, h) => a + h.par, 0)}`,
-    days_left_in_month: daysLeft,
-    monthly_wins_all_time: me.wins,
+    [`days_left_this_${span(snap.month)}`]: daysLeft,
+    titles_all_time: me.wins,
     career: me.career,
-    this_month: {
+    [`this_${span(snap.month)}`]: {
       rounds: myRounds.length,
       best: mine >= 0 ? toPar(bests[mine].best!) : 'no round yet',
       place_in_club: mine >= 0 ? `${place(mine)} (${members.length} members)` : null,
@@ -115,7 +123,7 @@ function roundFacts(snap: Snapshot, course: Course) {
       score: `${r.total}, ${toPar(r.total - r.par)}`,
       holes: course.holes.map((h, i) => `${h.name} (par ${h.par}): ${r.holes[i] ?? '-'}`),
       feats: r.feats,
-      personal_best_this_month: prevBest === null ? 'first round this month' : r.total - r.par < prevBest ? `new best, was ${toPar(prevBest)}` : `best is still ${toPar(prevBest)}`,
+      [`personal_best_this_${span(snap.month)}`]: prevBest === null ? `first round this ${span(snap.month)}` : r.total - r.par < prevBest ? `new best, was ${toPar(prevBest)}` : `best is still ${toPar(prevBest)}`,
     },
   };
 }
@@ -155,8 +163,8 @@ export async function POST(request: Request) {
   const context = { ...facts(s, (open ?? []) as { name: string; total: number; par: number; mine: boolean }[], course), ...(round ? { just_played: round.round } : {}) };
   const task =
     kind === 'daily'
-      ? `Write today's greeting for ${me.name}, shown at the top of the club's Play page above the button to play this month's course. Make them want to play today.`
-      : `${me.name} has just finished a round of this month's course (just_played). Write your note on their scorecard about this round: the moment that mattered most, and what it means for their month.`;
+      ? `Write today's greeting for ${me.name}, shown at the top of the club's Play page above the button to play this ${span(s.month)}'s course. Make them want to play today.`
+      : `${me.name} has just finished a round of this ${span(s.month)}'s course (just_played). Write your note on their scorecard about this round: the moment that mattered most, and what it means for their ${span(s.month)}.`;
 
   const claude = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   try {
