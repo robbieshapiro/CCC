@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 29, 2026. Pick up from here.
+Last updated Oct 29, 2026 (weekly play decided). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -21,7 +21,7 @@ Last updated Oct 29, 2026. Pick up from here.
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
-- [ ] Optional: add `CRON_SECRET` in Vercel so only the cron can trigger the Monday Chronicle.
+- [ ] Not needed once the Chronicle goes admin only (see below): `CRON_SECRET` only guards the Monday cron, which is being removed.
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
 - [x] Stale branches deleted. Only `main` is left.
@@ -33,6 +33,40 @@ Last updated Oct 29, 2026. Pick up from here.
 3. Check Reginald's daily line on the Play page, and his note after a round.
 4. Read this week's Chronicle (Clubhouse → Chronicle).
 
+## Decided, not built yet
+
+### Weekly play (starts Monday Nov 9)
+
+The problem with the new members: once your best round is in, there's no reason to come back, and one course for a whole month goes stale. The fix is a new course every week.
+
+- **A week runs Monday to Sunday** and closes at midnight ET. The best round of the week wins, and the winner goes on the plaque.
+- **No monthly title.** Weekly wins are the titles. The October champion is crowned on Nov 1 under the old rules, as normal.
+- **Courses are 3 holes,** like the Highlands. A round takes about 5 minutes.
+- **Stroke play only for now.** Skins (each hole goes to the outright lowest score on it that week) may come later. No handicaps.
+- **Gear unlocks count weekly wins** at higher thresholds (something like 1, 3, 5, 10, 20), since there'll be about four titles a month.
+- **The Open goes weekly too:** one board across every club for the week's course.
+- **If a week's course isn't ready,** the last one carries over. That fallback already works for months.
+
+**Schedule:**
+- **Nov 1 to 8:** the Caldera (all 6 holes) as a normal course. Whoever leads on Nov 9 is the first weekly champion.
+- **Week of Nov 9:** a new course. Robbie's leaning toward a fall, Ohio-style parkland course (maples in color, rolling farmland, a covered bridge or a red barn) over the Caldera's back three. To be confirmed. Its PR needs to be up by about Nov 5 so there's time to preview it.
+- **From Nov 16:** agent-built courses every week.
+
+**The course pipeline:**
+- A scheduled agent runs every Monday and builds the course for two weeks out, as code like the Highlands and Caldera. `npm run check-holes` must pass. It opens a PR with the course as a draft.
+- Robbie plays the admin preview (about 10 minutes) and merges if it's fun.
+- Later on, the best members' Design Desk holes could be mixed into a weekly course.
+
+**Build steps (one PR each, in order):**
+1. Weeks instead of months: a `week` (Monday's date) on rounds, `COURSES` keyed by week, weekly bests and champions, the boards, the Open, the plaque, the "crowned at midnight" text, gear thresholds, and Reginald's and the Chronicle's prompts. SQL for Robbie to paste. Must be live by Sunday Nov 8.
+2. The Nov 9 course.
+3. The scheduled course agent.
+
+### Smaller changes
+
+- **A daily crown for Closest to the Pin.** Yesterday's winner across every club gets a 👑 next to their name on the boards, the Members list and the Daily Shot tile, for one day. The tie-break is the board's own (holed first, then nearest, then the next-best try). Shot #1 (Oct 28) went to Eli G of Boomtown at 18.1 ft.
+- **The Chronicle becomes admin only.** Remove the Monday cron (`vercel.json` and the GET in `api/chronicle.ts`) and keep the "Write this week's now" button in the Committee Room. Robbie writes it each Monday, and it crowns last week's winner and introduces the new course. Change the empty-state line ("goes out on Monday morning"). A week Robbie skips has no edition.
+
 ## Next up (ideas, not started)
 
 - **The Committee.** Robbie appoints elite members and gives titles (Hole Architect, Mini Game Manager). Perks:
@@ -43,7 +77,7 @@ Last updated Oct 29, 2026. Pick up from here.
   - check the architect's holes play fairly, and adjust the prompt or the quick check;
   - maybe a server-side robot playtest to set par more precisely;
   - maybe let a great member hole be promoted onto a monthly course.
-- **More Reginald AI:**
+- **More Reginald AI.** Today he writes a daily line on the Play page, a note after each round, and the Chronicle; the Design Desk's architect is Claude too. Ideas:
   - "Ask Reginald", a chat box in the Clubhouse that can look up boards, rules and history;
   - AI lines for the other staff (Hank, Mo, the cart crew).
 - **Polish:**
