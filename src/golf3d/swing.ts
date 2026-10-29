@@ -1,6 +1,7 @@
 // The three-tap swing, shared by the game and the headless checks so both play by the same rules.
 // Tap 1 starts the power bar. Tap 2 stops it (aim for your planned power; 100-110% is overswing).
-// Tap 3 stops the needle on its way back: the thin pure bullseye is perfect, the rest of the gold is close.
+// Tap 3 stops the needle on its way back: the gold strip is pure, the silver either side of it is close.
+// (In the code the whole window is still `gold` and the strip is `pure`.)
 import { CLUBS, type ClubId } from './clubs';
 
 export const OVERSWING = 1.1; // the bar runs past 100% to here
@@ -31,7 +32,7 @@ export function goldHalf(club: ClubId, power: number, sweetMul = 1, style: Meter
   const over = Math.max(0, power - 1);
   return (CLUBS[club].sweet / 2) * sweetMul * (1 - over * (fire ? 1.5 : 4)) * (style === 'vertical' ? WIDER[club] : 1);
 }
-export const PURE = 0.3; // the bullseye is this share of the gold
+export const PURE = 0.3; // the gold strip is this share of the window
 
 // miss: how far the needle was from the impact point when tapped (bar-lengths; > 0 early, < 0 late).
 // Early pushes and slices (error > 0), late pulls and hooks.

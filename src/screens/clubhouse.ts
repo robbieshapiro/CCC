@@ -147,7 +147,7 @@ function how(snap: Snapshot) {
   const per = span(snap.month);
   const rows: [string, string, string][] = [
     ['⛳', `One course a ${per}`, `${esc(course.name)} this ${per}. Play as often as you like. Your best round counts.`],
-    ['🏆', `Win the ${per}`, `Lowest round in your club when the ${per} closes goes on the plaque. Midnight ET, ${per === 'week' ? 'Sunday night' : 'last day'}.`],
+    ['🏆', `Win the ${per}`, `Lowest round in your club when the ${per} closes goes on the plaque. Midnight ET, ${per === 'week' ? 'Saturday night' : 'last day'}.`],
     ['🌍', 'The Open', 'Every club on one board. Same round, bigger field.'],
     ['🎯', 'Closest to the Pin', 'One shot, three tries, new every day.'],
     ['🎃', 'The bar', 'Haunted mini golf and the long drive. New boards every Monday.'],

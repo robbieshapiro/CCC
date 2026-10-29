@@ -357,11 +357,12 @@ if (mode === 'all' || mode === 'basic') {
     const want = club === 'wedge' ? ms('vertical') >= ms('classic') * 1.9 : club === 'driver' ? Math.abs(ms('vertical') / ms('classic') - 1.25) < 0.02 : Math.abs(ms('vertical') - ms('classic')) < 1;
     ok(want, `vertical meter: ${club} gold window ±${ms('vertical').toFixed(0)} ms (classic ±${ms('classic').toFixed(0)})`);
   }
-  // the calendar: October closes at midnight Eastern and the Caldera takes over for November 1 to 8, then weeks
-  ok(periodClosesAt('2026-10').toISOString() === '2026-11-01T04:00:00.000Z' && periodClosesAt('2026-11').toISOString() === '2026-11-09T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
-  ok(periodOf('2026-10-31') === '2026-10' && periodOf('2026-11-08') === '2026-11' && periodOf('2026-11-09') === '2026-11-09' && periodOf('2026-11-15') === '2026-11-09' && periodOf('2026-11-16') === '2026-11-16', 'weeks start on Monday from November 9');
-  ok(periodClosesAt('2026-11-09').toISOString() === '2026-11-16T05:00:00.000Z', 'a week closes at midnight Eastern going into Monday');
-  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-11').id === 'caldera' && courseFor('2026-11-09').id === (courseById('westernreserve')!.draft ? 'caldera' : 'westernreserve'), 'October is the Highlands, Nov 1 to 8 the Caldera, then the Western Reserve once it is out of draft');
+  // the calendar: October closes early at midnight Eastern going into Friday 30 October and the Caldera challenge runs
+  // to Saturday 7 November; then Sunday-to-Saturday weeks
+  ok(periodClosesAt('2026-10').toISOString() === '2026-10-30T04:00:00.000Z' && periodClosesAt('2026-10-30').toISOString() === '2026-11-08T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
+  ok(periodOf('2026-10-29') === '2026-10' && periodOf('2026-10-30') === '2026-10-30' && periodOf('2026-11-07') === '2026-10-30' && periodOf('2026-11-08') === '2026-11-08' && periodOf('2026-11-14') === '2026-11-08' && periodOf('2026-11-15') === '2026-11-15', 'weeks start on Sunday from November 8');
+  ok(periodClosesAt('2026-11-08').toISOString() === '2026-11-15T05:00:00.000Z', 'a week closes at midnight Eastern going into Sunday');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 3 && courseFor('2026-11-08').id === (courseById('westernreserve')!.draft ? 'caldera' : 'westernreserve'), 'October is the Highlands, the Caldera challenge is three holes, then the Western Reserve once it is out of draft');
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)

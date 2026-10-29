@@ -237,11 +237,12 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-swing-bar .over { right: 0; width: 7.64%; background: repeating-linear-gradient(135deg, #7a1f2b, #7a1f2b 5px, #93303b 5px, #93303b 10px); }
 .g3-swing-bar .fill { background: linear-gradient(90deg, rgba(240, 213, 142, 0.35), rgba(240, 213, 142, 0.75)); }
 .g3-swing.accuracy .fill { opacity: 0.35; }
-.g3-swing-bar .gold { overflow: hidden; background: linear-gradient(180deg, #fff3c4 0%, #f3cf6a 22%, #c99a2e 50%, #f1cd66 72%, #a8781f 100%); box-shadow: inset 0 0 0 1px rgba(122, 82, 16, 0.55), 0 0 10px rgba(255, 210, 90, 0.45); }
-/* a glint of light that runs across the gold, so it reads as metal */
+/* the window round the impact point: silver is close (a touch of push or pull), the gold strip in its middle is pure */
+.g3-swing-bar .gold { overflow: hidden; background: linear-gradient(180deg, #f6f7f8 0%, #d3d8dc 22%, #9aa3aa 50%, #cfd4d8 72%, #7f888f 100%); box-shadow: inset 0 0 0 1px rgba(60, 68, 74, 0.55), 0 0 8px rgba(220, 228, 235, 0.4); }
+/* a glint of light that runs across the silver, so it reads as metal */
 .g3-swing-bar .gold::after { content: ''; position: absolute; inset: -40% auto -40% -60%; width: 45%; background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%); animation: glint 1.8s ease-in-out infinite; }
 @keyframes glint { 0% { left: -60%; } 55%, 100% { left: 130%; } }
-.g3-swing-bar .pure { z-index: 1; background: linear-gradient(180deg, #ffe58a 0%, #ffbf2e 45%, #d48a0c 100%); box-shadow: inset 0 0 0 1px rgba(19, 38, 28, 0.55); } /* the heart of the gold: still gold, so it never looks like the needle */
+.g3-swing-bar .pure { z-index: 1; background: linear-gradient(180deg, #fff3c4 0%, #f3cf6a 22%, #e0a92c 50%, #f1cd66 72%, #b8861f 100%); box-shadow: inset 0 0 0 1px rgba(122, 82, 16, 0.7), 0 0 10px rgba(255, 210, 90, 0.6); } /* the gold: tap here for a pure strike */
 .g3-swing-bar .plan { width: 3px; margin-left: -1.5px; background: #ffd23f; box-shadow: 0 0 0 1px #13261c; }
 .g3-swing-bar .needle { z-index: 2; width: 4px; margin-left: -2px; top: -2px; bottom: -2px; background: #fff; box-shadow: 0 0 0 1px #13261c, 0 0 8px #fff; }
 /* the vertical meter: stood up beside the golfer, impact near the bottom, power climbing to the overswing at the top */
@@ -251,7 +252,8 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-swing.vertical .g3-swing-bar span { top: auto; left: 0; right: 0; width: auto; }
 .g3-swing.vertical .g3-swing-bar .over { top: 0; bottom: auto; height: 7.64%; }
 .g3-swing.vertical .g3-swing-bar .fill { background: linear-gradient(0deg, rgba(240, 213, 142, 0.35), rgba(240, 213, 142, 0.75)); }
-.g3-swing.vertical .g3-swing-bar .gold { background: linear-gradient(90deg, #fff3c4 0%, #f3cf6a 22%, #c99a2e 50%, #f1cd66 72%, #a8781f 100%); }
+.g3-swing.vertical .g3-swing-bar .gold { background: linear-gradient(90deg, #f6f7f8 0%, #d3d8dc 22%, #9aa3aa 50%, #cfd4d8 72%, #7f888f 100%); }
+.g3-swing.vertical .g3-swing-bar .pure { background: linear-gradient(90deg, #fff3c4 0%, #f3cf6a 22%, #e0a92c 50%, #f1cd66 72%, #b8861f 100%); }
 .g3-swing.vertical .g3-swing-bar .gold::after { inset: auto -40% -60% -40%; width: auto; height: 45%; background: linear-gradient(10deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%); animation-name: glint-up; }
 @keyframes glint-up { 0% { bottom: -60%; } 55%, 100% { bottom: 130%; } }
 @media (prefers-reduced-motion: reduce) { .g3-swing-bar .gold::after { animation: none; display: none; } }
@@ -798,6 +800,15 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
    nods now and then. */
 .play-hero { display: grid; gap: 18px; padding: 20px; margin-bottom: 14px; border-radius: 12px; background: var(--green); color: var(--cream); box-shadow: 0 10px 30px rgba(22, 59, 44, 0.25); animation: rise 0.45s ease-out both; }
 .play-hero.volcanic { background: linear-gradient(160deg, #2a0f08, #4a1a0c 60%, #7a2c10); }
+/* a new period: the course that's just opened and last period's champion, until the member taps Play or Later */
+.news { display: grid; gap: 8px; padding: 22px 20px; margin-bottom: 14px; border-radius: 12px; background: var(--green); color: var(--cream); box-shadow: 0 0 0 2px var(--gold, #d9a441), 0 12px 32px rgba(22, 59, 44, 0.3); animation: rise 0.45s ease-out both; }
+.news.volcanic { background: linear-gradient(160deg, #2a0f08, #4a1a0c 60%, #7a2c10); }
+.news h2 { margin: 0; font-size: 28px; color: inherit; }
+.news p { margin: 0; }
+.news .muted { color: inherit; opacity: 0.8; }
+.news-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.news .btn.ghost { color: inherit; border-color: currentColor; }
+.news.volcanic .btn.big { background: #e8501c; border-color: #e8501c; color: #fff; }
 .play-reg { display: flex; align-items: center; gap: 14px; }
 .play-reg p { margin: 0; font-size: 15px; line-height: 1.45; color: #efe6d2; }
 .play-reg b { color: #f0dcae; font-family: var(--serif); font-size: 18px; margin-right: 4px; }
