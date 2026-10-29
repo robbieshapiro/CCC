@@ -89,7 +89,7 @@ export type AdminOverview = {
 };
 // The Daily Shot: one shot a day for everyone, three tries, best counts (see daily.ts)
 export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: boolean };
-export type DailyRow = { name: string; club: string; ft: number | null; holed: boolean; tries: number; mine: boolean };
+export type DailyRow = { name: string; club: string; ft: number | null; holed: boolean; holedTry?: number | null; tries: number; mine: boolean };
 export type DailyState = { mine: DailyTry[]; board: DailyRow[]; players: number; streak: number };
 export type DailyDay = { day: string; players: number; tries: number };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };

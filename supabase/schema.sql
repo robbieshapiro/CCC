@@ -722,15 +722,19 @@ begin
       select pe.k, pe.h, s.* from daily_shots s join players p on p.id = s.player_id
       join people pe on pe.k = lower(p.name) and pe.h = p.pin_hash where s.day = p_day
     ), best as (
-      select distinct on (t.k, t.h) t.k, t.h, t.ft, t.holed, (select count(*) from tries t2 where t2.k = t.k and t2.h = t.h) as n
-      from tries t order by t.k, t.h, t.holed desc, (t.lost or t.ft is null), t.ft asc nulls last
+      -- one row a person: holed (and on which try), then their tries nearest first, for the tie-break
+      select t.k, t.h, bool_or(t.holed) as holed, min(t.try) filter (where t.holed) as htry, count(*) as n,
+        array_agg(case when t.holed then 0 when t.lost then null else t.ft end order by case when t.holed then 0 when t.lost then null else t.ft end asc nulls last) as fts,
+        min(t.created_at) as first_at
+      from tries t group by t.k, t.h
     )
     select json_build_object(
       'mine', coalesce((select json_agg(json_build_object('try', t.try, 'ft', t.ft, 'holed', t.holed, 'lost', t.lost) order by t.try)
         from tries t where t.k = lower(me.name) and t.h = me.pin_hash), '[]'),
-      'board', coalesce((select json_agg(json_build_object('name', pe.name, 'club', g.name, 'ft', b.ft, 'holed', b.holed, 'tries', b.n,
+      -- ranked: holed beats everything, holed sooner beats later, then nearest, then the next-best try, then the earlier player
+      'board', coalesce((select json_agg(json_build_object('name', pe.name, 'club', g.name, 'ft', b.fts[1], 'holed', b.holed, 'holedTry', b.htry, 'tries', b.n,
           'mine', b.k = lower(me.name) and b.h = me.pin_hash)
-        order by b.holed desc, b.ft asc nulls last)
+        order by b.holed desc, b.htry asc nulls last, b.fts[1] asc nulls last, b.fts[2] asc nulls last, b.fts[3] asc nulls last, b.first_at)
         from best b join people pe on pe.k = b.k and pe.h = b.h join groups g on g.id = pe.group_id), '[]'),
       'players', (select count(*) from best),
       'streak', streak
