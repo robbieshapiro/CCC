@@ -13,6 +13,7 @@ Last updated Oct 29, 2026 (Caldera challenge from Fri Oct 30, Sunday weeks). Pic
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter, written every Monday by a Vercel cron at 12:17 UTC. |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #81 | A thin early-drop banner on the home page; Reginald's daily line knows October closes early (and refreshes when the schedule changes); the "now open" card waits for the Caldera instead of showing for October. |
 | #80 | October closes early and the 3-hole Caldera challenge opens Fri Oct 30; Sunday-to-Saturday weeks from Nov 8; the swing meter's gold is now only the pure strip, with silver for close; a "now open" card greets every member on their first open of a new period. |
 | #79 | The Western Reserve, the first weekly course (opens Nov 9): The Covered Bridge (par 4), Sugar Maple (par 3) and The Red Barn (par 5), in a new autumn look with maples, a creek, a covered bridge, a red barn and silo, and corn. |
 | #78 | Weekly play: from Nov 9 each week has its own board, champion and countdown. Nov 1 to 8 runs as one short week on the Caldera. |
