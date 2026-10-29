@@ -78,7 +78,8 @@ export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false)
     openPane.hidden = tab !== 'open';
     clubPane.hidden = tab !== 'club';
     tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-    if (say && !pinned) say.innerHTML = tab === 'open' ? lineOpen : lineClub;
+    // Reginald's own line for you today (from Claude) stays whichever board is showing
+    if (say && !pinned && !say.dataset.ai) say.innerHTML = tab === 'open' ? lineOpen : lineClub;
   };
   tabs.hidden = false;
   tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {

@@ -6,6 +6,7 @@ import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { GAME_TZ, monthClosesAt } from '../day';
 import { REGINALD, reginaldSvg, type Mood } from '../host';
 import { bindOpen } from './open';
+import { askReginald } from '../reginald';
 import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
 import { board, monthName, myBest, toParLabel } from '../standings';
@@ -112,6 +113,15 @@ export function home(snap: Snapshot) {
 
   tickCountdown();
   void bindOpen(snap, line, host);
+  // today's line, written for you by Reginald (Claude): it takes over from the scripted one when it arrives
+  if (!host)
+    void askReginald('daily', course, snap.today).then((text) => {
+      const say = document.querySelector<HTMLElement>('#reg-line');
+      if (!text || !say) return;
+      say.dataset.ai = '1';
+      say.classList.add('reg-fresh');
+      say.innerHTML = `<b>Reginald</b> ${esc(text)}`;
+    });
   void bindNotices();
   void bindDaily(snap.today);
   // in a club you only run, play from your own club: that's where it counts

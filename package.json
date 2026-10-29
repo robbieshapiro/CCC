@@ -10,9 +10,11 @@
     "typecheck": "tsc --noEmit",
     "build:single": "npm run build && node scripts/build-single.mjs",
     "check-holes": "rolldown scripts/check-holes.ts -o node_modules/.cache/check-holes.mjs -p node && node node_modules/.cache/check-holes.mjs",
-    "check-minigolf": "rolldown scripts/check-minigolf.ts -o node_modules/.cache/check-minigolf.mjs -p node && node node_modules/.cache/check-minigolf.mjs"
+    "check-minigolf": "rolldown scripts/check-minigolf.ts -o node_modules/.cache/check-minigolf.mjs -p node && node node_modules/.cache/check-minigolf.mjs",
+    "check-api": "tsc --noEmit --strict --module esnext --moduleResolution bundler --target es2022 --skipLibCheck --lib es2022,dom api/*.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
     "@supabase/supabase-js": "^2.118.0",
     "@vercel/analytics": "^2.0.1",
     "three": "0.170.0"
