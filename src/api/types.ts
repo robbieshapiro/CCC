@@ -100,9 +100,9 @@ export type BarBoard = { week: string; board: { name: string; score: number; min
 export type ClubRow = { id: string; name: string; mine: boolean; members: number; played: number; best: number | null; leaders: string[] | null };
 export type Chronicle = { week: string; body: { headline: string; dek: string; items: { title: string; body: string }[]; signoff: string } };
 export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
-// a member's mini golf hole from the Design Desk (spec: src/designer/spec.ts HoleSpec)
-export type Design = { id: number; prompt: string; spec: import('../designer/spec').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string };
-export type MembersHole = { id: number; spec: import('../designer/spec').HoleSpec; par: number; by: string };
+// a member's golf hole from the Design Desk (spec: src/designer/hole.ts HoleSpec)
+export type Design = { id: number; prompt: string; spec: import('../designer/hole').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string };
+export type MembersHole = { id: number; spec: import('../designer/hole').HoleSpec; par: number; by: string };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {

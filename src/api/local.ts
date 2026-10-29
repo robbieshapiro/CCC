@@ -6,6 +6,7 @@ import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
+import { SAMPLES } from '../designer/samples';
 import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyDay, type DailyRow, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
@@ -649,23 +650,9 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
   },
 };
 
-// the stand-in architect's hole: a night dogleg with a coffin shortcut and a ghost, or a sunny straight one with a
-// pendulum if the description mentions the day
+// the stand-in architect's hole: one of the samples, in the look the description mentions
 function sampleSpec(prompt: string, change?: string): Design['spec'] {
-  const day = /day|sun|garden/i.test(`${prompt} ${change ?? ''}`);
-  return day
-    ? {
-        name: 'The Swinging Gate', look: 'day', shape: 'straight', length: 70, width: 16, cup: { along: 0.92, across: 0.2 },
-        slopes: [{ kind: 'dip', along: 0.92, across: 0.2, size: 'small' }], obstacles: [{ kind: 'tree', along: 0.25, across: -0.5 }, { kind: 'stone', along: 0.7, across: 0.5 }],
-        fences: [], hazards: [{ from: 0.35, to: 0.6, left: -1, right: 1, bridge: true }],
-        gimmicks: [{ kind: 'pendulum', along: 0.48, across: 0, speed: change ? 'slow' : 'medium', to_along: 0, to_across: 0 }],
-        review: 'A pond, a plank and a blade. The Committee calls it character building.', hint: 'Wait for the blade to swing wide, then roll it across the plank.',
-      }
-    : {
-        name: 'Grave Matters', look: 'night', shape: 'dogleg-right', length: 80, width: 16, cup: { along: 0.95, across: 0 },
-        slopes: [{ kind: 'dip', along: 0.95, across: 0, size: 'small' }], obstacles: [{ kind: 'stone', along: 0.3, across: -0.4 }, { kind: 'stone', along: 0.42, across: 0.45 }],
-        fences: [], hazards: [],
-        gimmicks: [{ kind: 'ghost', along: 0.8, across: 0, speed: change ? 'slow' : 'medium', to_along: 0, to_across: 0 }, { kind: 'tunnel', along: 0.55, across: -0.6, speed: 'medium', to_along: 0.88, to_across: 0.3 }],
-        review: 'Round the corner, past a ghost, or down a hole in the ground. Most members choose the hole.', hint: 'Bank off the far wall at the corner, or find the tunnel on the left.',
-      };
+  const text = `${prompt} ${change ?? ''}`.toLowerCase();
+  const look = /desert|cact|canyon|mesa/.test(text) ? 'desert' : /links|sea|dune|scotland|wind/.test(text) ? 'links' : /lava|volcan|caldera|island/.test(text) ? 'caldera' : 'highlands';
+  return { ...SAMPLES[look] };
 }

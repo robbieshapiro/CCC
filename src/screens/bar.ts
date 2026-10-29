@@ -4,6 +4,7 @@
 import { api } from '../api';
 import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
 import { gameName, scoreLabel, type BarGame } from '../bar';
+import { isHole } from '../designer/desk';
 import { bestTry, dailyShot, resultLabel } from '../daily';
 import { MO, staffChip } from '../staff';
 import { requireSession } from '../state';
@@ -33,7 +34,7 @@ export function barPane(snap: Snapshot) {
         <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings · this week</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game members" href="#/bar/members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
-      <a class="desk-cta" href="#/design"><i>✏️</i><div><b>Design a hole</b><span>Describe it, the architect draws it, you play it</span></div><em>›</em></a>
+      <a class="desk-cta" href="#/design"><i>✏️</i><div><b>Design a hole</b><span>Describe a golf hole. The architect builds it, you play it</span></div><em>›</em></a>
     </div>`;
 }
 
@@ -44,7 +45,7 @@ export async function fillBar(snap: Snapshot) {
     api.barBoard(s, 'minigolf').catch(() => null as BarBoard | null),
     api.barBoard(s, 'drive').catch(() => null as BarBoard | null),
     api.barBoard(s, 'members').catch(() => null as BarBoard | null),
-    api.membersCourse(s).catch(() => [] as MembersHole[]),
+    api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => [] as MembersHole[]),
   ]);
   // the Members' Course: how many holes this week, and until there are any, a way to build the first
   const card = document.querySelector<HTMLAnchorElement>('[data-members]');

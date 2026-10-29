@@ -23,7 +23,8 @@ import { HANK } from '../staff';
 import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
 import { HOLLOW_HILLS } from '../golf3d/minigolf';
-import { buildHole } from '../designer/spec';
+import { buildHole } from '../designer/hole';
+import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
 import { dailySummary } from './daily';
@@ -255,8 +256,8 @@ export async function dailyRound(snap: Snapshot) {
 
 // The Members' Course: the approved holes from the Design Desk, each flying its designer's name on the flag
 async function membersHoles(): Promise<Hole[]> {
-  const list = await api.membersCourse(requireSession()).catch(() => []);
-  return list.map((m) => ({ ...buildHole(m.spec, `members-${m.id}`).hole, par: m.par, flag: m.by.slice(0, 9) }));
+  const list = (await api.membersCourse(requireSession()).catch(() => [])).filter(isHole);
+  return list.map((m) => buildHole(m.spec, `members-${m.id}`, m.by.slice(0, 9)).hole);
 }
 
 // Try a hole from the Design Desk (or the Committee's queue): one hole, nothing counts, then back
@@ -280,7 +281,7 @@ export function testHole(snap: Snapshot, hole: Hole, back: () => void) {
   }
   game = g;
   g.leaveText = 'Back';
-  g.howTo = 'minigolf';
+  g.howTo = hole.putterOnly ? 'minigolf' : 'round';
   const go = async () => {
     const r = await g.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
     if (game !== g) return;
@@ -324,7 +325,7 @@ export function barRound(snap: Snapshot, kind: BarGame) {
   const again = () => barRound(snap, kind);
   if (kind === 'minigolf' || kind === 'members') {
     // six holes of Hollow Hills, or the members' own holes (up to nine): putter only, fewest strokes counts
-    g.howTo = 'minigolf';
+    g.howTo = kind === 'minigolf' ? 'minigolf' : 'round';
     g.starter = kind === 'minigolf' ? `Six holes, ${me.name}. Mind the scythe.` : `Your fellow members built these, ${me.name}. Blame them.`;
     void (async () => {
       const holes = kind === 'minigolf' ? HOLLOW_HILLS : await membersHoles();

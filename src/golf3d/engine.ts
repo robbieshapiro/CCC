@@ -72,6 +72,14 @@ function nameTag(name: string, score: string) {
   return s;
 }
 
+type Look = 'day' | 'night' | 'links' | 'desert';
+const LOOKS: Record<Look, { sky: string; ground: string; hemi: number; sunColor: string; sun: number; fog: string; near: number; far: number; env: number }> = {
+  day: { sky: '#d6e8f5', ground: '#46612f', hemi: 1.25, sunColor: '#ffeccc', sun: 2.6, fog: '#e3ebe2', near: 420, far: 1300, env: 1 },
+  night: { sky: '#6f63a8', ground: '#231a33', hemi: 1.1, sunColor: '#aebcff', sun: 1.5, fog: '#24163a', near: 90, far: 620, env: 0.35 },
+  links: { sky: '#c9d3d8', ground: '#7a7350', hemi: 1.45, sunColor: '#f1ede2', sun: 1.7, fog: '#cfd5d3', near: 300, far: 1150, env: 0.8 },
+  desert: { sky: '#d9ecf8', ground: '#a07a4a', hemi: 1.2, sunColor: '#ffe2b0', sun: 3.0, fog: '#efe0c4', near: 450, far: 1500, env: 1 },
+};
+
 // a soft round glow, for the moon's halo
 function glowTexture(color: string) {
   const c = document.createElement('canvas');
@@ -150,8 +158,10 @@ export class Course3D {
   private camera = new THREE.PerspectiveCamera(55, 1, 0.5, 2600);
   private sun = new THREE.DirectionalLight('#ffeccc', 2.6);
   private hemi = new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25);
-  // day (the courses) or night (the haunted mini golf): sky, sun or moon, light and fog
-  private skies: { day: THREE.Object3D[]; night: THREE.Object3D[] } = { day: [], night: [] };
+  // the sky for each kind of country: day (the courses), night (the haunted mini golf), an overcast links and a hot
+  // desert: sky, sun or moon, light and fog
+  private skies: Record<Look, THREE.Object3D[]> = { day: [], night: [], links: [], desert: [] };
+  private look: Look | null = null;
   private night = false;
   private world: World | null = null;
   private hole!: Hole;
@@ -379,7 +389,8 @@ export class Course3D {
     this.drawTrail();
     this.placeBall();
     this.sharpen(!!hole.tour);
-    if (this.night !== (hole.theme === 'haunted')) this.setNight(hole.theme === 'haunted');
+    const look: Look = hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : 'day';
+    if (this.look !== look) this.setLook(look);
     this.fitShadows();
     this.petalsFor(hole);
     this.hud(total);
@@ -432,24 +443,33 @@ export class Course3D {
     const sg = new THREE.BufferGeometry();
     sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 2.2, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.8 }));
-    this.skies = { day: [day, sun], night: [night, moon, stars] };
-    for (const o of [...this.skies.day, ...this.skies.night]) this.scene.add(o);
-    this.setNight(false);
+    // links: a low grey sky, the sun a pale disc behind the cloud. Desert: a hard blue sky, a white-hot sun
+    const links = this.skyMesh(1, ['#7f8f9c', '#aab5bc', '#d9dcd6']);
+    const pale = new THREE.Mesh(new THREE.SphereGeometry(46, 16, 10), new THREE.MeshBasicMaterial({ color: '#e9e6da', fog: false, transparent: true, opacity: 0.55 }));
+    pale.position.set(-900, 620, 1200);
+    const desert = this.skyMesh(1, ['#2f7fcf', '#8fc1e8', '#f1dcb4']);
+    const hot = new THREE.Mesh(new THREE.SphereGeometry(44, 16, 10), new THREE.MeshBasicMaterial({ color: '#fffbea', fog: false }));
+    hot.position.set(-700, 900, 1100);
+    this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot] };
+    for (const o of Object.values(this.skies).flat()) this.scene.add(o);
+    this.setLook('day');
   }
 
-  // The haunted mini golf is played by moonlight: cold blue light, a purple fog close in, no clouds. Bats, not birds.
-  private setNight(on: boolean) {
-    this.night = on;
-    this.skies.day.forEach((o) => (o.visible = !on));
-    this.skies.night.forEach((o) => (o.visible = on));
-    this.clouds.forEach((c) => (c.visible = !on));
-    this.hemi.color.set(on ? '#6f63a8' : '#d6e8f5');
-    this.hemi.groundColor.set(on ? '#231a33' : '#46612f');
-    this.hemi.intensity = on ? 1.1 : 1.25;
-    this.sun.color.set(on ? '#aebcff' : '#ffeccc');
-    this.sun.intensity = on ? 1.5 : 2.6;
-    this.scene.fog = on ? new THREE.Fog('#24163a', 90, 620) : new THREE.Fog('#e3ebe2', 420, 1300);
-    this.scene.environmentIntensity = on ? 0.35 : 1;
+  // Sky, light and fog for the country the hole is in. The haunted mini golf is played by moonlight: cold blue light,
+  // a purple fog close in, no clouds, bats not birds. Links: soft grey light and sea haze. Desert: hard warm light.
+  private setLook(look: Look) {
+    this.look = look;
+    this.night = look === 'night';
+    for (const [k, objs] of Object.entries(this.skies)) objs.forEach((o) => (o.visible = k === look));
+    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links'));
+    const L = LOOKS[look];
+    this.hemi.color.set(L.sky);
+    this.hemi.groundColor.set(L.ground);
+    this.hemi.intensity = L.hemi;
+    this.sun.color.set(L.sunColor);
+    this.sun.intensity = L.sun;
+    this.scene.fog = new THREE.Fog(L.fog, L.near, L.far);
+    this.scene.environmentIntensity = L.env;
   }
 
   // Tour courses draw at the phone's full resolution, with finer shadows. The frame-rate guard in the loop still
