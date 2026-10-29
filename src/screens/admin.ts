@@ -8,7 +8,8 @@ import { courseById, upcoming } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { store } from '../storage';
-import { buildHole, tidy } from '../designer/spec';
+import { buildHole, tidy } from '../designer/hole';
+import { isHole } from '../designer/desk';
 import { planCanvas } from '../designer/plan';
 import { testHole } from './round';
 import { esc, header, navigate, render } from '../ui';
@@ -79,19 +80,19 @@ export function admin(snap: Snapshot) {
   void loadHoles(snap);
 }
 
-// Members' holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
+// Members' golf holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
 // already on the Members' Course (which can come off)
 async function loadHoles(snap: Snapshot) {
   const el = document.getElementById('adm-holes');
   if (!el) return;
-  const list = await api.designQueue(requireSession()).catch(() => [] as Design[]);
+  const list = (await api.designQueue(requireSession()).catch(() => [] as Design[])).filter(isHole);
   el.hidden = !list.length;
   if (!list.length) return;
   const waiting = list.filter((d) => d.status === 'submitted');
   const live = list.filter((d) => d.status === 'approved');
   const row = (d: Design) => {
     const spec = tidy(d.spec);
-    return `<li data-design="${d.id}"><div class="adm-hole-plan"></div><div><b>${esc(spec.name)}</b> <small>by ${esc(d.by ?? '?')}${d.club ? ` · ${esc(d.club)}` : ''} · par ${d.par ?? 3}</small>
+    return `<li data-design="${d.id}"><div class="adm-hole-plan"></div><div><b>${esc(spec.name)}</b> <small>by ${esc(d.by ?? '?')}${d.club ? ` · ${esc(d.club)}` : ''} · par ${spec.par}, ${spec.yards} yd · ${esc(spec.look)}</small>
       <p>${esc(d.prompt)}</p>
       <div class="adm-chips"><button data-hole-play>Play it</button>${d.status === 'submitted' ? '<button data-hole-ok class="on">Approve</button><button data-hole-no>Not this one</button>' : '<button data-hole-no>Take it off</button>'}</div></div></li>`;
   };
@@ -102,7 +103,7 @@ async function loadHoles(snap: Snapshot) {
     const li = el.querySelector<HTMLElement>(`[data-design="${d.id}"]`)!;
     const { hole } = buildHole(d.spec, `review-${d.id}`);
     li.querySelector('.adm-hole-plan')!.appendChild(planCanvas(hole, 96));
-    li.querySelector<HTMLButtonElement>('[data-hole-play]')!.onclick = () => testHole(snap, { ...hole, par: d.par ?? 3 }, () => navigate('#/admin'));
+    li.querySelector<HTMLButtonElement>('[data-hole-play]')!.onclick = () => testHole(snap, hole, () => navigate('#/admin'));
     li.querySelector<HTMLButtonElement>('[data-hole-ok]')?.addEventListener('click', async () => {
       await api.reviewDesign(requireSession(), d.id, true);
       void loadHoles(snap);

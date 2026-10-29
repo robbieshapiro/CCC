@@ -1,9 +1,9 @@
-// The Design Desk's helpers: ask the architect (api/design.ts, or a stock hole in local mode) and have the test
-// golfer try the result (check.worker.ts).
+// The Design Desk's helpers: ask the architect (api/design.ts, or a stock hole in local mode), and build and check
+// what comes back.
 import { localApi, useSupabase } from '../api';
+import type { Design } from '../api/types';
 import { requireSession } from '../state';
-import type { HoleSpec } from './spec';
-import type { TryResult } from './check.worker';
+import { buildHole, checkHole, type Check, type HoleSpec } from './hole';
 
 export type DesignReply = { id: number; spec: HoleSpec } | { error: string };
 
@@ -22,22 +22,11 @@ export async function askArchitect(args: { prompt: string } | { id: number; chan
   }
 }
 
-export function tryHole(spec: HoleSpec): Promise<TryResult> {
-  return new Promise((resolve) => {
-    const w = new Worker(new URL('./check.worker.ts', import.meta.url), { type: 'module' });
-    const done = (r: TryResult) => {
-      w.terminate();
-      resolve(r);
-    };
-    const timer = window.setTimeout(() => done({ ok: true, strokes: 0, par: 3, reason: '', warnings: ['The test golfer took too long; par set at 3.'] }), 90000);
-    w.onmessage = (e: MessageEvent<TryResult>) => {
-      window.clearTimeout(timer);
-      done(e.data);
-    };
-    w.onerror = () => {
-      window.clearTimeout(timer);
-      done({ ok: true, strokes: 0, par: 3, reason: '', warnings: ["The test golfer couldn't play it here; par set at 3."] });
-    };
-    w.postMessage(spec);
-  });
+// build it and run the quick check
+export function tryHole(spec: HoleSpec, id = 'draft'): Check & { warnings: string[] } {
+  const { hole, warnings } = buildHole(spec, id);
+  return { ...checkHole(hole, spec), warnings };
 }
+
+// the Design Desk only builds full holes now; the early mini golf drafts are left out
+export const isHole = (d: Pick<Design, 'spec'>) => (d.spec as { kind?: string } | null)?.kind === 'hole';
