@@ -784,3 +784,38 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .g3-howto-card li b { font-size: 17px; }
 .g3-howto-card li span { color: var(--muted); font-size: 14px; }
 .g3-howto-card .btn { width: 100%; font-size: 16px; padding: 13px; }
+
+/* The Play page: Reginald and one big button up top, small tiles under it. Light motion: things settle in, Reginald
+   nods now and then. */
+.play-hero { display: grid; gap: 18px; padding: 20px; margin-bottom: 14px; border-radius: 12px; background: var(--green); color: var(--cream); box-shadow: 0 10px 30px rgba(22, 59, 44, 0.25); animation: rise 0.45s ease-out both; }
+.play-hero.volcanic { background: linear-gradient(160deg, #2a0f08, #4a1a0c 60%, #7a2c10); }
+.play-reg { display: flex; align-items: center; gap: 14px; }
+.play-reg p { margin: 0; font-size: 15px; line-height: 1.45; color: #efe6d2; }
+.play-reg b { color: #f0dcae; font-family: var(--serif); font-size: 18px; margin-right: 4px; }
+.host-face.big { width: 72px; height: 72px; border-width: 2px; }
+.host-face.big svg { animation: nod 7s ease-in-out infinite; transform-origin: 50% 80%; }
+.play-main .eyebrow { color: #e6cf9f; }
+.play-main h1 { margin: 2px 0 2px; font-family: var(--serif); font-size: clamp(32px, 8vw, 44px); line-height: 1.05; color: var(--cream); }
+.play-main .muted { color: #cbbf9f; margin: 0 0 14px; }
+.play-main .muted b { color: #fff; }
+.btn.big { display: block; width: 100%; text-align: center; font-size: 18px; padding: 16px; border-radius: 10px; background: var(--gold); color: var(--green); border-color: var(--gold); }
+.play-hero.volcanic .btn.big { background: #e8501c; border-color: #e8501c; color: #fff; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.tile { position: relative; display: grid; gap: 2px; padding: 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); text-decoration: none; animation: rise 0.45s ease-out both; transition: transform 0.15s, box-shadow 0.15s; }
+.tile:nth-child(2) { animation-delay: 0.08s; }
+.tile:nth-child(3) { animation-delay: 0.16s; }
+.tile:nth-child(4) { animation-delay: 0.24s; }
+.tile:active { transform: scale(0.97); }
+.tile:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+.tile[hidden] { display: none; }
+.tile i { font-style: normal; font-size: 24px; }
+.tile b { font-family: var(--serif); font-size: 18px; color: var(--green); line-height: 1.15; }
+.tile span { font-size: 13px; color: var(--muted); }
+.tile.volcanic { background: linear-gradient(160deg, #2a0f08, #5a1f0c); border-color: #7a2c10; }
+.tile.volcanic b { color: #ffd9b0; }
+.tile.volcanic span { color: #e6b38a; }
+.tile-badge { position: absolute; top: 10px; right: 10px; font-style: normal; font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #fff2dc; border: 1px solid #f0c98a; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes nod { 0%, 88%, 100% { transform: rotate(0deg); } 91% { transform: rotate(-4deg) translateY(1px); } 94% { transform: rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .play-hero, .tile, .host-face.big svg { animation: none; } }
+.btn.big:hover { background: #c9a56a; }

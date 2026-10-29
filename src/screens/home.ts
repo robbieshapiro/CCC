@@ -1,13 +1,11 @@
 import { localApi, useSupabase } from '../api';
 import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
-import { crest } from '../brand';
 import { featById } from '../feats';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { GAME_TZ, monthClosesAt } from '../day';
-import { hostChip, REGINALD, type Mood } from '../host';
+import { REGINALD, reginaldSvg, type Mood } from '../host';
 import { openFeedback } from './feedback';
-import { facilityPanel } from './practice';
 import { bindOpen } from './open';
 import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
@@ -32,7 +30,7 @@ export function home(snap: Snapshot) {
   const mine = myBest(snap);
   const me = rows.find((r) => r.playerId === snap.me)!;
 
-  let line = REGINALD.course(course.name, course.par);
+  let line = REGINALD.course(course.name, course.holes.length, course.par);
   let mood: Mood = 'dry';
   if (!played.length) line = `${line} ${REGINALD.nobody(snap.today)}`;
   else if (!mine) line = REGINALD.notYet(played.length);
@@ -73,22 +71,20 @@ export function home(snap: Snapshot) {
     ${header(snap.groupName, 'month')}
     <main>
       ${noticesStrip()}
-      ${launchHero(snap.month)}
-      ${dailyCard()}
-      ${hostChip(line, mood, 'reg-line')}
-      <section class="course-card${nextCourse(snap.month) ? ' secondary' : ''}${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
-        <div class="course-crest">${crest(78, 'cc')}</div>
-        <div class="course-body">
+      <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
+        <div class="play-reg"><span class="host-face big">${reginaldSvg(mood, 72)}</span><p id="reg-line"><b>Reginald</b> ${line}</p></div>
+        <div class="play-main">
           <p class="eyebrow">${monthName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
-          <p class="muted">${esc(course.tagline)}</p>
-          <ol class="hole-list">${course.holes.map((h, i) => `<li><span>${i + 1}</span><b>${esc(h.name)}</b><em>Par ${h.par}</em></li>`).join('')}</ol>
-          <div class="course-cta">
-            <a class="btn" href="#/round">${mine ? 'Play another round' : `Play ${esc(shortName(course))}`}</a>
-            <span class="muted">${mine ? `Your best: <b>${mine.total}</b> (${toParLabel(mine.total - mine.par)})` : `Par ${course.par} · best round of the month counts`}</span>
-          </div>
+          <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
+          <a class="btn big" href="#/round">${mine ? 'Play again' : 'Play'}</a>
         </div>
       </section>
+      <div class="tiles">
+        ${dailyCard()}
+        ${previewTile(snap.month)}
+        <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
+      </div>
       <section class="board">
         ${countdown(snap.month, course)}
         <div class="board-head"><h2>The Board</h2><span>${monthName(snap.month)} · best round counts</span></div>
@@ -104,7 +100,6 @@ export function home(snap: Snapshot) {
           </tbody>
         </table></div></div>
       </section>
-      ${facilityPanel()}
       <section class="plaque">
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
@@ -150,7 +145,8 @@ function tickCountdown() {
       el.classList.toggle('final', left < 3_600_000);
       if (left <= 0) {
         out.textContent = el.dataset.done ? '' : 'Closed';
-        el.querySelector('small')!.textContent = el.dataset.done ?? 'The champion is being crowned.';
+        const note = el.querySelector('small');
+        if (note) note.textContent = el.dataset.done ?? 'The champion is being crowned.';
         continue;
       }
       const s = Math.floor(left / 1000);
@@ -168,24 +164,10 @@ const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 
 // The headline at the top of the home page: the next course's Open, counting down to its first day, with its practice
 // preview as the main button. Volcanic courses get the red glow.
-function launchHero(month: string) {
+function previewTile(month: string) {
   const next = nextCourse(month);
   if (!next) return '';
-  const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
   const starts = monthClosesAt(month);
-  const day = starts.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'long', day: 'numeric' });
-  return `
-    <section class="launch-hero${next.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
-      <p class="eyebrow">Opens ${esc(day)} · ${next.holes.length} holes · par ${next.par}</p>
-      <h1>${esc(shortName(next))} Open</h1>
-      <div class="hero-clock" data-countdown="${starts.getTime()}" data-done="It's open. Tee off.">
-        <span>Begins in</span><b data-left>…</b><small></small>
-      </div>
-      <p class="hero-tag">${esc(next.tagline)}</p>
-      <div class="hero-cta">
-        <a class="btn lava" href="#/practice/${next.id}">Play the preview</a>
-        <span>Try ${n} holes now. Counts from ${esc(day)}.</span>
-      </div>
-    </section>`;
+  return `<a class="tile${next.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}" href="#/practice/${next.id}"><i>🌋</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
 }
 

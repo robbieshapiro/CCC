@@ -46,18 +46,6 @@ export function facility() {
     </main>`);
 }
 
-// On the home page, for everyone: the way to the range.
-export function facilityPanel() {
-  return `
-    <section class="panel coming-soon facility-panel">
-      <div>
-        <p class="eyebrow">Practice facility</p>
-        <h2>Range &amp; short game</h2>
-        <p class="muted">Nothing counts. Just practice.</p>
-      </div>
-      <a class="btn" href="#/facility">Hit the range</a>
-    </section>`;
-}
 
 const KIND: Record<PracticeKind, string> = { caldera: 'Caldera practice', range: 'Range', shortgame: 'Short game' };
 const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });

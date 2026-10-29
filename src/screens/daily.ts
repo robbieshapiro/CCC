@@ -39,9 +39,9 @@ function board(state: DailyState, top = 5) {
     .join('')}</ol>`;
 }
 
-// the card on the home page, filled in once the day's state loads
+// the tile on the Play page, filled in once the day's state loads: today's shot and where you stand
 export function dailyCard() {
-  return `<section class="daily-card" id="daily-card" hidden></section>`;
+  return `<a class="tile daily" id="daily-card" href="#/daily" hidden></a>`;
 }
 
 export async function bindDaily(day: string) {
@@ -51,22 +51,17 @@ export async function bindDaily(day: string) {
   if (!state || !document.getElementById('daily-card')) return; // no SQL yet, or left the page
   const shot = dailyShot(day);
   const left = DAILY_TRIES - state.mine.length;
-  const best = bestTry(state.mine);
+  const rank = state.board.findIndex((r) => r.mine) + 1;
+  const status = !state.mine.length
+    ? `${shot.yards} yd · 3 tries`
+    : left
+      ? `Best ${resultLabel(bestTry(state.mine))} · ${left} ${left === 1 ? 'try' : 'tries'} left`
+      : `Best ${resultLabel(bestTry(state.mine))}${rank ? ` · ${ordinal(rank)} of ${state.players}` : ''}`;
   el.hidden = false;
-  el.innerHTML = `
-    <div class="daily-head">
-      <div><p class="eyebrow">Closest to the Pin · #${shot.number}</p><h2>${esc(shot.label)}</h2></div>
-      ${state.streak ? `<span class="daily-streak" title="Days in a row">🔥 ${state.streak}</span>` : ''}
-    </div>
-    <p class="muted">A new shot every day. 3 tries, closest wins.</p>
-    ${state.mine.length ? `<p class="daily-mine">${state.mine.map(tryMark).join(' ')} <span>Your best: <b>${resultLabel(best)}</b></span></p>` : ''}
-    <div class="daily-actions">
-      ${left ? `<a class="btn" href="#/daily">${state.mine.length ? `Take try ${state.mine.length + 1} of ${DAILY_TRIES}` : 'Take your shot'}</a>` : `<button class="btn ghost" data-daily-share>${canShare() ? 'Share' : 'Copy result'}</button>`}
-      <span class="muted">${state.players} ${state.players === 1 ? 'player' : 'players'} today</span>
-    </div>
-    ${board(state)}`;
-  el.querySelector<HTMLButtonElement>('[data-daily-share]')?.addEventListener('click', (e) => void share(shareText(day, state.mine), e.currentTarget as HTMLButtonElement));
+  el.innerHTML = `<i>🎯</i><b>Closest to the Pin</b><span>${esc(status)}</span>${state.streak ? `<em class="tile-badge">🔥 ${state.streak}</em>` : ''}`;
 }
+
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 
 // after the last try: how it went, the board, and the share
 export async function dailySummary(day: string, onClose: () => void) {
