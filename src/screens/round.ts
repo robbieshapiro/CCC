@@ -20,6 +20,9 @@ import { shortgame, STATIONS } from '../golf3d/practice/shortgame';
 import { scoreClass } from './home';
 import { DAILY_TRIES, dailyShot } from '../daily';
 import { HANK } from '../staff';
+import { DRIVES, driveYards, PUTTS, puttingScore, puttingSpots, weekOf, type BarGame } from '../bar';
+import { barSummary } from './bar';
+import { SCALE } from '../golf3d/clubs';
 import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
@@ -233,4 +236,72 @@ export async function dailyRound(snap: Snapshot) {
       return false;
     },
   });
+}
+
+// The bar's weekly contests: five putts on the practice green, or three swings off the range tee. The week's best
+// counts; play as often as you like.
+export function barRound(snap: Snapshot, kind: BarGame) {
+  closeRound();
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const back = () => {
+    closeRound();
+    navigate('#/bar');
+  };
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  let g: Course3D;
+  try {
+    g = new Course3D(el, me.avatar, back);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/bar">Back to the bar</a></main>`);
+    return;
+  }
+  game = g;
+  g.leaveText = 'Leave';
+  g.howTo = 'practice';
+  const again = () => barRound(snap, kind);
+  if (kind === 'putting') {
+    const spots = puttingSpots(weekOf(snap.today));
+    let made = 0;
+    let left = 0;
+    let n = 0;
+    g.practiceArea(shortgame, {
+      title: 'Putting contest',
+      eyebrow: 'The Nineteenth Hole',
+      stations: spots,
+      advance: true,
+      tag: () => `Putt ${n + 1} of ${PUTTS}`,
+      report: (r) => (r.holed ? 'In!' : r.lost ? 'Off the green' : `${Math.round(Math.hypot(r.end.x - shortgame.cup.x, r.end.y - shortgame.cup.y) * SCALE)} ft left`),
+      onResult: (r) => {
+        n++;
+        if (r.holed) made++;
+        else left += r.ft ?? 30;
+        if (n < PUTTS) return true;
+        const score = puttingScore(made, left);
+        void api.submitBar(requireSession(), 'putting', score).catch(() => {}).finally(() => window.setTimeout(() => void barSummary('putting', score, again, back), 1200));
+        return false;
+      },
+    });
+  } else {
+    let best: number | null = null;
+    let n = 0;
+    g.practiceArea(range, {
+      title: 'Long drive',
+      eyebrow: 'The Nineteenth Hole',
+      stations: [{ name: `${DRIVES} swings, longest in play`, at: range.tee }],
+      tag: () => `Swing ${n + 1} of ${DRIVES}`,
+      report: (r) => (r.lost ? 'Out of play' : `${driveYards(r.from, r.end)} yd`),
+      onResult: (r) => {
+        n++;
+        if (!r.lost) best = Math.max(best ?? 0, driveYards(r.from, r.end));
+        if (n < DRIVES) return true;
+        const done = () => window.setTimeout(() => void barSummary('drive', best, again, back), 1200);
+        if (best === null) done();
+        else void api.submitBar(requireSession(), 'drive', best).catch(() => {}).finally(done);
+        return false;
+      },
+    });
+  }
 }

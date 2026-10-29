@@ -83,6 +83,7 @@ export function home(snap: Snapshot) {
       <div class="tiles">
         ${dailyCard()}
         ${previewTile(snap.month)}
+        <a class="tile" href="#/bar"><i>🍺</i><b>The bar</b><span>Putting · long drive</span></a>
         <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
       </div>
       <section class="board">

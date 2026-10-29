@@ -819,3 +819,29 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 @keyframes nod { 0%, 88%, 100% { transform: rotate(0deg); } 91% { transform: rotate(-4deg) translateY(1px); } 94% { transform: rotate(2deg); } }
 @media (prefers-reduced-motion: reduce) { .play-hero, .tile, .host-face.big svg { animation: none; } }
 .btn.big:hover { background: #c9a56a; }
+
+/* The Nineteenth Hole: dark wood and brass, Mo behind the bar, the games on the wall */
+.bar-page { display: grid; gap: 14px; }
+.bar-head { padding: 18px; border-radius: 12px; background: linear-gradient(160deg, #2b1d14, #3d2a1c 60%, #4a3322); color: #f3e6cf; animation: rise 0.45s ease-out both; }
+.bar-head .eyebrow { color: #d9b77a; }
+.bar-head h1 { margin: 2px 0 12px; font-family: var(--serif); font-size: 36px; color: #f3e6cf; }
+.bar-head .host-chip p { color: #ecdcc0; }
+.bar-head .host-chip p b { color: #f0c98a; font-family: var(--serif); font-size: 18px; }
+.bar-games { display: grid; gap: 10px; }
+.bar-game { display: grid; grid-template-columns: 40px 1fr; gap: 4px 12px; padding: 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); text-decoration: none; animation: rise 0.45s ease-out both; transition: transform 0.15s; }
+.bar-game:nth-child(2) { animation-delay: 0.08s; }
+.bar-game:nth-child(3) { animation-delay: 0.16s; }
+.bar-game:active { transform: scale(0.98); }
+.bar-game > i { font-style: normal; font-size: 28px; grid-row: span 2; align-self: start; }
+.bar-game > div:first-of-type { display: grid; }
+.bar-game b { font-family: var(--serif); font-size: 20px; color: var(--green); }
+.bar-game span { font-size: 13px; color: var(--muted); }
+.bar-game > p { grid-column: 2; margin: 2px 0 0; font-weight: 800; font-size: 14px; color: #8a6a3e; }
+.bar-game > div[data-board] { grid-column: 2; }
+.bar-top { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
+.bar-top li { display: grid; grid-template-columns: 24px 1fr auto; gap: 6px; font-size: 14px; }
+.bar-top li.me b { color: #8a6a3e; }
+.bar-top em { font-style: normal; font-weight: 700; }
+.bar-empty { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+.staff-face { display: block; }
+@media (prefers-reduced-motion: reduce) { .bar-head, .bar-game { animation: none; } }

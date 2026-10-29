@@ -31,7 +31,10 @@ export type Drill = {
   wind?: Conditions;
   tag?: () => string;
   eyebrow?: string;
-  onResult?: (r: { ft: number | null; holed: boolean; lost: boolean }) => boolean;
+  onResult?: (r: { ft: number | null; holed: boolean; lost: boolean; from: V2; end: V2 }) => boolean;
+  // bar games: move on to the next spot after each shot, and say how it went in your own words
+  advance?: boolean;
+  report?: (r: { holed: boolean; lost: boolean; from: V2; end: V2 }) => string;
 };
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
 // A member who played today, standing where their tee shot finished on each hole.
@@ -1238,11 +1241,22 @@ export class Course3D {
       const d = Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y);
       const lost = r.penalty ? this.lost(last, s.clock + r.duration) : '';
       if (this.drill?.targets) this.rangeReport(s.from, r, lost);
-      else this.callout(r.holed ? 'In the hole!' : lost || `${away(d, surfaceAt(this.hole, last) === 'green')} from the pin`, this.drill?.tag?.() ?? 'Practice', 1600);
-      const more = this.drill?.onResult?.({ ft: r.penalty || r.holed ? (r.holed ? 0 : null) : Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y) * SCALE * 10) / 10, holed: r.holed, lost: r.penalty });
+      else {
+        const said = this.drill?.report?.({ holed: r.holed, lost: r.penalty, from: s.from, end: last });
+        this.callout(said ?? (r.holed ? 'In the hole!' : lost || `${away(d, surfaceAt(this.hole, last) === 'green')} from the pin`), this.drill?.tag?.() ?? 'Practice', 1600);
+      }
+      const more = this.drill?.onResult?.({ ft: r.penalty || r.holed ? (r.holed ? 0 : null) : Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y) * SCALE * 10) / 10, holed: r.holed, lost: r.penalty, from: s.from, end: { x: last.x, y: last.y } });
       if (more === false) {
         this.mode = 'done';
         return;
+      }
+      // a contest moves you on to the next spot, lined up on the pin
+      if (this.drill?.advance) {
+        this.drill.at = (this.drill.at + 1) % this.drill.stations.length;
+        const el = this.overlay.querySelector('[data-station-name]');
+        if (el) el.textContent = this.drill.stations[this.drill.at].name;
+        const at = this.drill.stations[this.drill.at].at;
+        this.aim = Math.atan2(this.hole.cup.x - at.x, this.hole.cup.y - at.y);
       }
       this.pos = this.drill ? { ...this.drill.stations[this.drill.at].at } : { ...this.hole.tee };
       this.placeBall();

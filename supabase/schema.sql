@@ -759,3 +759,56 @@ end $$;
 grant execute on function submit_daily(uuid, date, int, numeric, boolean, boolean) to anon;
 grant execute on function daily_state(uuid, date) to anon;
 grant execute on function daily_admin(uuid) to anon;
+
+-- The Nineteenth Hole's weekly contests: putting and long drive. Every score is kept; the week's best per person
+-- counts (higher is better), and the week runs Monday to Sunday, Eastern. One person across clubs is the same name
+-- and PIN hash, as on the Open.
+create table if not exists bar_scores (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  game text not null check (game in ('putting', 'drive')),
+  week date not null,
+  score numeric(8, 1) not null,
+  created_at timestamptz not null default now()
+);
+alter table bar_scores enable row level security;
+create index if not exists bar_scores_week on bar_scores (game, week);
+
+create or replace function submit_bar(p_token uuid, p_game text, p_score numeric) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if p_game not in ('putting', 'drive') then raise exception 'No such game.'; end if;
+  -- a long drive is 0 to 450 yd; a putting score is made x 1000 less feet left, 5 putts at most
+  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'putting' and p_score not between -999 and 5000) then
+    raise exception 'That score doesn''t look right.';
+  end if;
+  insert into bar_scores (player_id, game, week, score)
+    values (me.id, p_game, date_trunc('week', now() at time zone 'America/New_York')::date, p_score);
+end $$;
+
+create or replace function bar_board(p_token uuid, p_game text) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); wk date := date_trunc('week', now() at time zone 'America/New_York')::date;
+begin
+  return (
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name
+      from players p order by lower(p.name), p.pin_hash, p.created_at
+    ), best as (
+      select lower(p.name) as k, p.pin_hash as h, max(b.score) as score, min(b.created_at) as first_at
+      from bar_scores b join players p on p.id = b.player_id
+      where b.game = p_game and b.week = wk group by lower(p.name), p.pin_hash
+    )
+    select json_build_object(
+      'week', wk,
+      'board', coalesce((select json_agg(json_build_object('name', pe.name, 'score', b.score, 'mine', b.k = lower(me.name) and b.h = me.pin_hash)
+        order by b.score desc, b.first_at) from best b join people pe on pe.k = b.k and pe.h = b.h), '[]'),
+      'mine', (select score from best where k = lower(me.name) and h = me.pin_hash),
+      'players', (select count(*) from best)
+    )
+  );
+end $$;
+
+grant execute on function submit_bar(uuid, text, numeric) to anon;
+grant execute on function bar_board(uuid, text) to anon;
