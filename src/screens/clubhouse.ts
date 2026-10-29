@@ -1,7 +1,8 @@
-// The Clubhouse: everything off the course, as tabs. The bar (its games), your club's members, every club this
-// month, how the game works, and a note to the Committee. Each tab has its own link (#/clubhouse/<tab>).
+// The Clubhouse: everything off the course, as tabs. The bar (its games), Reginald's weekly Chronicle, your club's
+// members, every club this month, how the game works, and a note to the Committee. Each tab has its own link
+// (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
 import { api } from '../api';
-import type { ClubRow, Snapshot } from '../api/types';
+import type { Chronicle, ClubRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor } from '../golf3d/courses';
 import { hostChip } from '../host';
@@ -10,9 +11,10 @@ import { requireSession } from '../state';
 import { esc, header, render } from '../ui';
 import { barPane, fillBar } from './bar';
 
-export type ClubhouseTab = 'bar' | 'members' | 'clubs' | 'how' | 'feedback';
+export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'clubs' | 'how' | 'feedback';
 const TABS: [ClubhouseTab, string][] = [
   ['bar', 'Bar'],
+  ['chronicle', 'Chronicle'],
   ['members', 'Members'],
   ['clubs', 'Clubs'],
   ['how', 'How to play'],
@@ -22,8 +24,8 @@ export const isClubhouseTab = (t: string | undefined): t is ClubhouseTab => TABS
 
 const topar = (n: number | null) => (n === null ? '–' : `<span class="${n < 0 ? 'under' : n > 0 ? 'over' : ''}">${toParLabel(n)}</span>`);
 
-export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'bar') {
-  const pane = { bar: barPane, members, clubs, how, feedback }[tab](snap);
+export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'bar', week?: string) {
+  const pane = { bar: barPane, chronicle: chroniclePane, members, clubs, how, feedback }[tab](snap);
   render(`
     ${header(snap.groupName, 'clubhouse')}
     <main class="clubhouse">
@@ -33,6 +35,7 @@ export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'bar') {
   document.querySelector('.ch-tabs .on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
   if (tab === 'bar') void fillBar(snap);
   if (tab === 'clubs') void fillClubs();
+  if (tab === 'chronicle') void fillChronicle(snap, week);
   if (tab === 'feedback') bindFeedback();
 }
 
@@ -57,6 +60,56 @@ function members(snap: Snapshot) {
     ${rows.length ? `<div class="table-wrap"><table class="ch-table">
       <thead><tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rounds</th><th class="num" title="Monthly wins">🏆</th></tr></thead>
       <tbody>${body}</tbody></table></div>` : '<p class="muted">No members yet.</p>'}`;
+}
+
+// The Clubhouse Chronicle: Reginald's letter to the club each Monday, written by Claude (api/chronicle.ts)
+function chroniclePane() {
+  return `<div id="ch-chronicle"><p class="muted">Fetching the paper…</p></div>`;
+}
+
+const weekLabel = (week: string) => new Date(`${week}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+async function fillChronicle(snap: Snapshot, week?: string) {
+  const list = await api.chronicles(requireSession()).catch(() => [] as Chronicle[]);
+  const el = document.getElementById('ch-chronicle');
+  if (!el) return;
+  const ed = (week && list.find((c) => c.week === week)) || list[0];
+  const writeNow = snap.admin ? `<button class="btn ghost" id="ch-write">Write this week's now</button><p class="error" id="ch-write-err"></p>` : '';
+  if (!ed) {
+    el.innerHTML = `<div class="chron-empty">${hostChip('The first Chronicle goes out on Monday morning. I shall be brief. I am never brief.')}${writeNow}</div>`;
+  } else {
+    const b = ed.body;
+    el.innerHTML = `
+      <article class="chron">
+        <header><p class="chron-mast">The Clubhouse Chronicle</p><p class="chron-date">${esc(snap.groupName)} · Week of ${weekLabel(ed.week)}</p></header>
+        <h1>${esc(b.headline)}</h1>
+        <p class="chron-dek">${esc(b.dek)}</p>
+        ${b.items.map((i) => `<section><h2>${esc(i.title)}</h2><p>${esc(i.body)}</p></section>`).join('')}
+        ${hostChip(esc(b.signoff))}
+      </article>
+      ${list.length > 1 ? `<nav class="chron-back"><h2>Back issues</h2>${list.map((c) => `<a href="#/clubhouse/chronicle/${c.week}" class="${c === ed ? 'on' : ''}">${weekLabel(c.week)} · ${esc(c.body.headline)}</a>`).join('')}</nav>` : ''}`;
+    if (snap.admin && list[0].week !== thisMonday()) el.insertAdjacentHTML('beforeend', writeNow);
+  }
+  const btn = document.getElementById('ch-write') as HTMLButtonElement | null;
+  if (btn)
+    btn.onclick = async () => {
+      btn.disabled = true;
+      btn.textContent = 'Reginald is writing…';
+      const res = await fetch('/api/chronicle', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: requireSession().token }) })
+        .then((r) => r.json() as Promise<{ edition: unknown; why?: string }>)
+        .catch(() => ({ edition: null, why: 'unavailable' }));
+      if (res.edition) return fillChronicle(snap);
+      btn.disabled = false;
+      btn.textContent = "Write this week's now";
+      document.getElementById('ch-write-err')!.textContent = res.why === 'not configured' ? 'Add ANTHROPIC_API_KEY in Vercel first.' : "Couldn't write it just now.";
+    };
+}
+
+// Monday of this week, Eastern
+function thisMonday() {
+  const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  et.setDate(et.getDate() - ((et.getDay() + 6) % 7));
+  return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, '0')}-${String(et.getDate()).padStart(2, '0')}`;
 }
 
 // every club, this month: filled in once the server answers

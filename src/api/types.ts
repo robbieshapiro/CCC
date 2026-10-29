@@ -98,6 +98,7 @@ export type DailyDay = { day: string; players: number; tries: number };
 // The Nineteenth Hole's weekly contests (see bar.ts): best score of the week, higher is better
 export type BarBoard = { week: string; board: { name: string; score: number; mine: boolean }[]; mine: number | null; players: number };
 export type ClubRow = { id: string; name: string; mine: boolean; members: number; played: number; best: number | null; leaders: string[] | null };
+export type Chronicle = { week: string; body: { headline: string; dek: string; items: { title: string; body: string }[]; signoff: string } };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -132,6 +133,7 @@ export interface Api {
   submitBar(session: Session, game: 'minigolf' | 'drive', score: number): Promise<void>;
   barBoard(session: Session, game: 'minigolf' | 'drive'): Promise<BarBoard>; // the last 7 days across the admin's clubs
   openBoard(session: Session): Promise<OpenRow[]>;
-  clubList(session: Session): Promise<ClubRow[]>; // every club this month: members, leader, best
+  clubList(session: Session): Promise<ClubRow[]>;
+  chronicles(session: Session): Promise<Chronicle[]>; // Reginald's weekly letters to your club, newest first // every club this month: members, leader, best
   openChampions(session: Session): Promise<OpenChampion[]>;
 }
