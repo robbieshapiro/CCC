@@ -1,5 +1,5 @@
-// The Nineteenth Hole: Mo's bar, and the games on the wall behind it. Closest to the Pin (daily), the putting
-// contest and the long drive (weekly). Each card: what it is in a line, where you stand, the top three, and Play.
+// The Nineteenth Hole: Mo's bar, and the games on the wall behind it. Closest to the Pin (daily), mini golf and
+// the long drive (weekly). Each card: what it is in a line, where you stand, the top three, and Play.
 // It's the first tab of the Clubhouse.
 import { api } from '../api';
 import type { BarBoard, DailyState, Snapshot } from '../api/types';
@@ -29,7 +29,7 @@ export function barPane(snap: Snapshot) {
       </section>
       <div class="bar-games">
         <a class="bar-game" href="#/daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
-        <a class="bar-game" href="#/bar/putting"><i>🟢</i><div><b>Putting contest</b><span>5 putts · this week</span></div><p data-mine="putting"></p><div data-board="putting"></div></a>
+        <a class="bar-game spooky" href="#/bar/minigolf"><i>🎃</i><div><b>Hollow Hills Mini Golf</b><span>6 holes · this week</span></div><p data-mine="minigolf"></p><div data-board="minigolf"></div></a>
         <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings · this week</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
       </div>
     </div>`;
@@ -37,9 +37,9 @@ export function barPane(snap: Snapshot) {
 
 export async function fillBar(snap: Snapshot) {
   const s = requireSession();
-  const [daily, putting, drive] = await Promise.all([
+  const [daily, minigolf, drive] = await Promise.all([
     api.dailyState(s, snap.today).catch(() => null as DailyState | null),
-    api.barBoard(s, 'putting').catch(() => null as BarBoard | null),
+    api.barBoard(s, 'minigolf').catch(() => null as BarBoard | null),
     api.barBoard(s, 'drive').catch(() => null as BarBoard | null),
   ]);
   const put = (game: string, mine: string, board: string) => {
@@ -52,7 +52,7 @@ export async function fillBar(snap: Snapshot) {
     const best = bestTry(daily.mine);
     put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
   }
-  for (const [game, b] of [['putting', putting], ['drive', drive]] as [BarGame, BarBoard | null][]) {
+  for (const [game, b] of [['minigolf', minigolf], ['drive', drive]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
     put(game, b.mine === null ? 'Not played this week' : `You: ${scoreLabel(game, b.mine)}`, top3(b.board.map((r) => ({ name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
   }
@@ -66,7 +66,7 @@ export async function barSummary(game: BarGame, score: number | null, again: () 
   sheet.innerHTML = `
     <div class="notes-card">
       <div class="notes-body">
-        <p class="eyebrow">${game === 'drive' ? 'Long drive' : 'Putting contest'} · this week</p>
+        <p class="eyebrow">${game === 'drive' ? 'Long drive' : 'Hollow Hills Mini Golf'} · this week</p>
         <h2>${score === null ? 'No score' : esc(scoreLabel(game, score))}</h2>
         ${b && b.mine !== null ? `<p>Your best this week: <b>${esc(scoreLabel(game, b.mine))}</b></p>` : ''}
         ${b ? `<ol class="daily-board">${b.board

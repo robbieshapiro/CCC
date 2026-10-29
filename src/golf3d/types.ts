@@ -16,20 +16,20 @@ export type Piece =
   // wobble: ft the width wanders in and out, so a coastline isn't ruler-straight
   | { kind: 'embankment'; pts: V2[]; h: number[]; width: number; edge: number; wobble?: number };
 
-export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' };
-export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' };
+export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' | 'iron' | 'crypt' | 'blade' | 'teeth' };
+export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' };
 export type Region = { poly: V2[]; surface: Surface };
 // A lake or creek: its outline and the flat height of its surface. Ground inside that sits under the surface is wet.
 // The sea can run a tide and lava can pulse: the level swings by `amp` either way over `period` seconds of the hole clock.
-export type Water = { poly: V2[]; level: number; look?: 'lake' | 'sea' | 'lava'; tide?: { amp: number; period: number } };
+export type Water = { poly: V2[]; level: number; look?: 'lake' | 'sea' | 'lava' | 'slime'; tide?: { amp: number; period: number } };
 export type Zone = { id: string; poly: V2[] };
 
 // Things that move on the hole clock. `at(t)` returns their collision shapes at time t.
-export type Mover = { id: string; look: 'swan' | 'cart'; at: (t: number) => { walls: Wall[]; posts: Post[]; pos: V2; heading: number } };
+export type Mover = { id: string; look: 'swan' | 'cart' | 'scythe' | 'ghost' | 'jaw'; at: (t: number) => { walls: Wall[]; posts: Post[]; pos: V2; heading: number; open?: number } };
 // `erupt` (geysers and blowholes): while it returns a velocity, a ball rolling over the vent is thrown with it.
 export type Push = {
   id: string;
-  look: 'sprinkler' | 'fountain' | 'geyser' | 'blowhole';
+  look: 'sprinkler' | 'fountain' | 'geyser' | 'blowhole' | 'brew';
   x: number;
   y: number;
   r: number;
@@ -50,7 +50,8 @@ export type Hole = {
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
   noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)
-  theme?: 'highland' | 'volcanic';
+  theme?: 'highland' | 'volcanic' | 'haunted';
+  putterOnly?: boolean; // mini golf: the putter is the only club
   flag?: string; // what the pin's flag says, if not the hole number
   aim: number; // initial aim angle (radians, 0 = straight up the hole)
   bounds: { x0: number; y0: number; x1: number; y1: number };

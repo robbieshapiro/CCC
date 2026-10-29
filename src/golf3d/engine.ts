@@ -72,6 +72,19 @@ function nameTag(name: string, score: string) {
   return s;
 }
 
+// a soft round glow, for the moon's halo
+function glowTexture(color: string) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, color);
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+
 const html = (s: string) => {
   const t = document.createElement('template');
   t.innerHTML = s.trim();
@@ -136,6 +149,10 @@ export class Course3D {
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(55, 1, 0.5, 2600);
   private sun = new THREE.DirectionalLight('#ffeccc', 2.6);
+  private hemi = new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25);
+  // day (the courses) or night (the haunted mini golf): sky, sun or moon, light and fog
+  private skies: { day: THREE.Object3D[]; night: THREE.Object3D[] } = { day: [], night: [] };
+  private night = false;
   private world: World | null = null;
   private hole!: Hole;
   private number = 1;
@@ -213,7 +230,7 @@ export class Course3D {
   // practice of any kind: the Leave button says so and doesn't ask
   leaveText = '';
   // which how-to card this game shows (first time, then on the ? button)
-  howTo: 'round' | 'practice' | 'daily' = 'round';
+  howTo: 'round' | 'practice' | 'daily' | 'minigolf' = 'round';
   // Hank the Starter's word on the first tee of a round
   starter = '';
   // told after every swing, for the practice log
@@ -249,7 +266,7 @@ export class Course3D {
     });
 
     this.sky();
-    this.scene.add(new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25));
+    this.scene.add(this.hemi);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.0005;
@@ -334,7 +351,9 @@ export class Course3D {
     this.cart?.dispose();
     this.cart = null;
     // today's pin and wind, the same for every member
-    this.wind = this.drill ? (this.drill.wind ?? { pin: hole.cup, mph: 0, toward: 0, accel: { x: 0, y: 0 } }) : conditionsFor(hole, todayInGameTz());
+    const calm = { pin: hole.cup, mph: 0, toward: 0, accel: { x: 0, y: 0 } };
+    // no wind on the felt: mini golf putts never leave the ground
+    this.wind = this.drill ? (this.drill.wind ?? calm) : hole.putterOnly ? calm : conditionsFor(hole, todayInGameTz());
     hole = withPin(hole, this.wind);
     this.hole = hole;
     this.number = number;
@@ -360,6 +379,7 @@ export class Course3D {
     this.drawTrail();
     this.placeBall();
     this.sharpen(!!hole.tour);
+    if (this.night !== (hole.theme === 'haunted')) this.setNight(hole.theme === 'haunted');
     this.fitShadows();
     this.petalsFor(hole);
     this.hud(total);
@@ -374,12 +394,12 @@ export class Course3D {
 
   // ---------- setup ----------
 
-  private skyMesh(scale = 1) {
+  private skyMesh(scale = 1, colors = ['#6fa3d0', '#bcd5e8', '#f1ecdc']) {
     const geo = new THREE.SphereGeometry(2000 * scale, 32, 16);
     const col: number[] = [];
-    const top = new THREE.Color('#6fa3d0');
-    const mid = new THREE.Color('#bcd5e8');
-    const low = new THREE.Color('#f1ecdc');
+    const top = new THREE.Color(colors[0]);
+    const mid = new THREE.Color(colors[1]);
+    const low = new THREE.Color(colors[2]);
     const p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const k = p.getY(i) / (2000 * scale);
@@ -391,10 +411,45 @@ export class Course3D {
   }
 
   private sky() {
-    this.scene.add(this.skyMesh());
+    const day = this.skyMesh();
     const sun = new THREE.Mesh(new THREE.SphereGeometry(40, 16, 10), new THREE.MeshBasicMaterial({ color: '#fff3d6', fog: false }));
     sun.position.set(-900, 700, 1200);
-    this.scene.add(sun);
+    // night: a purple dusk at the horizon going to black, a big low moon up ahead with a halo, and stars
+    const night = this.skyMesh(1, ['#05030b', '#1c1033', '#3d2452']);
+    const moon = new THREE.Group();
+    moon.add(new THREE.Mesh(new THREE.SphereGeometry(70, 24, 16), new THREE.MeshBasicMaterial({ color: '#f3edd6', fog: false })));
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('#d9d2ff'), transparent: true, opacity: 0.55, fog: false, depthWrite: false }));
+    halo.scale.setScalar(420);
+    moon.add(halo);
+    moon.position.set(-380, 420, -1500);
+    const n = 500;
+    const pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const up = 0.12 + Math.random() * 0.85;
+      pos.set([Math.cos(a) * 1800 * Math.cos(up), 1800 * Math.sin(up), Math.sin(a) * 1800 * Math.cos(up)], i * 3);
+    }
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 2.2, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.8 }));
+    this.skies = { day: [day, sun], night: [night, moon, stars] };
+    for (const o of [...this.skies.day, ...this.skies.night]) this.scene.add(o);
+    this.setNight(false);
+  }
+
+  // The haunted mini golf is played by moonlight: cold blue light, a purple fog close in, no clouds. Bats, not birds.
+  private setNight(on: boolean) {
+    this.night = on;
+    this.skies.day.forEach((o) => (o.visible = !on));
+    this.skies.night.forEach((o) => (o.visible = on));
+    this.clouds.forEach((c) => (c.visible = !on));
+    this.hemi.color.set(on ? '#6f63a8' : '#d6e8f5');
+    this.hemi.groundColor.set(on ? '#231a33' : '#46612f');
+    this.hemi.intensity = on ? 1.1 : 1.25;
+    this.sun.color.set(on ? '#aebcff' : '#ffeccc');
+    this.sun.intensity = on ? 1.5 : 2.6;
+    this.scene.fog = on ? new THREE.Fog('#24163a', 90, 620) : new THREE.Fog('#e3ebe2', 420, 1300);
+    this.scene.environmentIntensity = on ? 0.35 : 1;
   }
 
   // Tour courses draw at the phone's full resolution, with finer shadows. The frame-rate guard in the loop still
@@ -508,7 +563,7 @@ export class Course3D {
       <div class="g3-cart" data-cart hidden></div>
       <div class="g3-bottom">
         <div class="g3-club" role="group" aria-label="Club">
-          ${this.bag.map((c) => `<button data-club="${c}"><b>${LABEL[c]}</b><small>${c === 'putter' ? 'roll' : yd(CLUBS[c].carry[1])}</small></button>`).join('')}
+          ${this.bag.map((c) => `<button data-club="${c}" ${this.hole?.putterOnly && c !== 'putter' ? 'hidden' : ''}><b>${LABEL[c]}</b><small>${c === 'putter' ? 'roll' : yd(CLUBS[c].carry[1])}</small></button>`).join('')}
         </div>
         <div class="g3-aim">
           <button data-nudge="-1" aria-label="Aim left">◀</button>
@@ -564,6 +619,7 @@ export class Course3D {
     const w = this.wind!;
     q('[data-wind-speed]').textContent = w.mph ? `${w.mph} mph` : 'Calm';
     q('[data-wind-arrow]').hidden = !w.mph;
+    q('[data-wind]').hidden = !!this.hole.putterOnly;
     this.bindStrike(q('[data-ball]'));
     this.showDrink();
   }
@@ -664,6 +720,7 @@ export class Course3D {
   // Which clubs this lie allows, and a sensible default for the distance.
   private lie() {
     const s = surfaceAt(this.hole, this.pos);
+    if (this.hole.putterOnly) return { allowed: ['putter'] as ClubId[], want: 'putter' as ClubId, d: Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y) };
     const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : this.bag;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
     const want: ClubId = s === 'green' ? 'putter' : this.hole.tour && s !== 'sand' && d >= 26 ? this.reachFor(d, s, allowed) : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
@@ -703,17 +760,22 @@ export class Course3D {
       round: ['How to play', 'Fewest shots wins.'],
       practice: ['Practice', "Nothing counts. Hit as many as you like."],
       daily: ['Closest to the Pin', 'One shot, three tries. Closest wins.'],
+      minigolf: ['Hollow Hills Mini Golf', 'Six holes. Fewest strokes wins the week.'],
     }[this.howTo];
     const card = document.createElement('div');
     card.className = 'g3-howto';
     card.innerHTML = `<div class="g3-howto-card" role="dialog" aria-label="${head[0]}">
       <h2>${head[0]}</h2><p>${head[1]}</p>
-      <ol>
-        <li><i>👆</i><b>Aim</b><span>Drag left or right</span></li>
+      <ol>${
+        this.howTo === 'minigolf'
+          ? `<li><i>👆</i><b>Aim</b><span>Drag left or right</span></li>
+        <li><i>🟢</i><b>Putt</b><span>Drag down, let go</span></li>
+        <li><i>⏱️</i><b>Time it</b><span>Things move. Wait for the gap.</span></li>`
+          : `<li><i>👆</i><b>Aim</b><span>Drag left or right</span></li>
         <li><i>🟡</i><b>Power</b><span>Tap to swing, tap again on the gold line</span></li>
         <li><i>⛳</i><b>Hit</b><span>Tap when the needle is in the gold</span></li>
-        <li><i>🟢</i><b>Putt</b><span>Drag down, let go</span></li>
-      </ol>
+        <li><i>🟢</i><b>Putt</b><span>Drag down, let go</span></li>`
+      }</ol>
       <button class="btn" data-go>Let's go</button>
     </div>`;
     this.overlay.appendChild(card);
@@ -900,7 +962,11 @@ export class Course3D {
     // after the tee shot, every shot starts lined up on the pin
     if (this.strokes > 0) this.aim = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
     const { allowed, want, d } = this.lie();
-    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.disabled = !allowed.includes(b.dataset.club as ClubId)));
+    this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
+      b.disabled = !allowed.includes(b.dataset.club as ClubId);
+      // mini golf: the putter's the only club, so the rest aren't shown
+      b.hidden = !!this.hole.putterOnly && b.disabled;
+    });
     this.setClub(want);
     const dist = this.overlay.querySelector('[data-dist]');
     const putt = surfaceAt(this.hole, this.pos) === 'green';
@@ -1195,7 +1261,7 @@ export class Course3D {
         this.puff(this.ball.position, '#f1efe9');
       } else if (k === 'portal') {
         sfx('thump');
-        this.callout('Down the tunnel', '', 1400);
+        this.callout(this.hole.theme === 'haunted' ? 'Into the coffin…' : 'Down the tunnel', '', 1400);
       }
     }
     // down a tunnel: out of sight until it rolls out of the far end
@@ -1828,7 +1894,22 @@ export class Course3D {
     }
     const cx = (this.hole.bounds.x0 + this.hole.bounds.x1) / 2;
     const cy = (this.hole.bounds.y0 + this.hole.bounds.y1) / 2;
+    if (this.night) {
+      // bats: small, low, quick, flitting round the hole
+      const c = this.hole.cup;
+      this.birds.forEach((b, i) => {
+        const a = this.clock * (0.5 + i * 0.07) + i * 1.9;
+        const r = 16 + i * 7 + Math.sin(this.clock * 1.3 + i) * 4;
+        b.position.set(c.x + Math.cos(a) * r, heightAt(this.hole, c.x, c.y) + 12 + i * 2.5 + Math.sin(this.clock * 3 + i) * 1.5, -(c.y + Math.sin(a) * r * 0.8));
+        b.rotation.y = -a;
+        b.scale.setScalar(0.5);
+        const flap = Math.sin(this.clock * 22 + i) * 0.9;
+        (b.getObjectByName('l') as THREE.Object3D).rotation.z = flap;
+        (b.getObjectByName('r') as THREE.Object3D).rotation.z = -flap;
+      });
+    } else
     this.birds.forEach((b, i) => {
+      b.scale.setScalar(1);
       const a = this.clock * (0.1 + i * 0.012) + i * 1.3;
       const r = 110 + i * 24;
       b.position.set(cx + Math.cos(a) * r, 70 + i * 7 + Math.sin(this.clock + i) * 3, -(cy + Math.sin(a) * r));

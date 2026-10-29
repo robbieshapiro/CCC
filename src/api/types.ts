@@ -129,8 +129,8 @@ export interface Api {
   dailyState(session: Session, day: string): Promise<DailyState>;
   submitDaily(session: Session, day: string, t: DailyTry): Promise<void>;
   dailyAdmin(session: Session): Promise<DailyDay[]>;
-  submitBar(session: Session, game: 'putting' | 'drive', score: number): Promise<void>;
-  barBoard(session: Session, game: 'putting' | 'drive'): Promise<BarBoard>; // the last 7 days across the admin's clubs
+  submitBar(session: Session, game: 'minigolf' | 'drive', score: number): Promise<void>;
+  barBoard(session: Session, game: 'minigolf' | 'drive'): Promise<BarBoard>; // the last 7 days across the admin's clubs
   openBoard(session: Session): Promise<OpenRow[]>;
   clubList(session: Session): Promise<ClubRow[]>; // every club this month: members, leader, best
   openChampions(session: Session): Promise<OpenChampion[]>;

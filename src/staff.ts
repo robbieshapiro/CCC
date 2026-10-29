@@ -57,6 +57,7 @@ export const MO = {
         `${name}. Pull up a stool. The board's on the wall.`,
         `Had a guy in here last week blame the wind on a putt. Indoors. What'll it be, ${name}?`,
         `${name}. Games are on the wall, drinks are on me. The drinks are not on me.`,
+        `Mini golf's out back, ${name}. Groundskeeper won't go near it after dark. Neither will I.`,
       ],
       `${day}:${name}`,
     ),

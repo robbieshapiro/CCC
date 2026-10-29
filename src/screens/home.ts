@@ -84,9 +84,9 @@ export function home(snap: Snapshot) {
       </section>
       <div class="tiles">
         ${dailyCard()}
-        ${previewTile(snap.month)}
-        <a class="tile" href="#/clubhouse/bar"><i>🍺</i><b>The bar</b><span>Putting · long drive</span></a>
+        <a class="tile" href="#/clubhouse/bar"><i>🎃</i><b>The bar</b><span>Mini golf · long drive</span></a>
         <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
+        ${previewTile(snap.month)}
       </div>
       <section class="board">
         ${countdown(snap.month, course)}
@@ -176,6 +176,6 @@ function previewTile(month: string) {
   const next = nextCourse(month);
   if (!next) return '';
   const starts = monthClosesAt(month);
-  return `<a class="tile${next.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}" href="#/practice/${next.id}"><i>🌋</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
+  return `<a class="tile" href="#/practice/${next.id}"><i>🌋</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
 }
 

@@ -20,9 +20,9 @@ import { shortgame, STATIONS } from '../golf3d/practice/shortgame';
 import { scoreClass } from './home';
 import { DAILY_TRIES, dailyShot } from '../daily';
 import { HANK } from '../staff';
-import { DRIVES, driveYards, PUTTS, puttingScore, puttingSpots, weekOf, type BarGame } from '../bar';
+import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
+import { HOLLOW_HILLS } from '../golf3d/minigolf';
 import { barSummary } from './bar';
-import { SCALE } from '../golf3d/clubs';
 import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
@@ -238,7 +238,7 @@ export async function dailyRound(snap: Snapshot) {
   });
 }
 
-// The bar's weekly contests: five putts on the practice green, or three swings off the range tee. The week's best
+// The bar's weekly contests: the six holes of haunted mini golf, or three swings off the range tee. The week's best
 // counts; play as often as you like.
 export function barRound(snap: Snapshot, kind: BarGame) {
   closeRound();
@@ -262,28 +262,24 @@ export function barRound(snap: Snapshot, kind: BarGame) {
   g.leaveText = 'Leave';
   g.howTo = 'practice';
   const again = () => barRound(snap, kind);
-  if (kind === 'putting') {
-    const spots = puttingSpots(weekOf(snap.today));
-    let made = 0;
-    let left = 0;
-    let n = 0;
-    g.practiceArea(shortgame, {
-      title: 'Putting contest',
-      eyebrow: 'The Nineteenth Hole',
-      stations: spots,
-      advance: true,
-      tag: () => `Putt ${n + 1} of ${PUTTS}`,
-      report: (r) => (r.holed ? 'In!' : r.lost ? 'Off the green' : `${Math.round(Math.hypot(r.end.x - shortgame.cup.x, r.end.y - shortgame.cup.y) * SCALE)} ft left`),
-      onResult: (r) => {
-        n++;
-        if (r.holed) made++;
-        else left += r.ft ?? 30;
-        if (n < PUTTS) return true;
-        const score = puttingScore(made, left);
-        void api.submitBar(requireSession(), 'putting', score).catch(() => {}).finally(() => window.setTimeout(() => void barSummary('putting', score, again, back), 1200));
-        return false;
-      },
-    });
+  if (kind === 'minigolf') {
+    // the six holes of Hollow Hills, putter only, by moonlight. Fewest strokes counts for the week.
+    g.howTo = 'minigolf';
+    g.starter = `Six holes, ${me.name}. Mind the scythe.`;
+    void (async () => {
+      const scores: number[] = [];
+      const sum = () => scores.reduce((a, b) => a + b, 0);
+      for (let i = 0; i < HOLLOW_HILLS.length; i++) {
+        const par = HOLLOW_HILLS.slice(0, i).reduce((a, h) => a + h.par, 0);
+        const r = await g.play(HOLLOW_HILLS[i], i + 1, { strokes: sum(), par }, { of: HOLLOW_HILLS.length });
+        if (game !== g) return; // they left
+        scores.push(r.strokes);
+        if (r.strokes === 1) sfx('cackle');
+      }
+      const score = minigolfScore(sum());
+      await api.submitBar(requireSession(), 'minigolf', score).catch(() => {});
+      if (game === g) window.setTimeout(() => void barSummary('minigolf', score, again, back), 600);
+    })();
   } else {
     let best: number | null = null;
     let n = 0;

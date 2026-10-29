@@ -95,7 +95,7 @@ function how(snap: Snapshot) {
     ['🏆', 'Win the month', 'Lowest round in your club when the month closes goes on the plaque. Midnight ET, last day.'],
     ['🌍', 'The Open', 'Every club on one board. Same round, bigger field.'],
     ['🎯', 'Closest to the Pin', 'One shot, three tries, new every day.'],
-    ['🍺', 'The bar', 'Putting contest and long drive. New every Monday.'],
+    ['🎃', 'The bar', 'Haunted mini golf and the long drive. New boards every Monday.'],
     ['🏌️', 'Practice', 'The range, the short game, and next month’s course before it opens.'],
     ['🥤', 'The cart', 'Drinks from the cart change your next swings.'],
   ];

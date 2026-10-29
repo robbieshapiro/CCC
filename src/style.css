@@ -852,6 +852,15 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .bar-top li.me b { color: #8a6a3e; }
 .bar-top em { font-style: normal; font-weight: 700; }
 .bar-empty { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+/* the haunted mini golf card: night purple, pumpkin orange, a moon in the corner */
+.bar-game.spooky { position: relative; overflow: hidden; background: radial-gradient(circle at 92% 12%, #f3edd6 0 14px, rgba(217, 210, 255, 0.25) 15px, transparent 34px), linear-gradient(160deg, #150c22, #2a1640 60%, #3b1c3c); border-color: #4a2a5a; color: #efe6ff; }
+.bar-game.spooky b { color: #ff9a3c; }
+.bar-game.spooky span, .bar-game.spooky .bar-empty { color: #c9b8e6; }
+.bar-game.spooky > p { color: #ffcf6a; }
+.bar-game.spooky .bar-top li.me b { color: #ffcf6a; }
+.bar-game.spooky > i { animation: bob 2.4s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-3px) rotate(-6deg); } }
+@media (prefers-reduced-motion: reduce) { .bar-game.spooky > i { animation: none; } }
 .staff-face { display: block; }
 @media (prefers-reduced-motion: reduce) { .bar-head, .bar-game { animation: none; } }
 
@@ -918,3 +927,6 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .ch-feedback textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
 .ch-feedback .btn { justify-self: start; }
 @media (prefers-reduced-motion: reduce) { .ch-pane { animation: none; } }
+
+/* mini golf: just the putter, and no wind */
+.g3 [data-club][hidden], .g3 [data-wind][hidden] { display: none !important; }
