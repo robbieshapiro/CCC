@@ -769,3 +769,18 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .adm-bars b { width: 70%; min-height: 2px; background: #8a6a3e; border-radius: 3px 3px 0 0; }
 .adm-bars span { font: 800 11px var(--font); }
 .adm-bars small { color: var(--muted); font-size: 11px; }
+
+/* the ? next to Leave, and the how-to card it opens (shown by itself the first time) */
+.g3-left { grid-template-columns: auto auto; }
+.g3-left [data-holes] { grid-column: 1; }
+.g3-help { width: 38px; padding-inline: 0; text-align: center; font-size: 15px; }
+.g3-howto { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(10, 24, 18, 0.55); }
+.g3-howto-card { width: min(340px, 100%); padding: 22px 20px 18px; border-radius: 14px; background: var(--paper); color: var(--ink); text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); }
+.g3-howto-card h2 { margin: 0; font-family: var(--serif); font-size: 28px; color: var(--green); }
+.g3-howto-card > p { margin: 4px 0 14px; color: var(--muted); font-size: 15px; }
+.g3-howto-card ol { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; text-align: left; }
+.g3-howto-card li { display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; }
+.g3-howto-card li i { grid-row: span 2; font-style: normal; font-size: 26px; text-align: center; }
+.g3-howto-card li b { font-size: 17px; }
+.g3-howto-card li span { color: var(--muted); font-size: 14px; }
+.g3-howto-card .btn { width: 100%; font-size: 16px; padding: 13px; }

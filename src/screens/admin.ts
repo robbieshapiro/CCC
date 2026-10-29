@@ -411,7 +411,7 @@ function dailyBars(days: DailyDay[] | null) {
   if (!days) return '';
   const top = Math.max(1, ...days.map((d) => d.players));
   const day = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'narrow', timeZone: 'UTC' });
-  return `<h3 class="adm-sub">Daily Shot · players a day</h3><div class="adm-bars">${[...days]
+  return `<h3 class="adm-sub">Closest to the Pin · players a day</h3><div class="adm-bars">${[...days]
     .reverse()
     .map((d) => `<div title="${d.day}: ${d.players} players, ${d.tries} tries"><b style="height:${Math.round((d.players / top) * 100)}%"></b><span>${d.players}</span><small>${day(d.day)}</small></div>`)
     .join('')}</div>`;

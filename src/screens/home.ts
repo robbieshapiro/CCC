@@ -185,7 +185,7 @@ function launchHero(month: string) {
       <p class="hero-tag">${esc(next.tagline)}</p>
       <div class="hero-cta">
         <a class="btn lava" href="#/practice/${next.id}">Play the preview</a>
-        <span>${n} practice holes now. Nothing counts until ${esc(day)}.</span>
+        <span>Try ${n} holes now. Counts from ${esc(day)}.</span>
       </div>
     </section>`;
 }
