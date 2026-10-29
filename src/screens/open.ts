@@ -32,7 +32,8 @@ function table(snap: Snapshot, rows: ReturnType<typeof ranked>) {
   const head = course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('');
   const body = rows
     .map((r) => {
-      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}<em>${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
+      const crowned = snap.crown && snap.crown.name === r.name && snap.crown.club === r.club ? ` <span class="crown" title="Yesterday's Closest to the Pin">👑</span>` : '';
+      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}${crowned}<em>${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
       const link = r.mine ? '#/locker' : r.localId ? `#/member/${r.localId}` : '';
       return `<tr class="${r.mine ? 'me' : ''}">
         <td class="rank">${r.rank}</td>

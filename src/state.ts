@@ -15,7 +15,9 @@ export function requireSession(): Session {
 
 export async function refresh(): Promise<Snapshot> {
   const session = requireSession();
-  const snap = await api.snapshot(session);
+  // yesterday's Closest to the Pin crown comes with it; the snapshot never waits on it or fails for it
+  const [snap, crown] = await Promise.all([api.snapshot(session), api.dailyCrown(session).catch(() => null)]);
+  snap.crown = crown;
   // a club renamed since this device signed in: keep the saved name (and the club switcher) up to date
   if (snap.groupName && snap.groupName !== session.groupName) setSession({ ...session, groupName: snap.groupName });
   current = snap;

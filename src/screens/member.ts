@@ -7,7 +7,7 @@ import { crest } from '../brand';
 import { FEATS } from '../feats';
 import { courseFor } from '../golf3d/courses';
 import { hostChip } from '../host';
-import { board, toParLabel } from '../standings';
+import { board, crownFor, toParLabel } from '../standings';
 import { GolferStage } from './locker';
 import { scoreClass } from './home';
 import { esc, header, render } from '../ui';
@@ -58,7 +58,7 @@ export function member(snap: Snapshot, id: string) {
         <div class="mc-body">
           <div class="mc-portrait">${portrait(p.avatar, 120)}</div>
           <div>
-            <h1>${esc(p.name)}</h1>
+            <h1>${esc(p.name)}${crownFor(snap, p.id)}</h1>
             <dl>
               <div><dt>Member No.</dt><dd>${number}</dd></div>
               <div><dt>Since</dt><dd>${since}</dd></div>

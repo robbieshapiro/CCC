@@ -1,17 +1,17 @@
 // The Clubhouse Chronicle: Reginald's weekly letter to each club, written by Claude from the week just gone.
-// GET  /api/chronicle            the Monday cron (vercel.json): an edition for every club that played this week
-// POST /api/chronicle { token }  the admin, from the Committee Room: this week's edition for their club, now
-// Each club gets at most one edition a week (kept in chronicles); asking again hands back the one already written.
-// Needs ANTHROPIC_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; CRON_SECRET, if set, guards the GET.
+// POST /api/chronicle { token, course? }  the admin only, from the Chronicle tab: this week's edition for their club,
+// written when the Committee asks (there's no schedule). course: the week's course, for Reginald to introduce.
+// Each club gets at most one edition a week, keyed by the week's Sunday (kept in chronicles); asking again hands back
+// the one already written. Needs ANTHROPIC_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const MODEL = 'claude-opus-5-5';
-const COURSES: Record<string, string> = { highlands: 'The Highlands Course', caldera: 'The Caldera Course' };
+const COURSES: Record<string, string> = { highlands: 'The Highlands Course', caldera: 'The Caldera Course', westernreserve: 'The Western Reserve' };
 
-const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. Each week there is a new 3D course (until November 2026 it was each month); members play it as often as they like and their best round counts, and the lowest round when the week closes on Saturday night goes on the club's plaque as that week's title. There is also a daily Closest to the Pin, and weekly bar games (Hollow Hills haunted mini golf, the long drive).
+const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. Each week there is a new 3D course (until October 2026 it was each month); members play it as often as they like and their best round counts, and the lowest round when the week closes on Saturday night goes on the club's plaque as that week's title. There is also a daily Closest to the Pin, and weekly bar games (Hollow Hills haunted mini golf, the long drive).
 
-Each Monday you write the Clubhouse Chronicle, a short weekly letter to the members of one club about the week just gone.
+When the Committee asks, usually on a Sunday as a new week opens, you write the Clubhouse Chronicle, a short weekly letter to the members of one club about the week just gone. If this_weeks_course is given, end the items with a short one introducing it.
 
 Your voice: English, dry, unhurried, a little formal. Understatement over excitement. Secretly fond of every member and proud of a good score, but you would never say so plainly. Gentle ribbing is fine; never mean, never crude.
 
@@ -42,20 +42,23 @@ type Edition = { headline: string; dek: string; items: { title: string; body: st
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const undash = (s: string) => s.replace(/\s*[—–]\s*/g, ', ').trim();
 
-// Monday of this week, Eastern, as YYYY-MM-DD
-function thisMonday() {
+// Sunday of this week, Eastern, as YYYY-MM-DD (weeks run Sunday to Saturday)
+function thisSunday() {
   const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  et.setDate(et.getDate() - ((et.getDay() + 6) % 7));
+  et.setDate(et.getDate() - et.getDay());
   return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, '0')}-${String(et.getDate()).padStart(2, '0')}`;
 }
 
-async function write(db: SupabaseClient, claude: Anthropic, group: string, week: string): Promise<Edition | null> {
+type CourseNote = { name: string; tagline: string; holes: number; par: number };
+
+async function write(db: SupabaseClient, claude: Anthropic, group: string, week: string, course: CourseNote | null): Promise<Edition | null> {
   const { data: kept } = await db.from('chronicles').select('body').eq('group_id', group).eq('week', week).maybeSingle();
   if (kept) return kept.body as Edition;
   const { data: facts, error } = await db.rpc('chronicle_facts', { p_group: group });
   if (error || !facts) return null;
   const f = facts as { rounds_this_week: { course: string }[] } & Record<string, unknown>;
   f.rounds_this_week = f.rounds_this_week.map((r) => ({ ...r, course: COURSES[r.course] ?? r.course }));
+  if (course) f.this_weeks_course = course;
   const res = await claude.beta.messages.create({
     model: MODEL,
     max_tokens: 8000,
@@ -84,35 +87,22 @@ function clients() {
   return { db: createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } }), claude: new Anthropic({ apiKey: ANTHROPIC_API_KEY }) };
 }
 
-// the Monday cron: every club that played this week
-export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (secret && request.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'no' }, 401);
-  const c = clients();
-  if (!c) return json({ written: 0, why: 'not configured' });
-  const { data: groups } = await c.db.rpc('chronicle_clubs');
-  const week = thisMonday();
-  let written = 0;
-  for (const g of (groups ?? []) as string[]) {
-    try {
-      if (await write(c.db, c.claude, g, week)) written++;
-    } catch (err) {
-      console.error('chronicle', g, err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err);
-    }
-  }
-  return json({ written });
-}
-
 // the admin, now: this week's edition for the club they're in
 export async function POST(request: Request) {
   const c = clients();
   if (!c) return json({ edition: null, why: 'not configured' });
-  const body = (await request.json().catch(() => null)) as { token?: string } | null;
+  const body = (await request.json().catch(() => null)) as { token?: string; course?: Partial<CourseNote> } | null;
   if (!body?.token) return json({ edition: null }, 400);
+  // the week's course, as the app sends it: short strings and small numbers only
+  const c0 = body.course;
+  const course =
+    c0 && typeof c0.name === 'string'
+      ? { name: c0.name.slice(0, 60), tagline: String(c0.tagline ?? '').slice(0, 160), holes: Math.min(18, Math.max(1, Number(c0.holes) || 0)), par: Math.min(90, Math.max(1, Number(c0.par) || 0)) }
+      : null;
   const { data: me } = await c.db.from('players').select('group_id, role').eq('token', body.token).maybeSingle();
   if (!me || me.role !== 'admin') return json({ edition: null, why: 'committee only' }, 403);
   try {
-    return json({ edition: await write(c.db, c.claude, me.group_id as string, thisMonday()) });
+    return json({ edition: await write(c.db, c.claude, me.group_id as string, thisSunday(), course) });
   } catch (err) {
     console.error('chronicle', err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err);
     return json({ edition: null, why: 'unavailable' });

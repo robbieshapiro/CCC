@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 29, 2026 (Caldera challenge from Fri Oct 30, Sunday weeks). Pick up from here.
+Last updated Oct 29, 2026 (Caldera challenge, Sunday weeks, honours, the crown, an admin-only Chronicle). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -11,8 +11,9 @@ Last updated Oct 29, 2026 (Caldera challenge from Fri Oct 30, Sunday weeks). Pic
 | #68 | Hollow Hills haunted mini golf replaced the putting contest at the bar. The preview tile is now a plain tile. |
 | #69 | iPad layouts for every page. |
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
-| #71 | The Clubhouse Chronicle: Reginald's weekly letter, written every Monday by a Vercel cron at 12:17 UTC. |
+| #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #82 | October honours on the home page (champion, the Open, runner-up, Iron Man, ace, steadiest hand, the honest card), refreshed for each closed period; a 👑 for yesterday's Closest to the Pin winner on the boards, Members, member cards and the Daily Shot tile; the Chronicle is admin only (no cron), keyed by the week's Sunday, and introduces the week's course. |
 | #81 | A thin early-drop banner on the home page; Reginald's daily line knows October closes early (and refreshes when the schedule changes); the "now open" card waits for the Caldera instead of showing for October. |
 | #80 | October closes early and the 3-hole Caldera challenge opens Fri Oct 30; Sunday-to-Saturday weeks from Nov 8; the swing meter's gold is now only the pure strip, with silver for close; a "now open" card greets every member on their first open of a new period. |
 | #79 | The Western Reserve, the first weekly course (opens Nov 9): The Covered Bridge (par 4), Sugar Maple (par 3) and The Red Barn (par 5), in a new autumn look with maples, a creek, a covered bridge, a red barn and silo, and corn. |
@@ -21,13 +22,13 @@ Last updated Oct 29, 2026 (Caldera challenge from Fri Oct 30, Sunday weeks). Pic
 
 ## Setup status
 
-- [ ] **Tonight, before midnight ET (Thu Oct 29):** paste all of `supabase/schema.sql` into the SQL Editor and run it (#80). This closes October, crowns its champions and opens the Caldera challenge at midnight. It replaces the #78 paste.
+- [x] The #80 schedule SQL, run Oct 29: October closed at midnight going into Oct 30 and the Caldera challenge opened.
+- [ ] Paste the #82 SQL (the `daily_crown` and `period_honors` functions) into the SQL Editor and run it. Until then the 👑 and the honours board just don't show.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
-- [ ] Not needed once the Chronicle goes admin only (see below): `CRON_SECRET` only guards the Monday cron, which is being removed.
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
 - [x] Stale branches deleted. Only `main` is left.
@@ -69,14 +70,9 @@ The problem with the new members: once your best round is in, there's no reason 
 2. ~~The Nov 9 course.~~ The Western Reserve, #79. New kit for later courses: the `autumn` theme (`src/golf3d/autumn.ts`), `maple` trees, `barn` walls, and roofs with a `top` so a high ball sails over a building.
 3. The scheduled course agent.
 
-### Step 2 (next PR): October honors, the daily crown, the admin-only Chronicle
+### Later
 
-- **October honors board:** club champions and the Open champion (automatic once October closes), plus runner-up in each club, most rounds, ace of the month, lowest average (5 rounds or more), and the highest posted score, for honesty. Needs one SQL paste.
-
-### Smaller changes
-
-- **A daily crown for Closest to the Pin.** Yesterday's winner across every club gets a 👑 next to their name on the boards, the Members list and the Daily Shot tile, for one day. The tie-break is the board's own (holed first, then nearest, then the next-best try). Shot #1 (Oct 28) went to Eli G of Boomtown at 18.1 ft.
-- **The Chronicle becomes admin only.** Remove the Monday cron (`vercel.json` and the GET in `api/chronicle.ts`) and keep the "Write this week's now" button in the Committee Room. Robbie writes it each Sunday, and it crowns last week's winner and introduces the new course. Change the empty-state line ("goes out on Monday morning"), and key editions by the week's Sunday. A week Robbie skips has no edition.
+- **A sudden-death playoff** when two or more tie at the top of a week. To be planned.
 
 ## Next up (ideas, not started)
 

@@ -1,7 +1,7 @@
 // The Daily Shot on the home page and after your last try: today's shot, your tries, your streak, the board across
 // every club, and a result to share.
 import { api } from '../api';
-import type { DailyState, DailyTry } from '../api/types';
+import type { DailyCrown, DailyState, DailyTry } from '../api/types';
 import { bestTry, DAILY_TRIES, dailyShot, resultLabel, tryMark } from '../daily';
 import { requireSession } from '../state';
 import { esc } from '../ui';
@@ -44,7 +44,7 @@ export function dailyCard() {
   return `<a class="tile daily" id="daily-card" href="#/daily" hidden></a>`;
 }
 
-export async function bindDaily(day: string) {
+export async function bindDaily(day: string, crown?: DailyCrown | null) {
   const el = document.getElementById('daily-card');
   if (!el) return;
   const state = await api.dailyState(requireSession(), day).catch(() => null);
@@ -58,7 +58,9 @@ export async function bindDaily(day: string) {
       ? `Best ${resultLabel(bestTry(state.mine))} · ${left} ${left === 1 ? 'try' : 'tries'} left`
       : `Best ${resultLabel(bestTry(state.mine))}${rank ? ` · ${ordinal(rank)} of ${state.players}` : ''}`;
   el.hidden = false;
-  el.innerHTML = `<i>🎯</i><b>Closest to the Pin</b><span>${esc(status)}</span>${state.streak ? `<em class="tile-badge">🔥 ${state.streak}</em>` : ''}`;
+  // yesterday's winner wears the crown, across every club
+  const king = crown ? `<span class="tile-crown">👑 ${esc(crown.name)} · ${esc(resultLabel({ ft: crown.ft, holed: crown.holed, lost: false }))} yesterday</span>` : '';
+  el.innerHTML = `<i>🎯</i><b>Closest to the Pin</b><span>${esc(status)}</span>${king}${state.streak ? `<em class="tile-badge">🔥 ${state.streak}</em>` : ''}`;
 }
 
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;

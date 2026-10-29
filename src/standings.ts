@@ -1,5 +1,9 @@
 import type { Champion, Round, Snapshot } from './api/types';
 
+// The crown by a member's name for a day: yesterday's Closest to the Pin winner across every club.
+export const crownFor = (snap: Snapshot, playerId: string) =>
+  snap.crown?.ids.includes(playerId) ? ` <span class="crown" title="Yesterday's Closest to the Pin">👑</span>` : '';
+
 export type Row = { playerId: string; best: Round | null; rounds: number; last: string | null; toPar: number; rank: number };
 
 const toParOf = (r: Round) => r.total - r.par;
