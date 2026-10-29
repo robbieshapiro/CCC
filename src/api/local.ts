@@ -7,7 +7,7 @@ import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyDay, type DailyRow, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
@@ -416,6 +416,45 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
 
   async openChampions(): Promise<OpenChampion[]> {
     return []; // local mode keeps one month at a time
+  },
+
+  // as on the server: the top of yesterday's Daily Shot board, if anyone scored
+  async dailyCrown(session): Promise<DailyCrown | null> {
+    const d = new Date(`${todayInGameTz()}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 1);
+    const day = d.toISOString().slice(0, 10);
+    const top = (await localApi.dailyState(session, day)).board.find((r) => r.holed || r.ft !== null);
+    if (!top) return null;
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const ids = db.players.filter((p) => p.groupId === me.groupId && p.name.toLowerCase() === top.name.toLowerCase()).map((p) => p.id);
+    return { day, name: top.name, club: top.club, ft: top.ft, holed: top.holed, ids };
+  },
+
+  async periodHonors(session, period): Promise<Honors> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const name = (id: string) => db.players.find((p) => p.id === id)?.name ?? '?';
+    const per = new Map<string, { best: number; n: number; sum: number; worst: number; aces: number }>();
+    for (const r of db.rounds.filter((r) => r.groupId === me.groupId && r.month === period)) {
+      const tp = r.total - r.par;
+      const x = per.get(name(r.playerId)) ?? { best: Infinity, n: 0, sum: 0, worst: -Infinity, aces: 0 };
+      per.set(name(r.playerId), { best: Math.min(x.best, tp), n: x.n + 1, sum: x.sum + tp, worst: Math.max(x.worst, tp), aces: x.aces + Number(r.feats.includes('ace')) });
+    }
+    const rows = [...per].map(([n, x]) => ({ name: n, ...x, av: Math.round((x.sum / x.n) * 10) / 10 })).sort((a, b) => a.name.localeCompare(b.name));
+    const bests = [...new Set(rows.map((r) => r.best))].sort((a, b) => a - b);
+    const top = <K extends 'n' | 'worst'>(k: K) => (rows.length ? Math.max(...rows.map((r) => r[k])) : null);
+    const steady = rows.filter((r) => r.n >= 5);
+    const lowAv = steady.length ? Math.min(...steady.map((r) => r.av)) : null;
+    return {
+      period,
+      champions: rows.filter((r) => r.best === bests[0]).map((r) => ({ name: r.name, toPar: r.best })),
+      runnersUp: rows.filter((r) => r.best === bests[1]).map((r) => ({ name: r.name, toPar: r.best })),
+      mostRounds: rows.length ? { names: rows.filter((r) => r.n === top('n')).map((r) => r.name), count: top('n')! } : null,
+      aces: rows.filter((r) => r.aces).map((r) => ({ name: r.name, count: r.aces })),
+      lowestAverage: lowAv === null ? null : { names: steady.filter((r) => r.av === lowAv).map((r) => r.name), avg: lowAv },
+      highestScore: rows.length ? { names: rows.filter((r) => r.worst === top('worst')).map((r) => r.name), toPar: top('worst')! } : null,
+    };
   },
 
   async touch(session, kind) {

@@ -800,6 +800,15 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
    nods now and then. */
 .play-hero { display: grid; gap: 18px; padding: 20px; margin-bottom: 14px; border-radius: 12px; background: var(--green); color: var(--cream); box-shadow: 0 10px 30px rgba(22, 59, 44, 0.25); animation: rise 0.45s ease-out both; }
 .play-hero.volcanic { background: linear-gradient(160deg, #2a0f08, #4a1a0c 60%, #7a2c10); }
+/* yesterday's Closest to the Pin winner, by their name for the day */
+.crown { font-size: 0.9em; }
+.tile-crown { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: #8a6514; }
+/* the honours for the period just closed */
+.honours { margin-bottom: 14px; padding: 16px 18px; border-radius: 12px; background: var(--cream, #f3ecdc); box-shadow: inset 0 0 0 1px rgba(184, 149, 90, 0.5); }
+.honours ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.honours li { display: grid; grid-template-columns: 26px 9.5em 1fr; align-items: baseline; gap: 6px; font-size: 14px; }
+.honours li b { font-weight: 700; }
+@media (max-width: 420px) { .honours li { grid-template-columns: 26px 1fr; } .honours li span { grid-column: 2; } }
 /* a thin strip across the top of the home page for schedule news */
 .banner { margin: 0 0 12px; padding: 7px 12px; border-radius: 8px; background: #3a160b; color: #ffd9b0; font-size: 13px; font-weight: 600; line-height: 1.35; text-align: center; }
 /* a new period: the course that's just opened and last period's champion, until the member taps Play or Later */

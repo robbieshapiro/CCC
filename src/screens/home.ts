@@ -1,4 +1,4 @@
-import { listSessions, localApi, switchClub, useSupabase } from '../api';
+import { api, listSessions, localApi, switchClub, useSupabase } from '../api';
 import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { featById } from '../feats';
@@ -9,7 +9,7 @@ import { bindOpen } from './open';
 import { askReginald } from '../reginald';
 import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
-import { board, myBest, toParLabel } from '../standings';
+import { board, crownFor, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { store } from '../storage';
 import { esc, header, render } from '../ui';
@@ -54,6 +54,39 @@ function scheduleBanner(snap: Snapshot) {
   return text ? `<p class="banner">${text}</p>` : '';
 }
 
+// The honours for the period that last closed, filled in once the server answers: champion, the Open, runner-up,
+// most rounds, aces, the steadiest average and the honest card.
+function honoursPane(snap: Snapshot) {
+  return snap.champions[0] ? `<section class="honours" id="honours" hidden></section>` : '';
+}
+
+async function bindHonours(snap: Snapshot) {
+  const last = snap.champions[0];
+  const el = document.getElementById('honours');
+  if (!last || !el) return;
+  const session = requireSession();
+  const [h, opens] = await Promise.all([
+    api.periodHonors(session, last.month).catch(() => null),
+    api.openChampions(session).catch(() => []),
+  ]);
+  if (!h || !document.getElementById('honours')) return; // no SQL yet, or left the page
+  const names = (xs: string[]) => xs.map(esc).join(' & ');
+  const open = opens.find((o) => o.month === last.month);
+  const per = span(last.month);
+  const rows: [string, string, string][] = [
+    ['🏆', 'Champion', h.champions.length ? `${names(h.champions.map((c) => c.name))} · ${toParLabel(h.champions[0].toPar)}` : ''],
+    ['🌍', 'The Open', open ? `${names(open.names)} · ${toParLabel(open.total - open.par)}` : ''],
+    ['🥈', 'Runner-up', h.runnersUp.length ? `${names(h.runnersUp.map((c) => c.name))} · ${toParLabel(h.runnersUp[0].toPar)}` : ''],
+    ['🔁', 'Iron Man', h.mostRounds ? `${names(h.mostRounds.names)} · ${h.mostRounds.count} rounds` : ''],
+    ['⛳', `Ace of the ${per}`, h.aces.length ? h.aces.map((a) => `${esc(a.name)}${a.count > 1 ? ` ×${a.count}` : ''}`).join(' & ') : ''],
+    ['📊', 'Steadiest hand', h.lowestAverage ? `${names(h.lowestAverage.names)} · ${toParLabel(h.lowestAverage.avg!)} average` : ''],
+    ['🫡', 'The Honest Card', h.highestScore ? `${names(h.highestScore.names)} · ${toParLabel(h.highestScore.toPar!)}, posted all the same` : ''],
+  ];
+  el.innerHTML = `<div class="board-head"><h2>${esc(periodName(last.month))} honours</h2><span>Your club</span></div>
+    <ul>${rows.filter((r) => r[2]).map(([i, t, v]) => `<li><i>${i}</i><b>${t}</b><span>${v}</span></li>`).join('')}</ul>`;
+  el.hidden = false;
+}
+
 export function home(snap: Snapshot) {
   const player = (id: string) => snap.players.find((p) => p.id === id);
   const course = courseFor(snap.month);
@@ -85,7 +118,7 @@ export function home(snap: Snapshot) {
       const feats = p.feats.map((f) => featById(f)?.icon ?? '').join('');
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${feats ? ` <small>${feats}</small>` : ''}<em>${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last!)}` : 'yet to play'}</em></span></a></td>
+        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${crownFor(snap, p.id)}${feats ? ` <small>${feats}</small>` : ''}<em>${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last!)}` : 'yet to play'}</em></span></a></td>
         ${cells}
         <td class="num tot">${r.best ? r.best.total : ''}</td>
         <td class="num topar ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>
@@ -123,6 +156,7 @@ export function home(snap: Snapshot) {
         <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
         ${previewTile(snap.month)}
       </div>
+      ${honoursPane(snap)}
       <section class="board">
         ${countdown(snap.month, course)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best round counts</span></div>
@@ -157,7 +191,8 @@ export function home(snap: Snapshot) {
       say.innerHTML = `<b>Reginald</b> ${esc(text)}`;
     });
   void bindNotices();
-  void bindDaily(snap.today);
+  void bindDaily(snap.today, snap.crown);
+  void bindHonours(snap);
   document.querySelectorAll<HTMLElement>('[data-seen]').forEach((b) =>
     b.addEventListener('click', () => {
       store.set(SEEN_PERIOD, snap.month);

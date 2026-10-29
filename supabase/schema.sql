@@ -626,6 +626,37 @@ grant execute on function touch(uuid, text) to anon;
 grant execute on function activity_report(uuid) to anon;
 grant execute on function open_board(uuid) to anon;
 grant execute on function open_champions(uuid) to anon;
+
+-- The honours for a closed period at your club: champions and runners-up (ties share), the most rounds, every ace,
+-- the lowest average over five rounds or more, and the highest round posted (for honesty). Hosts aren't members.
+create or replace function period_honors(p_token uuid, p_period text) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if p_period >= game_month() then raise exception 'That period is still open.'; end if;
+  return (
+    with r as (
+      select p.name, rd.total - rd.par as tp, rd.feats from rounds rd join players p on p.id = rd.player_id
+      where rd.group_id = me.group_id and rd.month = p_period and not p.host_only
+    ), per as (
+      select name, min(tp) as best, count(*) as n, round(avg(tp), 1) as av, max(tp) as worst,
+        count(*) filter (where 'ace' = any(feats)) as aces
+      from r group by name
+    ), ranked as (
+      select *, dense_rank() over (order by best) as dr from per
+    )
+    select json_build_object(
+      'period', p_period,
+      'champions', (select coalesce(json_agg(json_build_object('name', name, 'toPar', best) order by name), '[]') from ranked where dr = 1),
+      'runnersUp', (select coalesce(json_agg(json_build_object('name', name, 'toPar', best) order by name), '[]') from ranked where dr = 2),
+      'mostRounds', (select json_build_object('names', json_agg(name order by name), 'count', max(n)) from per where n = (select max(n) from per) having count(*) > 0),
+      'aces', (select coalesce(json_agg(json_build_object('name', name, 'count', aces) order by aces desc, name), '[]') from per where aces > 0),
+      'lowestAverage', (select json_build_object('names', json_agg(name order by name), 'avg', min(av)) from per where n >= 5 and av = (select min(av) from per where n >= 5) having count(*) > 0),
+      'highestScore', (select json_build_object('names', json_agg(name order by name), 'toPar', max(worst)) from per where worst = (select max(worst) from per) having count(*) > 0)
+    )
+  );
+end $$;
+grant execute on function period_honors(uuid, text) to anon;
 grant execute on function club_list(uuid) to anon;
 
 -- Create your group (change the name and code). The first person to join with the code runs the club;
@@ -811,6 +842,36 @@ end $$;
 
 grant execute on function submit_daily(uuid, date, int, numeric, boolean, boolean) to anon;
 grant execute on function daily_state(uuid, date) to anon;
+
+-- The crown: yesterday's Closest to the Pin winner across every club, ranked as daily_state ranks the board (holed
+-- first, holed sooner, then nearest, then the next-best try, then the earlier player). ids: that person's member ids
+-- in the viewer's club, if they belong to it, so the app can put the crown by their name. Null if nobody scored.
+create or replace function daily_crown(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); d date := (now() at time zone 'America/New_York')::date - 1;
+begin
+  return (
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.group_id
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+    ), tries as (
+      select pe.k, pe.h, s.* from daily_shots s join players p on p.id = s.player_id
+      join people pe on pe.k = lower(p.name) and pe.h = p.pin_hash where s.day = d
+    ), best as (
+      select t.k, t.h, bool_or(t.holed) as holed, min(t.try) filter (where t.holed) as htry,
+        array_agg(case when t.holed then 0 when t.lost then null else t.ft end order by case when t.holed then 0 when t.lost then null else t.ft end asc nulls last) as fts,
+        min(t.created_at) as first_at
+      from tries t group by t.k, t.h
+    )
+    select json_build_object('day', d, 'name', pe.name, 'club', g.name, 'ft', b.fts[1], 'holed', b.holed,
+      'ids', coalesce((select json_agg(p.id) from players p where p.group_id = me.group_id and lower(p.name) = b.k and p.pin_hash = b.h), '[]'))
+    from best b join people pe on pe.k = b.k and pe.h = b.h join groups g on g.id = pe.group_id
+    where b.holed or b.fts[1] is not null
+    order by b.holed desc, b.htry asc nulls last, b.fts[1] asc nulls last, b.fts[2] asc nulls last, b.fts[3] asc nulls last, b.first_at
+    limit 1
+  );
+end $$;
+grant execute on function daily_crown(uuid) to anon;
 grant execute on function daily_admin(uuid) to anon;
 
 -- The Nineteenth Hole's weekly contests: mini golf (the putting contest before it) and long drive. Every score is

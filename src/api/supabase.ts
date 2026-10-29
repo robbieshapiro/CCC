@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminOverview, Api, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyDay, DailyState, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PracticeReport, Session, Snapshot } from './types';
+import type { AdminOverview, Api, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PracticeReport, Session, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -108,4 +108,6 @@ export const supabaseApi: Api = {
   reviewDesign: (s, id, ok) => rpc<void>('review_design', { p_token: s.token, p_id: id, p_ok: ok }),
   membersCourse: (s) => rpc<MembersHole[]>('members_course', { p_token: s.token }),
   openChampions: (s) => rpc<OpenChampion[]>('open_champions', { p_token: s.token }),
+  dailyCrown: (s) => rpc<DailyCrown | null>('daily_crown', { p_token: s.token }),
+  periodHonors: (s, period) => rpc<Honors>('period_honors', { p_token: s.token, p_period: period }),
 };

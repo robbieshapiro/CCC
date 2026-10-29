@@ -59,6 +59,21 @@ export type Snapshot = {
   players: Player[];
   rounds: Round[]; // this period, whole group
   champions: Champion[]; // past periods, newest first
+  crown?: DailyCrown | null; // filled in by state.refresh alongside the snapshot
+};
+
+// Yesterday's Closest to the Pin winner across every club. ids: their member ids in your club, if they're in it.
+export type DailyCrown = { day: string; name: string; club: string; ft: number | null; holed: boolean; ids: string[] };
+// The honours for a closed period at your club (see period_honors in supabase/schema.sql). Ties share.
+export type Named = { names: string[]; count?: number; avg?: number; toPar?: number };
+export type Honors = {
+  period: string;
+  champions: { name: string; toPar: number }[];
+  runnersUp: { name: string; toPar: number }[];
+  mostRounds: Named | null;
+  aces: { name: string; count: number }[];
+  lowestAverage: Named | null; // five rounds or more
+  highestScore: Named | null;
 };
 
 // A personal, single-use invitation. The link (#/invite/<id>) shows the code under the foil.
@@ -145,4 +160,6 @@ export interface Api {
   reviewDesign(session: Session, id: number, ok: boolean): Promise<void>;
   membersCourse(session: Session): Promise<MembersHole[]>; // Reginald's weekly letters to your club, newest first // every club this month: members, leader, best
   openChampions(session: Session): Promise<OpenChampion[]>;
+  dailyCrown(session: Session): Promise<DailyCrown | null>;
+  periodHonors(session: Session, period: string): Promise<Honors>;
 }

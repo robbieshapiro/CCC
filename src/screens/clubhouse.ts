@@ -7,7 +7,7 @@ import type { Chronicle, ClubRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor } from '../golf3d/courses';
 import { hostChip } from '../host';
-import { board, toParLabel } from '../standings';
+import { board, crownFor, toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc, header, render } from '../ui';
 import { barPane, fillBar } from './bar';
@@ -49,7 +49,7 @@ function members(snap: Snapshot) {
       const me = p.id === snap.me;
       return `<tr class="${me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${me ? ' <small>you</small>' : ''}</span></a></td>
+        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</span></a></td>
         <td class="num topar">${r.best ? topar(r.toPar) : '–'}</td>
         <td class="num">${r.rounds}</td>
         <td class="num">${p.wins || ''}</td>
@@ -63,7 +63,7 @@ function members(snap: Snapshot) {
       <tbody>${body}</tbody></table></div>` : '<p class="muted">No members yet.</p>'}`;
 }
 
-// The Clubhouse Chronicle: Reginald's letter to the club each Monday, written by Claude (api/chronicle.ts)
+// The Clubhouse Chronicle: Reginald's letter to the club, written by Claude (api/chronicle.ts) when the Committee asks
 function chroniclePane() {
   return `<div id="ch-chronicle"><p class="muted">Fetching the paper…</p></div>`;
 }
@@ -75,9 +75,9 @@ async function fillChronicle(snap: Snapshot, week?: string) {
   const el = document.getElementById('ch-chronicle');
   if (!el) return;
   const ed = (week && list.find((c) => c.week === week)) || list[0];
-  const writeNow = snap.admin ? `<button class="btn ghost" id="ch-write">Write this week's now</button><p class="error" id="ch-write-err"></p>` : '';
+  const writeNow = snap.admin ? `<button class="btn ghost" id="ch-write">Write this week's Chronicle</button><p class="error" id="ch-write-err"></p>` : '';
   if (!ed) {
-    el.innerHTML = `<div class="chron-empty">${hostChip('The first Chronicle goes out on Monday morning. I shall be brief. I am never brief.')}${writeNow}</div>`;
+    el.innerHTML = `<div class="chron-empty">${hostChip('The first Chronicle goes out when the Committee gives the word. I shall be brief. I am never brief.')}${writeNow}</div>`;
   } else {
     const b = ed.body;
     el.innerHTML = `
@@ -89,27 +89,27 @@ async function fillChronicle(snap: Snapshot, week?: string) {
         ${hostChip(esc(b.signoff))}
       </article>
       ${list.length > 1 ? `<nav class="chron-back"><h2>Back issues</h2>${list.map((c) => `<a href="#/clubhouse/chronicle/${c.week}" class="${c === ed ? 'on' : ''}">${weekLabel(c.week)} · ${esc(c.body.headline)}</a>`).join('')}</nav>` : ''}`;
-    if (snap.admin && list[0].week !== thisMonday()) el.insertAdjacentHTML('beforeend', writeNow);
+    if (snap.admin && list[0].week !== thisSunday()) el.insertAdjacentHTML('beforeend', writeNow);
   }
   const btn = document.getElementById('ch-write') as HTMLButtonElement | null;
   if (btn)
     btn.onclick = async () => {
       btn.disabled = true;
       btn.textContent = 'Reginald is writing…';
-      const res = await fetch('/api/chronicle', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: requireSession().token }) })
+      const res = await fetch('/api/chronicle', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: requireSession().token, course: (({ name, tagline, holes, par }) => ({ name, tagline, holes: holes.length, par }))(courseFor(snap.month)) }) })
         .then((r) => r.json() as Promise<{ edition: unknown; why?: string }>)
         .catch(() => ({ edition: null, why: 'unavailable' }));
       if (res.edition) return fillChronicle(snap);
       btn.disabled = false;
-      btn.textContent = "Write this week's now";
+      btn.textContent = "Write this week's Chronicle";
       document.getElementById('ch-write-err')!.textContent = res.why === 'not configured' ? 'Add ANTHROPIC_API_KEY in Vercel first.' : "Couldn't write it just now.";
     };
 }
 
-// Monday of this week, Eastern
-function thisMonday() {
+// Sunday of this week, Eastern: editions are kept a week at a time, Sunday to Saturday
+function thisSunday() {
   const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  et.setDate(et.getDate() - ((et.getDay() + 6) % 7));
+  et.setDate(et.getDate() - et.getDay());
   return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, '0')}-${String(et.getDate()).padStart(2, '0')}`;
 }
 
