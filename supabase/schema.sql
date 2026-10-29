@@ -806,7 +806,7 @@ grant execute on function daily_admin(uuid) to anon;
 create table if not exists bar_scores (
   id bigserial primary key,
   player_id uuid not null references players on delete cascade,
-  game text not null check (game in ('putting', 'drive', 'minigolf')),
+  game text not null check (game in ('putting', 'drive', 'minigolf', 'members')),
   week date not null,
   score numeric(8, 1) not null,
   created_at timestamptz not null default now()
@@ -814,15 +814,16 @@ create table if not exists bar_scores (
 alter table bar_scores enable row level security;
 create index if not exists bar_scores_week on bar_scores (game, week);
 alter table bar_scores drop constraint if exists bar_scores_game_check;
-alter table bar_scores add constraint bar_scores_game_check check (game in ('putting', 'drive', 'minigolf'));
+alter table bar_scores add constraint bar_scores_game_check check (game in ('putting', 'drive', 'minigolf', 'members'));
 
 create or replace function submit_bar(p_token uuid, p_game text, p_score numeric) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token));
 begin
-  if p_game not in ('minigolf', 'drive') then raise exception 'No such game.'; end if;
-  -- a long drive is 0 to 450 yd; mini golf is minus the strokes, six holes picked up at par + 3 at worst
-  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'minigolf' and p_score not between -60 and -6) then
+  if p_game not in ('minigolf', 'drive', 'members') then raise exception 'No such game.'; end if;
+  -- a long drive is 0 to 450 yd; mini golf and the Members' Course are minus the strokes (up to nine holes)
+  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'minigolf' and p_score not between -60 and -6)
+    or (p_game = 'members' and p_score not between -90 and -1) then
     raise exception 'That score doesn''t look right.';
   end if;
   insert into bar_scores (player_id, game, week, score)
@@ -932,3 +933,88 @@ end $$;
 revoke all on function chronicle_clubs() from public, anon, authenticated;
 revoke all on function chronicle_facts(uuid) from public, anon, authenticated;
 grant execute on function chronicles(uuid) to anon;
+
+-- The Design Desk: members' mini golf holes. Claude lays each one out (api/design.ts writes the drafts); the member
+-- plays it, can ask for changes, and submits it; the admin approves it onto the Members' Course at the bar.
+create table if not exists designs (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  prompt text not null,
+  spec jsonb not null,
+  par int check (par is null or par between 2 and 5),
+  status text not null default 'draft' check (status in ('draft', 'submitted', 'approved', 'rejected')),
+  created_at timestamptz not null default now(),
+  submitted_at timestamptz,
+  reviewed_at timestamptz
+);
+alter table designs enable row level security;
+-- one row per call to the architect, for the daily caps
+create table if not exists design_calls (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table design_calls enable row level security;
+
+-- your holes (as one person across clubs), newest first
+create or replace function my_designs(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((select json_agg(json_build_object('id', d.id, 'prompt', d.prompt, 'spec', d.spec, 'par', d.par, 'status', d.status, 'createdAt', d.created_at) order by d.created_at desc)
+    from (select d.* from designs d join players p on p.id = d.player_id
+      where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash order by d.created_at desc limit 30) d), '[]');
+end $$;
+
+-- send a draft to the Committee, with the par the test golfer set
+create or replace function submit_design(p_token uuid, p_id bigint, p_par int) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  update designs d set status = 'submitted', submitted_at = now(), par = greatest(2, least(5, p_par))
+  from players p
+  where d.id = p_id and d.status = 'draft' and p.id = d.player_id and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash;
+  if not found then raise exception 'That hole can''t be submitted.'; end if;
+end $$;
+
+-- the admin's queue: holes waiting, and the ones already on the course
+create or replace function design_queue(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see this.'; end if;
+  return coalesce((select json_agg(json_build_object('id', d.id, 'prompt', d.prompt, 'spec', d.spec, 'par', d.par, 'status', d.status,
+      'by', p.name, 'club', g.name, 'submittedAt', d.submitted_at) order by d.status = 'submitted' desc, d.submitted_at desc)
+    from designs d join players p on p.id = d.player_id join groups g on g.id = p.group_id
+    where d.status in ('submitted', 'approved') and p.group_id in (select admin_clubs(me))), '[]');
+end $$;
+
+create or replace function review_design(p_token uuid, p_id bigint, p_ok boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can do this.'; end if;
+  update designs d set status = case when p_ok then 'approved' else 'rejected' end, reviewed_at = now()
+  from players p where d.id = p_id and p.id = d.player_id and p.group_id in (select admin_clubs(me)) and d.status in ('submitted', 'approved');
+end $$;
+
+-- The Members' Course: approved holes, up to nine, as they stood on Monday so the week's board is fair (in its
+-- first week, everything approved so far)
+create or replace function members_course(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); monday timestamptz := date_trunc('week', now() at time zone 'America/New_York') at time zone 'America/New_York';
+begin
+  return coalesce((
+    with ok as (select d.*, p.name as by from designs d join players p on p.id = d.player_id where d.status = 'approved'),
+    week as (select * from ok where reviewed_at < monday),
+    pick as (select * from week union all select * from ok where not exists (select 1 from week))
+    select json_agg(json_build_object('id', x.id, 'spec', x.spec, 'par', x.par, 'by', x.by) order by x.reviewed_at)
+    from (select * from pick order by reviewed_at desc limit 9) x
+  ), '[]');
+end $$;
+
+grant execute on function my_designs(uuid) to anon;
+grant execute on function submit_design(uuid, bigint, int) to anon;
+grant execute on function design_queue(uuid) to anon;
+grant execute on function review_design(uuid, bigint, boolean) to anon;
+grant execute on function members_course(uuid) to anon;

@@ -2,13 +2,16 @@
 // you can go do (notice, invite, preview, new club); then activity, every member, and member management (invites
 // nobody has opened yet, with revoke).
 import { api, getSession, listSessions } from '../api';
-import type { AdminOverview, AdminWindow, DailyDay, Notice, Session, Snapshot } from '../api/types';
+import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot } from '../api/types';
 import { GAME_TZ } from '../day';
 import { courseById, upcoming } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { store } from '../storage';
-import { esc, header, render } from '../ui';
+import { buildHole, tidy } from '../designer/spec';
+import { planCanvas } from '../designer/plan';
+import { testHole } from './round';
+import { esc, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
@@ -55,6 +58,7 @@ export function admin(snap: Snapshot) {
         <div class="adm-tool" data-panel="invite" hidden>${inviteTool()}</div>
         <div class="adm-tool" data-panel="club" hidden>${clubMaker(true)}</div>
       </section>
+      <section class="adm-card" id="adm-holes" hidden></section>
       <div id="adm-body"><p class="muted">Loading every club…</p></div>
     </main>`);
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
@@ -72,6 +76,42 @@ export function admin(snap: Snapshot) {
   bindNoticeTool();
   bindInviteTool();
   void load();
+  void loadHoles(snap);
+}
+
+// Members' holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
+// already on the Members' Course (which can come off)
+async function loadHoles(snap: Snapshot) {
+  const el = document.getElementById('adm-holes');
+  if (!el) return;
+  const list = await api.designQueue(requireSession()).catch(() => [] as Design[]);
+  el.hidden = !list.length;
+  if (!list.length) return;
+  const waiting = list.filter((d) => d.status === 'submitted');
+  const live = list.filter((d) => d.status === 'approved');
+  const row = (d: Design) => {
+    const spec = tidy(d.spec);
+    return `<li data-design="${d.id}"><div class="adm-hole-plan"></div><div><b>${esc(spec.name)}</b> <small>by ${esc(d.by ?? '?')}${d.club ? ` · ${esc(d.club)}` : ''} · par ${d.par ?? 3}</small>
+      <p>${esc(d.prompt)}</p>
+      <div class="adm-chips"><button data-hole-play>Play it</button>${d.status === 'submitted' ? '<button data-hole-ok class="on">Approve</button><button data-hole-no>Not this one</button>' : '<button data-hole-no>Take it off</button>'}</div></div></li>`;
+  };
+  el.innerHTML = `<div class="adm-head"><h2>Members' holes ${waiting.length ? `<span class="adm-count">${waiting.length}</span>` : ''}</h2></div>
+    ${waiting.length ? `<ul class="adm-list adm-holes">${waiting.map(row).join('')}</ul>` : '<p class="muted">Nothing waiting.</p>'}
+    ${live.length ? `<p class="adm-sub">On the Members' Course</p><ul class="adm-list adm-holes">${live.map(row).join('')}</ul>` : ''}`;
+  for (const d of list) {
+    const li = el.querySelector<HTMLElement>(`[data-design="${d.id}"]`)!;
+    const { hole } = buildHole(d.spec, `review-${d.id}`);
+    li.querySelector('.adm-hole-plan')!.appendChild(planCanvas(hole, 96));
+    li.querySelector<HTMLButtonElement>('[data-hole-play]')!.onclick = () => testHole(snap, { ...hole, par: d.par ?? 3 }, () => navigate('#/admin'));
+    li.querySelector<HTMLButtonElement>('[data-hole-ok]')?.addEventListener('click', async () => {
+      await api.reviewDesign(requireSession(), d.id, true);
+      void loadHoles(snap);
+    });
+    li.querySelector<HTMLButtonElement>('[data-hole-no]')!.onclick = async () => {
+      await api.reviewDesign(requireSession(), d.id, false);
+      void loadHoles(snap);
+    };
+  }
 }
 
 // The clubs this device can act for: the admin's signed-in clubs. Notices and invites go out through each one.

@@ -23,6 +23,8 @@ import { HANK } from '../staff';
 import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
 import { HOLLOW_HILLS } from '../golf3d/minigolf';
+import { buildHole } from '../designer/spec';
+import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
 import { dailySummary } from './daily';
 
@@ -251,6 +253,51 @@ export async function dailyRound(snap: Snapshot) {
   });
 }
 
+// The Members' Course: the approved holes from the Design Desk, each flying its designer's name on the flag
+async function membersHoles(): Promise<Hole[]> {
+  const list = await api.membersCourse(requireSession()).catch(() => []);
+  return list.map((m) => ({ ...buildHole(m.spec, `members-${m.id}`).hole, par: m.par, flag: m.by.slice(0, 9) }));
+}
+
+// Try a hole from the Design Desk (or the Committee's queue): one hole, nothing counts, then back
+export function testHole(snap: Snapshot, hole: Hole, back: () => void) {
+  closeRound();
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const leave = () => {
+    closeRound();
+    back();
+  };
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  let g: Course3D;
+  try {
+    g = new Course3D(el, me.avatar, leave);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p></main>`);
+    return;
+  }
+  game = g;
+  g.leaveText = 'Back';
+  g.howTo = 'minigolf';
+  const go = async () => {
+    const r = await g.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
+    if (game !== g) return;
+    const sheet = document.createElement('div');
+    sheet.className = 'practice-notes daily-summary';
+    sheet.innerHTML = `<div class="notes-card"><div class="notes-body"><p class="eyebrow">Test round · nothing counts</p><h2>${r.strokes} on ${esc(hole.name)}</h2><p>Par ${hole.par}.</p></div>
+      <div class="notes-foot daily-foot"><button class="btn" data-again>Again</button><button class="btn ghost" data-back>Back</button></div></div>`;
+    el.appendChild(sheet);
+    sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = () => {
+      sheet.remove();
+      void go();
+    };
+    sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = leave;
+  };
+  void go();
+}
+
 // The bar's weekly contests: the six holes of haunted mini golf, or three swings off the range tee. The week's best
 // counts; play as often as you like.
 export function barRound(snap: Snapshot, kind: BarGame) {
@@ -275,23 +322,26 @@ export function barRound(snap: Snapshot, kind: BarGame) {
   g.leaveText = 'Leave';
   g.howTo = 'practice';
   const again = () => barRound(snap, kind);
-  if (kind === 'minigolf') {
-    // the six holes of Hollow Hills, putter only, by moonlight. Fewest strokes counts for the week.
+  if (kind === 'minigolf' || kind === 'members') {
+    // six holes of Hollow Hills, or the members' own holes (up to nine): putter only, fewest strokes counts
     g.howTo = 'minigolf';
-    g.starter = `Six holes, ${me.name}. Mind the scythe.`;
+    g.starter = kind === 'minigolf' ? `Six holes, ${me.name}. Mind the scythe.` : `Your fellow members built these, ${me.name}. Blame them.`;
     void (async () => {
+      const holes = kind === 'minigolf' ? HOLLOW_HILLS : await membersHoles();
+      if (game !== g) return;
+      if (!holes.length) return back();
       const scores: number[] = [];
       const sum = () => scores.reduce((a, b) => a + b, 0);
-      for (let i = 0; i < HOLLOW_HILLS.length; i++) {
-        const par = HOLLOW_HILLS.slice(0, i).reduce((a, h) => a + h.par, 0);
-        const r = await g.play(HOLLOW_HILLS[i], i + 1, { strokes: sum(), par }, { of: HOLLOW_HILLS.length });
+      for (let i = 0; i < holes.length; i++) {
+        const par = holes.slice(0, i).reduce((a, h) => a + h.par, 0);
+        const r = await g.play(holes[i], i + 1, { strokes: sum(), par }, { of: holes.length });
         if (game !== g) return; // they left
         scores.push(r.strokes);
         if (r.strokes === 1) sfx('cackle');
       }
       const score = minigolfScore(sum());
-      await api.submitBar(requireSession(), 'minigolf', score).catch(() => {});
-      if (game === g) window.setTimeout(() => void barSummary('minigolf', score, again, back), 600);
+      await api.submitBar(requireSession(), kind, score).catch(() => {});
+      if (game === g) window.setTimeout(() => void barSummary(kind, score, again, back), 600);
     })();
   } else {
     let best: number | null = null;

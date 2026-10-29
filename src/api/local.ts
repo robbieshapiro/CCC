@@ -6,14 +6,14 @@ import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type DailyDay, type DailyRow, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyDay, type DailyRow, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[] };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[] };
 
 const KEY = 'ccc-local-db';
 
@@ -53,7 +53,7 @@ function homeOf(db: Db, me: DbPlayer): DbPlayer {
   return db.players.find((p) => !p.host && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin) ?? me;
 }
 
-export const localApi: Api & { seedDemo(session: { token: string }): void } = {
+export const localApi: Api & { seedDemo(session: { token: string }): void; localDesign(session: { token: string }, prompt: string, id?: number, change?: string): { id: number; spec: Design['spec'] } } = {
   mode: 'local',
 
   async join(invite, name, pin) {
@@ -355,6 +355,64 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     return []; // Reginald writes them on the server; local mode has none
   },
 
+  // the Design Desk, kept on the device (localDesign below stands in for the architect)
+  async myDesigns(session): Promise<Design[]> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    return (db.designs ?? []).filter((d) => d.playerId === me.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+  async submitDesign(session, id, par) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const d = (db.designs ?? []).find((x) => x.id === id && x.playerId === me.id && x.status === 'draft');
+    if (!d) throw new Error("That hole can't be submitted.");
+    d.status = 'submitted';
+    d.par = par;
+    save(db);
+  },
+  async designQueue(session): Promise<Design[]> {
+    const db = load();
+    if (!playerByToken(db, session.token).admin) throw new Error('Only the committee can see this.');
+    return (db.designs ?? []).filter((d) => d.status === 'submitted' || d.status === 'approved').map((d) => ({ ...d, by: db.players.find((p) => p.id === d.playerId)?.name ?? '?' }));
+  },
+  async reviewDesign(session, id, ok) {
+    const db = load();
+    if (!playerByToken(db, session.token).admin) throw new Error('Only the committee can do this.');
+    const d = (db.designs ?? []).find((x) => x.id === id);
+    if (d) {
+      d.status = ok ? 'approved' : 'rejected';
+      d.reviewedAt = new Date().toISOString();
+    }
+    save(db);
+  },
+  async membersCourse(): Promise<MembersHole[]> {
+    const db = load();
+    return (db.designs ?? [])
+      .filter((d) => d.status === 'approved')
+      .slice(-9)
+      .map((d) => ({ id: d.id, spec: d.spec, par: d.par ?? 3, by: db.players.find((p) => p.id === d.playerId)?.name ?? '?' }));
+  },
+  // local mode's architect: a stock hole, so the Desk can be tried without the server
+  localDesign(session, prompt, id, change) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const spec = sampleSpec(prompt, change);
+    db.designs ??= [];
+    if (id) {
+      const d = db.designs.find((x) => x.id === id && x.playerId === me.id);
+      if (d) {
+        d.spec = spec;
+        d.par = null;
+        save(db);
+        return { id, spec };
+      }
+    }
+    const nid = (db.designs.reduce((a, d) => Math.max(a, d.id), 0) || 0) + 1;
+    db.designs.push({ id: nid, playerId: me.id, prompt, spec, par: null, status: 'draft', createdAt: new Date().toISOString() });
+    save(db);
+    return { id: nid, spec };
+  },
+
   async openChampions(): Promise<OpenChampion[]> {
     return []; // local mode keeps one month at a time
   },
@@ -590,3 +648,24 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     save(db);
   },
 };
+
+// the stand-in architect's hole: a night dogleg with a coffin shortcut and a ghost, or a sunny straight one with a
+// pendulum if the description mentions the day
+function sampleSpec(prompt: string, change?: string): Design['spec'] {
+  const day = /day|sun|garden/i.test(`${prompt} ${change ?? ''}`);
+  return day
+    ? {
+        name: 'The Swinging Gate', look: 'day', shape: 'straight', length: 70, width: 16, cup: { along: 0.92, across: 0.2 },
+        slopes: [{ kind: 'dip', along: 0.92, across: 0.2, size: 'small' }], obstacles: [{ kind: 'tree', along: 0.25, across: -0.5 }, { kind: 'stone', along: 0.7, across: 0.5 }],
+        fences: [], hazards: [{ from: 0.35, to: 0.6, left: -1, right: 1, bridge: true }],
+        gimmicks: [{ kind: 'pendulum', along: 0.48, across: 0, speed: change ? 'slow' : 'medium', to_along: 0, to_across: 0 }],
+        review: 'A pond, a plank and a blade. The Committee calls it character building.', hint: 'Wait for the blade to swing wide, then roll it across the plank.',
+      }
+    : {
+        name: 'Grave Matters', look: 'night', shape: 'dogleg-right', length: 80, width: 16, cup: { along: 0.95, across: 0 },
+        slopes: [{ kind: 'dip', along: 0.95, across: 0, size: 'small' }], obstacles: [{ kind: 'stone', along: 0.3, across: -0.4 }, { kind: 'stone', along: 0.42, across: 0.45 }],
+        fences: [], hazards: [],
+        gimmicks: [{ kind: 'ghost', along: 0.8, across: 0, speed: change ? 'slow' : 'medium', to_along: 0, to_across: 0 }, { kind: 'tunnel', along: 0.55, across: -0.6, speed: 'medium', to_along: 0.88, to_across: 0.3 }],
+        review: 'Round the corner, past a ghost, or down a hole in the ground. Most members choose the hole.', hint: 'Bank off the far wall at the corner, or find the tunnel on the left.',
+      };
+}

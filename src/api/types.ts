@@ -99,6 +99,10 @@ export type DailyDay = { day: string; players: number; tries: number };
 export type BarBoard = { week: string; board: { name: string; score: number; mine: boolean }[]; mine: number | null; players: number };
 export type ClubRow = { id: string; name: string; mine: boolean; members: number; played: number; best: number | null; leaders: string[] | null };
 export type Chronicle = { week: string; body: { headline: string; dek: string; items: { title: string; body: string }[]; signoff: string } };
+export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+// a member's mini golf hole from the Design Desk (spec: src/designer/spec.ts HoleSpec)
+export type Design = { id: number; prompt: string; spec: import('../designer/spec').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string };
+export type MembersHole = { id: number; spec: import('../designer/spec').HoleSpec; par: number; by: string };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -130,10 +134,15 @@ export interface Api {
   dailyState(session: Session, day: string): Promise<DailyState>;
   submitDaily(session: Session, day: string, t: DailyTry): Promise<void>;
   dailyAdmin(session: Session): Promise<DailyDay[]>;
-  submitBar(session: Session, game: 'minigolf' | 'drive', score: number): Promise<void>;
-  barBoard(session: Session, game: 'minigolf' | 'drive'): Promise<BarBoard>; // the last 7 days across the admin's clubs
+  submitBar(session: Session, game: 'minigolf' | 'drive' | 'members', score: number): Promise<void>;
+  barBoard(session: Session, game: 'minigolf' | 'drive' | 'members'): Promise<BarBoard>; // the last 7 days across the admin's clubs
   openBoard(session: Session): Promise<OpenRow[]>;
   clubList(session: Session): Promise<ClubRow[]>;
-  chronicles(session: Session): Promise<Chronicle[]>; // Reginald's weekly letters to your club, newest first // every club this month: members, leader, best
+  chronicles(session: Session): Promise<Chronicle[]>;
+  myDesigns(session: Session): Promise<Design[]>;
+  submitDesign(session: Session, id: number, par: number): Promise<void>;
+  designQueue(session: Session): Promise<Design[]>; // the admin's: waiting, and on the course
+  reviewDesign(session: Session, id: number, ok: boolean): Promise<void>;
+  membersCourse(session: Session): Promise<MembersHole[]>; // Reginald's weekly letters to your club, newest first // every club this month: members, leader, best
   openChampions(session: Session): Promise<OpenChampion[]>;
 }
