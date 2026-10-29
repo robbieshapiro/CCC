@@ -128,6 +128,11 @@ const SFX = {
     hiss('lowpass', 400, 0.5, { dur: 0.8, attack: 0.2, peak: 0.3 }, 1600);
     tone('sawtooth', 220, 440, { dur: 0.4, peak: 0.06 });
   },
+  // a witch's cackle, for a hole in one at Hollow Hills: four falling, wobbling "ha"s
+  cackle: () => {
+    for (let i = 0; i < 4; i++) tone('sawtooth', 760 - i * 70, 520 - i * 60, { at: i * 0.16, dur: 0.13, attack: 0.01, peak: 0.12 });
+    tone('sine', 1400, 300, { at: 0.66, dur: 0.5, attack: 0.02, peak: 0.08 });
+  },
   sad: () => {
     tone('triangle', 392, 370, { dur: 0.25, peak: 0.12 });
     tone('triangle', 370, 349, { at: 0.25, dur: 0.25, peak: 0.12 });

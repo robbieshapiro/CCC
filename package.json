@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "build:single": "npm run build && node scripts/build-single.mjs",
-    "check-holes": "rolldown scripts/check-holes.ts -o node_modules/.cache/check-holes.mjs -p node && node node_modules/.cache/check-holes.mjs"
+    "check-holes": "rolldown scripts/check-holes.ts -o node_modules/.cache/check-holes.mjs -p node && node node_modules/.cache/check-holes.mjs",
+    "check-minigolf": "rolldown scripts/check-minigolf.ts -o node_modules/.cache/check-minigolf.mjs -p node && node node_modules/.cache/check-minigolf.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

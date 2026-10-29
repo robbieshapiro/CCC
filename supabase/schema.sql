@@ -800,27 +800,29 @@ grant execute on function submit_daily(uuid, date, int, numeric, boolean, boolea
 grant execute on function daily_state(uuid, date) to anon;
 grant execute on function daily_admin(uuid) to anon;
 
--- The Nineteenth Hole's weekly contests: putting and long drive. Every score is kept; the week's best per person
--- counts (higher is better), and the week runs Monday to Sunday, Eastern. One person across clubs is the same name
+-- The Nineteenth Hole's weekly contests: mini golf (the putting contest before it) and long drive. Every score is
+-- kept; the week's best per person counts (higher is better: mini golf is kept as minus the strokes), and the week runs Monday to Sunday, Eastern. One person across clubs is the same name
 -- and PIN hash, as on the Open.
 create table if not exists bar_scores (
   id bigserial primary key,
   player_id uuid not null references players on delete cascade,
-  game text not null check (game in ('putting', 'drive')),
+  game text not null check (game in ('putting', 'drive', 'minigolf')),
   week date not null,
   score numeric(8, 1) not null,
   created_at timestamptz not null default now()
 );
 alter table bar_scores enable row level security;
 create index if not exists bar_scores_week on bar_scores (game, week);
+alter table bar_scores drop constraint if exists bar_scores_game_check;
+alter table bar_scores add constraint bar_scores_game_check check (game in ('putting', 'drive', 'minigolf'));
 
 create or replace function submit_bar(p_token uuid, p_game text, p_score numeric) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token));
 begin
-  if p_game not in ('putting', 'drive') then raise exception 'No such game.'; end if;
-  -- a long drive is 0 to 450 yd; a putting score is made x 1000 less feet left, 5 putts at most
-  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'putting' and p_score not between -999 and 5000) then
+  if p_game not in ('minigolf', 'drive') then raise exception 'No such game.'; end if;
+  -- a long drive is 0 to 450 yd; mini golf is minus the strokes, six holes picked up at par + 3 at worst
+  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'minigolf' and p_score not between -60 and -6) then
     raise exception 'That score doesn''t look right.';
   end if;
   insert into bar_scores (player_id, game, week, score)

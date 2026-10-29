@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { makeRng } from '../seed';
 import { cupR, curbs } from './physics';
 import * as props from './props';
+import { brewFx, HAUNTED_FLOOR, HAUNTED_SURFACE, hauntedDecor, hauntedGrounds, hauntedMover, hauntedPortal, hauntedPost, hauntedWall, slimeBubbles, slimeMaterial } from './haunted';
 import * as stands from './stands';
 import { mat, mesh, P } from './props';
 import { gradAt, heightAt, inPoly, levelOf, surfaceAt, wetIn } from './terrain';
@@ -24,7 +25,7 @@ const SURFACE: Record<Surface, string> = {
 };
 // on the volcanic island the sand is black, the paths are cinder and the cliffs are basalt
 const VOLCANIC: Partial<Record<Surface, string>> = { sand: '#4a4541', path: '#6b5f55', rough: '#3f6a2f' };
-const surfaceColor = (h: Hole, s: Surface) => (h.theme === 'volcanic' ? VOLCANIC[s] : undefined) ?? SURFACE[s];
+const surfaceColor = (h: Hole, s: Surface) => (h.theme === 'volcanic' ? VOLCANIC[s] : h.theme === 'haunted' ? HAUNTED_SURFACE[s] : undefined) ?? SURFACE[s];
 
 const ROCK = new THREE.Color('#8a8270');
 const BASALT = new THREE.Color('#2f2b29');
@@ -54,7 +55,7 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
     g.closePath();
   };
   const hex = (s: Surface, dl = 0) => '#' + new THREE.Color(surfaceColor(h, s)).offsetHSL(0, 0, dl).getHexString();
-  g.fillStyle = h.theme === 'volcanic' ? '#2a2624' : '#284a25';
+  g.fillStyle = h.theme === 'volcanic' ? '#2a2624' : h.theme === 'haunted' ? HAUNTED_FLOOR : '#284a25';
   g.fillRect(x0, y0, x1 - x0, y1 - y0);
   const layers: { poly: V2[]; surface: Surface }[] = [{ poly: h.border, surface: h.base }, ...h.regions];
   for (const { poly, surface } of layers) {
@@ -183,7 +184,7 @@ function terrainMesh(h: Hole) {
   const ny = Math.ceil((y1 - y0) / S) + 1;
   const pos = new Float32Array(nx * ny * 3);
   const bed = new THREE.Color('#58705a');
-  const beds: Record<string, THREE.Color> = { lake: bed, sea: new THREE.Color('#2f5560'), lava: new THREE.Color('#1a0d09') };
+  const beds: Record<string, THREE.Color> = { lake: bed, sea: new THREE.Color('#2f5560'), lava: new THREE.Color('#1a0d09'), slime: new THREE.Color('#244a16') };
   const cliff = h.theme === 'volcanic' ? BASALT : ROCK;
   for (let j = 0; j < ny; j++)
     for (let i = 0; i < nx; i++) {
@@ -363,7 +364,9 @@ function waterMesh(h: Hole, w: Water) {
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   }
   const material =
-    look === 'lava'
+    look === 'slime'
+      ? slimeMaterial()
+      : look === 'lava'
       ? new THREE.MeshStandardMaterial({
           map: lavaTextures().map,
           emissiveMap: lavaTextures().glow,
@@ -381,11 +384,12 @@ function waterMesh(h: Hole, w: Water) {
           envMapIntensity: 1.4,
         });
   const m = new THREE.Mesh(geo, material);
-  m.receiveShadow = look !== 'lava';
+  m.receiveShadow = look !== 'lava' && look !== 'slime';
   return m;
 }
 
 function wallMesh(h: Hole, w: Wall, group: THREE.Group, occ: Occluder[]) {
+  if (hauntedWall(h, w, group)) return;
   const len = Math.hypot(w.b.x - w.a.x, w.b.y - w.a.y);
   const n = Math.max(1, Math.ceil(len / 3));
   const look = w.look ?? 'stone';
@@ -444,6 +448,7 @@ export function buildWorld(h: Hole, number: number): World {
   const terrain = terrainMesh(h);
   root.add(terrain.mesh);
   const volcanic = h.theme === 'volcanic';
+  const haunted = h.theme === 'haunted';
   // on the island the world beyond the grounds is the sea, at the sea's own level when the hole has one
   const sea = h.water.find((w) => w.look === 'sea');
   const floor = volcanic ? (sea ? sea.level : Math.min(0, terrain.low - 1.5)) : terrain.low - 1.5;
@@ -451,7 +456,7 @@ export function buildWorld(h: Hole, number: number): World {
     new THREE.PlaneGeometry(4000, 4000),
     volcanic
       ? new THREE.MeshStandardMaterial({ color: '#2b6d84', roughness: 0.08, metalness: 0.25, envMapIntensity: 1.4 })
-      : new THREE.MeshStandardMaterial({ color: '#284a25', roughness: 1 }),
+      : new THREE.MeshStandardMaterial({ color: haunted ? HAUNTED_FLOOR : '#284a25', roughness: 1 }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = floor - (volcanic && sea ? 0.05 : 0);
@@ -464,6 +469,7 @@ export function buildWorld(h: Hole, number: number): World {
     if (!water) continue;
     root.add(water);
     if (w.look === 'lava') root.add(lavaSmoke(h, w, anim));
+    if (w.look === 'slime') slimeBubbles(h, w, root, anim);
     const posAttr = water.geometry.attributes.position as THREE.BufferAttribute;
     const base = Float32Array.from(posAttr.array as Float32Array);
     const lava = w.look === 'lava';
@@ -497,7 +503,8 @@ export function buildWorld(h: Hole, number: number): World {
     occluders.push({ obj: o, x, z: -y, r });
     return o;
   };
-  for (const w of [...curbs(h), ...h.walls]) wallMesh(h, w, root, occluders);
+  // mini golf's curbs are crypt walls
+  for (const w of [...curbs(h).map((c) => (haunted ? { ...c, look: 'crypt' as const } : c)), ...h.walls]) wallMesh(h, w, root, occluders);
 
   // posts
   let wicketPrev: { x: number; y: number } | null = null;
@@ -505,7 +512,10 @@ export function buildWorld(h: Hole, number: number): World {
   for (const p of h.posts) {
     const look = p.look ?? 'post';
     const vary = 0.9 + (Math.abs(p.x * 7 + p.y * 13) % 5) * 0.06;
-    if (look === 'pine') root.add(fadeable(at(props.pine(vary), p.x, p.y, -0.2), p.x, p.y, 5.5));
+    const spooky = hauntedPost(h, p, anim);
+    if (spooky) root.add(spooky);
+    else if (look === 'ghost') continue;
+    else if (look === 'pine') root.add(fadeable(at(props.pine(vary), p.x, p.y, -0.2), p.x, p.y, 5.5));
     else if (look === 'tree') root.add(fadeable(at(props.leafyTree(1.1), p.x, p.y, -0.2), p.x, p.y, 6));
     else if (look === 'oak') root.add(fadeable(at(props.oak(vary), p.x, p.y, -0.2), p.x, p.y, 9));
     else if (look === 'cypress') root.add(fadeable(at(props.cypress(vary), p.x, p.y, -0.2), p.x, p.y, 3));
@@ -537,7 +547,14 @@ export function buildWorld(h: Hole, number: number): World {
 
   // decor
   for (const d of h.decor) {
-    let o: THREE.Object3D | null = null;
+    let o: THREE.Object3D | null = haunted ? hauntedDecor(d, anim) : null;
+    if (o) {
+      at(o, d.x, d.y);
+      if (d.rot) o.rotation.y = d.rot;
+      if (d.kind !== 'bigpumpkin' && d.scale && d.kind !== 'tomb' && d.kind !== 'deadtree') o.scale.setScalar(d.scale);
+      root.add(o);
+      continue;
+    }
     if (d.kind === 'azalea') o = props.azaleaBush(d.color ?? '#e86a92');
     else if (d.kind === 'bench') o = props.bench();
     else if (d.kind === 'lamp') o = props.lamp();
@@ -614,6 +631,7 @@ export function buildWorld(h: Hole, number: number): World {
 
   // movers
   for (const m of h.movers) {
+    if (hauntedMover(h, m, root, anim)) continue;
     const o = m.look === 'swan' ? props.swan() : props.cart();
     root.add(o);
     anim.push((clock) => {
@@ -658,6 +676,10 @@ export function buildWorld(h: Hole, number: number): World {
 
   // tunnels: a dark hole ringed with rock where a ball drops in, and a rock arch round the mouth where it comes out
   for (const pt of h.portals ?? []) {
+    if (haunted) {
+      hauntedPortal(h, pt, root);
+      continue;
+    }
     const ring = mesh(new THREE.TorusGeometry(pt.r * 1.05, 0.5, 6, 18), mat('#3a302b'));
     ring.rotation.x = Math.PI / 2;
     root.add(at(ring, pt.x, pt.y, 0.12));
@@ -675,6 +697,8 @@ export function buildWorld(h: Hole, number: number): World {
     out.rotation.y = Math.atan2(dx, dy);
     root.add(at(out, pt.to.x - (dx / len) * 3, pt.to.y - (dy / len) * 3, 0));
   }
+
+  for (const p of h.pushes) brewFx(h, p, root, anim);
 
   // geysers and blowholes: a ring of dark rock round the vent, a wisp of steam, and a burst when it goes
   for (const p of h.pushes) {
@@ -782,7 +806,7 @@ export function buildWorld(h: Hole, number: number): World {
   root.add(liner);
   const pin = new THREE.Group();
   pin.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 7.5, 6), mat(P.white, { rough: 0.3 })).translateY(3.75));
-  const flagTex = props.textTexture([{ text: h.flag ?? String(number), font: `600 ${h.flag ? 64 : 90}px Georgia, serif`, color: P.gold, y: 68 }], 192, 128);
+  const flagTex = props.textTexture([{ text: h.flag ?? String(number), font: `600 ${h.flag ? 64 : 90}px Georgia, serif`, color: haunted ? '#1a0f22' : P.gold, y: 68 }], 192, 128, haunted ? '#e8742a' : P.green);
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.7, 10, 3), new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide, roughness: 0.9 }));
   flag.geometry.translate(1.3, 0, 0);
   flag.position.y = 6.6;
@@ -797,7 +821,8 @@ export function buildWorld(h: Hole, number: number): World {
   const rng = makeRng(`frame:${h.id}`);
   const { x0, y0, x1, y1 } = h.bounds;
   const building = h.decor.find((d) => d.kind === 'clubhouse');
-  for (let i = 0; i < (volcanic ? 0 : 70); i++) {
+  if (haunted) hauntedGrounds(h, root, anim, floor);
+  for (let i = 0; i < (volcanic || haunted ? 0 : 70); i++) {
     const side = Math.floor(rng.next() * 4);
     const t = rng.next();
     const off = 10 + rng.next() * 60;
@@ -836,7 +861,7 @@ export function buildWorld(h: Hole, number: number): World {
       root.add(st);
     }
   }
-  for (let i = 0; i < (volcanic ? 0 : 26); i++) {
+  for (let i = 0; i < (volcanic || haunted ? 0 : 26); i++) {
     const a = (i / 26) * Math.PI * 2 + rng.next() * 0.2;
     const r = 1150 + rng.next() * 350;
     const peak = props.mountain(180 + rng.next() * 260, 220 + rng.next() * 160, i);
