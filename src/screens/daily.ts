@@ -34,7 +34,7 @@ function board(state: DailyState, top = 5) {
   return `<ol class="daily-board">${rows
     .map((r) => {
       const i = state.board.indexOf(r) + 1;
-      return `<li class="${r.mine ? 'me' : ''}"><span>${i}</span><b>${esc(r.name)}</b><small>${esc(r.club)}</small><em>${resultLabel({ ft: r.ft, holed: r.holed, lost: r.ft === null && !r.holed })}</em></li>`;
+      return `<li class="${r.mine ? 'me' : ''}"><span>${i}</span><b>${esc(r.name)}</b><small>${esc(r.club)}</small><em>${r.holed ? `Holed${r.holedTry ? ` · try ${r.holedTry}` : ''}` : resultLabel({ ft: r.ft, holed: r.holed, lost: r.ft === null && !r.holed })}</em></li>`;
     })
     .join('')}</ol>`;
 }

@@ -441,9 +441,13 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
       const ts = of(ps, day);
       if (!ts.length) continue;
       const b = best(ts);
-      board.push({ name: ps[0].name, club: club(ps[0].groupId), ft: b?.ft ?? null, holed: !!b?.holed, tries: ts.length, mine: k === key(me) });
+      const holedTry = ts.filter((t) => t.holed).map((t) => t.try).sort()[0] ?? null;
+      const fts = ts.map((t) => (t.holed ? 0 : t.lost ? null : t.ft)).sort((x, y) => (x ?? Infinity) - (y ?? Infinity));
+      board.push({ name: ps[0].name, club: club(ps[0].groupId), ft: b?.ft ?? null, holed: !!b?.holed, holedTry, tries: ts.length, mine: k === key(me), fts } as DailyRow & { fts: (number | null)[] });
     }
-    board.sort((a, b) => Number(b.holed) - Number(a.holed) || (a.ft ?? Infinity) - (b.ft ?? Infinity));
+    // as on the server: holed first, holed sooner first, then nearest, then the next-best try
+    const by = (r: DailyRow) => r as DailyRow & { fts: (number | null)[] };
+    board.sort((a, b) => Number(b.holed) - Number(a.holed) || (a.holedTry ?? 9) - (b.holedTry ?? 9) || [0, 1, 2].reduce((c, i) => c || (by(a).fts[i] ?? 1e9) - (by(b).fts[i] ?? 1e9), 0));
     const mine = people.get(key(me)) ?? [me];
     let streak = 0;
     const d = new Date(`${day}T12:00:00Z`);
