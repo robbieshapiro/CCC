@@ -72,12 +72,13 @@ function nameTag(name: string, score: string) {
   return s;
 }
 
-type Look = 'day' | 'night' | 'links' | 'desert';
+type Look = 'day' | 'night' | 'links' | 'desert' | 'autumn';
 const LOOKS: Record<Look, { sky: string; ground: string; hemi: number; sunColor: string; sun: number; fog: string; near: number; far: number; env: number }> = {
   day: { sky: '#d6e8f5', ground: '#46612f', hemi: 1.25, sunColor: '#ffeccc', sun: 2.6, fog: '#e3ebe2', near: 420, far: 1300, env: 1 },
   night: { sky: '#6f63a8', ground: '#231a33', hemi: 1.1, sunColor: '#aebcff', sun: 1.5, fog: '#24163a', near: 90, far: 620, env: 0.35 },
   links: { sky: '#c9d3d8', ground: '#7a7350', hemi: 1.45, sunColor: '#f1ede2', sun: 1.7, fog: '#cfd5d3', near: 300, far: 1150, env: 0.8 },
   desert: { sky: '#d9ecf8', ground: '#a07a4a', hemi: 1.2, sunColor: '#ffe2b0', sun: 3.0, fog: '#efe0c4', near: 450, far: 1500, env: 1 },
+  autumn: { sky: '#d3e1ee', ground: '#6b5a2e', hemi: 1.2, sunColor: '#ffd59a', sun: 2.5, fog: '#e7dcc8', near: 400, far: 1300, env: 0.9 },
 };
 
 // a soft round glow, for the moon's halo
@@ -160,7 +161,7 @@ export class Course3D {
   private hemi = new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25);
   // the sky for each kind of country: day (the courses), night (the haunted mini golf), an overcast links and a hot
   // desert: sky, sun or moon, light and fog
-  private skies: Record<Look, THREE.Object3D[]> = { day: [], night: [], links: [], desert: [] };
+  private skies: Record<Look, THREE.Object3D[]> = { day: [], night: [], links: [], desert: [], autumn: [] };
   private look: Look | null = null;
   private night = false;
   private world: World | null = null;
@@ -389,7 +390,7 @@ export class Course3D {
     this.drawTrail();
     this.placeBall();
     this.sharpen(!!hole.tour);
-    const look: Look = hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : 'day';
+    const look: Look = hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? 'autumn' : 'day';
     if (this.look !== look) this.setLook(look);
     this.fitShadows();
     this.petalsFor(hole);
@@ -450,7 +451,11 @@ export class Course3D {
     const desert = this.skyMesh(1, ['#2f7fcf', '#8fc1e8', '#f1dcb4']);
     const hot = new THREE.Mesh(new THREE.SphereGeometry(44, 16, 10), new THREE.MeshBasicMaterial({ color: '#fffbea', fog: false }));
     hot.position.set(-700, 900, 1100);
-    this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot] };
+    // autumn: a crisp blue October sky warming to gold at the horizon, the sun low and amber
+    const autumn = this.skyMesh(1, ['#4f86c0', '#9fc0de', '#efd9b0']);
+    const low = new THREE.Mesh(new THREE.SphereGeometry(42, 16, 10), new THREE.MeshBasicMaterial({ color: '#ffe3b0', fog: false }));
+    low.position.set(-1000, 420, 1100);
+    this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot], autumn: [autumn, low] };
     for (const o of Object.values(this.skies).flat()) this.scene.add(o);
     this.setLook('day');
   }
@@ -461,7 +466,7 @@ export class Course3D {
     this.look = look;
     this.night = look === 'night';
     for (const [k, objs] of Object.entries(this.skies)) objs.forEach((o) => (o.visible = k === look));
-    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links'));
+    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links' || look === 'autumn'));
     const L = LOOKS[look];
     this.hemi.color.set(L.sky);
     this.hemi.groundColor.set(L.ground);

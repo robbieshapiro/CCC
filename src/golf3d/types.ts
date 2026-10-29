@@ -16,8 +16,8 @@ export type Piece =
   // wobble: ft the width wanders in and out, so a coastline isn't ruler-straight
   | { kind: 'embankment'; pts: V2[]; h: number[]; width: number; edge: number; wobble?: number };
 
-export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' | 'iron' | 'crypt' | 'blade' | 'teeth' };
-export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' | 'cactus' | 'gorse' };
+export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' | 'iron' | 'crypt' | 'blade' | 'teeth' | 'barn' };
+export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' | 'cactus' | 'gorse' | 'maple' };
 export type Region = { poly: V2[]; surface: Surface };
 // A lake or creek: its outline and the flat height of its surface. Ground inside that sits under the surface is wet.
 // The sea can run a tide and lava can pulse: the level swings by `amp` either way over `period` seconds of the hole clock.
@@ -50,7 +50,7 @@ export type Hole = {
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
   noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)
-  theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert';
+  theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn';
   putterOnly?: boolean; // mini golf: the putter is the only club
   flag?: string; // what the pin's flag says, if not the hole number
   aim: number; // initial aim angle (radians, 0 = straight up the hole)
@@ -64,7 +64,9 @@ export type Hole = {
   posts: Post[];
   movers: Mover[];
   pushes: Push[];
-  roofs?: { poly: V2[]; h: number }[]; // a ball that comes down on one is lost (penalty)
+  // a ball that comes down on one is lost (penalty). top: the ridge, ft above the ground; a ball higher than that
+  // sails over (a barn), where without it the roof reaches up for ever (a veranda under the clubhouse wall)
+  roofs?: { poly: V2[]; h: number; top?: number }[];
   ceilings?: { poly: V2[]; h: number }[]; // a cave roof this far above the ground: a ball that rises into it clips it and drops
   // a hole in the rock: a ball that rolls into it drops down a tunnel and comes out at `to` a moment later, at rest
   portals?: { id: string; x: number; y: number; r: number; to: V2; delay?: number }[];

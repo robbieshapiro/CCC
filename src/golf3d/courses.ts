@@ -4,12 +4,15 @@
 // from the preview.
 import { blowhole } from './holes/blowhole';
 import { caldera } from './holes/caldera';
+import { coveredbridge } from './holes/coveredbridge';
 import { geyseralley } from './holes/geyseralley';
 import { island } from './holes/island';
 import { lavafield } from './holes/lavafield';
 import { lavalift } from './holes/lavalift';
 import { lavatube } from './holes/lavatube';
+import { redbarn } from './holes/redbarn';
 import { ridge } from './holes/ridge';
+import { sugarmaple } from './holes/sugarmaple';
 import { summit } from './holes/summit';
 import type { Hole } from './types';
 
@@ -36,6 +39,17 @@ const COURSES: Course[] = [
     tagline: 'Six holes on a volcanic island. Lava, geysers and quick greens.',
     holes: [blowhole, lavafield, caldera, lavalift, geyseralley, lavatube],
     par: par([blowhole, lavafield, caldera, lavalift, geyseralley, lavatube]),
+  },
+  {
+    id: 'westernreserve',
+    // the first weekly course: northeast Ohio in October. A draft until Robbie has played it: then drop `draft` and
+    // it opens on the Monday below
+    opens: '2026-11-09',
+    draft: true,
+    name: 'The Western Reserve',
+    tagline: 'Three holes of Ohio in October. Maples, a covered bridge and a red barn.',
+    holes: [coveredbridge, sugarmaple, redbarn],
+    par: par([coveredbridge, sugarmaple, redbarn]),
   },
 ];
 

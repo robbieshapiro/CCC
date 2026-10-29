@@ -186,6 +186,6 @@ function previewTile(month: string) {
   const next = nextCourse(month);
   if (!next) return '';
   const starts = periodClosesAt(month);
-  return `<a class="tile" href="#/practice/${next.id}"><i>🌋</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
+  return `<a class="tile" href="#/practice/${next.id}"><i>${next.holes[0]?.theme === 'autumn' ? '🍁' : next.holes[0]?.theme === 'volcanic' ? '🌋' : '⛳'}</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
 }
 

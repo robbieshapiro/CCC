@@ -6,6 +6,7 @@ import * as props from './props';
 import { DESERT_SURFACE, LANDS_FLOOR, LINKS_SURFACE, landsFrame, landsPost } from './lands';
 import { brewFx, HAUNTED_FLOOR, HAUNTED_SURFACE, hauntedDecor, hauntedGrounds, hauntedMover, hauntedPortal, hauntedPost, hauntedWall, slimeBubbles, slimeMaterial } from './haunted';
 import * as stands from './stands';
+import { AUTUMN_FLOOR, AUTUMN_SURFACE, autumnDecor, autumnFrame, BARN_RED, gableRoof, maple } from './autumn';
 import { mat, mesh, P } from './props';
 import { gradAt, heightAt, inPoly, levelOf, surfaceAt, wetIn } from './terrain';
 import type { Hole, Surface, V2, Wall, Water } from './types';
@@ -26,7 +27,7 @@ const SURFACE: Record<Surface, string> = {
 };
 // on the volcanic island the sand is black, the paths are cinder and the cliffs are basalt
 const VOLCANIC: Partial<Record<Surface, string>> = { sand: '#4a4541', path: '#6b5f55', rough: '#3f6a2f' };
-const PALETTE: Record<string, Partial<Record<Surface, string>>> = { volcanic: VOLCANIC, haunted: HAUNTED_SURFACE, links: LINKS_SURFACE, desert: DESERT_SURFACE };
+const PALETTE: Record<string, Partial<Record<Surface, string>>> = { volcanic: VOLCANIC, haunted: HAUNTED_SURFACE, links: LINKS_SURFACE, desert: DESERT_SURFACE, autumn: AUTUMN_SURFACE };
 const surfaceColor = (h: Hole, s: Surface) => PALETTE[h.theme ?? '']?.[s] ?? SURFACE[s];
 
 const ROCK = new THREE.Color('#8a8270');
@@ -57,7 +58,7 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
     g.closePath();
   };
   const hex = (s: Surface, dl = 0) => '#' + new THREE.Color(surfaceColor(h, s)).offsetHSL(0, 0, dl).getHexString();
-  g.fillStyle = h.theme === 'volcanic' ? '#2a2624' : h.theme === 'haunted' ? HAUNTED_FLOOR : LANDS_FLOOR[h.theme ?? ''] ?? '#284a25';
+  g.fillStyle = h.theme === 'volcanic' ? '#2a2624' : h.theme === 'haunted' ? HAUNTED_FLOOR : h.theme === 'autumn' ? AUTUMN_FLOOR : LANDS_FLOOR[h.theme ?? ''] ?? '#284a25';
   g.fillRect(x0, y0, x1 - x0, y1 - y0);
   const layers: { poly: V2[]; surface: Surface }[] = [{ poly: h.border, surface: h.base }, ...h.regions];
   for (const { poly, surface } of layers) {
@@ -395,8 +396,8 @@ function wallMesh(h: Hole, w: Wall, group: THREE.Group, occ: Occluder[]) {
   const len = Math.hypot(w.b.x - w.a.x, w.b.y - w.a.y);
   const n = Math.max(1, Math.ceil(len / 3));
   const look = w.look ?? 'stone';
-  const thick = look === 'hedge' ? 1.6 : look === 'rail' ? 0.25 : look === 'wood' ? 0.5 : 0.7;
-  const color = look === 'hedge' ? P.hedge : look === 'wood' || look === 'rail' ? P.wood : P.stone;
+  const thick = look === 'hedge' ? 1.6 : look === 'rail' ? 0.25 : look === 'wood' ? 0.5 : look === 'barn' ? 0.8 : 0.7;
+  const color = look === 'hedge' ? P.hedge : look === 'wood' || look === 'rail' ? P.wood : look === 'barn' ? BARN_RED : P.stone;
   const ang = Math.atan2(w.b.y - w.a.y, w.b.x - w.a.x);
   for (let i = 0; i < n; i++) {
     const t = (i + 0.5) / n;
@@ -452,6 +453,7 @@ export function buildWorld(h: Hole, number: number): World {
   const volcanic = h.theme === 'volcanic';
   const haunted = h.theme === 'haunted';
   const lands = h.theme === 'links' || h.theme === 'desert';
+  const autumn = h.theme === 'autumn';
   // on the island the world beyond the grounds is the sea, at the sea's own level when the hole has one
   const sea = h.water.find((w) => w.look === 'sea');
   const seaside = volcanic || h.theme === 'links';
@@ -460,7 +462,7 @@ export function buildWorld(h: Hole, number: number): World {
     new THREE.PlaneGeometry(4000, 4000),
     seaside && (volcanic || sea)
       ? new THREE.MeshStandardMaterial({ color: volcanic ? '#2b6d84' : '#4d6f7a', roughness: 0.08, metalness: 0.25, envMapIntensity: 1.4 })
-      : new THREE.MeshStandardMaterial({ color: haunted ? HAUNTED_FLOOR : LANDS_FLOOR[h.theme ?? ''] ?? '#284a25', roughness: 1 }),
+      : new THREE.MeshStandardMaterial({ color: haunted ? HAUNTED_FLOOR : autumn ? AUTUMN_FLOOR : LANDS_FLOOR[h.theme ?? ''] ?? '#284a25', roughness: 1 }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = floor - (seaside && sea ? 0.05 : 0);
@@ -520,6 +522,7 @@ export function buildWorld(h: Hole, number: number): World {
     if (spooky) root.add(spooky);
     else if (look === 'ghost') continue;
     else if (look === 'pine') root.add(fadeable(at(props.pine(vary), p.x, p.y, -0.2), p.x, p.y, 5.5));
+    else if (look === 'maple') root.add(fadeable(at(maple(vary * Math.max(0.7, p.h / 22), Math.round(p.x * 7 + p.y)), p.x, p.y, -0.2), p.x, p.y, 7));
     else if (look === 'tree') root.add(fadeable(at(props.leafyTree(1.1), p.x, p.y, -0.2), p.x, p.y, 6));
     else if (look === 'oak') root.add(fadeable(at(props.oak(vary), p.x, p.y, -0.2), p.x, p.y, 9));
     else if (look === 'cypress') root.add(fadeable(at(props.cypress(vary), p.x, p.y, -0.2), p.x, p.y, 3));
@@ -558,6 +561,12 @@ export function buildWorld(h: Hole, number: number): World {
       if (d.rot) o.rotation.y = d.rot;
       if (d.kind !== 'bigpumpkin' && d.scale && d.kind !== 'tomb' && d.kind !== 'deadtree') o.scale.setScalar(d.scale);
       root.add(o);
+      continue;
+    }
+    const fall = autumnDecor(d);
+    if (fall) {
+      root.add(at(fall, d.x, d.y));
+      if (d.rot) fall.rotation.y = d.rot;
       continue;
     }
     if (d.kind === 'azalea') o = props.azaleaBush(d.color ?? '#e86a92');
@@ -779,6 +788,11 @@ export function buildWorld(h: Hole, number: number): World {
 
   // verandas: a roof slab on the columns, with a white fascia
   for (const r of h.roofs ?? []) {
+    // a barn or a covered bridge: a pitched roof that the ball can sail over
+    if (autumn) {
+      root.add(gableRoof(h, r.poly, r.h, r.top ?? r.h + 6));
+      continue;
+    }
     const xs = r.poly.map((q) => q.x);
     const ys = r.poly.map((q) => q.y);
     const [rx0, rx1, ry0, ry1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
@@ -828,7 +842,8 @@ export function buildWorld(h: Hole, number: number): World {
   const building = h.decor.find((d) => d.kind === 'clubhouse');
   if (haunted) hauntedGrounds(h, root, anim, floor);
   if (lands) landsFrame(h, root, floor);
-  for (let i = 0; i < (volcanic || haunted || lands ? 0 : 70); i++) {
+  if (autumn) autumnFrame(h, root, floor);
+  for (let i = 0; i < (volcanic || haunted || lands || autumn ? 0 : 70); i++) {
     const side = Math.floor(rng.next() * 4);
     const t = rng.next();
     const off = 10 + rng.next() * 60;
@@ -867,7 +882,7 @@ export function buildWorld(h: Hole, number: number): World {
       root.add(st);
     }
   }
-  for (let i = 0; i < (volcanic || haunted || lands ? 0 : 26); i++) {
+  for (let i = 0; i < (volcanic || haunted || lands || autumn ? 0 : 26); i++) {
     const a = (i / 26) * Math.PI * 2 + rng.next() * 0.2;
     const r = 1150 + rng.next() * 350;
     const peak = props.mountain(180 + rng.next() * 260, 220 + rng.next() * 160, i);
