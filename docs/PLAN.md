@@ -24,7 +24,7 @@ Last updated Oct 29, 2026. Pick up from here.
 - [ ] Optional: add `CRON_SECRET` in Vercel so only the cron can trigger the Monday Chronicle.
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
-- [ ] Delete the stale branches: `claude/multiplayer-web-game-brainstorm-8a7dxm` (after the default switch), `claude/practical-brown-qpytm6`, `claude/sharp-franklin-hbr1mc`.
+- [x] Stale branches deleted. Only `main` is left.
 
 ## To try tomorrow
 
