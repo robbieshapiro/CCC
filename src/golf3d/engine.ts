@@ -162,9 +162,6 @@ export class Course3D {
   private petals: THREE.Points | null = null;
   private puffs: { m: THREE.Mesh; t: number }[] = [];
   private cart: CartGirl | null = null;
-  private visits = 0; // beverage cart stops this round
-  private lastDrink: Drink | null = null;
-  private total = { strokes: 0, par: 0 };
   private ghosts: Ghost[] = [];
   private onCourse: { golfer: Golfer; objs: THREE.Object3D[]; at: THREE.Vector3 }[] = [];
   // the rest of a full stadium: simple figures, two instanced meshes for the lot
@@ -322,7 +319,7 @@ export class Course3D {
   }
 
   // Plays one hole to completion. The beverage cart may stop by on the tee.
-  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: 'daisy' | 'reginald'; of?: number } = {}): Promise<HoleResult> {
+  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: 'drinks' | 'shots'; of?: number } = {}): Promise<HoleResult> {
     this.holesInRound = opts.of ?? this.holesInRound;
     this.clearRead();
     if (this.world) {
@@ -336,7 +333,6 @@ export class Course3D {
     hole = withPin(hole, this.wind);
     this.hole = hole;
     this.number = number;
-    this.total = total;
     this.world = buildWorld(hole, number);
     this.scene.add(this.world.root);
     // the flag streams the way the wind blows
@@ -364,7 +360,7 @@ export class Course3D {
     this.hud(total);
     this.miniBase = null;
     this.placeGhosts();
-    if (opts.cart && !hole.noCart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k), opts.cart);
+    if (opts.cart && !hole.noCart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k), opts.cart === 'shots');
     this.startFlyover();
     // the practice areas skip the flyover and get straight to it
     if (this.drill) this.endFlyover();
@@ -753,13 +749,12 @@ export class Course3D {
   private order(kind: Drink | null) {
     this.overlay.classList.remove('carting');
     if (kind) {
-      this.lastDrink = kind;
-      // Reginald's fireball is good for one swing; Daisy's drinks for two
+      // a fireball is good for one swing; the other drinks for two
       this.drink = { kind, shots: kind === 'fireball' ? 1 : 2 };
       try {
         const k = 'ccc-drinks';
         const had = new Set<string>(JSON.parse(localStorage.getItem(k) || '[]'));
-        // the Nineteenth Hole is Daisy's three; the fireball doesn't count toward it
+        // the Nineteenth Hole feat is the three cart drinks; the fireball doesn't count toward it
         if (kind !== 'fireball') had.add(kind);
         localStorage.setItem(k, JSON.stringify([...had]));
         if (had.size === 3) this.zones.add('nineteenth');
@@ -869,11 +864,7 @@ export class Course3D {
     if (this.cart && !this.cart.visited) {
       this.mode = 'cart';
       this.overlay.classList.add('carting');
-      this.cart.arrive(this.pos, this.aim, this.overlay.querySelector('[data-cart]') as HTMLElement, {
-        visit: ++this.visits,
-        diff: this.total.strokes - this.total.par,
-        last: this.lastDrink,
-      });
+      this.cart.arrive(this.pos, this.aim, this.overlay.querySelector('[data-cart]') as HTMLElement);
     } else {
       this.toAim();
       this.showHowTo(true);

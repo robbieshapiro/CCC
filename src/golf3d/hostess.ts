@@ -1,10 +1,20 @@
-// Daisy, drawn differently from the members: smooth, realistic proportions instead of the club's toy golfers.
+// The cart crew (Daisy and the others), drawn differently from the members: smooth, realistic proportions instead of the club's toy golfers.
 // About 5'7" in a fitted club tank top and a tennis skort, long layered hair, and her own way of moving:
 // weight on one hip, a hand resting on it, a turn of the head, a laugh that tips her head back.
 // Faces +z like the golfers; units are feet.
 import * as THREE from 'three';
 
 export type HostessPose = 'idle' | 'wave' | 'laugh';
+
+// The cart crew: a few attendants, each with their own look. Who comes out to the tee is a matter of luck.
+export type Look = { name: string; skin: string; top: string; skort: string; hair: string; hairLight: string };
+export const CREW: Look[] = [
+  { name: 'Daisy', skin: '#e8bf9c', top: '#f4efe3', skort: '#163b2c', hair: '#4b2f1d', hairLight: '#6e4628' },
+  { name: 'Jules', skin: '#c68e62', top: '#1f2d4a', skort: '#f6f3ec', hair: '#1e1611', hairLight: '#3a2a1e' },
+  { name: 'Sam', skin: '#f2d2b8', top: '#7a1f2b', skort: '#e9e2d0', hair: '#c9a66b', hairLight: '#e3c48a' },
+  { name: 'Priya', skin: '#a8704a', top: '#2f6f5a', skort: '#f6f3ec', hair: '#1a1210', hairLight: '#2e211a' },
+  { name: 'Lucia', skin: '#d9a77e', top: '#b8955a', skort: '#1f2d4a', hair: '#7b3a1f', hairLight: '#a65a30' },
+];
 
 const smooth = (color: string, rough = 0.6, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness: rough, ...extra });
@@ -53,12 +63,12 @@ export class Hostess {
   private t = 0;
   private cur = { sway: 0, lean: 0, headX: 0, headY: 0, headZ: 0, bounce: 0, rA: [0, 0, 0, 0], lA: [0, 0, 0, 0] };
 
-  constructor() {
-    const skin = smooth('#e8bf9c', 0.5);
-    const shirt = smooth('#163b2c', 0.7);
+  constructor(look: Look = CREW[0]) {
+    const skin = smooth(look.skin, 0.5);
+    const shirt = smooth(look.top, 0.7);
     const white = smooth('#f6f3ec', 0.6);
-    const hairMat = smooth('#4b2f1d', 0.45);
-    const hairLight = smooth('#6e4628', 0.45);
+    const hairMat = smooth(look.hair, 0.45);
+    const hairLight = smooth(look.hairLight, 0.45);
     const gold = smooth('#d4af37', 0.25, { metalness: 0.9 });
     const dark = smooth('#1b1714', 0.3);
 
@@ -81,7 +91,7 @@ export class Hostess {
     }
 
     // skort, belt and the fitted polo: in at the waist, out at the hip
-    this.body.add(part(lathe([[0.5, 0.36], [0.58, 0.12], [0.62, -0.12], [0.66, -0.42], [0.65, -0.44]]), smooth('#f6f3ec', 0.6, { side: THREE.DoubleSide })));
+    this.body.add(part(lathe([[0.5, 0.36], [0.58, 0.12], [0.62, -0.12], [0.66, -0.42], [0.65, -0.44]]), smooth(look.skort, 0.6, { side: THREE.DoubleSide })));
     const belt = part(new THREE.TorusGeometry(0.49, 0.035, 8, 32), smooth('#2a1d14', 0.4));
     belt.rotation.x = Math.PI / 2;
     belt.position.y = 0.36;

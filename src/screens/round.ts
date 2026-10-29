@@ -101,7 +101,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     const h = course.holes[i];
     const par = course.holes.reduce((a, x, j) => a + (scores[j] === undefined ? 0 : x.par), 0);
     const jumped = new Promise<number>((res) => (jump = res));
-    const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i === 1 ? 'daisy' : i === 4 && course.holes.length >= 5 ? 'reginald' : undefined, of: course.holes.length });
+    const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i === 1 ? 'drinks' : i === 4 && course.holes.length >= 5 ? 'shots' : undefined, of: course.holes.length });
     const r = await Promise.race([played, jumped]);
     if (quit || !game) return;
     if (typeof r === 'number') {

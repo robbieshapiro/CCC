@@ -34,7 +34,7 @@ function board(state: DailyState, top = 5) {
   return `<ol class="daily-board">${rows
     .map((r) => {
       const i = state.board.indexOf(r) + 1;
-      return `<li class="${r.mine ? 'me' : ''}"><span>${i}</span><b>${esc(r.name)}</b><small>${esc(r.club)}</small><em>${r.holed ? `Holed${r.holedTry ? ` · try ${r.holedTry}` : ''}` : resultLabel({ ft: r.ft, holed: r.holed, lost: r.ft === null && !r.holed })}</em></li>`;
+      return `<li class="${r.mine ? 'me' : ''}"><span>${i}</span><b>${esc(r.name)}</b><small></small><em>${r.holed ? `Holed${r.holedTry ? ` · try ${r.holedTry}` : ''}` : resultLabel({ ft: r.ft, holed: r.holed, lost: r.ft === null && !r.holed })}</em></li>`;
     })
     .join('')}</ol>`;
 }
@@ -55,7 +55,7 @@ export async function bindDaily(day: string) {
   el.hidden = false;
   el.innerHTML = `
     <div class="daily-head">
-      <div><p class="eyebrow">Closest to the Pin · #${shot.number} · committee preview</p><h2>${esc(shot.label)}</h2></div>
+      <div><p class="eyebrow">Closest to the Pin · #${shot.number}</p><h2>${esc(shot.label)}</h2></div>
       ${state.streak ? `<span class="daily-streak" title="Days in a row">🔥 ${state.streak}</span>` : ''}
     </div>
     <p class="muted">A new shot every day. 3 tries, closest wins.</p>

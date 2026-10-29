@@ -1,6 +1,6 @@
 // The Open: one board across every club, this month's best round per person. It sits beside the club's own
-// board as a tab, and is the one members see first. Names from other clubs carry their club; only members of
-// your own club link through to a card.
+// board as a tab, and is the one members see first. Clubs aren't shown; only members of your own club link
+// through to a card.
 import { api } from '../api';
 import type { OpenChampion, OpenRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
@@ -32,7 +32,7 @@ function table(snap: Snapshot, rows: ReturnType<typeof ranked>) {
   const head = course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('');
   const body = rows
     .map((r) => {
-      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}<em>${esc(r.club)} · ${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
+      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}<em>${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
       const link = r.mine ? '#/card' : r.localId ? `#/member/${r.localId}` : '';
       return `<tr class="${r.mine ? 'me' : ''}">
         <td class="rank">${r.rank}</td>
@@ -55,7 +55,7 @@ function openLine(rows: ReturnType<typeof ranked>, today: string) {
   const top = rows[0];
   const me = rows.find((r) => r.mine);
   if (top.mine) return REGINALD.openLeading(toParLabel(top.toPar), today);
-  return REGINALD.openLeads(top.name, top.club, toParLabel(top.toPar), me ? me.rank : null, rows.length);
+  return REGINALD.openLeads(top.name, toParLabel(top.toPar), me ? me.rank : null, rows.length);
 }
 
 // Called after the home page draws. If the Open isn't available (the SQL isn't run yet, or offline), nothing

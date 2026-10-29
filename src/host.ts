@@ -74,7 +74,7 @@ export const REGINALD = {
   openNobody: () => 'The Open stands empty. Every club in the land, and not one round between them.',
   openLeading: (toPar: string, day: string) =>
     pick([`You lead the Open at <b>${toPar}</b>, ahead of every club in the land. Insufferable, I expect.`, `<b>${toPar}</b> and top of the Open. The other clubs have been informed. They took it badly.`], day),
-  openLeads: (who: string, club: string, toPar: string, mine: number | null, n: number) =>
-    `${esc(who)} of ${esc(club)} leads the Open at <b>${toPar}</b>.` + (mine ? ` You sit ${ordinal(mine)} of ${n}.` : ' You have yet to enter. I merely observe.'),
+  openLeads: (who: string, toPar: string, mine: number | null, n: number) =>
+    `${esc(who)} leads the Open at <b>${toPar}</b>.` + (mine ? ` You sit ${ordinal(mine)} of ${n}.` : ' You have yet to enter. I merely observe.'),
   card: (wins: number) => (wins ? `${wins} monthly ${wins === 1 ? 'title' : 'titles'}. The wardrobe reflects it.` : 'No titles yet. Win a month and the pro shop shall open its doors to you.'),
 };

@@ -53,11 +53,7 @@ async function router() {
       return welcome(s);
     }
     if (page === 'round') return round(s);
-    if (page === 'daily') {
-      if (s.admin) return dailyRound(s); // admin only for now
-      location.hash = '#/';
-      return;
-    }
+    if (page === 'daily') return dailyRound(s);
     // the admin's look at every hole of a course still to come
     if (page === 'preview') {
       const c = courseById(arg ?? '');
