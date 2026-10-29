@@ -74,7 +74,7 @@ export function home(snap: Snapshot) {
     <main>
       ${noticesStrip()}
       ${launchHero(snap.month)}
-      ${snap.admin ? dailyCard() : ''}
+      ${dailyCard()}
       ${hostChip(line, mood, 'reg-line')}
       <section class="course-card${nextCourse(snap.month) ? ' secondary' : ''}${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
         <div class="course-crest">${crest(78, 'cc')}</div>
@@ -116,8 +116,7 @@ export function home(snap: Snapshot) {
   tickCountdown();
   void bindOpen(snap, line);
   void bindNotices();
-  // the Daily Shot is the admin's alone while the scoring is worked out
-  if (snap.admin) void bindDaily(snap.today);
+  void bindDaily(snap.today);
   document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {
     localApi.seedDemo(requireSession());
