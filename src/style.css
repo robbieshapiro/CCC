@@ -930,3 +930,34 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 
 /* mini golf: just the putter, and no wind */
 .g3 [data-club][hidden], .g3 [data-wind][hidden] { display: none !important; }
+
+/* ---------- Tablets (iPad) ----------
+   Phones get one column and the tab bar along the bottom. From iPad width up, the pages use the room: wider
+   columns in landscape, the Play hero side by side, tiles and bar games in a row, the how-to as a grid, the Locker
+   with a bigger golfer, and the Committee Room's feed in two columns. */
+@media (min-width: 700px) {
+  .play-hero { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: center; padding: 28px; gap: 28px; }
+  .play-main { order: -1; }
+  .play-reg { flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .play-reg p { font-size: 16px; }
+  .btn.big { display: inline-block; width: auto; min-width: 260px; }
+  .bar-games { grid-template-columns: 1fr 1fr; }
+  .bar-games .bar-game:first-child { grid-column: span 2; }
+  .ch-how { grid-template-columns: 1fr 1fr; }
+  .ch-tabs a { padding: 9px 18px; font-size: 15px; }
+  main.narrow { max-width: 760px; }
+  .lk-hero { padding: 18px; gap: 22px; }
+  .lk-hero .stage { height: 320px; }
+}
+@media (min-width: 1000px) {
+  .tiles { grid-template-columns: repeat(4, 1fr); }
+  .bar-games { grid-template-columns: repeat(3, 1fr); }
+  .bar-games .bar-game:first-child { grid-column: auto; }
+  .adm-feed { display: block; columns: 2; column-gap: 28px; }
+  .adm-feed li { break-inside: avoid; }
+}
+@media (min-width: 1100px) {
+  .top, main { max-width: 1060px; }
+  main.narrow { max-width: 900px; }
+  .lk-hero .stage { height: 360px; }
+}
