@@ -211,6 +211,8 @@ export class Course3D {
   leaveText = '';
   // which how-to card this game shows (first time, then on the ? button)
   howTo: 'round' | 'practice' | 'daily' = 'round';
+  // Hank the Starter's word on the first tee of a round
+  starter = '';
   // told after every swing, for the practice log
   onShot: (() => void) | null = null;
   private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
@@ -907,7 +909,7 @@ export class Course3D {
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
     this.hint(
       first
-        ? 'Drag to aim. Tap to swing.'
+        ? this.starter ? `Hank: ${this.starter}` : 'Drag to aim. Tap to swing.'
         : tip
           ? 'Drag the dot on the ball for spin, or to bend the shot. Mind the wind.'
           : '',

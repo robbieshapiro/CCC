@@ -66,7 +66,7 @@ export async function bindOpen(snap: Snapshot, clubLine: string) {
   const tabs = document.getElementById('board-tabs');
   const openPane = document.getElementById('board-open');
   const clubPane = document.getElementById('board-club');
-  const say = document.querySelector<HTMLElement>('#reg-line p');
+  const say = document.querySelector<HTMLElement>('#reg-line');
   if (!rows || !tabs || !openPane || !clubPane) return;
   const list = ranked(rows);
   openPane.innerHTML = table(snap, list);

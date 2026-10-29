@@ -19,6 +19,7 @@ import { range, TARGETS } from '../golf3d/practice/range';
 import { shortgame, STATIONS } from '../golf3d/practice/shortgame';
 import { scoreClass } from './home';
 import { DAILY_TRIES, dailyShot } from '../daily';
+import { HANK } from '../staff';
 import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
@@ -91,6 +92,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       )
       .catch(() => {});
   }
+  game.starter = HANK.firstTee(me.name, snap.today);
   const scores: number[] = [];
   const spots: Spot[] = [];
   const feats = new Set<string>();
