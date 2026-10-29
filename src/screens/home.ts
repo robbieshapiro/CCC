@@ -1,4 +1,4 @@
-import { localApi, useSupabase } from '../api';
+import { listSessions, localApi, switchClub, useSupabase } from '../api';
 import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { featById } from '../feats';
@@ -28,7 +28,8 @@ export function home(snap: Snapshot) {
   const rows = board(snap);
   const played = rows.filter((r) => r.best);
   const mine = myBest(snap);
-  const me = rows.find((r) => r.playerId === snap.me)!;
+  const me = rows.find((r) => r.playerId === snap.me)!; // absent when you only run this club
+  const host = !!snap.players.find((p) => p.id === snap.me)?.host;
 
   let line = REGINALD.course(course.name, course.holes.length, course.par);
   let mood: Mood = 'dry';
@@ -41,6 +42,8 @@ export function home(snap: Snapshot) {
     const top = played[0];
     line = played.length > 2 ? REGINALD.others(player(top.playerId)!.name, toParLabel(top.toPar)) : REGINALD.behind(player(top.playerId)!.name, toParLabel(top.toPar), me.toPar - top.toPar);
   }
+
+  if (host) line = REGINALD.host(snap.groupName, snap.homeName ?? 'your club');
 
   const head = course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('');
   const body = rows
@@ -77,7 +80,7 @@ export function home(snap: Snapshot) {
           <p class="eyebrow">${monthName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
-          <a class="btn big" href="#/round">${mine ? 'Play again' : 'Play'}</a>
+          <a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>
         </div>
       </section>
       <div class="tiles">
@@ -110,9 +113,16 @@ export function home(snap: Snapshot) {
     </main>`);
 
   tickCountdown();
-  void bindOpen(snap, line);
+  void bindOpen(snap, line, host);
   void bindNotices();
   void bindDaily(snap.today);
+  // in a club you only run, play from your own club: that's where it counts
+  document.querySelector<HTMLAnchorElement>('[data-play-home]')?.addEventListener('click', (e) => {
+    if (!snap.homeGroupId || !listSessions().some((x) => x.groupId === snap.homeGroupId)) return;
+    e.preventDefault();
+    switchClub(snap.homeGroupId);
+    location.hash = '#/round';
+  });
   document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {
     localApi.seedDemo(requireSession());

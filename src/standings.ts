@@ -17,7 +17,8 @@ export function bestRounds(rounds: Round[]): Map<string, Round> {
 // The clubhouse board: best round per member, ties share a rank. Members yet to play sit at the bottom.
 export function board(snap: Snapshot): Row[] {
   const best = bestRounds(snap.rounds);
-  const rows = snap.players.map((p) => {
+  // someone who only runs the club (a host) isn't on its board
+  const rows = snap.players.filter((p) => !p.host).map((p) => {
     const mine = snap.rounds.filter((r) => r.playerId === p.id);
     const b = best.get(p.id) ?? null;
     return { playerId: p.id, best: b, rounds: mine.length, last: mine.map((r) => r.createdAt).sort().pop() ?? null, toPar: b ? toParOf(b) : 0, rank: 0 };

@@ -33,7 +33,7 @@ function table(snap: Snapshot, rows: ReturnType<typeof ranked>) {
   const body = rows
     .map((r) => {
       const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}<em>${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
-      const link = r.mine ? '#/card' : r.localId ? `#/member/${r.localId}` : '';
+      const link = r.mine ? '#/locker' : r.localId ? `#/member/${r.localId}` : '';
       return `<tr class="${r.mine ? 'me' : ''}">
         <td class="rank">${r.rank}</td>
         <td class="who">${link ? `<a href="${link}">${who}</a>` : `<div>${who}</div>`}</td>
@@ -54,13 +54,15 @@ function openLine(rows: ReturnType<typeof ranked>, today: string) {
   if (!rows.length) return REGINALD.openNobody();
   const top = rows[0];
   const me = rows.find((r) => r.mine);
-  if (top.mine) return REGINALD.openLeading(toParLabel(top.toPar), today);
+  // level at the top counts as leading: you share it
+  if (top.mine || me?.rank === 1) return REGINALD.openLeading(toParLabel(top.toPar), today);
   return REGINALD.openLeads(top.name, toParLabel(top.toPar), me ? me.rank : null, rows.length);
 }
 
 // Called after the home page draws. If the Open isn't available (the SQL isn't run yet, or offline), nothing
 // changes: the club board stays as it always was.
-export async function bindOpen(snap: Snapshot, clubLine: string) {
+// pinned: Reginald's line stays put whichever tab is showing (a club you only run)
+export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false) {
   const s = requireSession();
   const [rows, champs] = await Promise.all([api.openBoard(s).catch(() => null), api.openChampions(s).catch(() => [] as OpenChampion[])]);
   const tabs = document.getElementById('board-tabs');
@@ -76,7 +78,7 @@ export async function bindOpen(snap: Snapshot, clubLine: string) {
     openPane.hidden = tab !== 'open';
     clubPane.hidden = tab !== 'club';
     tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-    if (say) say.innerHTML = tab === 'open' ? lineOpen : lineClub;
+    if (say && !pinned) say.innerHTML = tab === 'open' ? lineOpen : lineClub;
   };
   tabs.hidden = false;
   tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {

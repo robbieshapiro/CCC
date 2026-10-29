@@ -33,7 +33,7 @@ export function member(snap: Snapshot, id: string) {
   leaveMember();
   const p = snap.players.find((x) => x.id === id);
   if (!p) {
-    render(`${header(snap.groupName, 'lockers')}<main class="narrow"><h1>No such member</h1><p class="muted">They may have resigned. It happens.</p><a class="btn" href="#/lockers">Back to the locker room</a></main>`);
+    render(`${header(snap.groupName, 'card')}<main class="narrow"><h1>No such member</h1><p class="muted">They may have resigned. It happens.</p><a class="btn" href="#/locker">Back to the locker</a></main>`);
     return;
   }
   const order = [...snap.players].sort((a, b) => (a.joined ?? '').localeCompare(b.joined ?? ''));
@@ -48,9 +48,9 @@ export function member(snap: Snapshot, id: string) {
   const got = FEATS.filter((f) => p.feats.includes(f.id));
 
   render(`
-    ${header(snap.groupName, 'lockers')}
+    ${header(snap.groupName, 'card')}
     <main class="narrow">
-      <p><a class="link" href="#/lockers">‹ The locker room</a></p>
+      <p><a class="link" href="#/locker">‹ The locker</a></p>
       ${hostChip(remark(p.name, p.wins, row.rank, row.best ? 1 : 0, c.rounds), p.wins ? 'pleased' : 'dry')}
       <section class="member-card">
         <div class="mc-top">${crest(46, 'mc')}<div><p class="eyebrow">Claude Country Club</p><p class="mc-kind">Full Member</p></div></div>

@@ -1,9 +1,10 @@
+// Your Locker: your golfer, how your month is going, your trophies, and the members of your club. Edit your look
+// from here. (The Member Card and the Locker Room, together.)
 import { api, setSession } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
 import { portrait, specOf } from '../avatar';
-import { crest } from '../brand';
 import { FEATS } from '../feats';
-import { hostChip, REGINALD } from '../host';
+import { board, myBest, toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { GolferStage, lockerPanel } from './locker';
 import { esc, header, navigate, render } from '../ui';
@@ -14,41 +15,55 @@ export const leaveCard = () => {
   closeCard = () => {};
 };
 
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+
 export function card(snap: Snapshot) {
+  leaveCard();
   const me = snap.players.find((p) => p.id === snap.me)!;
-  const order = [...snap.players].sort((a, b) => (a.joined ?? '').localeCompare(b.joined ?? ''));
-  const number = String(order.findIndex((p) => p.id === me.id) + 1).padStart(4, '0');
-  const since = me.joined ? new Date(me.joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '2026';
+  const rows = board(snap);
+  const mine = rows.find((r) => r.playerId === snap.me);
+  const best = myBest(snap);
+  const got = FEATS.filter((f) => me.feats.includes(f.id));
+  const left = FEATS.filter((f) => !me.feats.includes(f.id));
+  // the members, best of the month first, then the rest by name
+  const members = rows
+    .map((r) => ({ r, p: snap.players.find((x) => x.id === r.playerId)! }))
+    .sort((a, b) => (a.r.best ? a.r.rank : 999) - (b.r.best ? b.r.rank : 999) || a.p.name.localeCompare(b.p.name));
   let spec = specOf(me.avatar);
 
   render(`
     ${header(snap.groupName, 'card')}
-    <main class="narrow">
-      ${hostChip(REGINALD.card(me.wins), me.wins ? 'pleased' : 'dry')}
-      <section class="member-card">
-        <div class="mc-top">${crest(46, 'mc')}<div><p class="eyebrow">Claude Country Club</p><p class="mc-kind">Full Member</p></div></div>
-        <div class="mc-body">
-          <div class="mc-portrait" id="mc-face">${portrait(me.avatar, 120)}</div>
-          <div>
-            <h1>${esc(me.name)}</h1>
-            <dl>
-              <div><dt>Member No.</dt><dd>${number}</dd></div>
-              <div><dt>Since</dt><dd>${since}</dd></div>
-              <div><dt>Titles</dt><dd>${me.wins}</dd></div>
-            </dl>
-          </div>
+    <main class="narrow locker-page">
+      <section class="lk-hero">
+        <div class="stage" id="stage"></div>
+        <div class="lk-who">
+          <h1>${esc(me.name)}</h1>
+          <p class="muted">${me.host ? `Runs ${esc(snap.groupName)} · plays for ${esc(snap.homeName ?? 'their club')}` : esc(snap.groupName)}${me.wins ? ` · 🏆 ${me.wins}` : ''}</p>
+          ${
+            me.host
+              ? ''
+              : `<div class="lk-stats">
+            <div><b>${best ? toParLabel(best.total - best.par) : '–'}</b><span>Best this month</span></div>
+            <div><b>${mine?.best ? ordinal(mine.rank) : '–'}</b><span>In the club</span></div>
+            <div><b>${mine?.rounds ?? 0}</b><span>Rounds</span></div>
+          </div>`
+          }
+          <button class="btn ghost" id="edit-look">Edit your look</button>
         </div>
       </section>
-      <section class="panel locker-wrap">
-        <div class="card-head"><h2>Your locker</h2><a class="link" href="#/lockers">Visit the locker room</a></div>
-        <div class="locker-grid"><div class="stage" id="stage"></div><div id="panel"></div></div>
+      <section class="lk-edit" id="lk-edit" hidden><div id="panel"></div></section>
+      <section class="lk-section">
+        <h2>Trophies</h2>
+        ${got.length ? `<div class="lk-trophies">${got.map((f) => `<span title="${esc(f.how)}"><i>${f.icon}</i>${esc(f.name)}</span>`).join('')}</div>` : '<p class="muted">None yet. Your first one is out there.</p>'}
+        ${left.length ? `<details class="lk-more"><summary>${left.length} more to find</summary><ul>${left.map((f) => `<li><i>🔒</i><b>${esc(f.name)}</b><small>${esc(f.how)}</small></li>`).join('')}</ul></details>` : ''}
       </section>
-      <h2>Trophy cabinet</h2>
-      <div class="shelf">${FEATS.map((f) => {
-        const got = me.feats.includes(f.id);
-        return `<div class="feat ${got ? 'got' : ''}" title="${f.how}"><span>${got ? f.icon : '🔒'}</span><b>${f.name}</b><small>${f.how}</small></div>`;
-      }).join('')}</div>
-      <p><button class="link" id="logout">Sign out on this device</button></p>
+      <section class="lk-section">
+        <h2>Members</h2>
+        <ul class="lk-members">${members
+          .map(({ r, p }) => `<li><a href="${p.id === snap.me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 40)}<b>${esc(p.name)}${p.id === snap.me ? ' <small>you</small>' : ''}</b><em>${r.best ? toParLabel(r.toPar) : '–'}</em></a></li>`)
+          .join('')}</ul>
+      </section>
+      <p class="fine"><button class="link" id="logout">Sign out on this device</button></p>
     </main>`);
 
   let stage: GolferStage | null = null;
@@ -68,10 +83,15 @@ export function card(snap: Snapshot) {
         const avatar: Avatar = { ...me.avatar, golfer: spec };
         await api.saveAvatar(requireSession(), avatar);
         me.avatar = avatar;
-        document.getElementById('mc-face')!.innerHTML = portrait(avatar, 120);
       }, 400);
     }),
   );
+  const edit = document.getElementById('lk-edit')!;
+  document.getElementById('edit-look')!.onclick = (e) => {
+    edit.hidden = !edit.hidden;
+    (e.currentTarget as HTMLButtonElement).textContent = edit.hidden ? 'Edit your look' : 'Done';
+    if (!edit.hidden) edit.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   document.getElementById('logout')!.addEventListener('click', () => {
     setSession(null);
     navigate('#/');

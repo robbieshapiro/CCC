@@ -23,6 +23,7 @@ export type Player = {
   id: string;
   name: string;
   avatar: Avatar;
+  host?: boolean; // runs this club without playing in it: never on its board
   wins: number; // months won
   feats: string[];
   joined: string; // ISO date, for the member number
@@ -53,6 +54,8 @@ export type Snapshot = {
   groupName: string;
   me: string;
   admin?: boolean; // runs the club: the only one who can put up new members
+  homeGroupId?: string; // the club your play counts for (differs when you only run this one)
+  homeName?: string;
   players: Player[];
   rounds: Round[]; // this month, whole group
   champions: Champion[]; // past months, newest first
