@@ -8,7 +8,7 @@ import { store } from '../storage';
 import { weekOf } from '../bar';
 import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type DailyDay, type DailyRow, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
 
-type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean };
+type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
@@ -46,6 +46,11 @@ function playerByToken(db: Db, token: string): DbPlayer {
   const p = db.players.find((x) => x.token === token);
   if (!p) throw new Error('Session expired. Rejoin with your invite link.');
   return p;
+}
+
+// Where someone's play counts: their membership in the club they belong to, not one they only run (host).
+function homeOf(db: Db, me: DbPlayer): DbPlayer {
+  return db.players.find((p) => !p.host && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin) ?? me;
 }
 
 export const localApi: Api & { seedDemo(session: { token: string }): void } = {
@@ -103,7 +108,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     if (!clean || clean.length > 40) throw new Error('Club name must be 1-40 characters.');
     const code = rand(10);
     const group = (db.groups[code] = { id: uid(), name: clean });
-    const p: DbPlayer = { id: uid(), groupId: group.id, name: me.name, pin: me.pin, token: uid(), avatar: me.avatar, joined: new Date().toISOString(), admin: true };
+    const p: DbPlayer = { id: uid(), groupId: group.id, name: me.name, pin: me.pin, token: uid(), avatar: me.avatar, joined: new Date().toISOString(), admin: true, host: true };
     db.players.push(p);
     save(db);
     return { token: p.token, playerId: p.id, groupId: group.id, groupName: group.name };
@@ -127,9 +132,13 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
       groupName: session.groupName,
       me: me.id,
       admin: !!me.admin,
+      homeGroupId: homeOf(db, me).groupId,
+      homeName: Object.values(db.groups).find((g) => g.id === homeOf(db, me).groupId)?.name,
+      // the club's members, and you; someone who only runs the club isn't on its board
       players: db.players
-        .filter((p) => p.groupId === me.groupId)
+        .filter((p) => p.groupId === me.groupId && (!p.host || p.id === me.id))
         .map((p) => ({
+          host: !!p.host,
           id: p.id,
           name: p.name,
           avatar: p.avatar,
@@ -145,7 +154,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
 
   async submitRound(session, r) {
     const db = load();
-    const me = playerByToken(db, session.token);
+    const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
     const month = monthOf(todayInGameTz());
     const course = courseFor(month);
     if (r.course !== course.id || r.holes.length !== course.holes.length) throw new Error("That round doesn't match this month's course.");
@@ -262,7 +271,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
 
   async startPractice(session, kind) {
     const db = load();
-    const me = playerByToken(db, session.token);
+    const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
     const list = (db.practice ??= []);
     const id = list.length + 1;
     list.push({ id, groupId: me.groupId, playerId: me.id, kind, startedAt: new Date().toISOString(), endedAt: null, shots: 0 });
@@ -272,7 +281,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
 
   async endPractice(session, id, shots) {
     const db = load();
-    const me = playerByToken(db, session.token);
+    const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
     const p = (db.practice ?? []).find((x) => x.id === id && x.playerId === me.id && !x.endedAt);
     if (p) Object.assign(p, { endedAt: new Date().toISOString(), shots: Math.max(0, Math.min(shots, 5000)) });
     save(db);
@@ -462,7 +471,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
 
   async submitDaily(session, day, t) {
     const db = load();
-    const me = playerByToken(db, session.token);
+    const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
     if (day !== todayInGameTz()) throw new Error("That's not today's shot.");
     const mine = db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id);
     const done = (db.daily ?? []).filter((x) => x.day === day && mine.includes(x.playerId));
@@ -473,7 +482,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
 
   async submitBar(session, game, score) {
     const db = load();
-    const me = playerByToken(db, session.token);
+    const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
     (db.bar ??= []).push({ playerId: me.id, game, week: weekOf(todayInGameTz()), score });
     save(db);
   },

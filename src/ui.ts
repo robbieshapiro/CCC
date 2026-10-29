@@ -36,15 +36,14 @@ function clubName(groupName: string) {
 }
 
 // The Admin tab shows for the admin only (main.ts marks the device when the club says you run it).
-export function header(groupName: string, active: 'month' | 'card' | 'lockers' | 'admin'): string {
+export function header(groupName: string, active: 'month' | 'card' | 'admin'): string {
   const admin = store.get('ccc-admin') === '1';
   return `
     <header class="top">
       <div class="brand"><a href="#/">${crest(30, 'h')}</a><span><a href="#/"><b>Claude Country Club</b></a>${clubName(groupName)}</span></div>
       <nav>
         <a href="#/" class="${active === 'month' ? 'on' : ''}">Play</a>
-        <a href="#/lockers" class="${active === 'lockers' ? 'on' : ''}">Locker<span class="wide"> Room</span></a>
-        <a href="#/card" class="${active === 'card' ? 'on' : ''}"><span class="wide">Member </span>Card</a>
+        <a href="#/locker" class="${active === 'card' ? 'on' : ''}">Locker</a>
         ${admin ? `<a href="#/admin" class="admin-tab ${active === 'admin' ? 'on' : ''}">Admin</a>` : ''}
         ${muteButton()}
       </nav>

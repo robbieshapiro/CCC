@@ -12,7 +12,6 @@ import { barRound, closeRound, dailyRound, practice, practiceArea, round } from 
 import { bar } from './screens/bar';
 import { facility } from './screens/practice';
 import { courseById, nextCourse, upcoming } from './golf3d/courses';
-import { leaveLockers, lockers } from './screens/lockers';
 import { leaveMember, member } from './screens/member';
 import { checkIn } from './screens/activity';
 import { onSnapshot, refresh, startPolling } from './state';
@@ -25,7 +24,6 @@ let routing = false; // the router draws the page itself; the refresh hook mustn
 async function router() {
   closeRound();
   leaveCard();
-  leaveLockers();
   leaveMember();
   closeWelcome();
   const hash = location.hash.replace(/^#\/?/, '');
@@ -45,7 +43,7 @@ async function router() {
     else {
       store.remove('ccc-admin');
       checkIn('visit');
-      if (page === 'lockers') checkIn('locker');
+      if (page === 'locker' || page === 'lockers') checkIn('locker');
     }
     // new members get the tour first; it lives at #/ for them, so mark the route or the minute-by-minute
     // refresh would redraw the home page over the top of it
@@ -75,9 +73,9 @@ async function router() {
       location.hash = '#/';
       return;
     }
-    if (page === 'card' || (page === 'member' && arg === s.me)) return card(s);
+    // the Locker (the old Member Card and Locker Room links still land there)
+    if (page === 'locker' || page === 'card' || page === 'lockers' || (page === 'member' && arg === s.me)) return card(s);
     if (page === 'member' && arg) return member(s, arg);
-    if (page === 'lockers') return lockers(s);
     if (page === 'admin') {
       if (s.admin) return admin(s);
       location.hash = '#/';

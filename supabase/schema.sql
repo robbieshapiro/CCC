@@ -112,16 +112,33 @@ create or replace function game_month() returns text
 language sql stable as $$ select to_char(game_today(), 'YYYY-MM') $$;
 
 -- Each member's best round per month (lowest to par, earliest breaks a tie), ranked within the month.
+-- (see home_of below: a host runs a club without playing in it)
+alter table players add column if not exists host_only boolean not null default false;
+
 create or replace function month_bests(p_group uuid)
 returns table (month text, player_id uuid, total int, par int, r bigint)
 language sql stable security definer set search_path = public, extensions as $$
   select b.month, b.player_id, b.total, b.par, rank() over (partition by b.month order by b.total - b.par)
   from (
     select distinct on (month, player_id) month, player_id, total, par
-    from rounds where group_id = p_group
+    from rounds where group_id = p_group and not exists (select 1 from players h where h.id = rounds.player_id and h.host_only)
     order by month, player_id, total - par, created_at
   ) b
 $$;
+
+-- Hosts: someone can run a club without playing in it (the admin runs several clubs and belongs to one). A
+-- host-only membership is never on that club's board; their play counts at home, the same name and PIN in the club
+-- they belong to.
+
+create or replace function home_of(me players) returns players
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare h players;
+begin
+  select * into h from players p where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash and not p.host_only
+    order by p.created_at limit 1;
+  return coalesce(h, me);
+end $$;
+
 
 create or replace function player_for(p_token uuid) returns players
 language plpgsql stable security definer set search_path = public, extensions as $$
@@ -201,7 +218,8 @@ begin
     exit when not exists (select 1 from groups where invite_code = v_code) and not exists (select 1 from invitations where code = v_code);
   end loop;
   insert into groups (name, invite_code) values (clean, v_code) returning * into g;
-  insert into players (group_id, name, pin_hash, avatar, role) values (g.id, me.name, me.pin_hash, me.avatar, 'admin') returning * into p;
+  -- the creator runs the new club; they keep playing for the club they belong to
+  insert into players (group_id, name, pin_hash, avatar, role, host_only) values (g.id, me.name, me.pin_hash, me.avatar, 'admin', true) returning * into p;
   return json_build_object('token', p.token, 'playerId', p.id, 'groupId', g.id, 'groupName', g.name);
 end $$;
 
@@ -316,7 +334,7 @@ end $$;
 drop function if exists submit_round(uuid, text, int[], int[], text[]);
 create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[], p_spots jsonb default null) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
+declare me players := home_of(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
 begin
   if n not between 1 and 9 or n <> coalesce(array_length(p_pars, 1), 0) then raise exception 'That round is not a full card.'; end if;
   if char_length(coalesce(p_course, '')) not between 1 and 40 then raise exception 'Unknown course.'; end if;
@@ -354,9 +372,11 @@ begin
     'groupName', (select name from groups where id = me.group_id),
     'me', me.id,
     'admin', me.role = 'admin',
+    'homeGroupId', (home_of(me)).group_id,
+    'homeName', (select name from groups where id = (home_of(me)).group_id),
     'players', coalesce((
       select json_agg(json_build_object(
-        'id', pl.id, 'name', pl.name, 'avatar', pl.avatar, 'joined', pl.created_at,
+        'id', pl.id, 'name', pl.name, 'avatar', pl.avatar, 'joined', pl.created_at, 'host', pl.host_only,
         -- a win is the lowest best round of a finished month; ties all win
         'wins', (select count(*) from month_bests(me.group_id) b where b.player_id = pl.id and b.r = 1 and b.month < m),
         'career', (select json_build_object('rounds', count(*), 'best', min(total - par), 'avg', round(avg(total - par), 1)) from rounds where player_id = pl.id),
@@ -365,7 +385,8 @@ begin
             union select 'champion' where exists (select 1 from month_bests(me.group_id) b where b.player_id = pl.id and b.r = 1 and b.month < m)
           ) fs)
       ) order by pl.created_at)
-      from players pl where pl.group_id = me.group_id
+      -- the club's members, and you; someone who only runs the club isn't on its board
+      from players pl where pl.group_id = me.group_id and (not pl.host_only or pl.id = me.id)
     ), '[]'),
     'rounds', coalesce((
       select json_agg(json_build_object('playerId', r.player_id, 'month', r.month, 'course', r.course, 'holes', r.holes,
@@ -396,7 +417,7 @@ alter table practice_sessions enable row level security;
 
 create or replace function start_practice(p_token uuid, p_kind text) returns bigint
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token); new_id bigint;
+declare me players := home_of(player_for(p_token)); new_id bigint;
 begin
   insert into practice_sessions (group_id, player_id, kind) values (me.group_id, me.id, p_kind) returning id into new_id;
   return new_id;
@@ -404,7 +425,7 @@ end $$;
 
 create or replace function end_practice(p_token uuid, p_id bigint, p_shots int) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token);
+declare me players := home_of(player_for(p_token));
 begin
   update practice_sessions set ended_at = now(), shots = greatest(0, least(p_shots, 5000))
   where id = p_id and player_id = me.id and ended_at is null;
@@ -500,7 +521,7 @@ begin
   return coalesce((
     with people as (
       select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.group_id as home_group, p.avatar
-      from players p order by lower(p.name), p.pin_hash, p.created_at
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
     ), r as (
       select pe.*, rd.holes, rd.total, rd.par, rd.created_at
       from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
@@ -529,7 +550,7 @@ begin
   return coalesce((
     with people as (
       select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.group_id as home_group
-      from players p order by lower(p.name), p.pin_hash, p.created_at
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
     ), best as (
       select distinct on (rd.month, pe.home_id) rd.month, pe.home_id, pe.name, g.name as club, rd.total, rd.par
       from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
@@ -691,7 +712,7 @@ alter table daily_shots enable row level security;
 
 create or replace function submit_daily(p_token uuid, p_day date, p_try int, p_ft numeric, p_holed boolean, p_lost boolean) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token); used int;
+declare me players := home_of(player_for(p_token)); used int;
 begin
   if p_day <> (now() at time zone 'America/New_York')::date then raise exception 'That''s not today''s shot.'; end if;
   if p_try not between 1 and 3 then raise exception 'Three tries a day.'; end if;
@@ -717,7 +738,7 @@ begin
   return (
     with people as (
       select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.group_id
-      from players p order by lower(p.name), p.pin_hash, p.created_at
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
     ), tries as (
       select pe.k, pe.h, s.* from daily_shots s join players p on p.id = s.player_id
       join people pe on pe.k = lower(p.name) and pe.h = p.pin_hash where s.day = p_day
@@ -776,7 +797,7 @@ create index if not exists bar_scores_week on bar_scores (game, week);
 
 create or replace function submit_bar(p_token uuid, p_game text, p_score numeric) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token);
+declare me players := home_of(player_for(p_token));
 begin
   if p_game not in ('putting', 'drive') then raise exception 'No such game.'; end if;
   -- a long drive is 0 to 450 yd; a putting score is made x 1000 less feet left, 5 putts at most
@@ -794,7 +815,7 @@ begin
   return (
     with people as (
       select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name
-      from players p order by lower(p.name), p.pin_hash, p.created_at
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
     ), best as (
       select lower(p.name) as k, p.pin_hash as h, max(b.score) as score, min(b.created_at) as first_at
       from bar_scores b join players p on p.id = b.player_id

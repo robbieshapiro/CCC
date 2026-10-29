@@ -845,3 +845,33 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .bar-empty { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
 .staff-face { display: block; }
 @media (prefers-reduced-motion: reduce) { .bar-head, .bar-game { animation: none; } }
+
+/* The Locker: your golfer and your month up top, then trophies and the members */
+.locker-page { display: grid; gap: 16px; }
+.lk-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 14px; align-items: center; padding: 14px; border-radius: 12px; background: var(--green); color: var(--cream); animation: rise 0.45s ease-out both; }
+.lk-hero .stage { height: 240px; border-radius: 10px; overflow: hidden; }
+.lk-who h1 { margin: 0; font-family: var(--serif); color: var(--cream); font-size: clamp(28px, 7vw, 40px); }
+.lk-who .muted { color: #cbbf9f; margin: 2px 0 12px; }
+.lk-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+.lk-stats div { display: grid; padding: 8px 4px; border-radius: 8px; background: rgba(255, 255, 255, 0.07); text-align: center; }
+.lk-stats b { font-family: var(--serif); font-size: 24px; color: #f0dcae; }
+.lk-stats span { font-size: 11px; color: #cbbf9f; }
+.lk-who .btn.ghost { color: var(--cream); border-color: rgba(240, 220, 174, 0.6); width: 100%; }
+@media (max-width: 560px) { .lk-hero { grid-template-columns: 1fr; } .lk-hero .stage { height: 220px; } }
+.lk-section { padding: 14px 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); animation: rise 0.45s ease-out both; }
+.lk-section h2 { margin: 0 0 10px; font-family: var(--serif); }
+.lk-trophies { display: flex; flex-wrap: wrap; gap: 6px; }
+.lk-trophies span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #fff7e6; border: 1px solid #f0d49a; font-size: 13px; font-weight: 700; }
+.lk-trophies i { font-style: normal; font-size: 16px; }
+.lk-more { margin-top: 10px; }
+.lk-more summary { cursor: pointer; color: #8a6a3e; font-weight: 800; font-size: 13px; }
+.lk-more ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.lk-more li { display: grid; grid-template-columns: 24px 1fr; column-gap: 8px; font-size: 13px; }
+.lk-more li i { font-style: normal; grid-row: span 2; }
+.lk-more li small { color: var(--muted); }
+.lk-members { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.lk-members a { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 8px; color: var(--ink); text-decoration: none; }
+.lk-members a:hover { background: #f4ecda; }
+.lk-members small { color: var(--muted); font-weight: 600; }
+.lk-members em { font-style: normal; font-weight: 800; color: var(--green); }
+@media (prefers-reduced-motion: reduce) { .lk-hero, .lk-section { animation: none; } }
