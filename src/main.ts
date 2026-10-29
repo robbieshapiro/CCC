@@ -54,7 +54,7 @@ async function router() {
     if (page === 'round') return round(s);
     if (page === 'daily') return dailyRound(s);
     if (page === 'bar') return arg === 'minigolf' || arg === 'putting' ? barRound(s, 'minigolf') : arg === 'drive' ? barRound(s, 'drive') : clubhouse(s, 'bar');
-    if (page === 'clubhouse') return clubhouse(s, isClubhouseTab(arg) ? arg : 'bar');
+    if (page === 'clubhouse') return clubhouse(s, isClubhouseTab(arg) ? arg : 'bar', extra);
     // the admin's look at every hole of a course still to come
     if (page === 'preview') {
       const c = courseById(arg ?? '');

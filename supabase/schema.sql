@@ -869,3 +869,66 @@ create table if not exists reginald_notes (
 );
 alter table reginald_notes enable row level security;
 create index if not exists reginald_notes_recent on reginald_notes (created_at);
+
+-- The Clubhouse Chronicle: Reginald's weekly letter to each club, written by Claude (api/chronicle.ts) on Monday
+-- morning from the week just gone, and kept. Members read their club's editions; only the server writes them.
+create table if not exists chronicles (
+  id bigserial primary key,
+  group_id uuid not null references groups on delete cascade,
+  week date not null, -- the Monday it was written
+  body jsonb not null, -- { headline, dek, items: [{ title, body }], signoff }
+  created_at timestamptz not null default now(),
+  unique (group_id, week)
+);
+alter table chronicles enable row level security;
+
+-- The clubs that had any play in the last seven days (the server writes an edition for each)
+create or replace function chronicle_clubs() returns setof uuid
+language sql stable security definer set search_path = public, extensions as $$
+  select distinct p.group_id from players p
+  where not p.host_only and (
+    exists (select 1 from rounds r where r.player_id = p.id and r.created_at > now() - interval '7 days')
+    or exists (select 1 from daily_shots d where d.player_id = p.id and d.created_at > now() - interval '7 days')
+    or exists (select 1 from bar_scores b where b.player_id = p.id and b.created_at > now() - interval '7 days')
+    or p.created_at > now() - interval '7 days')
+$$;
+
+-- Everything that happened at one club in the last seven days, for Reginald to write up
+create or replace function chronicle_facts(p_group uuid) returns json
+language sql stable security definer set search_path = public, extensions as $$
+  with m as (select game_month() as month), members as (
+    select * from players where group_id = p_group and not host_only
+  )
+  select json_build_object(
+    'club', (select name from groups where id = p_group),
+    'members', (select count(*) from members),
+    'new_members', (select coalesce(json_agg(name), '[]') from members where created_at > now() - interval '7 days'),
+    'month', (select month from m),
+    'rounds_this_week', (select coalesce(json_agg(json_build_object('who', p.name, 'course', r.course, 'score', r.total, 'to_par', r.total - r.par,
+        'feats', r.feats, 'day', to_char(r.created_at at time zone 'America/New_York', 'Dy')) order by r.created_at), '[]')
+      from rounds r join members p on p.id = r.player_id where r.created_at > now() - interval '7 days'),
+    'month_standings', (select coalesce(json_agg(json_build_object('who', p.name, 'best_to_par', b.total - b.par, 'place', b.r) order by b.r), '[]')
+      from month_bests(p_group) b join members p on p.id = b.player_id where b.month = (select month from m)),
+    'closest_to_the_pin', (select json_build_object('players', count(distinct d.player_id), 'holed', coalesce(json_agg(distinct p.name) filter (where d.holed), '[]'))
+      from daily_shots d join members p on p.id = d.player_id where d.created_at > now() - interval '7 days'),
+    'mini_golf_best', (select json_build_object('who', p.name, 'strokes', -max(b.score)) from bar_scores b join members p on p.id = b.player_id
+      where b.game = 'minigolf' and b.created_at > now() - interval '7 days' group by p.name order by max(b.score) desc limit 1),
+    'long_drive_best', (select json_build_object('who', p.name, 'yards', max(b.score)) from bar_scores b join members p on p.id = b.player_id
+      where b.game = 'drive' and b.created_at > now() - interval '7 days' group by p.name order by max(b.score) desc limit 1),
+    'past_champions', (select coalesce(json_agg(json_build_object('month', b.month, 'who', p.name) order by b.month desc), '[]')
+      from month_bests(p_group) b join members p on p.id = b.player_id where b.r = 1 and b.month < (select month from m))
+  )
+$$;
+
+-- A member's club's editions, newest first
+create or replace function chronicles(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((select json_agg(json_build_object('week', c.week, 'body', c.body) order by c.week desc)
+    from (select * from chronicles where group_id = me.group_id order by week desc limit 8) c), '[]');
+end $$;
+
+revoke all on function chronicle_clubs() from public, anon, authenticated;
+revoke all on function chronicle_facts(uuid) from public, anon, authenticated;
+grant execute on function chronicles(uuid) to anon;

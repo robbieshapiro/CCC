@@ -351,6 +351,10 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
     return rows.filter((r) => r.members).sort((a, b) => (a.best ?? 999) - (b.best ?? 999) || a.name.localeCompare(b.name));
   },
 
+  async chronicles() {
+    return []; // Reginald writes them on the server; local mode has none
+  },
+
   async openChampions(): Promise<OpenChampion[]> {
     return []; // local mode keeps one month at a time
   },
