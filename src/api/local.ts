@@ -6,7 +6,7 @@ import { makeRng } from '../seed';
 import { monthChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type DailyDay, type DailyRow, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type DailyDay, type DailyRow, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
@@ -334,6 +334,21 @@ export const localApi: Api & { seedDemo(session: { token: string }): void } = {
       });
     }
     return rows.sort((a, b) => a.total - a.par - (b.total - b.par) || a.createdAt.localeCompare(b.createdAt));
+  },
+
+  async clubList(session): Promise<ClubRow[]> {
+    const db = load();
+    const home = homeOf(db, playerByToken(db, session.token));
+    const month = monthOf(todayInGameTz());
+    const rows = Object.values(db.groups).map((g) => {
+      const members = db.players.filter((p) => p.groupId === g.id && !p.host);
+      const bests = members
+        .map((p) => ({ p, r: db.rounds.filter((r) => r.playerId === p.id && r.month === month).map((r) => r.total - r.par).sort((a, b) => a - b)[0] }))
+        .filter((x) => x.r !== undefined);
+      const best = bests.length ? Math.min(...bests.map((x) => x.r!)) : null;
+      return { id: g.id, name: g.name, mine: g.id === home.groupId, members: members.length, played: bests.length, best, leaders: best === null ? null : bests.filter((x) => x.r === best).map((x) => x.p.name).sort() };
+    });
+    return rows.filter((r) => r.members).sort((a, b) => (a.best ?? 999) - (b.best ?? 999) || a.name.localeCompare(b.name));
   },
 
   async openChampions(): Promise<OpenChampion[]> {

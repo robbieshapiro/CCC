@@ -567,6 +567,24 @@ begin
   ), '[]');
 end $$;
 
+-- The Clubhouse's clubs table: every club with members, how many have played this month, the best round to par
+-- and who holds it. Hosts aren't members. mine: the club you belong to. Names only; nobody's card is shown.
+create or replace function club_list(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); home uuid := (home_of(me)).group_id; m text := game_month();
+begin
+  return coalesce((
+    select json_agg(c order by c.best is null, c.best, c.name) from (
+      select g.id, g.name, g.id = home as mine,
+        (select count(*) from players p where p.group_id = g.id and not p.host_only) as members,
+        (select count(*) from month_bests(g.id) b where b.month = m) as played,
+        (select min(b.total - b.par) from month_bests(g.id) b where b.month = m) as best,
+        (select json_agg(p.name order by p.name) from month_bests(g.id) b join players p on p.id = b.player_id where b.month = m and b.r = 1) as leaders
+      from groups g
+    ) c where c.members > 0
+  ), '[]');
+end $$;
+
 revoke all on function player_for(uuid) from public, anon, authenticated;
 revoke all on function month_bests(uuid) from public, anon, authenticated;
 grant execute on function join_group(text, text, text) to anon;
@@ -595,6 +613,7 @@ grant execute on function touch(uuid, text) to anon;
 grant execute on function activity_report(uuid) to anon;
 grant execute on function open_board(uuid) to anon;
 grant execute on function open_champions(uuid) to anon;
+grant execute on function club_list(uuid) to anon;
 
 -- Create your group (change the name and code). The first person to join with the code runs the club;
 -- after that, new members need a personal invitation from them. Share https://YOUR-SITE/#/join/<code> to start:

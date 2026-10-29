@@ -54,8 +54,9 @@ main.narrow { max-width: 580px; }
 .brand span { display: grid; line-height: 1.15; }
 .brand b { font-family: var(--serif); font-size: 21px; color: var(--green); }
 .brand small { color: var(--muted); font-weight: 700; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
-.top nav { display: flex; gap: 4px; align-items: center; }
+.top nav { display: flex; gap: 4px; align-items: center; margin-left: auto; }
 .top nav a { white-space: nowrap; font-weight: 700; font-size: 14px; padding: 7px 12px; border-radius: 999px; color: var(--muted); }
+.top nav a i { display: none; font-style: normal; }
 .top nav a.on { color: var(--cream); background: var(--green); }
 .mute { cursor: pointer; font-size: 15px; background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; color: var(--ink); }
 
@@ -522,10 +523,18 @@ td.who a:hover span { text-decoration: underline; }
 .stat-row small { color: var(--muted); font-size: 12px; font-weight: 700; }
 .stats .table-wrap { margin-bottom: 16px; }
 @media (max-width: 560px) {
-  /* phones: one even row of tabs across the full width, short labels */
-  .top nav { width: 100%; justify-content: space-between; }
-  .top nav .wide { display: none; }
-  .top nav a { padding: 6px 12px; font-size: 13px; }
+  /* phones: the tabs are a bar along the bottom, icon over label; the page leaves room for it */
+  body:has(.tabbar) { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .top nav.tabbar {
+    position: fixed; inset: auto 0 0 0; z-index: 40; margin: 0; gap: 0; justify-content: space-around;
+    padding: 6px max(8px, env(safe-area-inset-left, 0px)) calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(250, 245, 233, 0.96); border-top: 1px solid var(--line); backdrop-filter: blur(8px);
+  }
+  .top nav.tabbar a { flex: 1; display: grid; justify-items: center; gap: 1px; padding: 5px 2px; font-size: 11px; border-radius: 10px; }
+  .top nav.tabbar a i { display: block; font-size: 20px; line-height: 1.1; }
+  .top nav.tabbar a.on { background: rgba(22, 59, 44, 0.1); color: var(--green); }
+  .top nav.tabbar a.admin-tab { border: 0; }
+  .top nav.tabbar a.admin-tab.on { background: rgba(138, 106, 62, 0.14); color: #8a6a3e; }
   .stat-row { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -875,3 +884,37 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .lk-members small { color: var(--muted); font-weight: 600; }
 .lk-members em { font-style: normal; font-weight: 800; color: var(--green); }
 @media (prefers-reduced-motion: reduce) { .lk-hero, .lk-section { animation: none; } }
+
+/* The Clubhouse: a row of tabs, then the pane */
+.clubhouse { display: grid; gap: 14px; }
+.ch-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 2px; }
+.ch-tabs::-webkit-scrollbar { display: none; }
+.ch-tabs a { flex: none; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-weight: 700; font-size: 14px; color: var(--muted); }
+.ch-tabs a.on { background: var(--green); border-color: var(--green); color: var(--cream); }
+.ch-pane { display: grid; gap: 12px; animation: rise 0.35s ease-out both; }
+.ch-head { display: grid; gap: 2px; }
+.ch-head p { margin: 0; }
+.ch-sub { font-size: 22px; margin-top: 8px; }
+.ch-table { width: 100%; border-collapse: collapse; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.ch-table th { text-align: left; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.ch-table td { padding: 8px 10px; border-bottom: 1px solid rgba(184, 149, 90, 0.25); vertical-align: middle; }
+.ch-table tr:last-child td { border-bottom: 0; }
+.ch-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ch-table .rank { width: 24px; color: var(--gold); font-family: var(--serif); font-size: 18px; }
+.ch-table td.who { display: table-cell; }
+.ch-table .who a { display: flex; align-items: center; gap: 10px; color: var(--ink); }
+.ch-table small { color: var(--muted); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.ch-table tr.me td { background: rgba(184, 149, 90, 0.12); }
+.ch-table .topar { font-weight: 800; }
+.ch-table .under { color: var(--green); }
+.ch-table .over { color: var(--ink); }
+.ch-how { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ch-how li { display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; column-gap: 10px; padding: 10px 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+.ch-how i { grid-row: span 2; font-style: normal; font-size: 26px; align-self: center; text-align: center; }
+.ch-how b { font-size: 15px; }
+.ch-how span { color: var(--muted); font-size: 14px; }
+.ch-tip { margin: 0; }
+.ch-feedback { display: grid; gap: 10px; }
+.ch-feedback textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.ch-feedback .btn { justify-self: start; }
+@media (prefers-reduced-motion: reduce) { .ch-pane { animation: none; } }

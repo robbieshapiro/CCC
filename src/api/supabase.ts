@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminOverview, Api, BarBoard, DailyDay, DailyState, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PracticeReport, Session, Snapshot } from './types';
+import type { AdminOverview, Api, BarBoard, ClubRow, DailyDay, DailyState, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PracticeReport, Session, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -100,5 +100,6 @@ export const supabaseApi: Api = {
     await rpc('admin_feedback_done', { p_token: s.token, p_id: id, p_done: done });
   },
   openBoard: (s) => rpc<OpenRow[]>('open_board', { p_token: s.token }),
+  clubList: (s) => rpc<ClubRow[]>('club_list', { p_token: s.token }),
   openChampions: (s) => rpc<OpenChampion[]>('open_champions', { p_token: s.token }),
 };
