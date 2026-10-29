@@ -20,6 +20,7 @@ import { shortgame, STATIONS } from '../golf3d/practice/shortgame';
 import { scoreClass } from './home';
 import { DAILY_TRIES, dailyShot } from '../daily';
 import { HANK } from '../staff';
+import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
 import { HOLLOW_HILLS } from '../golf3d/minigolf';
 import { barSummary } from './bar';
@@ -146,13 +147,25 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
           ? hostChip('Practice. Nobody is keeping score, least of all me. Come November it counts.', 'dry')
           : preview
             ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry')
-            : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry')
+            : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
       <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
       <div class="summary-actions"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the club</button></div>
       <button class="link" data-feedback>Leave feedback</button>
     </div>`;
   el.appendChild(sheet);
+  // Reginald reads the card (Claude) and his note replaces the stock line when it comes
+  if (!preview && posted) {
+    const note = sheet.querySelector<HTMLElement>('#reg-note p');
+    note?.classList.add('reg-thinking');
+    void askReginald('round', full, snap.today).then((text) => {
+      note?.classList.remove('reg-thinking');
+      if (text && note) {
+        note.innerHTML = `<b>Reginald</b> ${esc(text)}`;
+        note.classList.add('reg-fresh');
+      }
+    });
+  }
   sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => round(await refresh(), opts);
   sheet.querySelector<HTMLButtonElement>('[data-feedback]')!.onclick = () => openFeedback(`After a ${total} (${toParLabel(toPar)}) on ${course.name}`, el);
   sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {

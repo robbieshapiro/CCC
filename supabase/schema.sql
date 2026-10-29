@@ -854,3 +854,18 @@ end $$;
 
 grant execute on function submit_bar(uuid, text, numeric) to anon;
 grant execute on function bar_board(uuid, text) to anon;
+
+-- Reginald's own words, written by Claude (api/reginald.ts) and kept: a line for each member's Play page each day,
+-- and a note on each round's card. Only the server function (with the service role key) reads or writes them, so
+-- there are no policies and nothing is granted to the app.
+create table if not exists reginald_notes (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  kind text not null check (kind in ('daily', 'round', 'chronicle', 'design')),
+  key text not null,
+  body text not null,
+  created_at timestamptz not null default now(),
+  unique (player_id, kind, key)
+);
+alter table reginald_notes enable row level security;
+create index if not exists reginald_notes_recent on reginald_notes (created_at);
