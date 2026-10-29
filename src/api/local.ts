@@ -1,9 +1,9 @@
 // Browser-only backend for playing without Supabase. Mirrors supabase/schema.sql.
 import { STOCK_BUDDIES } from '../buddies';
-import { todayInGameTz } from '../day';
-import { courseFor, monthOf } from '../golf3d/courses';
+import { periodOf, todayInGameTz } from '../day';
+import { courseFor } from '../golf3d/courses';
 import { makeRng } from '../seed';
-import { monthChampion } from '../standings';
+import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
 import { SAMPLES } from '../designer/samples';
@@ -119,12 +119,12 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const db = load();
     const me = playerByToken(db, session.token);
     const today = todayInGameTz();
-    const month = monthOf(today);
+    const month = periodOf(today);
     const mine = db.rounds.filter((r) => r.groupId === me.groupId);
     const champions = [...new Set(mine.filter((r) => r.month < month).map((r) => r.month))]
       .sort()
       .reverse()
-      .map((m) => monthChampion(m, mine))
+      .map((m) => periodChampion(m, mine))
       .filter((c): c is Champion => !!c);
     const wins = (id: string) => champions.filter((c) => c.playerIds.includes(id)).length;
     return {
@@ -156,7 +156,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
   async submitRound(session, r) {
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
-    const month = monthOf(todayInGameTz());
+    const month = periodOf(todayInGameTz());
     const course = courseFor(month);
     if (r.course !== course.id || r.holes.length !== course.holes.length) throw new Error("That round doesn't match this month's course.");
     const holes = r.holes.map((s, i) => Math.max(1, Math.min(course.holes[i].par + MAX_OVER_PAR, Math.round(s))));
@@ -318,7 +318,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
   async openBoard(session): Promise<OpenRow[]> {
     const db = load();
     const me = playerByToken(db, session.token);
-    const month = monthOf(todayInGameTz());
+    const month = periodOf(todayInGameTz());
     const key = (p: DbPlayer) => `${p.name.toLowerCase()}|${p.pin}`;
     const club = (groupId: string) => Object.values(db.groups).find((g) => g.id === groupId)?.name ?? '';
     const people = new Map<string, DbPlayer[]>();
@@ -340,7 +340,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
   async clubList(session): Promise<ClubRow[]> {
     const db = load();
     const home = homeOf(db, playerByToken(db, session.token));
-    const month = monthOf(todayInGameTz());
+    const month = periodOf(todayInGameTz());
     const rows = Object.values(db.groups).map((g) => {
       const members = db.players.filter((p) => p.groupId === g.id && !p.host);
       const bests = members
@@ -435,7 +435,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const db = load();
     const me = playerByToken(db, session.token);
     if (!me.admin) throw new Error('Only the committee can see member activity.');
-    const month = monthOf(todayInGameTz());
+    const month = todayInGameTz().slice(0, 7); // the calendar month, whatever the game period
     return db.players
       .filter((p) => p.groupId === me.groupId && !p.admin)
       .map((p) => {
@@ -443,12 +443,12 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         const practice = (db.practice ?? []).filter((x) => x.playerId === p.id);
         const days = (db.days ?? []).filter((x) => x.playerId === p.id && x.day.startsWith(month));
         const lastSeen = [db.seen?.[p.id], ...rounds.map((r) => r.createdAt), ...practice.map((x) => x.startedAt)].filter(Boolean).sort().pop() ?? null;
-        const active = new Set([...days.map((x) => x.day), ...rounds.filter((r) => r.month === month).map((r) => todayInGameTz(new Date(r.createdAt))), ...practice.filter((x) => x.startedAt.startsWith(month)).map((x) => todayInGameTz(new Date(x.startedAt)))]);
+        const active = new Set([...days.map((x) => x.day), ...rounds.filter((r) => todayInGameTz(new Date(r.createdAt)).startsWith(month)).map((r) => todayInGameTz(new Date(r.createdAt))), ...practice.filter((x) => x.startedAt.startsWith(month)).map((x) => todayInGameTz(new Date(x.startedAt)))]);
         return {
           name: p.name,
           lastSeen,
           days: active.size,
-          rounds: rounds.filter((r) => r.month === month).length,
+          rounds: rounds.filter((r) => todayInGameTz(new Date(r.createdAt)).startsWith(month)).length,
           practice: practice.filter((x) => x.startedAt.startsWith(month)).length,
           lockers: days.reduce((a, x) => a + x.lockers, 0),
         };
@@ -464,7 +464,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const clubs = new Set(db.players.filter((p) => p.admin && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.groupId));
     const club = (id: string) => Object.values(db.groups).find((g) => g.id === id)?.name ?? '?';
     const since =
-      window === 'week' ? new Date(Date.now() - 7 * 86_400_000).toISOString() : window === 'month' ? `${monthOf(todayInGameTz())}-01` : '';
+      window === 'week' ? new Date(Date.now() - 7 * 86_400_000).toISOString() : window === 'month' ? `${todayInGameTz().slice(0, 7)}-01` : '';
     const sinceDay = since.slice(0, 10);
     const members = db.players.filter((p) => clubs.has(p.groupId) && !p.admin);
     const stats = members.map((p) => {
@@ -606,18 +606,15 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     save(db);
   },
 
-  // Adds Sean, Danny and PJ with a few rounds this month and a past champion.
+  // Adds Sean, Danny and PJ with a few rounds this period and a past champion.
   seedDemo(session) {
     const db = load();
     const me = playerByToken(db, session.token);
-    const month = monthOf(todayInGameTz());
+    const month = periodOf(todayInGameTz());
     const course = courseFor(month);
     const rng = makeRng(`demo:${me.id}`);
-    const prev = (() => {
-      const d = new Date(`${month}-15T12:00:00Z`);
-      d.setUTCMonth(d.getUTCMonth() - 1);
-      return d.toISOString().slice(0, 7);
-    })();
+    const startOf = (p: string) => Date.parse(`${p.length === 10 ? p : `${p}-01`}T17:00:00Z`);
+    const prev = periodOf(new Date(startOf(month) - 86_400_000).toISOString().slice(0, 10));
     STOCK_BUDDIES.forEach((b, i) => {
       if (db.players.some((p) => p.groupId === me.groupId && p.name === b.name)) return;
       const p: DbPlayer = { id: uid(), groupId: me.groupId, name: b.name, pin: '0000', token: uid(), avatar: b.avatar, joined: new Date(Date.UTC(2026, 8, 1 + i)).toISOString() };
@@ -633,8 +630,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
             return Math.max(2, h.par + (roll > 0.6 ? -1 : roll > 0.35 ? 0 : roll > 0.15 ? 1 : 2));
           });
           const total = holes.reduce((a, c) => a + c, 0);
-          const day = m === month ? Math.max(1, Math.min(28, new Date().getUTCDate() - k - i)) : 10 + k * 7 + i;
-          // each buddy's first round this month was played today, so they stand on the course
+          // each buddy's first round this period was played today, so they stand on the course
           const today = m === month && k === 0;
           const spots = today
             ? course.holes.map((h) => {
@@ -642,7 +638,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
                 return { x: Math.round(at.x + (rng.next() - 0.5) * 30), y: Math.round(at.y + (rng.next() - 0.5) * 30) };
               })
             : null;
-          const createdAt = today ? new Date(Date.now() - (i + 1) * 3_600_000).toISOString() : `${m}-${String(day).padStart(2, '0')}T17:${10 + i * 7}:00.000Z`;
+          const createdAt = new Date(m === month ? Date.now() - (k * 3 + i + 1) * 3_600_000 : startOf(m) + (k + i) * 86_400_000).toISOString();
           db.rounds.push({ playerId: p.id, groupId: me.groupId, month: m, course: course.id, holes, total, par: course.par, feats: total < course.par ? ['underpar'] : [], spots, createdAt });
         }
     });

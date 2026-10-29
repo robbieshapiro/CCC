@@ -1,12 +1,13 @@
 // Another member's card: their golfer on the turntable, the card itself, and how they've been playing.
 // Anyone can look at anyone; only your own card has the wardrobe.
+import { periodName } from '../day';
 import type { Snapshot } from '../api/types';
 import { portrait, specOf } from '../avatar';
 import { crest } from '../brand';
 import { FEATS } from '../feats';
 import { courseFor } from '../golf3d/courses';
 import { hostChip } from '../host';
-import { board, monthName, toParLabel } from '../standings';
+import { board, toParLabel } from '../standings';
 import { GolferStage } from './locker';
 import { scoreClass } from './home';
 import { esc, header, render } from '../ui';
@@ -23,10 +24,10 @@ const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['
 function remark(name: string, wins: number, rank: number, played: number, rounds: number) {
   if (!rounds) return `${name} has yet to trouble the scorers. A member in good standing, if not in good form.`;
   if (wins >= 2) return `${name}. ${wins} titles. I polish the brass with their name on it more than I should like.`;
-  if (played && rank === 1) return `${name} leads the board this month. Do not tell them; it only encourages them.`;
+  if (played && rank === 1) return `${name} leads the board. Do not tell them; it only encourages them.`;
   if (wins === 1) return `A former champion, ${name}. They mention it. Often.`;
-  if (!played) return `${name} has not been out this month. I am told it is a busy season for excuses.`;
-  return `${name}, ${ordinal(rank)} on the board this month. Steady. Nobody ever wrote a song about steady.`;
+  if (!played) return `${name} has not been out lately. I am told it is a busy season for excuses.`;
+  return `${name}, ${ordinal(rank)} on the board. Steady. Nobody ever wrote a song about steady.`;
 }
 
 export function member(snap: Snapshot, id: string) {
@@ -68,7 +69,7 @@ export function member(snap: Snapshot, id: string) {
       </section>
       <section class="panel profile-stage"><div class="stage" id="stage"></div></section>
       <section class="panel stats">
-        <h2>${monthName(snap.month)}</h2>
+        <h2>${periodName(snap.month)}</h2>
         <div class="stat-row">
           <div><b>${row.best ? ordinal(row.rank) : '–'}</b><small>On the board</small></div>
           <div><b>${row.best ? `${row.best.total}` : '–'}</b><small>Best round${row.best ? ` (${toParLabel(row.toPar)})` : ''}</small></div>

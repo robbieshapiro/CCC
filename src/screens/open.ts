@@ -4,10 +4,10 @@
 import { api } from '../api';
 import type { OpenChampion, OpenRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
-import { GAME_TZ } from '../day';
+import { GAME_TZ, periodName } from '../day';
 import { courseFor } from '../golf3d/courses';
 import { REGINALD } from '../host';
-import { monthName, toParLabel } from '../standings';
+import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { store } from '../storage';
 import { esc } from '../ui';
@@ -97,7 +97,7 @@ export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false)
     plaque.querySelector('.empty')?.remove();
     plaque.insertAdjacentHTML(
       'afterbegin',
-      champs.slice(0, 6).map((c) => `<li class="open-champ"><span>${monthName(c.month)} · The Open</span><b>${c.names.map(esc).join(' & ')}</b><em>${toParLabel(c.total - c.par)}</em></li>`).join(''),
+      champs.slice(0, 6).map((c) => `<li class="open-champ"><span>${periodName(c.month)} · The Open</span><b>${c.names.map(esc).join(' & ')}</b><em>${toParLabel(c.total - c.par)}</em></li>`).join(''),
     );
   }
 }

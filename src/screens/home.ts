@@ -3,13 +3,13 @@ import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { featById } from '../feats';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
-import { GAME_TZ, monthClosesAt } from '../day';
+import { GAME_TZ, periodClosesAt, periodName, span } from '../day';
 import { REGINALD, reginaldSvg, type Mood } from '../host';
 import { bindOpen } from './open';
 import { askReginald } from '../reginald';
 import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
-import { board, monthName, myBest, toParLabel } from '../standings';
+import { board, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { esc, header, render } from '../ui';
 
@@ -31,7 +31,7 @@ export function home(snap: Snapshot) {
   const me = rows.find((r) => r.playerId === snap.me)!; // absent when you only run this club
   const host = !!snap.players.find((p) => p.id === snap.me)?.host;
 
-  let line = REGINALD.course(course.name, course.holes.length, course.par);
+  let line = REGINALD.course(course.name, course.holes.length, course.par, span(snap.month));
   let mood: Mood = 'dry';
   if (!played.length) line = `${line} ${REGINALD.nobody(snap.today)}`;
   else if (!mine) line = REGINALD.notYet(played.length);
@@ -64,9 +64,9 @@ export function home(snap: Snapshot) {
   const plaque = snap.champions.length
     ? snap.champions
         .slice(0, 6)
-        .map((c) => `<li><span>${monthName(c.month)}</span><b>${c.playerIds.map((id) => `<a href="#/member/${id}">${esc(player(id)?.name ?? '?')}</a>`).join(' & ')}</b><em>${toParLabel(c.total - c.par)}</em></li>`)
+        .map((c) => `<li><span>${periodName(c.month)}</span><b>${c.playerIds.map((id) => `<a href="#/member/${id}">${esc(player(id)?.name ?? '?')}</a>`).join(' & ')}</b><em>${toParLabel(c.total - c.par)}</em></li>`)
         .join('')
-    : `<li class="empty">The first name goes up when ${monthName(snap.month).split(' ')[0]} closes.</li>`;
+    : `<li class="empty">The first name goes up when the ${span(snap.month)} closes.</li>`;
 
   // whatever was full screen before (the tour, a round) has let go of the page by now
   document.body.classList.remove('court-open');
@@ -77,7 +77,7 @@ export function home(snap: Snapshot) {
       <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
         <div class="play-reg"><span class="host-face big">${reginaldSvg(mood, 72)}</span><p id="reg-line"><b>Reginald</b> ${line}</p></div>
         <div class="play-main">
-          <p class="eyebrow">${monthName(snap.month)}</p>
+          <p class="eyebrow">${periodName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
           <a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>
@@ -91,7 +91,7 @@ export function home(snap: Snapshot) {
       </div>
       <section class="board">
         ${countdown(snap.month, course)}
-        <div class="board-head"><h2>The Board</h2><span>${monthName(snap.month)} · best round counts</span></div>
+        <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best round counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist" hidden>
           <button role="tab" data-tab="open">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club">My club</button>
         </div>
@@ -137,13 +137,13 @@ export function home(snap: Snapshot) {
   });
 }
 
-// The month's clock: how long until the board closes and the champion goes up.
+// The period's clock: how long until the board closes and the champion goes up.
 function countdown(month: string, course: Course) {
-  const ends = monthClosesAt(month);
+  const ends = periodClosesAt(month);
   const day = new Date(ends.getTime() - 1).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
   return `<div class="countdown" data-countdown="${ends.getTime()}">
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
-    <small>${monthName(month).split(' ')[0]}'s champion is crowned at midnight ET, ${day}.</small>
+    <small>This ${span(month)}'s champion is crowned at midnight ET, ${day}.</small>
   </div>`;
 }
 
@@ -185,7 +185,7 @@ const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 function previewTile(month: string) {
   const next = nextCourse(month);
   if (!next) return '';
-  const starts = monthClosesAt(month);
+  const starts = periodClosesAt(month);
   return `<a class="tile" href="#/practice/${next.id}"><i>🌋</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
 }
 

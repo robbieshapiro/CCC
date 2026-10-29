@@ -1,4 +1,4 @@
-// A full round: every hole of this month's course in one go, then the card goes up on the board.
+// A full round: every hole of this period's course in one go, then the card goes up on the board.
 // A preview round (the admin, every hole of a course still to come) and a practice round (any member, the first few holes
 // of the next course) are played the same way but never posted.
 import { api } from '../api';
@@ -82,9 +82,9 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     game.howTo = 'practice';
     game.onShot = joinPractice('caldera').shot;
   }
-  // today's players are on this month's course, not the preview
+  // today's players are on this period's course, not the preview
   if (!preview) game.setGhosts(todaysField(snap));
-  // a hole with a stadium fills its stands with everyone in the Open who has played it this month
+  // a hole with a stadium fills its stands with everyone in the Open who has played it this period
   const standsAt = course.holes.findIndex((h) => h.decor.some((d) => d.kind === 'stands'));
   if (standsAt >= 0 && !preview) {
     const g = game;

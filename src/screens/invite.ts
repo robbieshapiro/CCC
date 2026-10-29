@@ -38,7 +38,7 @@ export async function invite(id: string) {
         <header class="letter-head">${crest(64, 'lh')}<p class="eyebrow">CCC · Est. 2026</p></header>
         <p class="letter-dear">Dear ${esc(dear)},</p>
         <p>The Committee is delighted to put you up for membership of the CCC.</p>
-        <p>A new course opens every month. Play it as often as you please; your lowest round of the month counts toward the Monthly Championship, and you'll collect gear along the way.</p>
+        <p>A new course opens every week. Play it as often as you please; your lowest round of the week can win you the title, and you'll collect gear along the way.</p>
         <p>Your invitation code lies beneath the foil. You'll need it but once.</p>
         <div class="scratch" id="scratch">
           <p class="scratch-code" aria-live="polite"><small>Your code</small><b id="code">${esc(inv.code.toUpperCase())}</b></p>

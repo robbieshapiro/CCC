@@ -26,7 +26,7 @@ create table if not exists rounds (
   id bigserial primary key,
   player_id uuid not null references players on delete cascade,
   group_id uuid not null references groups on delete cascade,
-  month text not null check (month ~ '^\d{4}-\d{2}$'),
+  month text not null check (month ~ '^\d{4}-\d{2}(-\d{2})?$'), -- the game period: see game_month()
   course text not null,
   holes int[] not null,
   total int not null,
@@ -108,8 +108,18 @@ $$;
 create or replace function game_today() returns date
 language sql stable as $$ select (now() at time zone 'America/New_York')::date $$;
 
+-- The game period, still called "month" in the tables: calendar months to begin with ('2026-10'), then from
+-- 9 November 2026 a week at a time, keyed by its Monday ('2026-11-16'). November 1 to 8 is the last of the old
+-- periods ('2026-11'). Keys sort in time order either way. src/day.ts has the same rule as periodOf().
 create or replace function game_month() returns text
-language sql stable as $$ select to_char(game_today(), 'YYYY-MM') $$;
+language sql stable as $$
+  select case when game_today() >= date '2026-11-09' then to_char(date_trunc('week', game_today()), 'YYYY-MM-DD')
+    else to_char(game_today(), 'YYYY-MM') end
+$$;
+
+-- older databases have the months-only check on rounds: let it take a week too
+alter table rounds drop constraint if exists rounds_month_check;
+alter table rounds add constraint rounds_month_check check (month ~ '^\d{4}-\d{2}(-\d{2})?$');
 
 -- Each member's best round per month (lowest to par, earliest breaks a tie), ranked within the month.
 -- (see home_of below: a host runs a club without playing in it)
@@ -487,7 +497,7 @@ end $$;
 -- This month, member by member (the admin left out): last in, days active, rounds, practice, locker visits.
 create or replace function activity_report(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token); m text := game_month();
+declare me players := player_for(p_token);
   since timestamptz := (date_trunc('month', now() at time zone 'America/New_York')) at time zone 'America/New_York';
 begin
   if me.role <> 'admin' then raise exception 'Only the committee can see member activity.'; end if;
@@ -499,10 +509,10 @@ begin
           (select max(started_at) from practice_sessions where player_id = pl.id)) as "lastSeen",
         (select count(*) from (
             select day from member_days where player_id = pl.id and day >= since::date
-            union select (created_at at time zone 'America/New_York')::date from rounds where player_id = pl.id and month = m
+            union select (created_at at time zone 'America/New_York')::date from rounds where player_id = pl.id and created_at >= since
             union select (started_at at time zone 'America/New_York')::date from practice_sessions where player_id = pl.id and started_at >= since
           ) d) as days,
-        (select count(*) from rounds where player_id = pl.id and month = m) as rounds,
+        (select count(*) from rounds where player_id = pl.id and created_at >= since) as rounds,
         (select count(*) from practice_sessions where player_id = pl.id and started_at >= since) as practice,
         (select coalesce(sum(lockers), 0) from member_days where player_id = pl.id and day >= since::date) as lockers
       from players pl where pl.group_id = me.group_id and pl.role <> 'admin'
@@ -899,17 +909,23 @@ create or replace function chronicle_facts(p_group uuid) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with m as (select game_month() as month), members as (
     select * from players where group_id = p_group and not host_only
+  ), last as (
+    -- the period that just closed: the latest before this one that anybody played
+    select max(b.month) as month from month_bests(p_group) b where b.month < (select month from m)
   )
   select json_build_object(
     'club', (select name from groups where id = p_group),
     'members', (select count(*) from members),
     'new_members', (select coalesce(json_agg(name), '[]') from members where created_at > now() - interval '7 days'),
-    'month', (select month from m),
+    'period', (select month from m),
     'rounds_this_week', (select coalesce(json_agg(json_build_object('who', p.name, 'course', r.course, 'score', r.total, 'to_par', r.total - r.par,
         'feats', r.feats, 'day', to_char(r.created_at at time zone 'America/New_York', 'Dy')) order by r.created_at), '[]')
       from rounds r join members p on p.id = r.player_id where r.created_at > now() - interval '7 days'),
-    'month_standings', (select coalesce(json_agg(json_build_object('who', p.name, 'best_to_par', b.total - b.par, 'place', b.r) order by b.r), '[]')
+    'standings_so_far', (select coalesce(json_agg(json_build_object('who', p.name, 'best_to_par', b.total - b.par, 'place', b.r) order by b.r), '[]')
       from month_bests(p_group) b join members p on p.id = b.player_id where b.month = (select month from m)),
+    'last_period', (select month from last),
+    'last_period_final', (select coalesce(json_agg(json_build_object('who', p.name, 'best_to_par', b.total - b.par, 'place', b.r) order by b.r), '[]')
+      from month_bests(p_group) b join members p on p.id = b.player_id where b.month = (select month from last)),
     'closest_to_the_pin', (select json_build_object('players', count(distinct d.player_id), 'holed', coalesce(json_agg(distinct p.name) filter (where d.holed), '[]'))
       from daily_shots d join members p on p.id = d.player_id where d.created_at > now() - interval '7 days'),
     'mini_golf_best', (select json_build_object('who', p.name, 'strokes', -max(b.score)) from bar_scores b join members p on p.id = b.player_id

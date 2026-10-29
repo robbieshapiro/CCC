@@ -56,13 +56,13 @@ const pick = <T,>(list: T[], seed: string) => list[[...seed].reduce((a, c) => a 
 export const REGINALD = {
   welcome: () => "Good afternoon. Members only, I'm afraid. Do sign in, there's a good sort.",
   invited: () => "Splendid. You've been put up for membership. Choose a name and a four-digit PIN. The PIN is your password hereafter, so do try to remember it. I shan't.",
-  course: (name: string, holes: number, par: number) => `This month the Committee presents <b>${esc(name)}</b>. ${holes} holes, par ${par}. Your lowest round takes the honours.`,
-  nobody: (day: string) => pick(['Not a single round this month. The greens are, frankly, offended.', 'The board stands empty. One of you might consider, and I say this gently, golf.'], day),
+  course: (name: string, holes: number, par: number, span: string) => `This ${span} the Committee presents <b>${esc(name)}</b>. ${holes} holes, par ${par}. Your lowest round takes the honours.`,
+  nobody: (day: string) => pick(['Not a single round yet. The greens are, frankly, offended.', 'The board stands empty. One of you might consider, and I say this gently, golf.'], day),
   notYet: (n: number) => `${n} ${n === 1 ? 'member has' : 'members have'} posted a round. You, as yet, have not. I merely observe.`,
   leading: (toPar: string, day: string) =>
-    pick([`You lead the month at <b>${toPar}</b>. Do try not to let it go to your head. It rarely ends well.`, `<b>${toPar}</b> and top of the board. The staff are cautiously impressed. I am reserving judgement.`], day),
+    pick([`You lead the board at <b>${toPar}</b>. Do try not to let it go to your head. It rarely ends well.`, `<b>${toPar}</b> and top of the board. The staff are cautiously impressed. I am reserving judgement.`], day),
   behind: (who: string, toPar: string, gap: number) => `${esc(who)} leads at <b>${toPar}</b>, ${gap} ${gap === 1 ? 'stroke' : 'strokes'} ahead of you. Chin up. Stiff upper lip and all that.`,
-  others: (who: string, toPar: string) => `${esc(who)} leads the month at <b>${toPar}</b>. The rest of you are, regrettably, also members.`,
+  others: (who: string, toPar: string) => `${esc(who)} leads the board at <b>${toPar}</b>. The rest of you are, regrettably, also members.`,
   hole: (name: string, toPar: number, strokes: number) =>
     strokes === 1 ? 'A hole in one! Good heavens. I shall have it engraved at once.'
     : toPar <= -2 ? `${name}. Extraordinary. I had to sit down.`
@@ -78,5 +78,5 @@ export const REGINALD = {
   openLeads: (who: string, toPar: string, mine: number | null, n: number) =>
     `${esc(who)} leads the Open at <b>${toPar}</b>.` + (mine ? ` You sit ${ordinal(mine)} of ${n}.` : ' You have yet to enter. I merely observe.'),
   host: (club: string, home: string) => `You run <b>${esc(club)}</b>, so you're not on its board. Your rounds count for ${esc(home)}.`,
-  card: (wins: number) => (wins ? `${wins} monthly ${wins === 1 ? 'title' : 'titles'}. The wardrobe reflects it.` : 'No titles yet. Win a month and the pro shop shall open its doors to you.'),
+  card: (wins: number) => (wins ? `${wins} ${wins === 1 ? 'title' : 'titles'}. The wardrobe reflects it.` : 'No titles yet. Win a week and the pro shop shall open its doors to you.'),
 };

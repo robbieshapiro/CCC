@@ -9,7 +9,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 const MODEL = 'claude-opus-5-5';
 const COURSES: Record<string, string> = { highlands: 'The Highlands Course', caldera: 'The Caldera Course' };
 
-const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. Each month there is a new 3D course; members play it as often as they like and their best round counts, and the lowest round when the month closes goes on the club's plaque. There is also a daily Closest to the Pin, and weekly bar games (Hollow Hills haunted mini golf, the long drive).
+const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. Each week there is a new 3D course (until November 2026 it was each month); members play it as often as they like and their best round counts, and the lowest round when the week closes on Sunday night goes on the club's plaque as that week's title. There is also a daily Closest to the Pin, and weekly bar games (Hollow Hills haunted mini golf, the long drive).
 
 Each Monday you write the Clubhouse Chronicle, a short weekly letter to the members of one club about the week just gone.
 
@@ -17,7 +17,7 @@ Your voice: English, dry, unhurried, a little formal. Understatement over excite
 
 The letter:
 - A headline (under 8 words) and a one-line dek under it.
-- Three to five short items, each with a title (under 6 words) and a body of one to three sentences. Lead with the best story of the week: a new leader, a personal best, a hole in one, a close race, a newcomer, a collapse on one hole. Then the standings with days left in the month, then the bar and the daily shot if anything happened there.
+- Three to five short items, each with a title (under 6 words) and a body of one to three sentences. Lead with the best story of the week: who won the period just closed (last_period), a personal best, a hole in one, a close finish, a newcomer, a collapse on one hole. Then where this week stands so far if anyone has played, then the bar and the daily shot if anything happened there.
 - A one-line sign-off.
 - Under 230 words in all.
 - Use only facts in the data. Never invent a score, a person, a quote or an event. Name members by first name as given.
@@ -49,12 +49,6 @@ function thisMonday() {
   return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, '0')}-${String(et.getDate()).padStart(2, '0')}`;
 }
 
-function daysLeft() {
-  const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const end = new Date(et.getFullYear(), et.getMonth() + 1, 1);
-  return Math.max(0, Math.round((end.getTime() - et.getTime()) / 86400000));
-}
-
 async function write(db: SupabaseClient, claude: Anthropic, group: string, week: string): Promise<Edition | null> {
   const { data: kept } = await db.from('chronicles').select('body').eq('group_id', group).eq('week', week).maybeSingle();
   if (kept) return kept.body as Edition;
@@ -69,7 +63,7 @@ async function write(db: SupabaseClient, claude: Anthropic, group: string, week:
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
     system: SYSTEM,
-    messages: [{ role: 'user', content: `Write this week's Chronicle (week of ${week}, ${daysLeft()} days left in the month).\n\n<club_data>\n${JSON.stringify(f, null, 1)}\n</club_data>` }],
+    messages: [{ role: 'user', content: `Write this week's Chronicle (week of ${week}).\n\n<club_data>\n${JSON.stringify(f, null, 1)}\n</club_data>` }],
   });
   if (res.stop_reason !== 'end_turn') return null;
   const text = res.content.map((b) => (b.type === 'text' ? b.text : '')).join('');

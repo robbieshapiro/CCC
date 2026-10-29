@@ -32,8 +32,8 @@ export function board(snap: Snapshot): Row[] {
   return [...played, ...rows.filter((r) => !r.best)];
 }
 
-// Champions of a finished month: the lowest best round. Ties share it.
-export function monthChampion(month: string, rounds: Round[]): Champion | null {
+// Champions of a finished period (a month, then a week): the lowest best round. Ties share it.
+export function periodChampion(month: string, rounds: Round[]): Champion | null {
   const best = [...bestRounds(rounds.filter((r) => r.month === month)).values()];
   if (!best.length) return null;
   const low = Math.min(...best.map(toParOf));
@@ -43,4 +43,3 @@ export function monthChampion(month: string, rounds: Round[]): Champion | null {
 
 export const myBest = (snap: Snapshot) => bestRounds(snap.rounds).get(snap.me) ?? null;
 export const toParLabel = (n: number) => (n === 0 ? 'E' : n > 0 ? `+${n}` : `${n}`);
-export const monthName = (m: string) => new Date(`${m}-15T12:00:00Z`).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });

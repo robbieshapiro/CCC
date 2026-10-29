@@ -21,7 +21,8 @@ A private online golf club for friends: a 3D course each month, a daily Closest 
 - Data access goes through the `Api` interface in `src/api/types.ts`. Add a method to both `src/api/supabase.ts` and `src/api/local.ts` so local mode keeps working with no keys.
 - All SQL lives in `supabase/schema.sql` and must be safe to re-run (`create table if not exists`, `create or replace function`, `add column if not exists`). Never run SQL against the live database. Robbie pastes it in himself.
 - AI calls are server-side only, in `api/*.ts`, each with a per-member daily cap. Keep a cap on anything new and note the expected cost in the plan.
-- New monthly courses: hole files in `src/golf3d/holes/`, then an entry in `COURSES` in `src/golf3d/courses.ts` keyed by month.
+- New weekly courses: hole files in `src/golf3d/holes/`, then an entry in `COURSES` in `src/golf3d/courses.ts` with `opens` set to its Monday (`'2026-11-16'`).
+- The game period lives in a field still called `month` (rounds, the snapshot, champions): `'YYYY-MM'` for the old months, the week's Monday `'YYYY-MM-DD'` from Nov 9 2026. Use the helpers in `src/day.ts` (`periodOf`, `periodClosesAt`, `periodName`, `span`), never slice a date to get a month.
 - Words members see: short, warm, plain. No em dashes.
 
 ## Keep the plan current (part of every PR)
