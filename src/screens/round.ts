@@ -70,7 +70,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   }
   // a practice round is a practice session: joined here, ended when they leave or finish
   if (opts.practice) {
-    game.leaveText = 'Leave practice';
+    game.leaveText = 'Leave';
+    game.howTo = 'practice';
     game.onShot = joinPractice('caldera').shot;
   }
   // today's players are on this month's course, not the preview
@@ -155,44 +156,10 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   };
 }
 
-// Before a practice round on the next course: what plays differently from the Highlands.
+// A practice round on the next course: straight in. The how-to card covers what plays differently.
 export function practice(snap: Snapshot, next: Course) {
-  closeRound();
   const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
-  render(`<main class="narrow"></main>`);
-  const sheet = document.createElement('div');
-  sheet.className = 'practice-notes';
-  // a column the height of the screen: the notes scroll, the one button is always there at the bottom
-  sheet.innerHTML = `
-    <div class="notes-card">
-      <div class="notes-body">
-        <p class="eyebrow">Practice · ${n} holes · not counted</p>
-        <h2>${esc(next.name)}</h2>
-        <p class="muted">It plays differently from the Highlands.</p>
-        <h3>The swing meter</h3>
-        <ul>
-          <li>It stands beside your golfer, and the club swings with it.</li>
-          <li>Tap to start the backswing, tap on your gold line for power, tap in the gold at the bottom to strike.</li>
-          <li>More time to find the gold than on the Highlands.</li>
-          <li>Righty or lefty? Set it under Gear on your member card.</li>
-        </ul>
-        <h3>Putting</h3>
-        <ul>
-          <li>No aim line: judge the pace off the power bar.</li>
-          <li>Read the break from the read card: how much it goes up or down, and which way it breaks.</li>
-          <li>Firm putts can hop the hole. Let it die in.</li>
-        </ul>
-      </div>
-      <div class="notes-foot"><button class="btn" data-go>Join practice</button></div>
-    </div>`;
-  document.body.appendChild(sheet);
-  const close = () => sheet.remove();
-  sheet.querySelector<HTMLButtonElement>('[data-go]')!.onclick = () => {
-    close();
-    void round(snap, { course: next, holes: n, practice: true });
-  };
-  // leaving the page by any other way takes the sheet with it
-  window.addEventListener('hashchange', close, { once: true });
+  void round(snap, { course: next, holes: n, practice: true });
 }
 
 // The range or the short game area at the practice facility: a session from the moment you step on to when you leave.
@@ -212,7 +179,8 @@ export function practiceArea(snap: Snapshot, kind: 'range' | 'shortgame') {
     render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/">Back to the club</a></main>`);
     return;
   }
-  game.leaveText = 'Leave practice';
+  game.leaveText = 'Leave';
+  game.howTo = 'practice';
   game.onShot = joinPractice(kind).shot;
   if (kind === 'range') game.practiceArea(range, { title: 'Driving range', stations: [{ name: 'From the mat', at: range.tee }], targets: TARGETS });
   else game.practiceArea(shortgame, { title: 'Short game', stations: STATIONS });
@@ -247,11 +215,12 @@ export async function dailyRound(snap: Snapshot) {
     return;
   }
   game.leaveText = 'Leave';
+  game.howTo = 'daily';
   game.practiceArea(shot.hole, {
-    title: `Daily Shot #${shot.number}`,
+    title: `Closest to the Pin #${shot.number}`,
     stations: [{ name: shot.label, at: shot.from }],
     wind: shot.wind,
-    eyebrow: 'Every club · three tries',
+    eyebrow: 'Three tries · closest wins',
     tag: () => `Try ${done.length + 1} of ${DAILY_TRIES}`,
     onResult: (r) => {
       const t = { try: done.length + 1, ...r };

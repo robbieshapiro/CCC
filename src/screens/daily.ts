@@ -11,7 +11,7 @@ const canShare = () => typeof navigator.share === 'function' && matchMedia('(poi
 export function shareText(day: string, tries: DailyTry[]) {
   const shot = dailyShot(day);
   const best = bestTry(tries);
-  return `CCC Daily Shot #${shot.number} · ${shot.label}\n${tries.map(tryMark).join(' ')}  Best: ${resultLabel(best)}\n${location.origin}`;
+  return `CCC Closest to the Pin #${shot.number} · ${shot.label}\n${tries.map(tryMark).join(' ')}  Best: ${resultLabel(best)}\n${location.origin}`;
 }
 
 export async function share(text: string, btn?: HTMLButtonElement) {
@@ -55,10 +55,10 @@ export async function bindDaily(day: string) {
   el.hidden = false;
   el.innerHTML = `
     <div class="daily-head">
-      <div><p class="eyebrow">Daily Shot #${shot.number} · committee preview</p><h2>${esc(shot.label)}</h2></div>
+      <div><p class="eyebrow">Closest to the Pin · #${shot.number} · committee preview</p><h2>${esc(shot.label)}</h2></div>
       ${state.streak ? `<span class="daily-streak" title="Days in a row">🔥 ${state.streak}</span>` : ''}
     </div>
-    <p class="muted">${shot.hole.par === 3 ? 'From the tee.' : 'An approach from the fairway.'} ${shot.wind.mph ? `${shot.wind.mph} mph wind.` : 'No wind.'} Three tries, closest to the pin wins.</p>
+    <p class="muted">A new shot every day. 3 tries, closest wins.</p>
     ${state.mine.length ? `<p class="daily-mine">${state.mine.map(tryMark).join(' ')} <span>Your best: <b>${resultLabel(best)}</b></span></p>` : ''}
     <div class="daily-actions">
       ${left ? `<a class="btn" href="#/daily">${state.mine.length ? `Take try ${state.mine.length + 1} of ${DAILY_TRIES}` : 'Take your shot'}</a>` : `<button class="btn ghost" data-daily-share>${canShare() ? 'Share' : 'Copy result'}</button>`}
@@ -78,7 +78,7 @@ export async function dailySummary(day: string, onClose: () => void) {
   sheet.innerHTML = `
     <div class="notes-card">
       <div class="notes-body">
-        <p class="eyebrow">Daily Shot #${shot.number}</p>
+        <p class="eyebrow">Closest to the Pin · #${shot.number}</p>
         <h2>${esc(shot.label)}</h2>
         <p class="daily-mine big">${tries.map(tryMark).join(' ')}</p>
         <p>Your best: <b>${resultLabel(bestTry(tries))}</b>${state?.streak ? ` · 🔥 ${state.streak} ${state.streak === 1 ? 'day' : 'days in a row'}` : ''}</p>

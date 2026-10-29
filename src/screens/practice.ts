@@ -37,10 +37,10 @@ export function facility() {
     <main class="narrow facility">
       <p class="eyebrow">Practice facility</p>
       <h1>Warm up, or work on it</h1>
-      <p class="muted">Nothing here goes on the board. Same turf and greens as the Caldera.</p>
+      <p class="muted">Nothing counts. Just practice.</p>
       <div class="facility-choice">
-        <a class="panel" href="#/facility/range"><h2>Driving range</h2><p class="muted">Flags from 45 to 220 yd</p></a>
-        <a class="panel" href="#/facility/shortgame"><h2>Short game</h2><p class="muted">Chip, pitch, bunker and putt</p></a>
+        <a class="panel" href="#/facility/range"><h2>Driving range</h2><p class="muted">Long shots</p></a>
+        <a class="panel" href="#/facility/shortgame"><h2>Short game</h2><p class="muted">Chips and putts</p></a>
       </div>
       <p><a class="link" href="#/">Back to the club</a></p>
     </main>`);
@@ -53,7 +53,7 @@ export function facilityPanel() {
       <div>
         <p class="eyebrow">Practice facility</p>
         <h2>Range &amp; short game</h2>
-        <p class="muted">Hit balls, chip and putt. Nothing goes on the board.</p>
+        <p class="muted">Nothing counts. Just practice.</p>
       </div>
       <a class="btn" href="#/facility">Hit the range</a>
     </section>`;

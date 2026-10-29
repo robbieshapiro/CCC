@@ -212,6 +212,8 @@ export class Course3D {
   private drill: Drill | null = null;
   // practice of any kind: the Leave button says so and doesn't ask
   leaveText = '';
+  // which how-to card this game shows (first time, then on the ? button)
+  howTo: 'round' | 'practice' | 'daily' = 'round';
   // told after every swing, for the practice log
   onShot: (() => void) | null = null;
   private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
@@ -469,7 +471,7 @@ export class Course3D {
       <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-flash" data-flash aria-hidden="true"></div>
       <div class="g3-top">
-        <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}</div>
+        <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button><button class="g3-pill g3-help" data-help aria-label="How to play">?</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}</div>
         ${
           this.drill
             ? `<div class="g3-title"><small>${this.drill.eyebrow ?? 'Practice facility'}</small><b>${this.drill.title}</b><span><em data-station-name>${this.drill.stations[this.drill.at].name}</em>${this.drill.stations.length > 1 ? ' · <i data-dist></i>' : ''}</span></div>
@@ -557,6 +559,7 @@ export class Course3D {
       sfx('tick');
     };
     q('[data-skip]').onclick = () => this.endFlyover();
+    q('[data-help]').onclick = () => this.showHowTo();
     const w = this.wind!;
     q('[data-wind-speed]').textContent = w.mph ? `${w.mph} mph` : 'Calm';
     q('[data-wind-arrow]').hidden = !w.mph;
@@ -681,6 +684,43 @@ export class Course3D {
   private setStrokes() {
     const el = this.overlay.querySelector('[data-strokes]');
     if (el) el.textContent = String(this.strokes);
+  }
+
+  // The how-to card: three picture steps and a button. Shown the first time on this device for each kind of game,
+  // then whenever the ? is tapped.
+  private showHowTo(auto = false) {
+    const key = `ccc-howto-${this.howTo}`;
+    if (auto) {
+      try {
+        if (localStorage.getItem(key)) return;
+        localStorage.setItem(key, '1');
+      } catch {
+        return;
+      }
+    }
+    const head = {
+      round: ['How to play', 'Fewest shots wins.'],
+      practice: ['Practice', "Nothing counts. Hit as many as you like."],
+      daily: ['Closest to the Pin', 'One shot, three tries. Closest wins.'],
+    }[this.howTo];
+    const card = document.createElement('div');
+    card.className = 'g3-howto';
+    card.innerHTML = `<div class="g3-howto-card" role="dialog" aria-label="${head[0]}">
+      <h2>${head[0]}</h2><p>${head[1]}</p>
+      <ol>
+        <li><i>👆</i><b>Aim</b><span>Drag left or right</span></li>
+        <li><i>🟡</i><b>Power</b><span>Tap to swing, tap again on the gold line</span></li>
+        <li><i>⛳</i><b>Hit</b><span>Tap when the needle is in the gold</span></li>
+        <li><i>🟢</i><b>Putt</b><span>Drag down, let go</span></li>
+      </ol>
+      <button class="btn" data-go>Let's go</button>
+    </div>`;
+    this.overlay.appendChild(card);
+    // taps on the card are for the card, not the swing underneath
+    for (const ev of ['pointerdown', 'pointerup', 'pointermove'] as const) card.addEventListener(ev, (e) => e.stopPropagation());
+    const go = () => card.remove();
+    card.querySelector<HTMLButtonElement>('[data-go]')!.onclick = go;
+    card.onclick = (e) => e.target === card && go();
   }
 
   private hint(text: string) {
@@ -816,7 +856,7 @@ export class Course3D {
     this.fly = { curve: new THREE.CatmullRomCurve3(pts), t: 0 };
     this.mode = 'fly';
     this.overlay.querySelector('[data-skip]')?.classList.add('show');
-    this.callout(this.hole.name, this.drill ? 'Practice facility' : `Hole ${this.number} · Par ${this.hole.par}`, 3200);
+    this.callout(this.hole.name, this.drill ? this.drill.title : `Hole ${this.number} · Par ${this.hole.par}`, 3200);
     this.hint('');
     this.golfer.setPose('idle');
     sfx('whoosh');
@@ -834,7 +874,10 @@ export class Course3D {
         diff: this.total.strokes - this.total.par,
         last: this.lastDrink,
       });
-    } else this.toAim();
+    } else {
+      this.toAim();
+      this.showHowTo(true);
+    }
     this.snapCamera();
   }
 
@@ -873,7 +916,7 @@ export class Course3D {
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
     this.hint(
       first
-        ? 'Drag sideways to aim, down to plan your power. Then tap to swing.'
+        ? 'Drag to aim. Tap to swing.'
         : tip
           ? 'Drag the dot on the ball for spin, or to bend the shot. Mind the wind.'
           : '',
