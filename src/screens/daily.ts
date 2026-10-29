@@ -55,7 +55,7 @@ export async function bindDaily(day: string) {
   el.hidden = false;
   el.innerHTML = `
     <div class="daily-head">
-      <div><p class="eyebrow">Daily Shot #${shot.number} · every club</p><h2>${esc(shot.label)}</h2></div>
+      <div><p class="eyebrow">Daily Shot #${shot.number} · committee preview</p><h2>${esc(shot.label)}</h2></div>
       ${state.streak ? `<span class="daily-streak" title="Days in a row">🔥 ${state.streak}</span>` : ''}
     </div>
     <p class="muted">${shot.hole.par === 3 ? 'From the tee.' : 'An approach from the fairway.'} ${shot.wind.mph ? `${shot.wind.mph} mph wind.` : 'No wind.'} Three tries, closest to the pin wins.</p>
