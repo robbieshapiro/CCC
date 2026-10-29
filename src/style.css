@@ -800,6 +800,8 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
    nods now and then. */
 .play-hero { display: grid; gap: 18px; padding: 20px; margin-bottom: 14px; border-radius: 12px; background: var(--green); color: var(--cream); box-shadow: 0 10px 30px rgba(22, 59, 44, 0.25); animation: rise 0.45s ease-out both; }
 .play-hero.volcanic { background: linear-gradient(160deg, #2a0f08, #4a1a0c 60%, #7a2c10); }
+/* a thin strip across the top of the home page for schedule news */
+.banner { margin: 0 0 12px; padding: 7px 12px; border-radius: 8px; background: #3a160b; color: #ffd9b0; font-size: 13px; font-weight: 600; line-height: 1.35; text-align: center; }
 /* a new period: the course that's just opened and last period's champion, until the member taps Play or Later */
 .news { display: grid; gap: 8px; padding: 22px 20px; margin-bottom: 14px; border-radius: 12px; background: var(--green); color: var(--cream); box-shadow: 0 0 0 2px var(--gold, #d9a441), 0 12px 32px rgba(22, 59, 44, 0.3); animation: rise 0.45s ease-out both; }
 .news.volcanic { background: linear-gradient(160deg, #2a0f08, #4a1a0c 60%, #7a2c10); }

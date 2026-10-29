@@ -2,6 +2,7 @@
 // round. Best-effort: the scripted lines show first, and stay whenever there's nothing back (local mode, no API
 // key yet, a slow answer, a cap). A day's line is kept on the device so the page doesn't ask twice.
 import { useSupabase } from './api';
+import { periodClosesAt, periodOf } from './day';
 import type { Course } from './golf3d/courses';
 import { requireSession } from './state';
 import { store } from './storage';
@@ -9,7 +10,8 @@ import { store } from './storage';
 export async function askReginald(kind: 'daily' | 'round', course: Course, today: string): Promise<string | null> {
   if (!useSupabase) return null;
   const s = requireSession();
-  const key = `ccc-reg-${s.groupId}-${today}`;
+  // kept for the day and for when the board closes, so a schedule change asks again
+  const key = `ccc-reg-${s.groupId}-${today}-${periodClosesAt(periodOf(today)).getTime()}`;
   if (kind === 'daily') {
     const kept = store.get(key);
     if (kept) return kept;

@@ -45,6 +45,7 @@ const clean = (s: unknown, n: number) => String(s ?? '').replace(/[^\p{L}\p{N} '
 function periodEnds(period: string) {
   if (period === '2026-10-30') return '2026-11-08';
   if (period.length === 10) return new Date(Date.parse(`${period}T12:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
+  if (period === '2026-10') return '2026-10-30'; // October closed early, for the Caldera challenge
   const [y, m] = period.split('-').map(Number);
   return new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
 }
@@ -96,6 +97,10 @@ function facts(snap: Snapshot, open: { name: string; total: number; par: number;
     today: snap.today,
     course: `${course.name}, ${course.holes.length} holes, par ${course.holes.reduce((a, h) => a + h.par, 0)}`,
     [`days_left_this_${span(snap.month)}`]: daysLeft,
+    board_closes: daysLeft <= 1 ? 'tonight at midnight Eastern' : `${new Date(`${periodEnds(snap.month)}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' })} at midnight Eastern (as that day begins)`,
+    ...(snap.month === '2026-10'
+      ? { club_news: 'The Committee is closing October early: the board closes at midnight tonight, Thursday 29 October, and the champion is crowned. The Caldera challenge opens at once, on Friday: the Caldera\'s first three holes, par 14, through Saturday 7 November. Weekly courses start Sunday 8 November.' }
+      : {}),
     titles_all_time: me.wins,
     career: me.career,
     [`this_${span(snap.month)}`]: {
@@ -146,7 +151,9 @@ export async function POST(request: Request) {
 
   const round = kind === 'round' ? roundFacts(s, course) : null;
   if (kind === 'round' && !round) return json({ text: null, why: 'no recent round' });
-  const key = kind === 'daily' ? s.today : round!.key;
+  // a day's line is about the board as it stands, so it's kept for the day and for when the board closes: a schedule
+  // change gets a fresh one
+  const key = kind === 'daily' ? `${s.today}>${periodEnds(s.month)}` : round!.key;
 
   // already written: hand it back
   const { data: kept } = await db.from('reginald_notes').select('body').eq('player_id', me.id).eq('kind', kind).eq('key', key).maybeSingle();

@@ -3,7 +3,7 @@ import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { featById } from '../feats';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
-import { GAME_TZ, periodClosesAt, periodName, span } from '../day';
+import { CALDERA_START, GAME_TZ, periodClosesAt, periodName, span } from '../day';
 import { REGINALD, reginaldSvg, type Mood } from '../host';
 import { bindOpen } from './open';
 import { askReginald } from '../reginald';
@@ -26,7 +26,8 @@ const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { 
 // The first time a member opens the app in a new period: the last one's champion, and the new course open to play.
 // Gone once they tap Play or Later.
 export const SEEN_PERIOD = 'ccc-seen-period';
-export const newPeriod = (snap: Snapshot) => store.get(SEEN_PERIOD) !== snap.month;
+// (from the Caldera challenge on: the months before it just open on the home page as they always did)
+export const newPeriod = (snap: Snapshot) => snap.month >= CALDERA_START && store.get(SEEN_PERIOD) !== snap.month;
 
 function newsCard(snap: Snapshot, course: Course) {
   if (!newPeriod(snap)) return '';
@@ -40,6 +41,17 @@ function newsCard(snap: Snapshot, course: Course) {
     ${crowned}
     <div class="news-actions"><a class="btn big" href="#/round" data-seen>Play it now</a><button class="btn ghost" data-seen>Later</button></div>
   </section>`;
+}
+
+// A thin strip along the top while the Caldera drops early: the night October closes, then through the challenge.
+function scheduleBanner(snap: Snapshot) {
+  const text =
+    snap.month === '2026-10' && snap.today === '2026-10-29'
+      ? '🌋 Early drop: October closes at midnight. The Caldera opens Fri 12am ET, 3 holes, to Sat Nov 7.'
+      : snap.month === CALDERA_START
+        ? '🌋 The Caldera dropped early: 3 holes, to Sat Nov 7. Weekly courses start Sun Nov 8.'
+        : '';
+  return text ? `<p class="banner">${text}</p>` : '';
 }
 
 export function home(snap: Snapshot) {
@@ -93,6 +105,7 @@ export function home(snap: Snapshot) {
   render(`
     ${header(snap.groupName, 'play')}
     <main>
+      ${scheduleBanner(snap)}
       ${newsCard(snap, course)}
       ${noticesStrip()}
       <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
