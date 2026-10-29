@@ -1,5 +1,5 @@
-// Your Locker: your golfer, how your month is going, your trophies, and the members of your club. Edit your look
-// from here. (The Member Card and the Locker Room, together.)
+// Your Locker: your golfer, how your month is going and your trophies. Edit your look from here. (The club's
+// members are in the Clubhouse.)
 import { api, setSession } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
 import { portrait, specOf } from '../avatar';
@@ -25,14 +25,10 @@ export function card(snap: Snapshot) {
   const best = myBest(snap);
   const got = FEATS.filter((f) => me.feats.includes(f.id));
   const left = FEATS.filter((f) => !me.feats.includes(f.id));
-  // the members, best of the month first, then the rest by name
-  const members = rows
-    .map((r) => ({ r, p: snap.players.find((x) => x.id === r.playerId)! }))
-    .sort((a, b) => (a.r.best ? a.r.rank : 999) - (b.r.best ? b.r.rank : 999) || a.p.name.localeCompare(b.p.name));
   let spec = specOf(me.avatar);
 
   render(`
-    ${header(snap.groupName, 'card')}
+    ${header(snap.groupName, 'locker')}
     <main class="narrow locker-page">
       <section class="lk-hero">
         <div class="stage" id="stage"></div>
@@ -56,12 +52,6 @@ export function card(snap: Snapshot) {
         <h2>Trophies</h2>
         ${got.length ? `<div class="lk-trophies">${got.map((f) => `<span title="${esc(f.how)}"><i>${f.icon}</i>${esc(f.name)}</span>`).join('')}</div>` : '<p class="muted">None yet. Your first one is out there.</p>'}
         ${left.length ? `<details class="lk-more"><summary>${left.length} more to find</summary><ul>${left.map((f) => `<li><i>🔒</i><b>${esc(f.name)}</b><small>${esc(f.how)}</small></li>`).join('')}</ul></details>` : ''}
-      </section>
-      <section class="lk-section">
-        <h2>Members</h2>
-        <ul class="lk-members">${members
-          .map(({ r, p }) => `<li><a href="${p.id === snap.me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 40)}<b>${esc(p.name)}${p.id === snap.me ? ' <small>you</small>' : ''}</b><em>${r.best ? toParLabel(r.toPar) : '–'}</em></a></li>`)
-          .join('')}</ul>
       </section>
       <p class="fine"><button class="link" id="logout">Sign out on this device</button></p>
     </main>`);

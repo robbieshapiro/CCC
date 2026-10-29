@@ -1,12 +1,13 @@
 // The Nineteenth Hole: Mo's bar, and the games on the wall behind it. Closest to the Pin (daily), the putting
 // contest and the long drive (weekly). Each card: what it is in a line, where you stand, the top three, and Play.
+// It's the first tab of the Clubhouse.
 import { api } from '../api';
 import type { BarBoard, DailyState, Snapshot } from '../api/types';
 import { scoreLabel, type BarGame } from '../bar';
 import { bestTry, dailyShot, resultLabel } from '../daily';
 import { MO, staffChip } from '../staff';
 import { requireSession } from '../state';
-import { esc, header, render } from '../ui';
+import { esc } from '../ui';
 
 const top3 = (rows: { name: string; label: string; mine: boolean }[]) =>
   rows.length
@@ -16,12 +17,11 @@ const top3 = (rows: { name: string; label: string; mine: boolean }[]) =>
         .join('')}</ol>`
     : '<p class="bar-empty">Nobody yet. Be first.</p>';
 
-export function bar(snap: Snapshot) {
+export function barPane(snap: Snapshot) {
   const me = snap.players.find((p) => p.id === snap.me)!;
   const shot = dailyShot(snap.today);
-  render(`
-    ${header(snap.groupName, 'month')}
-    <main class="bar-page">
+  return `
+    <div class="bar-page">
       <section class="bar-head">
         <p class="eyebrow">The Nineteenth Hole</p>
         <h1>The bar</h1>
@@ -32,12 +32,10 @@ export function bar(snap: Snapshot) {
         <a class="bar-game" href="#/bar/putting"><i>🟢</i><div><b>Putting contest</b><span>5 putts · this week</span></div><p data-mine="putting"></p><div data-board="putting"></div></a>
         <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings · this week</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
       </div>
-      <p class="fine"><a class="link" href="#/">Back to the club</a></p>
-    </main>`);
-  void fill(snap);
+    </div>`;
 }
 
-async function fill(snap: Snapshot) {
+export async function fillBar(snap: Snapshot) {
   const s = requireSession();
   const [daily, putting, drive] = await Promise.all([
     api.dailyState(s, snap.today).catch(() => null as DailyState | null),

@@ -5,7 +5,6 @@ import { featById } from '../feats';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { GAME_TZ, monthClosesAt } from '../day';
 import { REGINALD, reginaldSvg, type Mood } from '../host';
-import { openFeedback } from './feedback';
 import { bindOpen } from './open';
 import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
@@ -71,7 +70,7 @@ export function home(snap: Snapshot) {
   // whatever was full screen before (the tour, a round) has let go of the page by now
   document.body.classList.remove('court-open');
   render(`
-    ${header(snap.groupName, 'month')}
+    ${header(snap.groupName, 'play')}
     <main>
       ${noticesStrip()}
       <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
@@ -86,7 +85,7 @@ export function home(snap: Snapshot) {
       <div class="tiles">
         ${dailyCard()}
         ${previewTile(snap.month)}
-        <a class="tile" href="#/bar"><i>🍺</i><b>The bar</b><span>Putting · long drive</span></a>
+        <a class="tile" href="#/clubhouse/bar"><i>🍺</i><b>The bar</b><span>Putting · long drive</span></a>
         <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
       </div>
       <section class="board">
@@ -108,7 +107,6 @@ export function home(snap: Snapshot) {
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
       </section>
-      <p class="fine feedback-link"><button class="link" id="send-feedback">Leave feedback</button></p>
       ${!useSupabase && snap.players.length < 2 ? `<p class="fine">Local mode. <button class="link" id="demo">Add Sean, Danny and PJ</button> to see a full board.</p>` : ''}
     </main>`);
 
@@ -123,7 +121,6 @@ export function home(snap: Snapshot) {
     switchClub(snap.homeGroupId);
     location.hash = '#/round';
   });
-  document.getElementById('send-feedback')!.onclick = () => openFeedback('From the clubhouse');
   document.getElementById('demo')?.addEventListener('click', async () => {
     localApi.seedDemo(requireSession());
     home(await refresh());
