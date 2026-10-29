@@ -19,6 +19,8 @@ Last updated Oct 29, 2026 (weekly play decided). Pick up from here.
 
 ## Setup status
 
+- [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
+
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
@@ -52,7 +54,7 @@ The problem with the new members: once your best round is in, there's no reason 
 
 **Schedule:**
 - **Nov 1 to 8:** the Caldera (all 6 holes) as a normal course. Whoever leads on Nov 9 is the first weekly champion.
-- **Week of Nov 9:** The Western Reserve, northeast Ohio in October (#79). Admin → preview it before then; members can practise its first hole from the home page.
+- **Week of Nov 9:** The Western Reserve, northeast Ohio in October (#79). It's a draft: only Robbie can play it (Admin → upcoming course). Once he approves, an agent removes `draft: true` in `src/golf3d/courses.ts` and it opens Nov 9. If it's still a draft on Nov 9, the Caldera carries over.
 - **From Nov 16:** agent-built courses every week.
 
 **The course pipeline:**

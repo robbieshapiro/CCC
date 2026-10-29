@@ -361,7 +361,7 @@ if (mode === 'all' || mode === 'basic') {
   ok(periodClosesAt('2026-10').toISOString() === '2026-11-01T04:00:00.000Z' && periodClosesAt('2026-11').toISOString() === '2026-11-09T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
   ok(periodOf('2026-10-31') === '2026-10' && periodOf('2026-11-08') === '2026-11' && periodOf('2026-11-09') === '2026-11-09' && periodOf('2026-11-15') === '2026-11-09' && periodOf('2026-11-16') === '2026-11-16', 'weeks start on Monday from November 9');
   ok(periodClosesAt('2026-11-09').toISOString() === '2026-11-16T05:00:00.000Z', 'a week closes at midnight Eastern going into Monday');
-  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-11').id === 'caldera' && courseFor('2026-11-09').id === 'westernreserve' && courseFor('2026-11-16').id === 'westernreserve', 'October is the Highlands, Nov 1 to 8 the Caldera, then the Western Reserve until the next course opens');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-11').id === 'caldera' && courseFor('2026-11-09').id === (courseById('westernreserve')!.draft ? 'caldera' : 'westernreserve'), 'October is the Highlands, Nov 1 to 8 the Caldera, then the Western Reserve once it is out of draft');
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)

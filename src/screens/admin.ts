@@ -38,7 +38,8 @@ const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
 ];
 
 export function admin(snap: Snapshot) {
-  const next = upcoming(snap.month)[0];
+  // every course still to come, drafts included: the Committee plays them before members do
+  const next = upcoming(snap.month);
   render(`
     ${header(snap.groupName, 'admin')}
     <main class="admin-page">
@@ -52,7 +53,7 @@ export function admin(snap: Snapshot) {
         <div class="adm-actions">
           <button class="btn" data-tool="notice">📣 Post a notice</button>
           <button class="btn" data-tool="invite">✉️ Invite someone</button>
-          ${next ? `<a class="btn ghost" href="#/preview/${next.id}">⛳ Preview ${esc(next.name.replace(/ Course$/, ''))}</a>` : ''}
+          ${next.map((c) => `<a class="btn ghost" href="#/preview/${c.id}">⛳ Preview ${esc(c.name.replace(/ Course$/, ''))}${c.draft ? ' (draft)' : ''}</a>`).join('')}
           <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
         </div>
         <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>

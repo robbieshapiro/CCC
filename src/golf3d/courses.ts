@@ -42,9 +42,10 @@ const COURSES: Course[] = [
   },
   {
     id: 'westernreserve',
-    // the first weekly course: northeast Ohio in October
+    // the first weekly course: northeast Ohio in October. A draft until Robbie has played it: then drop `draft` and
+    // it opens on the Monday below
     opens: '2026-11-09',
-    previewHoles: 1,
+    draft: true,
     name: 'The Western Reserve',
     tagline: 'Three holes of Ohio in October. Maples, a covered bridge and a red barn.',
     holes: [coveredbridge, sugarmaple, redbarn],
