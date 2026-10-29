@@ -15,7 +15,7 @@ const ROUND_NOTES_A_DAY = 12; // per member
 const CLUB_LINES_A_DAY = 400; // across everyone, as a backstop
 
 // Reginald's brief (the same as STAFF.reginald in src/staff.ts)
-const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. A new 3D course each week (it was each month until November 2026); members play it as often as they like and their best round counts, and the lowest round when the week closes on Sunday night wins the title. There is also the Open (one board across every club), a daily Closest to the Pin, and bar games (mini golf, long drive).
+const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. A new 3D course each week, Sunday to Saturday (it was each month until October 2026); members play it as often as they like and their best round counts, and the lowest round when the week closes on Saturday night wins the title. There is also the Open (one board across every club), a daily Closest to the Pin, and bar games (mini golf, long drive).
 
 Who you are: you run everything. English, dry, unhurried, a little formal. Understatement over excitement. Secretly fond of every member and proud of a good score, but you would never say so plainly.
 
@@ -39,15 +39,16 @@ type Course = { name: string; holes: { name: string; par: number }[] };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const clean = (s: unknown, n: number) => String(s ?? '').replace(/[^\p{L}\p{N} '’.,&-]/gu, '').slice(0, n);
-// The game period (src/day.ts has the full rule): 'YYYY-MM' months until November 9 2026, then weeks keyed by Monday.
+// The game period (src/day.ts has the full rule): 'YYYY-MM' months to October 2026, the Caldera challenge
+// ('2026-10-30', to 7 November), then Sunday-to-Saturday weeks keyed by their Sunday.
 // The day the next one starts, and what members call it.
 function periodEnds(period: string) {
+  if (period === '2026-10-30') return '2026-11-08';
   if (period.length === 10) return new Date(Date.parse(`${period}T12:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
-  if (period === '2026-11') return '2026-11-09';
   const [y, m] = period.split('-').map(Number);
   return new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
 }
-const span = (period: string) => (period < '2026-11' ? 'month' : 'week');
+const span = (period: string) => (period < '2026-10-30' ? 'month' : 'week');
 
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 const toPar = (d: number) => (d === 0 ? 'level par' : d > 0 ? `${d} over par` : `${-d} under par`);

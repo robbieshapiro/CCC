@@ -63,7 +63,7 @@ With no Supabase keys set, the app runs in **local mode**: data lives in your br
 
 ## Adding next week's course
 
-Add hole files under `src/golf3d/holes/`, then add a course to `COURSES` in `src/golf3d/courses.ts` with `opens` set to the Monday it starts (`'2026-11-16'`). If a week has no course, the most recent one carries over. Before November 9 2026 the club ran by the month; `src/day.ts` explains how the two kinds of period share the `month` column.
+Add hole files under `src/golf3d/holes/`, then add a course to `COURSES` in `src/golf3d/courses.ts` with `opens` set to the Sunday it starts (`'2026-11-15'`). If a week has no course, the most recent one carries over. Before 30 October 2026 the club ran by the month; `src/day.ts` explains how the two kinds of period share the `month` column.
 
 ## How it works
 

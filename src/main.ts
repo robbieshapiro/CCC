@@ -3,7 +3,7 @@ import { inject, pageview } from '@vercel/analytics';
 import { getSession, switchClub } from './api';
 import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
-import { home } from './screens/home';
+import { home, newPeriod } from './screens/home';
 import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
@@ -51,6 +51,11 @@ async function router() {
     if (page === 'welcome' || (me && !me.avatar.onboarded && page !== 'card')) {
       route = 'welcome';
       return welcome(s);
+    }
+    // the first open of a new period lands on the home page, where the new course and last period's champion are
+    if (page && page !== 'round' && newPeriod(s)) {
+      location.replace('#/');
+      return;
     }
     if (page === 'round') return round(s);
     if (page === 'daily') return dailyRound(s);

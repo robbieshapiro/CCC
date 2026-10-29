@@ -11,6 +11,7 @@ import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
 import { board, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
+import { store } from '../storage';
 import { esc, header, render } from '../ui';
 
 export function scoreClass(strokes: number, par: number) {
@@ -21,6 +22,25 @@ export function scoreClass(strokes: number, par: number) {
 
 // Last round's date on the club's (Eastern) calendar, e.g. "Oct 24".
 const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: GAME_TZ });
+
+// The first time a member opens the app in a new period: the last one's champion, and the new course open to play.
+// Gone once they tap Play or Later.
+export const SEEN_PERIOD = 'ccc-seen-period';
+export const newPeriod = (snap: Snapshot) => store.get(SEEN_PERIOD) !== snap.month;
+
+function newsCard(snap: Snapshot, course: Course) {
+  if (!newPeriod(snap)) return '';
+  const last = snap.champions[0];
+  const names = last ? last.playerIds.map((id) => snap.players.find((p) => p.id === id)?.name ?? 'a former member') : [];
+  const crowned = last ? `<p>${esc(periodName(last.month))} has closed. <b>${names.map(esc).join(' & ')}</b> ${names.length > 1 ? 'share' : 'takes'} the title at <b>${toParLabel(last.total - last.par)}</b>.</p>` : '';
+  return `<section class="news${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}" id="news">
+    <p class="eyebrow">Now open · ${esc(periodName(snap.month))}</p>
+    <h2>${esc(course.name)}</h2>
+    <p class="muted">${course.holes.length} holes · par ${course.par} · ${esc(course.tagline)}</p>
+    ${crowned}
+    <div class="news-actions"><a class="btn big" href="#/round" data-seen>Play it now</a><button class="btn ghost" data-seen>Later</button></div>
+  </section>`;
+}
 
 export function home(snap: Snapshot) {
   const player = (id: string) => snap.players.find((p) => p.id === id);
@@ -73,6 +93,7 @@ export function home(snap: Snapshot) {
   render(`
     ${header(snap.groupName, 'play')}
     <main>
+      ${newsCard(snap, course)}
       ${noticesStrip()}
       <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
         <div class="play-reg"><span class="host-face big">${reginaldSvg(mood, 72)}</span><p id="reg-line"><b>Reginald</b> ${line}</p></div>
@@ -124,6 +145,12 @@ export function home(snap: Snapshot) {
     });
   void bindNotices();
   void bindDaily(snap.today);
+  document.querySelectorAll<HTMLElement>('[data-seen]').forEach((b) =>
+    b.addEventListener('click', () => {
+      store.set(SEEN_PERIOD, snap.month);
+      document.getElementById('news')?.remove();
+    }),
+  );
   // in a club you only run, play from your own club: that's where it counts
   document.querySelector<HTMLAnchorElement>('[data-play-home]')?.addEventListener('click', (e) => {
     if (!snap.homeGroupId || !listSessions().some((x) => x.groupId === snap.homeGroupId)) return;

@@ -108,12 +108,15 @@ $$;
 create or replace function game_today() returns date
 language sql stable as $$ select (now() at time zone 'America/New_York')::date $$;
 
--- The game period, still called "month" in the tables: calendar months to begin with ('2026-10'), then from
--- 9 November 2026 a week at a time, keyed by its Monday ('2026-11-16'). November 1 to 8 is the last of the old
--- periods ('2026-11'). Keys sort in time order either way. src/day.ts has the same rule as periodOf().
+-- The game period, still called "month" in the tables: calendar months to begin with ('2026-10'), then the Caldera
+-- challenge from Friday 30 October to Saturday 7 November ('2026-10-30'), then from 8 November a week at a time,
+-- Sunday to Saturday, keyed by its Sunday ('2026-11-15'). Keys sort in time order either way. src/day.ts has the
+-- same rule as periodOf().
 create or replace function game_month() returns text
 language sql stable as $$
-  select case when game_today() >= date '2026-11-09' then to_char(date_trunc('week', game_today()), 'YYYY-MM-DD')
+  select case
+    when game_today() >= date '2026-11-08' then to_char(game_today() - extract(dow from game_today())::int, 'YYYY-MM-DD')
+    when game_today() >= date '2026-10-30' then '2026-10-30'
     else to_char(game_today(), 'YYYY-MM') end
 $$;
 
