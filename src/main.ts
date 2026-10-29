@@ -10,6 +10,7 @@ import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
 import { barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { clubhouse, isClubhouseTab } from './screens/clubhouse';
+import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
 import { courseById, nextCourse, upcoming } from './golf3d/courses';
 import { leaveMember, member } from './screens/member';
@@ -53,7 +54,8 @@ async function router() {
     }
     if (page === 'round') return round(s);
     if (page === 'daily') return dailyRound(s);
-    if (page === 'bar') return arg === 'minigolf' || arg === 'putting' ? barRound(s, 'minigolf') : arg === 'drive' ? barRound(s, 'drive') : clubhouse(s, 'bar');
+    if (page === 'bar') return arg === 'minigolf' || arg === 'putting' ? barRound(s, 'minigolf') : arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');
+    if (page === 'design') return designDesk(s, Number(arg) || undefined);
     if (page === 'clubhouse') return clubhouse(s, isClubhouseTab(arg) ? arg : 'bar', extra);
     // the admin's look at every hole of a course still to come
     if (page === 'preview') {

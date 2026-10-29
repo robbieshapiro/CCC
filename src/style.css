@@ -987,3 +987,43 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .chron-empty { display: grid; gap: 10px; justify-items: start; }
 #ch-write { margin-top: 12px; }
 @media (min-width: 1000px) { .chron { padding: 30px 40px; } .chron section { columns: 1; } }
+
+/* The Design Desk */
+.desk { display: grid; gap: 16px; }
+.desk-head h1 { margin: 2px 0 10px; }
+.desk-new { display: grid; gap: 10px; padding: 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
+.desk-new textarea, .desk-change input { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.desk-new .btn { justify-self: start; }
+.desk-looks { display: flex; flex-wrap: wrap; gap: 6px; }
+.desk-looks button { font: 700 13px var(--font); padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; }
+.desk-looks button[aria-checked='true'] { background: var(--green); border-color: var(--green); color: var(--cream); }
+.desk-work { padding: 12px 14px; border-radius: 12px; background: #fff7e6; border: 1px solid #f0d49a; }
+.desk-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; padding: 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); animation: rise 0.4s ease-out both; }
+.desk-plan { display: grid; place-items: start center; }
+.desk-plan canvas { border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); }
+.desk-info { display: grid; gap: 8px; align-content: start; }
+.desk-info h2 { margin: 0; font-size: 28px; }
+.desk-info .eyebrow { text-transform: uppercase; }
+.desk-par { margin: 0; font-weight: 800; color: #8a6a3e; }
+.desk-hint { margin: 0; color: var(--muted); font-style: italic; }
+.desk-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.desk-change { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.desk-mine h2 { font-size: 22px; margin: 0 0 8px; }
+.desk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.desk-list a { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); }
+.desk-list small { grid-column: 1 / -1; color: var(--muted); }
+.pill { display: inline-block; font: 800 11px var(--font); letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #efe6d2; color: #8a6a3e; white-space: nowrap; }
+.pill.submitted { background: #fff2dc; color: #a8480f; }
+.pill.approved { background: var(--green); color: var(--cream); }
+.pill.rejected { background: #eee; color: #888; }
+@media (max-width: 640px) { .desk-card { grid-template-columns: 1fr; } }
+/* the bar: the Members' Course and the way into the Desk */
+.bar-game.members { background: linear-gradient(160deg, #fbf3df, #f3e6c4); }
+.desk-cta { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 12px; margin-top: 10px; padding: 12px 14px; border-radius: 12px; border: 1px dashed #c9ad80; color: var(--ink); text-decoration: none; }
+.desk-cta i { font-style: normal; font-size: 24px; }
+.desk-cta b { display: block; font-family: var(--serif); font-size: 19px; color: var(--green); }
+.desk-cta span { font-size: 13px; color: var(--muted); }
+.desk-cta em { font-style: normal; font-size: 26px; color: #8a6a3e; }
+/* the Committee's queue */
+.adm-holes li { display: grid; grid-template-columns: 100px 1fr; gap: 12px; align-items: start; }
+.adm-hole-plan canvas { border-radius: 6px; }

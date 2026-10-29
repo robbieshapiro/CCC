@@ -5,7 +5,7 @@ import { rect } from './terrain';
 import type { Decor, Hole, Mover, Post, Push, V2, Wall } from './types';
 
 // a lane up from the tee that opens into a round green: the outline of both together
-function laneAndRound(half: number, y0: number, c: V2, r: number): V2[] {
+export function laneAndRound(half: number, y0: number, c: V2, r: number): V2[] {
   const meet = Math.asin(half / r); // where the lane's sides meet the circle, either side of straight down
   const start = -Math.PI / 2 + meet;
   const end = (3 * Math.PI) / 2 - meet;

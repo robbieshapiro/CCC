@@ -547,7 +547,8 @@ export function buildWorld(h: Hole, number: number): World {
 
   // decor
   for (const d of h.decor) {
-    let o: THREE.Object3D | null = haunted ? hauntedDecor(d, anim) : null;
+    // the haunted props (lanterns, the big pumpkin, dead trees) can turn up on any member's hole
+    let o: THREE.Object3D | null = hauntedDecor(d, anim);
     if (o) {
       at(o, d.x, d.y);
       if (d.rot) o.rotation.y = d.rot;

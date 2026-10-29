@@ -6,7 +6,7 @@ import { SCALE } from './golf3d/clubs';
 import { HOLLOW_HILLS_PAR } from './golf3d/minigolf';
 import type { V2 } from './golf3d/types';
 
-export type BarGame = 'minigolf' | 'drive';
+export type BarGame = 'minigolf' | 'drive' | 'members';
 export const DRIVES = 3;
 
 // Monday of this week, Eastern, as YYYY-MM-DD
@@ -25,4 +25,5 @@ const minigolfLabel = (score: number) => {
 };
 
 export const driveYards = (from: V2, end: V2) => Math.round((Math.hypot(end.x - from.x, end.y - from.y) * SCALE) / 3);
-export const scoreLabel = (game: BarGame, score: number) => (game === 'drive' ? `${Math.round(score)} yd` : minigolfLabel(score));
+export const scoreLabel = (game: BarGame, score: number) => (game === 'drive' ? `${Math.round(score)} yd` : game === 'members' ? `${-score} strokes` : minigolfLabel(score));
+export const gameName = (game: BarGame) => (game === 'drive' ? 'Long drive' : game === 'members' ? "Members' Course" : 'Hollow Hills Mini Golf');
