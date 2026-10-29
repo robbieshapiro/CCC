@@ -21,8 +21,8 @@ Last updated Oct 29, 2026. Pick up from here.
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [ ] Optional: add `CRON_SECRET` in Vercel so only the cron can trigger the Monday Chronicle.
-- [ ] GitHub → Settings → General → Default branch: switch to `main`. It's still the 3-commit starter branch, so new agent sessions start on stale code.
-- [ ] Same page, under Pull Requests: tick "Automatically delete head branches" so merged branches clean themselves up.
+- [x] GitHub default branch switched to `main`.
+- [x] "Automatically delete head branches" turned on in GitHub.
 - [ ] Delete the stale branches: `claude/multiplayer-web-game-brainstorm-8a7dxm` (after the default switch), `claude/practical-brown-qpytm6`, `claude/sharp-franklin-hbr1mc`.
 
 ## To try tomorrow
