@@ -18,7 +18,7 @@ const CREST = 34; // it rises gently to the lip, so an ordinary drive pulls up s
 const LIP = 440; // where the plateau ends and the hill down to the green begins
 const LOW = 18; // the floor of the bowl
 const GREEN = { x: 8, y: 640, r: 34 };
-const DITCH = { y0: 318, y1: 338 }; // the barranca, across the hole
+const DITCH = { y0: 318, y1: 344 }; // the barranca, across the hole: 26 ft of lava to carry
 // the speed slot: down the middle of the hill from the lip to just short of the green
 const SLOT: V2[] = [
   { x: 0, y: LIP - 8 },
@@ -67,6 +67,7 @@ export const lavatube: Hole = {
   cup: { x: 26, y: 658 },
   // two on the upper back tier, two on the lower front one
   pins: [{ x: 26, y: 658 }, { x: 10, y: 622 }, { x: -6, y: 618 }, { x: 0, y: 660 }],
+  greenFirm: 0.03,
   aim: 0,
   bounds: { x0: -170, y0: -50, x1: 170, y1: 800 },
   border: [
@@ -80,8 +81,8 @@ export const lavatube: Hole = {
     { poly: rect(-12, -10, 12, 10), surface: 'fairway' },
     { poly: band(way, 42), surface: 'fringe' },
     // generous off the tee, tighter on the hill down to the green
-    { poly: band(way.slice(0, 4), 36), surface: 'fairway' },
-    { poly: band(way.slice(3), 24), surface: 'fairway' },
+    { poly: band(way.slice(0, 4), 30), surface: 'fairway' },
+    { poly: band(way.slice(3), 17), surface: 'fairway' },
     // the barranca's banks: rough, so a ball that lands on the lip doesn't skip on
     { poly: rect(-100, DITCH.y0 - 6, 140, DITCH.y1 + 6), surface: 'rough' },
     // the speed slot: a gully of hard-packed track, quick as you like
@@ -93,6 +94,8 @@ export const lavatube: Hole = {
     { poly: blob(48, 628, 9, 7, 8, 0.15), surface: 'sand' },
     { poly: blob(-24, 520, 9, 6, 10, 0.15), surface: 'sand' },
     { poly: blob(34, 470, 8, 6, 11, 0.15), surface: 'sand' },
+    // and one guarding the front of the green, right on the line in
+    { poly: blob(6, 597, 8, 5, 12, 0.15), surface: 'sand' },
   ],
   water: [
     // the sea down the left, below the cliff
@@ -123,7 +126,7 @@ export const lavatube: Hole = {
     { kind: 'hill', x: GREEN.x + 16, y: GREEN.y - 8, r: 8, h: 1.3 },
     { kind: 'hill', x: GREEN.x - 6, y: GREEN.y + 20, r: 10, h: 1.2 },
     { kind: 'hill', x: GREEN.x + 18, y: GREEN.y + 22, r: 7, h: -1.1 },
-    ...[[-30, 616, 8], [48, 628, 9], [-24, 520, 9], [34, 470, 8]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.2, edge: 3, op: 'add' as const })),
+    ...[[-30, 616, 8], [48, 628, 9], [-24, 520, 9], [34, 470, 8], [6, 597, 8]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.2, edge: 3, op: 'add' as const })),
   ],
   walls: [],
   posts: [...palms, ...rocks],

@@ -5,8 +5,11 @@
 import { blowhole } from './holes/blowhole';
 import { caldera } from './holes/caldera';
 import { coveredbridge } from './holes/coveredbridge';
+import { geyseralley } from './holes/geyseralley';
 import { island } from './holes/island';
 import { lavafield } from './holes/lavafield';
+import { lavalift } from './holes/lavalift';
+import { lavatube } from './holes/lavatube';
 import { redbarn } from './holes/redbarn';
 import { ridge } from './holes/ridge';
 import { sugarmaple } from './holes/sugarmaple';
@@ -29,13 +32,13 @@ const COURSES: Course[] = [
   },
   {
     id: 'caldera',
-    // the Caldera challenge: its first three holes, from midnight Eastern as October closes early (Friday 30 October)
-    // to the first Sunday week. The back three (lavalift, geyseralley, lavatube) wait for a later week.
+    // the Caldera challenge: all six holes, from midnight Eastern as October closes early (Friday 30 October) to the
+    // first Sunday week
     opens: '2026-10-30',
     name: 'The Caldera Course',
-    tagline: 'Three holes on a volcanic island. Lava, geysers and quick greens.',
-    holes: [blowhole, lavafield, caldera],
-    par: par([blowhole, lavafield, caldera]),
+    tagline: 'Six holes on a volcanic island. Lava, geysers and quick greens.',
+    holes: [blowhole, lavafield, caldera, lavalift, geyseralley, lavatube],
+    par: par([blowhole, lavafield, caldera, lavalift, geyseralley, lavatube]),
   },
   {
     id: 'westernreserve',
