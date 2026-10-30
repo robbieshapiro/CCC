@@ -61,9 +61,9 @@ async function router() {
     if (page === 'round') return round(s);
     if (page === 'daily') return dailyRound(s);
     if (page === 'playoff') return playoff(s);
-    if (page === 'bar') return arg === 'minigolf' || arg === 'putting' ? barRound(s, 'minigolf') : arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');
+    if (page === 'bar') return arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
-    if (page === 'clubhouse') return clubhouse(s, isClubhouseTab(arg) ? arg : 'bar', extra);
+    if (page === 'clubhouse') return clubhouse(s, isClubhouseTab(arg) ? arg : 'members', extra);
     // the admin's look at every hole of a course still to come
     if (page === 'preview') {
       const c = courseById(arg ?? '');

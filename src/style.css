@@ -1086,3 +1086,9 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
   .board .scorecard .fz-end { box-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.6); }
   .board { padding: 14px 12px; }
 }
+/* the Caldera's countdown: a muted ember red, a shade off the board's */
+.countdown.volcanic { background: #6b2e22; color: #f6e6da; }
+/* Reginald's word for a new champion, along the top for two days */
+.champ-word { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: #fbf4e4; border: 1px solid rgba(184, 149, 90, 0.55); font-size: 14px; line-height: 1.4; }
+.champ-word .host-face { width: 30px; height: 30px; }
+.champ-word em { font-style: normal; }

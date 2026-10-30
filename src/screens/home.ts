@@ -6,7 +6,7 @@ import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { CALDERA_START, GAME_TZ, periodClosesAt, periodName, span } from '../day';
 import { REGINALD, reginaldSvg, type Mood } from '../host';
 import { bindOpen } from './open';
-import { askReginald } from '../reginald';
+import { askReginald, championWord } from '../reginald';
 import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
 import { bindPlayoff, playoffCard } from './playoff';
@@ -29,6 +29,23 @@ const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { 
 export const SEEN_PERIOD = 'ccc-seen-period';
 // (from the Caldera challenge on: the months before it just open on the home page as they always did)
 export const newPeriod = (snap: Snapshot) => snap.month >= CALDERA_START && store.get(SEEN_PERIOD) !== snap.month;
+
+// Reginald's word for the club's new champion, along the top for the two days after the title is won: a scripted line
+// at once, then his own (api/reginald.ts) when it comes
+function championDays(snap: Snapshot) {
+  const last = snap.champions[0];
+  if (!last || last.how === 'playoff') return null;
+  const won = periodClosesAt(last.month).toLocaleDateString('en-CA', { timeZone: GAME_TZ });
+  const days = Math.round((Date.parse(`${snap.today}T12:00:00Z`) - Date.parse(`${won}T12:00:00Z`)) / 86400000);
+  return days >= 0 && days <= 1 ? last : null;
+}
+
+function championStrip(snap: Snapshot) {
+  const last = championDays(snap);
+  if (!last) return '';
+  const names = last.playerIds.map((id) => esc(snap.players.find((p) => p.id === id)?.name ?? 'a former member'));
+  return `<p class="champ-word" id="champ-word"><span class="host-face">${reginaldSvg('pleased', 30)}</span><span><b>🏆 ${names.join(' & ')}</b>, ${esc(periodName(last.month))} champion at ${toParLabel(last.total - last.par)}. <em data-word>Our congratulations.</em></span></p>`;
+}
 
 // Under the course name, until you've played the new period: how the last one ended
 function lastWord(snap: Snapshot) {
@@ -147,6 +164,7 @@ export function home(snap: Snapshot) {
   render(`
     ${header(snap.groupName, 'play')}
     <main>
+      ${championStrip(snap)}
       ${playoffCard()}
       ${noticesStrip()}
       <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
@@ -177,7 +195,7 @@ export function home(snap: Snapshot) {
       </section>
       <div class="tiles">
         ${dailyCard()}
-        <a class="tile" href="#/clubhouse/bar"><i>🎃</i><b>The bar</b><span>Mini golf · long drive</span></a>
+        <a class="tile" href="#/clubhouse/bar"><i>🍺</i><b>The bar</b><span>Long drive · Members' Course</span></a>
         <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
         ${previewTile(snap.month)}
       </div>
@@ -204,6 +222,12 @@ export function home(snap: Snapshot) {
   void bindDaily(snap.today, snap.crown);
   void bindHonours(snap);
   void bindPlayoff();
+  const champ = championDays(snap);
+  if (champ)
+    void championWord(champ.month).then((text) => {
+      const el = document.querySelector('#champ-word [data-word]');
+      if (text && el) el.textContent = text;
+    });
   if (newPeriod(snap)) store.set(SEEN_PERIOD, snap.month);
   // in a club you only run, play from your own club: that's where it counts
   document.querySelector<HTMLAnchorElement>('[data-play-home]')?.addEventListener('click', (e) => {
@@ -222,7 +246,7 @@ export function home(snap: Snapshot) {
 function countdown(month: string, course: Course) {
   const ends = periodClosesAt(month);
   const day = new Date(ends.getTime() - 1).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
-  return `<div class="countdown" data-countdown="${ends.getTime()}">
+  return `<div class="countdown${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}" data-countdown="${ends.getTime()}">
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
     <small>This ${span(month)}'s champion is crowned at midnight ET, ${day}.</small>
   </div>`;

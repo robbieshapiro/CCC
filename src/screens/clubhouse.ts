@@ -1,5 +1,5 @@
-// The Clubhouse: everything off the course, as tabs. The bar (its games), Reginald's weekly Chronicle, your club's
-// members, every club this month, how the game works, and a note to the Committee. Each tab has its own link
+// The Clubhouse: everything off the course, as tabs. Your club's members and standings (the default), the bar (its
+// games), Reginald's weekly Chronicle, every club this month, how the game works, and a note to the Committee. Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
 import { periodName, span } from '../day';
 import { api } from '../api';
@@ -14,9 +14,9 @@ import { barPane, fillBar } from './bar';
 
 export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'clubs' | 'how' | 'feedback';
 const TABS: [ClubhouseTab, string][] = [
+  ['members', 'Members'],
   ['bar', 'Bar'],
   ['chronicle', 'Chronicle'],
-  ['members', 'Members'],
   ['clubs', 'Clubs'],
   ['how', 'How to play'],
   ['feedback', 'Feedback'],
@@ -25,7 +25,7 @@ export const isClubhouseTab = (t: string | undefined): t is ClubhouseTab => TABS
 
 const topar = (n: number | null) => (n === null ? '–' : `<span class="${n < 0 ? 'under' : n > 0 ? 'over' : ''}">${toParLabel(n)}</span>`);
 
-export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'bar', week?: string) {
+export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: string) {
   const pane = { bar: barPane, chronicle: chroniclePane, members, clubs, how, feedback }[tab](snap);
   render(`
     ${header(snap.groupName, 'clubhouse')}
@@ -150,7 +150,7 @@ function how(snap: Snapshot) {
     ['🏆', `Win the ${per}`, `Lowest round in your club when the ${per} closes goes on the plaque. Midnight ET, ${per === 'week' ? 'Saturday night' : 'last day'}.`],
     ['🌍', 'The Open', 'Every club on one board. Same round, bigger field.'],
     ['🎯', 'Closest to the Pin', 'One shot, three tries, new every day.'],
-    ['🎃', 'The bar', 'Haunted mini golf and the long drive. New boards every Monday.'],
+    ['🍺', 'The bar', "The long drive and the Members' Course. New boards every Monday."],
     ['🏌️', 'Practice', `The range, the short game, and next ${per}’s course before it opens.`],
     ['🥤', 'The cart', 'Drinks from the cart change your next swings.'],
   ];
