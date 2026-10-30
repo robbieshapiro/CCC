@@ -47,9 +47,9 @@ function newsCard(snap: Snapshot, course: Course) {
 function scheduleBanner(snap: Snapshot) {
   const text =
     snap.month === '2026-10' && snap.today === '2026-10-29'
-      ? '🌋 Early drop: October closes at midnight. The Caldera opens Fri 12am ET, 3 holes, to Sat Nov 7.'
+      ? '🌋 Early drop: October closes at midnight. The Caldera opens Fri 12am ET, all 6 holes, to Sat Nov 7.'
       : snap.month === CALDERA_START
-        ? '🌋 The Caldera dropped early: 3 holes, to Sat Nov 7. Weekly courses start Sun Nov 8.'
+        ? '🌋 The Caldera dropped early: 6 holes, to Sat Nov 7. Weekly courses start Sun Nov 8.'
         : '';
   return text ? `<p class="banner">${text}</p>` : '';
 }

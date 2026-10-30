@@ -99,7 +99,7 @@ function facts(snap: Snapshot, open: { name: string; total: number; par: number;
     [`days_left_this_${span(snap.month)}`]: daysLeft,
     board_closes: daysLeft <= 1 ? 'tonight at midnight Eastern' : `${new Date(`${periodEnds(snap.month)}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' })} at midnight Eastern (as that day begins)`,
     ...(snap.month === '2026-10'
-      ? { club_news: 'The Committee is closing October early: the board closes at midnight tonight, Thursday 29 October, and the champion is crowned. The Caldera challenge opens at once, on Friday: the Caldera\'s first three holes, par 14, through Saturday 7 November. Weekly courses start Sunday 8 November.' }
+      ? { club_news: 'The Committee is closing October early: the board closes at midnight tonight, Thursday 29 October, and the champion is crowned. The Caldera challenge opens at once, on Friday: all six holes of the Caldera, par 25, through Saturday 7 November. Weekly courses start Sunday 8 November.' }
       : {}),
     titles_all_time: me.wins,
     career: me.career,

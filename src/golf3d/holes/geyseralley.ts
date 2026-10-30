@@ -13,7 +13,7 @@ import { extend } from './extend';
 import type { Decor, Hole, Post, Push, V2 } from '../types';
 
 const TOP = 20;
-const GREEN = { x: 6, y: 384, rx: 20, ry: 22 };
+const GREEN = { x: 6, y: 384, rx: 16, ry: 18 }; // small, and firm: hold it or lose it off the back
 
 const way: V2[] = [
   { x: 0, y: 14 },
@@ -52,6 +52,7 @@ const base: Hole = {
   tee: { x: 0, y: 0 },
   cup: { x: 8, y: 390 },
   pins: [{ x: 8, y: 390 }, { x: -4, y: 378 }, { x: 16, y: 396 }, { x: 2, y: 400 }],
+  greenFirm: 0.04,
   aim: 0,
   bounds: { x0: -120, y0: -40, x1: 120, y1: 460 },
   border: [
@@ -64,8 +65,9 @@ const base: Hole = {
   regions: [
     // black ash either side: a long waste bunker down each flank
     { poly: band(way, 44), surface: 'sand' },
-    { poly: band(way, 23), surface: 'fringe' },
-    { poly: band(way, 19), surface: 'fairway' },
+    // a narrow alley: miss the crown by a few feet and the shoulder takes it into the ash
+    { poly: band(way, 19), surface: 'fringe' },
+    { poly: band(way, 15), surface: 'fairway' },
     { poly: band(road, 4), surface: 'path' },
     { poly: blob(0, 0, 26, 20, 1, 0.1), surface: 'rough' },
     { poly: rect(-12, -10, 12, 10), surface: 'fairway' },
@@ -119,12 +121,13 @@ const geyser = (id: string, x: number, y: number, period: number, offset: number
   erupt: (t) => ((t + offset) % period > period - 1.3 ? throwTo : null),
 });
 const geysers: Push[] = [
-  geyser('g1', -7, 300, 5, 0, { x: 18, y: 14, z: 16 }),
-  geyser('g2', 8, 334, 6.5, 2, { x: 26, y: 6, z: 16 }),
+  // the side vents go more often than they used to
+  geyser('g1', -7, 300, 4, 0, { x: 18, y: 14, z: 16 }),
+  geyser('g2', 8, 334, 5, 2, { x: 26, y: 6, z: 16 }),
   // Old Faithful: dead centre, every 8 seconds, and it throws you down the gully toward the green
   geyser('faithful', 0, 362, 8, 0, { x: 0, y: 56, z: 26 }),
-  geyser('g3', -6, 396, 5.5, 4, { x: -24, y: 10, z: 16 }),
-  geyser('g5', 7, 428, 6, 3, { x: 22, y: 12, z: 16 }),
+  geyser('g3', -6, 396, 4.5, 4, { x: -24, y: 10, z: 16 }),
+  geyser('g5', 7, 428, 4.5, 3, { x: 22, y: 12, z: 16 }),
 ];
 // the lava gutters out wide, past the ash: on the right all the way, on the left beyond the ash road
 const gutterR: V2[] = [{ x: 54, y: 30 }, { x: 58, y: 220 }, { x: 52, y: 420 }, { x: 46, y: 520 }];

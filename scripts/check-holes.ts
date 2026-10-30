@@ -363,7 +363,7 @@ if (mode === 'all' || mode === 'basic') {
   ok(periodClosesAt('2026-10').toISOString() === '2026-10-30T04:00:00.000Z' && periodClosesAt('2026-10-30').toISOString() === '2026-11-08T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
   ok(periodOf('2026-10-29') === '2026-10' && periodOf('2026-10-30') === '2026-10-30' && periodOf('2026-11-07') === '2026-10-30' && periodOf('2026-11-08') === '2026-11-08' && periodOf('2026-11-14') === '2026-11-08' && periodOf('2026-11-15') === '2026-11-15', 'weeks start on Sunday from November 8');
   ok(periodClosesAt('2026-11-08').toISOString() === '2026-11-15T05:00:00.000Z', 'a week closes at midnight Eastern going into Sunday');
-  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 3 && courseFor('2026-11-08').id === (courseById('westernreserve')!.draft ? 'caldera' : 'westernreserve'), 'October is the Highlands, the Caldera challenge is three holes, then the Western Reserve once it is out of draft');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 6 && courseFor('2026-11-08').id === (courseById('westernreserve')!.draft ? 'caldera' : 'westernreserve'), 'October is the Highlands, the Caldera challenge is all six holes, then the Western Reserve once it is out of draft');
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)
@@ -410,7 +410,7 @@ if (mode === 'all' || mode === 'basic') {
     const drive = (p: number) => simulate(home, home.tee, { angle: 0, power: p, club: 'driver', error: 0, clock: 0 }, false);
     const big = drive(1);
     const mid = drive(0.7);
-    ok(!big.penalty && big.end.y > 338 && mid.end.y < 318, `${home.name}: a full drive carries the barranca (${big.end.y.toFixed(0)} ft), a 70% one stays short (${mid.end.y.toFixed(0)} ft${mid.penalty ? ', in the lava' : ''})`);
+    ok(!big.penalty && big.end.y > 344 && mid.end.y < 318, `${home.name}: a full drive carries the barranca (${big.end.y.toFixed(0)} ft), a 70% one stays short (${mid.end.y.toFixed(0)} ft${mid.penalty ? ', in the lava' : ''})`);
   }
   for (const h of course.holes) {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);

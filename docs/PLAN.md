@@ -13,6 +13,7 @@ Last updated Oct 29, 2026 (Caldera challenge, Sunday weeks, honours, the crown, 
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #85 | The Caldera challenge opens with all six holes (par 25), not three. Geyser Alley is harder (a narrower alley, a smaller, firmer green, livelier vents) and so is the Homecoming (a wider barranca, a tighter run down the hill, a firmer green and a front bunker). |
 | #84 | The cart crew glammed up: made-up faces (liner and lashes, glossy lips, blush), glossy hair in three styles (waves, high ponytail, sleek), a tank or a tailored polo, a visor or aviators on the head, gold hoops and a watch; she walks off the cart, flips her hair, blinks, and winks when you take a drink. |
 | #83 | Putts on the Lava Field and Caldera greens no longer fall into a hidden trench where the tier slope met the top shelf and roll back. New `check-holes greens` sweep putts every green from all round every pin and fails on any hidden hit. |
 | #82 | October honours on the home page (champion, the Open, runner-up, Iron Man, ace, steadiest hand, the honest card), refreshed for each closed period; a 👑 for yesterday's Closest to the Pin winner on the boards, Members, member cards and the Daily Shot tile; the Chronicle is admin only (no cron), keyed by the week's Sunday, and introduces the week's course. |
@@ -57,7 +58,7 @@ The problem with the new members: once your best round is in, there's no reason 
 - **If a week's course isn't ready,** the last one carries over. That fallback already works for months.
 
 **Schedule:**
-- **Fri Oct 30 to Sat Nov 7: the Caldera challenge,** holes 1 to 3 (par 14). Its back three wait for a later week. Every member's first open of the app lands on a card naming October's champion with the Caldera's Play button (#80).
+- **Fri Oct 30 to Sat Nov 7: the Caldera challenge,** all six holes (par 25). Every member's first open of the app lands on a card naming October's champion with the Caldera's Play button (#80).
 - **Week of Sun Nov 8:** The Western Reserve, northeast Ohio in October (#79). It's a draft: only Robbie can play it (Admin → upcoming course). Once he approves, an agent removes `draft: true` in `src/golf3d/courses.ts` and it opens Nov 8. If it's still a draft then, the Caldera carries over.
 - **From Nov 15:** agent-built courses every week.
 - **A tie at the top** will need a sudden-death playoff. To be planned.
