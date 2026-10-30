@@ -1056,3 +1056,20 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .playoff-list li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.18); }
 .playoff-list span { opacity: 0.85; text-align: right; }
 .playoff-intro p { line-height: 1.5; }
+/* the Committee Room's Weekly Players card */
+.adm-trend { display: grid; gap: 8px; }
+.trend-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.trend-big { margin: 2px 0 0; font: 700 40px/1 var(--serif); color: var(--green); }
+.trend-big span { font: 600 14px var(--font); color: var(--muted, #6b6b6b); margin-left: 6px; }
+.trend-change { margin: 0; font-weight: 800; font-size: 14px; color: var(--muted, #6b6b6b); }
+.trend-change.up { color: #2f7d4a; }
+.trend-change.down { color: #b0442e; }
+.trend-chart { width: 100%; height: 150px; display: block; overflow: visible; }
+.trend-line { fill: none; stroke: var(--green); stroke-width: 2.5; stroke-linejoin: round; }
+.trend-area { fill: var(--gold); opacity: 0.18; }
+.trend-members { fill: none; stroke: var(--gold); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.trend-chart rect:hover { fill: rgba(184, 149, 90, 0.12); }
+.trend-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted, #6b6b6b); }
+.trend-key { margin: 0; font-size: 12px; color: var(--muted, #6b6b6b); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.trend-key i { display: inline-block; width: 14px; height: 0; border-top: 2.5px solid var(--green); }
+.trend-key i.k-members { border-top: 1.5px dashed var(--gold); margin-left: 10px; }

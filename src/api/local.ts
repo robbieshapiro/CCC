@@ -1,13 +1,13 @@
 // Browser-only backend for playing without Supabase. Mirrors supabase/schema.sql.
 import { STOCK_BUDDIES } from '../buddies';
-import { periodOf, todayInGameTz } from '../day';
+import { GAME_TZ, periodOf, todayInGameTz } from '../day';
 import { courseFor } from '../golf3d/courses';
 import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
@@ -455,6 +455,30 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       lowestAverage: lowAv === null ? null : { names: steady.filter((r) => r.av === lowAv).map((r) => r.name), avg: lowAv },
       highestScore: rows.length ? { names: rows.filter((r) => r.worst === top('worst')).map((r) => r.name), toPar: top('worst')! } : null,
     };
+  },
+
+  // as on the server: Weekly Players for each day since the first member joined
+  async adminTrend(session): Promise<TrendDay[]> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see the admin tab.');
+    const clubs = new Set(db.players.filter((p) => p.admin && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.groupId));
+    const members = db.players.filter((p) => clubs.has(p.groupId) && !p.admin);
+    const day = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: GAME_TZ });
+    const joined = members.filter((p) => !p.host).map((p) => day(p.joined));
+    const played = db.rounds.filter((r) => members.some((p) => p.id === r.playerId)).map((r) => ({ id: r.playerId, d: day(r.createdAt) }));
+    const today = todayInGameTz();
+    const out: TrendDay[] = [];
+    for (let d = joined.length ? joined.reduce((a, b) => (a < b ? a : b)) : today; d <= today; ) {
+      const from = new Date(`${d}T12:00:00Z`);
+      from.setUTCDate(from.getUTCDate() - 7);
+      const lo = from.toISOString().slice(0, 10);
+      out.push({ day: d, players: new Set(played.filter((r) => r.d > lo && r.d <= d).map((r) => r.id)).size, members: joined.filter((j) => j <= d).length });
+      const next = new Date(`${d}T12:00:00Z`);
+      next.setUTCDate(next.getUTCDate() + 1);
+      d = next.toISOString().slice(0, 10);
+    }
+    return out;
   },
 
   // local mode keeps one period at a time, so there's never a playoff to play

@@ -2,7 +2,7 @@
 // you can go do (notice, invite, preview, new club); then activity, every member, and member management (invites
 // nobody has opened yet, with revoke).
 import { api, getSession, listSessions } from '../api';
-import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot } from '../api/types';
+import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
 import { courseById, upcoming } from '../golf3d/courses';
 import { toParLabel } from '../standings';
@@ -47,6 +47,7 @@ export function admin(snap: Snapshot) {
         <div><p class="eyebrow">Committee only</p><h1>The Committee Room</h1></div>
         <div class="seg" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
       </div>
+      <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
       <section class="adm-card adm-do">
         <h2>To do</h2>
         <div id="adm-todo"><p class="muted">Loading…</p></div>
@@ -79,6 +80,7 @@ export function admin(snap: Snapshot) {
   bindInviteTool();
   void load();
   void loadHoles(snap);
+  void loadTrend();
 }
 
 // Members' golf holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
@@ -261,6 +263,57 @@ let state: {
   club: '',
 };
 
+// Weekly Players at the top: members who posted a round in the last 7 days, the change on a week ago, and the trend
+// day by day for the window picked (7 days, this month, or since launch). Refreshes every minute while you're here.
+let trend: TrendDay[] | null = null;
+let trendTimer = 0;
+
+async function loadTrend() {
+  window.clearTimeout(trendTimer);
+  const el = document.getElementById('adm-trend');
+  if (!el) return;
+  trend = await api.adminTrend(requireSession()).catch(() => trend);
+  if (!document.getElementById('adm-trend')) return; // left the page
+  drawTrend();
+  trendTimer = window.setTimeout(() => void loadTrend(), 60_000);
+}
+
+function drawTrend() {
+  const el = document.getElementById('adm-trend');
+  if (!el) return;
+  if (!trend?.length) {
+    el.innerHTML = `<p class="muted">Weekly Players shows up once its SQL has been run in Supabase.</p>`;
+    return;
+  }
+  const now = trend[trend.length - 1];
+  const before = trend.length > 7 ? trend[trend.length - 8] : null;
+  const change = before ? now.players - before.players : null;
+  const pct = now.members ? Math.round((now.players / now.members) * 100) : 0;
+  const today = now.day;
+  const days = state.window === 'week' ? trend.slice(-7) : state.window === 'month' ? trend.filter((d) => d.day.slice(0, 7) === today.slice(0, 7)) : trend;
+  const W = 600;
+  const H = 150;
+  const top = Math.max(1, ...days.map((d) => d.members));
+  const x = (i: number) => (days.length > 1 ? (i / (days.length - 1)) * W : W / 2);
+  const y = (v: number) => H - (v / top) * (H - 8);
+  const line = (k: 'players' | 'members') => days.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join(' ');
+  const label = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const ticks = days.length > 2 ? [days[0], days[Math.floor((days.length - 1) / 2)], days[days.length - 1]] : days;
+  const band = W / days.length;
+  el.innerHTML = `<div class="trend-head">
+      <div><p class="eyebrow">Weekly Players</p><p class="trend-big">${now.players}<span> of ${now.members} members · ${pct}%</span></p></div>
+      ${change === null ? '' : `<p class="trend-change ${change > 0 ? 'up' : change < 0 ? 'down' : ''}">${change > 0 ? '▲' : change < 0 ? '▼' : '='} ${change > 0 ? '+' : ''}${change} on last week</p>`}
+    </div>
+    <svg class="trend-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Weekly Players by day">
+      <path class="trend-members" d="${line('members')}" vector-effect="non-scaling-stroke" />
+      <path class="trend-area" d="${line('players')} L${x(days.length - 1).toFixed(1)},${H} L${x(0).toFixed(1)},${H} Z" />
+      <path class="trend-line" d="${line('players')}" vector-effect="non-scaling-stroke" />
+      ${days.map((d, i) => `<rect x="${(x(i) - band / 2).toFixed(1)}" y="0" width="${band.toFixed(1)}" height="${H}" fill="transparent"><title>${label(d.day)}: ${d.players} of ${d.members} played that week</title></rect>`).join('')}
+    </svg>
+    <div class="trend-axis">${ticks.map((d) => `<span>${label(d.day)}</span>`).join('')}</div>
+    <p class="trend-key"><i class="k-players"></i> played a round in the 7 days to that day <i class="k-members"></i> members</p>`;
+}
+
 async function load() {
   const saved = store.get(WINDOW_KEY) as AdminWindow | null;
   state = {
@@ -272,7 +325,7 @@ async function load() {
     b.classList.toggle('on', b.dataset.window === state.window);
     b.onclick = () => {
       store.set(WINDOW_KEY, b.dataset.window!);
-      void load();
+      void load().then(drawTrend);
     };
   });
   const body = document.getElementById('adm-body');

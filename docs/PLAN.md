@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 30, 2026 (playoff SQL live; no more long waits for a ball to stop; lively rock on the Caldera). Pick up from here.
+Last updated Oct 30, 2026 (Weekly Players chart at the top of Admin). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Oct 30, 2026 (playoff SQL live; no more long waits for a ball to st
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #90 | Weekly Players at the top of the Committee Room: members who posted a round in the last 7 days (out of all members, Robbie left out), the change on a week ago, and a day-by-day trend line for the 7 days, month or all time. Refreshes every minute. |
 | #88 | No more long wait after a shot: a ball all but stopped on a rough, sandy or rocky slope stops, instead of creeping down it for up to 24 seconds. Rock (and the steep brown scree on the Caldera) now bounces hard, kicks a ball off line for better or worse, and soon dies. |
 | #87 | Sudden-death playoff for the club title: a tie when a week closes is played off on Sunday (to midnight ET). Each tied member gets one go at the course's playoff hole (the Homecoming at the Caldera, the Covered Bridge at the Western Reserve), then one shot at the pin that settles it if still level. A no-show forfeits; nobody playing shares the title. A gold card on the home page, "Playoff: A v B" on the plaque, then "won in a playoff". |
 | #85 | The Caldera challenge opens with all six holes (par 25), not three. Geyser Alley is harder (a narrower alley, a smaller, firmer green, livelier vents) and so is the Homecoming (a wider barranca, a tighter run down the hill, a firmer green and a front bunker). |
@@ -30,6 +31,7 @@ Last updated Oct 30, 2026 (playoff SQL live; no more long waits for a ball to st
 - [x] The #80 schedule SQL, run Oct 29: October closed at midnight going into Oct 30 and the Caldera challenge opened.
 - [x] The #82 SQL (`daily_crown`, `period_honors`), run Oct 29.
 - [x] The #87 playoff SQL, run Oct 29. Checked live: the `playoff_tries` table, all six playoff functions, and the snapshot, honours and Chronicle all read `period_champs`.
+- [ ] Paste the #90 SQL in Supabase (one function, `admin_trend`) so the Weekly Players chart fills in.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".

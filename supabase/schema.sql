@@ -867,6 +867,32 @@ end $$;
 
 revoke all on function admin_clubs(players) from public, anon, authenticated;
 grant execute on function admin_overview(uuid, text) to anon;
+
+-- Weekly Players, day by day since the first member joined: for each day, how many members (across the admin's clubs,
+-- the admin left out) posted a round in the 7 days to that day, and how many members there were then
+create or replace function admin_trend(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
+  return (
+    with m as (
+      select pl.id, (pl.created_at at time zone 'America/New_York')::date as joined from players pl
+      where pl.group_id in (select admin_clubs(me)) and pl.role <> 'admin' and not pl.host_only
+    ), r as (
+      select distinct rd.player_id, (rd.created_at at time zone 'America/New_York')::date as d from rounds rd join m on m.id = rd.player_id
+    ), days as (
+      select generate_series(coalesce((select min(joined) from m), game_today()), game_today(), interval '1 day')::date as day
+    )
+    select coalesce(json_agg(json_build_object(
+        'day', days.day,
+        'players', (select count(distinct r.player_id) from r where r.d > days.day - 7 and r.d <= days.day),
+        'members', (select count(*) from m where m.joined <= days.day)
+      ) order by days.day), '[]')
+    from days
+  );
+end $$;
+grant execute on function admin_trend(uuid) to anon;
 grant execute on function admin_feedback_done(uuid, bigint, boolean) to anon;
 
 -- The Daily Shot: one shot a day for everyone in every club, three tries, best counts. The shot itself is seeded from
