@@ -6,7 +6,7 @@ import { periodClosesAt, periodOf } from '../src/day';
 import { conditionsFor, withPin } from '../src/golf3d/conditions';
 import { CUP_R, cupR, curbs, DROP_SPEED, dropPoint, simulate } from '../src/golf3d/physics';
 import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type MeterStyle } from '../src/golf3d/swing';
-import { bake, gradAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
+import { bake, gradAt, heightAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
 import { makeRng } from '../src/seed';
 
@@ -294,9 +294,10 @@ const mode = process.argv[2] ?? 'all';
 if (mode === 'quick') {
   const { spawn } = await import('node:child_process');
   const ids = course.holes.map((h) => h.id).filter((id) => !process.argv[3] || id === process.argv[3]);
-  const run = (args: string[]) =>
+  // quick: on the baked ground. The greens check always reads the exact ground, where a seam would hide.
+  const run = (args: string[], quick = true) =>
     new Promise<string>((done) => {
-      const kid = spawn(process.execPath, [process.argv[1], ...args], { env: { ...process.env, QUICK: '1' } });
+      const kid = spawn(process.execPath, [process.argv[1], ...args], { env: quick ? { ...process.env, QUICK: '1' } : { ...process.env, QUICK: '' } });
       let text = '';
       kid.stdout.on('data', (d) => (text += d));
       kid.stderr.on('data', (d) => (text += d));
@@ -306,7 +307,7 @@ if (mode === 'quick') {
       });
     });
   const started = Date.now();
-  const jobs = [run(['basic', '-']), ...ids.flatMap((id) => [run(['solve', id]), run(['novice', id])])];
+  const jobs = [run(['basic', '-']), ...ids.flatMap((id) => [run(['solve', id]), run(['novice', id]), run(['greens', id], false)])];
   for (const job of jobs) process.stdout.write((await job).split('\n').filter((l) => !l.startsWith('  ')).join('\n'));
   console.log(`\nquick check done in ${Math.round((Date.now() - started) / 1000)}s`);
   process.exit();
@@ -426,6 +427,65 @@ if (mode === 'all' || mode === 'solve') {
     const best = secretBest(h);
     const near = SECRET_FROM[h.id].near ?? (h.par >= 5 ? 160 : 60);
     ok(best.d < near, `${h.name}: ${h.secret.name} finishes ${best.d.toFixed(0)} ft from the pin ${best.shot ? `(${best.shot.club} ${Math.round((best.shot.angle * 180) / Math.PI)}° ${best.shot.power.toFixed(2)})` : ''}`);
+  }
+}
+
+// Putting, end to end: from rings round every pin, a range of speeds straight at the hole. On the green and fringe a
+// ball should only slow the way friction and slope slow it; a sudden loss of pace (more than a third in a frame, with
+// no wall, post, vent, mover or cup near) means it ran into something hidden in the ground, like the trench a tier's seam once left.
+// It also mustn't sink below the surface.
+if (mode === 'all' || mode === 'greens') {
+  const segD = (p: V2, a: V2, b: V2) => {
+    const abx = b.x - a.x;
+    const aby = b.y - a.y;
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * abx + (p.y - a.y) * aby) / (abx * abx + aby * aby || 1)));
+    return Math.hypot(p.x - a.x - abx * t, p.y - a.y - aby * t);
+  };
+  const putting = (s: string) => s === 'green' || s === 'fringe';
+  for (const h0 of holes) {
+    const walls = [...curbs(h0), ...h0.walls];
+    let putts = 0;
+    const bad: string[] = [];
+    for (const pin of h0.pins ?? [h0.cup]) {
+      const h: Hole = { ...h0, cup: pin };
+      for (const r of [6, 12, 20, 30])
+        for (let k = 0; k < 16; k++) {
+          const a = (k / 16) * Math.PI * 2;
+          const from = { x: pin.x + Math.cos(a) * r, y: pin.y + Math.sin(a) * r };
+          if (surfaceAt(h, from) !== 'green') continue;
+          const angle = Math.atan2(pin.x - from.x, pin.y - from.y);
+          for (const power of [0.12, 0.25, 0.4, 0.6, 0.85]) {
+            const f = simulate(h, from, { angle, power, club: 'putter', error: 0, clock: 0 }).frames;
+            putts++;
+            for (let i = 2; i < f.length; i++) {
+              const p = f[i - 1];
+              const speed = (u: { x: number; y: number; t: number }, w: { x: number; y: number; t: number }) => Math.hypot(w.x - u.x, w.y - u.y) / (w.t - u.t || 1);
+              const v1 = speed(f[i - 2], p);
+              const v2 = speed(p, f[i]);
+              // the cup, a wall, a tree or a post, a vent: things a ball is meant to meet
+              const near =
+                Math.hypot(p.x - pin.x, p.y - pin.y) < 2.5 ||
+                walls.some((w) => segD(p, w.a, w.b) < 3) ||
+                h.posts.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < q.r + 2) ||
+                h.pushes.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < q.r + 2) ||
+                h.movers.some((m) => {
+                  const at = m.at(p.t).pos;
+                  return Math.hypot(p.x - at.x, p.y - at.y) < 6;
+                });
+              if (near) continue;
+              if (putting(surfaceAt(h, p)) && putting(surfaceAt(h, f[i])) && v1 > 2 && v1 - v2 > Math.max(1.5, v1 * 0.35)) {
+                bad.push(`hit something at ${p.x.toFixed(1)},${p.y.toFixed(1)} (${v1.toFixed(1)} to ${v2.toFixed(1)} ft/s)`);
+                break;
+              }
+              if (heightAt(h, p.x, p.y) - p.z > 0.05) {
+                bad.push(`sank below the ground at ${p.x.toFixed(1)},${p.y.toFixed(1)}`);
+                break;
+              }
+            }
+          }
+        }
+    }
+    ok(!bad.length, `${h0.name}: ${putts} putts roll true on the green${bad.length ? `: ${[...new Set(bad)].slice(0, 3).join('; ')}` : ''}`);
   }
 }
 
