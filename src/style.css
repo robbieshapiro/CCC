@@ -1092,3 +1092,7 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .champ-word { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: #fbf4e4; border: 1px solid rgba(184, 149, 90, 0.55); font-size: 14px; line-height: 1.4; }
 .champ-word .host-face { width: 30px; height: 30px; }
 .champ-word em { font-style: normal; }
+/* the Clubhouse members table: this period, then all time */
+.ch-members tr.group th { padding-bottom: 0; border-bottom: 0; font-size: 10px; color: var(--gold); }
+.ch-members .all { border-left: 1px solid var(--line); }
+@media (max-width: 480px) { .ch-members td, .ch-members th { padding: 8px 5px; } .ch-members .avg { display: none; } .ch-members .who .avatar, .ch-members .who svg:first-child { width: 26px; height: 26px; } }
