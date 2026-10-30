@@ -40,26 +40,38 @@ export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: 
   if (tab === 'feedback') bindFeedback();
 }
 
-// your club this period: best first, then everyone yet to play
+// your club: this period's best first, then everyone yet to play this period (most rounds all time first), with
+// everyone's all-time rounds, best, average and titles alongside
 function members(snap: Snapshot) {
+  const career = (id: string) => snap.players.find((x) => x.id === id)?.career ?? { rounds: 0, best: null, avg: null };
   const rows = board(snap);
-  const body = rows
+  const played = rows.filter((r) => r.best);
+  const yet = rows.filter((r) => !r.best).sort((a, b) => career(b.playerId).rounds - career(a.playerId).rounds);
+  const body = [...played, ...yet]
     .map((r) => {
       const p = snap.players.find((x) => x.id === r.playerId)!;
       const me = p.id === snap.me;
+      const c = career(p.id);
       return `<tr class="${me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
         <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</span></a></td>
         <td class="num topar">${r.best ? topar(r.toPar) : '–'}</td>
         <td class="num">${r.rounds}</td>
+        <td class="num all">${c.rounds}</td>
+        <td class="num topar">${topar(c.best)}</td>
+        <td class="num avg">${c.avg === null ? '–' : toParLabel(Math.round(c.avg * 10) / 10)}</td>
         <td class="num">${p.wins || ''}</td>
       </tr>`;
     })
     .join('');
+  const per = span(snap.month) === 'week' ? 'This week' : 'This month';
   return `
     <div class="ch-head"><h1>${esc(snap.groupName)}</h1><p class="muted">${rows.length} ${rows.length === 1 ? 'member' : 'members'} · ${periodName(snap.month)}</p></div>
-    ${rows.length ? `<div class="table-wrap"><table class="ch-table">
-      <thead><tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rounds</th><th class="num" title="Titles">🏆</th></tr></thead>
+    ${rows.length ? `<div class="table-wrap"><table class="ch-table ch-members">
+      <thead>
+        <tr class="group"><th colspan="2"></th><th colspan="2" class="num">${per}</th><th colspan="2" class="num all">All time</th><th class="avg"></th><th></th></tr>
+        <tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rds</th><th class="num all">Rds</th><th class="num">Best</th><th class="num avg">Avg</th><th class="num" title="Titles">🏆</th></tr>
+      </thead>
       <tbody>${body}</tbody></table></div>` : '<p class="muted">No members yet.</p>'}`;
 }
 
