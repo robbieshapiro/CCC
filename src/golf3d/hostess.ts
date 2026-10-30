@@ -43,6 +43,23 @@ function part(geo: THREE.BufferGeometry, mat: THREE.Material) {
 // a solid of revolution from (radius, height) pairs
 const lathe = (pts: [number, number][], segs = 32) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), segs);
 
+// The bust, shaped into the front of the torso (and of the top over it): the surface eases forward in two soft
+// rounds, so the fabric curves over it rather than meeting it at an edge
+function bust(geo: THREE.BufferGeometry) {
+  geo.rotateY(Math.PI); // the lathe's seam goes down her back, not her front
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    if (z <= 0) continue;
+    const lift = [-1, 1].reduce((a, side) => a + Math.exp(-(((x - 0.13 * side) / 0.12) ** 2 + ((y - 0.84) / 0.11) ** 2)), 0);
+    pos.setZ(i, z + 0.11 * Math.min(1, lift) * (z / Math.hypot(x, z)));
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
 // a strand of hair: a tube along a curve that thins toward the end
 function strand(points: [number, number, number][], r: number, mat: THREE.Material) {
   const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
@@ -83,7 +100,7 @@ export class Hostess {
 
   constructor(look: Look = CREW[0]) {
     // skin with a little of its own glow, so the face reads soft rather than shadowed under the jaw
-    const skin = smooth(look.skin, 0.5, { emissive: look.skin, emissiveIntensity: 0.14 });
+    const skin = smooth(look.skin, 0.68, { emissive: look.skin, emissiveIntensity: 0.16 });
     const shirt = smooth(look.top, 0.7);
     const white = smooth('#f6f3ec', 0.6);
     // glossy hair: a lower roughness catches the light
@@ -98,10 +115,10 @@ export class Hostess {
     // legs, hanging from the hip joints
     for (const side of [-1, 1]) {
       const hip = new THREE.Group();
-      hip.position.set(0.25 * side, 2.95, 0);
-      const leg = part(lathe([[0.001, -2.68], [0.1, -2.66], [0.12, -2.4], [0.165, -2.0], [0.135, -1.5], [0.15, -1.38], [0.2, -0.9], [0.245, -0.3], [0.25, 0.05], [0.001, 0.08]], 24), skin);
+      hip.position.set(0.19 * side, 2.95, 0);
+      const leg = part(lathe([[0.001, -2.68], [0.08, -2.66], [0.095, -2.42], [0.14, -2.02], [0.11, -1.52], [0.125, -1.38], [0.17, -0.9], [0.205, -0.3], [0.2, 0.05], [0.001, 0.08]], 24), skin);
       hip.add(leg);
-      const shoe = part(new THREE.CapsuleGeometry(0.12, 0.32, 4, 12), white);
+      const shoe = part(new THREE.CapsuleGeometry(0.1, 0.3, 4, 12), white);
       shoe.rotation.x = Math.PI / 2;
       shoe.scale.set(1, 1, 0.8);
       shoe.position.set(0, -2.8, 0.1);
@@ -111,121 +128,134 @@ export class Hostess {
     }
 
     // skort, belt and the top: in at the waist, out at the hip
-    this.body.add(part(lathe([[0.5, 0.36], [0.58, 0.12], [0.62, -0.12], [0.66, -0.42], [0.65, -0.44]]), smooth(look.skort, 0.6, { side: THREE.DoubleSide })));
-    const belt = part(new THREE.TorusGeometry(0.49, 0.035, 8, 32), smooth('#2a1d14', 0.4));
+    const skort = part(lathe([[0.37, 0.36], [0.46, 0.12], [0.52, -0.12], [0.56, -0.42], [0.55, -0.44]]), smooth(look.skort, 0.6, { side: THREE.DoubleSide }));
+    skort.scale.z = 0.78;
+    this.body.add(skort);
+    const belt = part(new THREE.TorusGeometry(0.375, 0.03, 8, 32), smooth('#2a1d14', 0.4));
     belt.rotation.x = Math.PI / 2;
     belt.position.y = 0.36;
+    belt.scale.y = 0.78;
     this.body.add(belt);
-    this.body.add(part(new THREE.BoxGeometry(0.12, 0.08, 0.04), gold).translateY(0.36).translateZ(0.5));
+    this.body.add(part(new THREE.BoxGeometry(0.1, 0.07, 0.04), gold).translateY(0.36).translateZ(0.3));
     this.body.add(this.chest);
     this.chest.position.y = 0.3;
-    const profile: [number, number][] = [[0.5, 0], [0.46, 0.18], [0.45, 0.36], [0.53, 0.62], [0.59, 0.82], [0.58, 0.92], [0.55, 1.02], [0.56, 1.16], [0.5, 1.3], [0.3, 1.42], [0.001, 1.46]];
-    const torso = part(lathe([[0.001, -0.02], ...profile]), skin);
-    torso.scale.set(1, 1, 0.7);
+    const profile: [number, number][] = [[0.37, 0], [0.32, 0.18], [0.3, 0.34], [0.34, 0.55], [0.38, 0.72], [0.42, 0.86], [0.4, 0.98], [0.41, 1.15], [0.35, 1.3], [0.2, 1.42], [0.001, 1.46]];
+    const torso = part(bust(lathe([[0.001, -0.02], ...profile], 48)), skin);
+    torso.scale.set(1, 1, 0.66);
     this.chest.add(torso);
+
     if (look.cut === 'polo') {
       // the tailored polo: up to the collar, a short placket, the collar points, and short fitted sleeves (on the arms)
-      const polo = part(lathe([[0.001, -0.02], ...profile.filter(([, y]) => y < 1.36), [0.42, 1.36], [0.16, 1.42], [0.12, 1.43]]), shirt);
-      polo.scale.set(1.02, 1, 0.72);
+      const polo = part(bust(lathe([[0.001, -0.02], ...profile.filter(([, y]) => y < 1.36), [0.3, 1.36], [0.14, 1.42], [0.11, 1.43]], 48)), shirt);
+      polo.scale.set(1.03, 1, 0.68);
       this.chest.add(polo);
-      for (const side of [-1, 1]) {
-        const point = part(new THREE.ConeGeometry(0.09, 0.2, 3), shirt);
-        point.scale.set(1, 1, 0.25);
-        point.position.set(0.075 * side, 1.3, 0.25);
-        point.rotation.set(0.35, 0, Math.PI + 0.55 * side);
-        this.chest.add(point);
-      }
+      const collar = part(new THREE.TorusGeometry(0.135, 0.035, 8, 24), shirt);
+      collar.rotation.x = Math.PI / 2 - 0.25;
+      collar.scale.set(1.1, 1, 1);
+      collar.position.set(0, 1.4, 0.02);
+      this.chest.add(collar);
       const placket = part(new THREE.BoxGeometry(0.035, 0.22, 0.01), smooth(look.top, 0.5));
-      placket.position.set(0, 1.18, 0.385);
+      placket.position.set(0, 1.16, 0.27);
       placket.rotation.x = -0.25;
       this.chest.add(placket);
-      for (const y of [1.12, 1.22]) this.chest.add(part(new THREE.SphereGeometry(0.014, 8, 6), white).translateY(y).translateZ(0.392));
+      for (const y of [1.1, 1.2]) this.chest.add(part(new THREE.SphereGeometry(0.014, 8, 6), white).translateY(y).translateZ(0.28));
     } else {
       // the fitted tank: scoop neck, thin straps, bare shoulders
-      const tank = part(lathe([[0.001, -0.02], ...profile.filter(([, y]) => y < 1.0), [0.57, 1.0], [0.565, 1.03]]), shirt);
-      tank.scale.set(1.02, 1, 0.72);
+      const tank = part(bust(lathe([[0.001, -0.02], ...profile.filter(([, y]) => y < 1.0), [0.405, 1.0], [0.4, 1.03]], 48)), shirt);
+      tank.scale.set(1.03, 1, 0.68);
       this.chest.add(tank);
       // straps over the shoulders, out where the hair doesn't hide them
       for (const side of [-1, 1]) {
         // up and over the top of the shoulder, sitting on the skin rather than inside it
         const curve = new THREE.CatmullRomCurve3([
-          new THREE.Vector3(0.3 * side, 1.0, 0.37),
-          new THREE.Vector3(0.34 * side, 1.22, 0.31),
-          new THREE.Vector3(0.36 * side, 1.41, 0),
-          new THREE.Vector3(0.34 * side, 1.22, -0.31),
-          new THREE.Vector3(0.3 * side, 1.0, -0.37),
+          new THREE.Vector3(0.21 * side, 1.0, 0.27),
+          new THREE.Vector3(0.24 * side, 1.22, 0.23),
+          new THREE.Vector3(0.26 * side, 1.38, 0),
+          new THREE.Vector3(0.24 * side, 1.22, -0.23),
+          new THREE.Vector3(0.21 * side, 1.0, -0.27),
         ]);
-        this.chest.add(part(new THREE.TubeGeometry(curve, 16, 0.035, 6, false), shirt));
+        this.chest.add(part(new THREE.TubeGeometry(curve, 16, 0.022, 6, false), shirt));
       }
       // the neckline: a soft shadow between, a thin gold trim along the edge, and a fine gold chain
       const shade = part(new THREE.CapsuleGeometry(0.008, 0.07, 3, 6), smooth('#c99a76', 0.6));
-      shade.position.set(0, 1.0, 0.395);
+      shade.position.set(0, 0.98, 0.3);
       this.chest.add(shade);
-      const trim = part(new THREE.TorusGeometry(0.555, 0.008, 4, 40), gold);
+      const trim = part(new THREE.TorusGeometry(0.4, 0.007, 4, 40), gold);
       trim.rotation.x = Math.PI / 2;
-      trim.scale.set(1.02, 0.72, 1);
+      trim.scale.set(1.03, 0.7, 1);
       trim.position.y = 1.03;
       this.chest.add(trim);
       const chain = part(new THREE.TorusGeometry(0.2, 0.006, 4, 32, Math.PI), gold);
       chain.rotation.set(-0.35, 0, Math.PI);
-      chain.position.set(0, 1.36, 0.17);
+      chain.position.set(0, 1.34, 0.13);
       this.chest.add(chain);
-      this.chest.add(part(new THREE.SphereGeometry(0.02, 10, 8), gold).translateY(1.16).translateZ(0.36));
+      this.chest.add(part(new THREE.SphereGeometry(0.018, 10, 8), gold).translateY(1.15).translateZ(0.27));
     }
     // the club crest, small, on the left
     const crestPin = part(new THREE.CircleGeometry(0.045, 16), gold);
-    crestPin.position.set(-0.3, 0.68, 0.372);
+    crestPin.position.set(-0.26, 0.62, 0.25);
     crestPin.rotation.y = -0.4;
     this.chest.add(crestPin);
 
     // arms: shoulder -> elbow -> hand, each a joint we can bend
     for (const side of [-1, 1]) {
       const shoulder = new THREE.Group();
-      shoulder.position.set(0.53 * side, 1.16, 0);
+      shoulder.position.set(0.39 * side, 1.12, 0);
       this.chest.add(shoulder);
-      shoulder.add(part(new THREE.SphereGeometry(0.13, 16, 12), skin));
-      shoulder.add(part(lathe([[0.001, -0.95], [0.085, -0.93], [0.1, -0.6], [0.118, -0.25], [0.125, -0.05], [0.001, 0.06]], 16), skin));
+      const cap = part(new THREE.SphereGeometry(0.105, 16, 12), skin);
+      cap.scale.set(1.05, 0.8, 0.85);
+      cap.position.y = -0.03;
+      shoulder.add(cap);
+      shoulder.add(part(lathe([[0.001, -0.96], [0.068, -0.95], [0.074, -0.88], [0.082, -0.6], [0.094, -0.25], [0.1, -0.05], [0.001, 0.06]], 16), skin));
       if (look.cut === 'polo') {
-        const sleeve = part(lathe([[0.135, -0.36], [0.15, -0.2], [0.155, 0], [0.145, 0.1], [0.001, 0.16]], 16), shirt);
+        const sleeve = part(lathe([[0.108, -0.34], [0.118, -0.2], [0.122, 0], [0.112, 0.09], [0.001, 0.13]], 16), shirt);
         shoulder.add(sleeve);
       }
       const elbow = new THREE.Group();
       elbow.position.y = -0.93;
       shoulder.add(elbow);
-      elbow.add(part(lathe([[0.001, -0.8], [0.062, -0.78], [0.08, -0.45], [0.088, -0.1], [0.001, 0.02]], 16), skin));
-      const hand = part(new THREE.SphereGeometry(0.09, 14, 10), skin);
-      hand.scale.set(0.7, 1.3, 0.45);
+      elbow.add(part(new THREE.SphereGeometry(0.07, 12, 10), skin));
+      elbow.add(part(lathe([[0.001, -0.8], [0.048, -0.78], [0.06, -0.55], [0.072, -0.2], [0.069, -0.02], [0.001, 0.07]], 16), skin));
+      const hand = part(new THREE.SphereGeometry(0.08, 14, 10), skin);
+      hand.scale.set(0.62, 1.35, 0.4);
       hand.position.y = -0.9;
       elbow.add(hand);
-      if (side < 0) elbow.add(part(new THREE.TorusGeometry(0.075, 0.018, 6, 16), gold).rotateX(Math.PI / 2).translateZ(0.68));
+      if (side < 0) elbow.add(part(new THREE.TorusGeometry(0.058, 0.014, 6, 16), gold).rotateX(Math.PI / 2).translateZ(0.7));
       else {
         // a gold watch: a slim band and a small face
-        elbow.add(part(new THREE.TorusGeometry(0.074, 0.014, 6, 16), gold).rotateX(Math.PI / 2).translateZ(0.66));
-        const dial = part(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 16), smooth('#f3ecdc', 0.2, { metalness: 0.3 }));
+        elbow.add(part(new THREE.TorusGeometry(0.057, 0.012, 6, 16), gold).rotateX(Math.PI / 2).translateZ(0.68));
+        const dial = part(new THREE.CylinderGeometry(0.036, 0.036, 0.018, 16), smooth('#f3ecdc', 0.2, { metalness: 0.3 }));
         dial.rotation.z = Math.PI / 2;
-        dial.position.set(0.078, -0.66, 0);
+        dial.position.set(0.062, -0.68, 0);
         elbow.add(dial);
       }
       this.arms.push({ shoulder, elbow, side });
     }
 
     // neck and head
-    this.chest.add(part(new THREE.CylinderGeometry(0.11, 0.13, 0.24, 16), skin).translateY(1.46));
+    this.chest.add(part(new THREE.CylinderGeometry(0.092, 0.11, 0.3, 16), skin).translateY(1.47));
     this.chest.add(this.head);
-    this.head.position.y = 1.52;
-    const skull = part(new THREE.SphereGeometry(0.33, 32, 24), skin);
+    this.head.position.y = 1.56;
+    const skullGeo = new THREE.SphereGeometry(0.33, 40, 30);
+    const sp = skullGeo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < sp.count; i++) {
+      const y = sp.getY(i);
+      if (y >= 0) continue;
+      const t = -y / 0.33;
+      sp.setX(i, sp.getX(i) * (1 - 0.4 * t ** 1.4));
+      sp.setZ(i, sp.getZ(i) * (sp.getZ(i) > 0 ? 1 - 0.05 * t : 1 - 0.35 * t));
+      sp.setY(i, y * (1 + 0.12 * t));
+    }
+    skullGeo.computeVertexNormals();
+    const skull = part(skullGeo, skin);
     skull.scale.set(0.86, 1.02, 0.95);
     skull.position.set(0, 0.36, 0);
     this.head.add(skull);
-    const jaw = part(new THREE.SphereGeometry(0.27, 28, 20), skin);
-    jaw.scale.set(0.78, 0.74, 0.88);
-    jaw.position.set(0, 0.21, 0.05);
-    this.head.add(jaw);
     // eyes: almond whites, her own iris colour, liner with a little wing, a catch light; each blinks (and winks)
     // brows a shade darker than her hair (fair hair gets a deeper brow so it still frames the eye)
     const hairCol = new THREE.Color(look.hair);
     const browCol = '#' + hairCol.clone().multiplyScalar(hairCol.getHSL({ h: 0, s: 0, l: 0 }).l > 0.4 ? 0.6 : 0.85).getHexString();
-    const blushMat = new THREE.MeshStandardMaterial({ color: '#e07a7a', roughness: 0.8, transparent: true, opacity: 0.28, depthWrite: false });
+    const blushMat = new THREE.MeshStandardMaterial({ color: '#e07a7a', roughness: 0.8, transparent: true, opacity: 0.14, depthWrite: false });
     for (const side of [-1, 1]) {
       const eye = new THREE.Group();
       eye.position.set(0.105 * side, 0.4, 0.268);
@@ -404,8 +434,8 @@ export class Hostess {
     const pt = this.poseT;
     // [shoulder out, shoulder forward, elbow bend, forearm twist] for her right and left arms
     // idle: right hand resting on her hip, left arm loose
-    let rA = [0.62, -0.1, 1.85, 0];
-    let lA = [0.12, 0.05, 0.25, 0];
+    let rA = [0.5, 0.18, 1.55, 0];
+    let lA = [0.2, 0.05, 0.2, 0];
     let headX = 0.04;
     let headY = Math.sin(t * 0.35) * 0.18;
     let headZ = 0.07 + Math.sin(t * 0.6 + 1) * 0.04;
@@ -418,8 +448,8 @@ export class Hostess {
       headY = 0;
     } else if (p === 'walk') {
       // off the cart with some swagger: arms swinging, hips rolling, chin up
-      rA = [0.12, Math.sin(t * 7) * 0.35, 0.3, 0];
-      lA = [0.12, -Math.sin(t * 7) * 0.35, 0.3, 0];
+      rA = [0.18, Math.sin(t * 7) * 0.35, 0.3, 0];
+      lA = [0.18, -Math.sin(t * 7) * 0.35, 0.3, 0];
       headX = -0.05;
       headY = 0;
       headZ = 0.04;
