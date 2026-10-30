@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 30, 2026 (the Clubhouse members table keeps all-time rounds and stats). Pick up from here.
+Last updated Oct 30, 2026 (the cart crew reshaped: slimmer, curvier, natural arms). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Oct 30, 2026 (the Clubhouse members table keeps all-time rounds and
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #97 | The cart crew reshaped: narrower shoulders and an hourglass figure (slim waist, a shaped bust, hips in proportion), slender arms with soft shoulders and elbows, a hand that rests naturally on her hip, slimmer legs and neck, a smooth face with a softer chin and bigger eyes, gentler blush, and a collar band on the polo. Long hair worn down is now one flowing sheet down her back, framing her face, with a section falling over the front of each shoulder. |
 | #96 | The Clubhouse members table shows this week (best, rounds) beside all time (rounds, best, average, titles), so a new week never makes it look like history was wiped. Members yet to play this week are listed by all-time rounds. |
 | #94 | 👑 now marks each club's reigning champion (Marc in Kellogg, Charles in The Clergy, Eli G and Brian in Boomtown); yesterday's Closest to the Pin winner gets a 🎯. Reginald's word for a new champion runs along the top of the home page for the two days after a title is won (one AI line per club per title, from the honours: score, margin, runner-up, rounds; about $0.05 a week for every club, within the existing 400-lines-a-day cap). The Clubhouse opens on Members and standings. Hollow Hills mini golf is closed for now (its course and code stay). The Caldera's countdown is a muted ember red. |
 | #93 | The board comes straight after the Play hero, with the Daily Shot, bar and practice tiles below it. On the Caldera it takes a softer version of the hero's red. On phones the name, total and to-par stay put while the holes scroll. |
