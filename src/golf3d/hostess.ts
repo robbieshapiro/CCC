@@ -53,11 +53,82 @@ function bust(geo: THREE.BufferGeometry) {
     const y = pos.getY(i);
     const z = pos.getZ(i);
     if (z <= 0) continue;
-    const lift = [-1, 1].reduce((a, side) => a + Math.exp(-(((x - 0.13 * side) / 0.12) ** 2 + ((y - 0.84) / 0.11) ** 2)), 0);
-    pos.setZ(i, z + 0.11 * Math.min(1, lift) * (z / Math.hypot(x, z)));
+    const lift = [-1, 1].reduce((a, side) => a + Math.exp(-(((x - 0.145 * side) / 0.135) ** 2 + ((y - 0.84) / 0.125) ** 2)), 0);
+    pos.setZ(i, z + 0.14 * Math.min(1, lift) * (z / Math.hypot(x, z)));
   }
   geo.computeVertexNormals();
   return geo;
+}
+
+// Long hair worn down, as one sheet: rows from the crown to the ends, each an arc round the back of the head that
+// opens at the face. Up top it follows the skull; below the nape it lies on her back, behind the shoulders, and the
+// ends finish uneven. Waves ripple it; fine grooves read as strands. top: the part above the nape (it stays with the
+// head), or the length below it (it swings).
+function hairSheet(wavy: boolean, top: boolean, mat: THREE.Material) {
+  // (radius, height) down the profile, in head space
+  const prof: [number, number][] = [[0.1, 0.72], [0.24, 0.68], [0.33, 0.58], [0.365, 0.44], [0.37, 0.3], [0.36, 0.16], [0.35, 0.04], [0.37, -0.12], [0.41, -0.32], [0.42, -0.55], [0.41, -0.8], [0.38, -1.02]];
+  const rows = top ? prof.filter(([, y]) => y >= 0.04) : prof.filter(([, y]) => y <= 0.16); // they overlap a row, so a swing never opens a gap
+  const cols = 48;
+  const pos: number[] = [];
+  const idx: number[] = [];
+  rows.forEach(([r0, y0], j) => {
+    const low = Math.max(0, Math.min(1, (0.1 - y0) / 0.4)); // 0 at the head, 1 down her back
+    const open = Math.PI * (0.64 - 0.14 * low); // how far round toward the face the row reaches
+    for (let i = 0; i <= cols; i++) {
+      const th = -open + (2 * open * i) / cols;
+      const ripple = wavy ? 0.03 * Math.sin(y0 * 13 + th * 1.5) * low : 0;
+      const r = r0 + ripple + 0.006 * Math.sin(th * 34);
+      const last = j === rows.length - 1 && !top;
+      const y = y0 - (last ? (wavy ? 0.12 : 0.06) * Math.abs(Math.sin(th * 5)) : 0);
+      pos.push(r * Math.sin(th) * 0.92, y, -r * Math.cos(th) * (1 - 0.4 * low) - 0.14 * low - 0.03);
+    }
+  });
+  for (let j = 0; j < rows.length - 1; j++)
+    for (let i = 0; i < cols; i++) {
+      const a = j * (cols + 1) + i;
+      idx.push(a, a + cols + 1, a + 1, a + 1, a + cols + 1, a + cols + 2);
+    }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const m = part(geo, mat);
+  m.material = (mat as THREE.MeshStandardMaterial).clone();
+  (m.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+  return m;
+}
+
+// A front section of long hair: a curved ribbon from under the hair at the crown, past the temple, down over the front of the shoulder to the chest,
+// narrowing to its ends
+function frontLock(side: number, wavy: boolean, mat: THREE.Material) {
+  const rows = 14;
+  const cols = 8;
+  const pos: number[] = [];
+  const idx: number[] = [];
+  for (let j = 0; j <= rows; j++) {
+    const t = j / rows;
+    const y = 0.5 - t * 1.12;
+    // out round the jaw, then forward over the shoulder (its top is about y -0.44 here)
+    const cx = (0.22 + 0.15 * Math.sin(Math.min(1, t * 2) * Math.PI * 0.5) + (wavy ? 0.025 * Math.sin(t * 9) : 0)) * side;
+    const cz = -0.05 + 0.27 * Math.min(1, Math.max(0, t - 0.15) * 1.5); // tucked under the hair at the top
+    const w = 0.12 * (1 - 0.5 * t);
+    for (let i = 0; i <= cols; i++) {
+      const u = i / cols - 0.5;
+      pos.push(cx + u * w * 2 * side, y - (j === rows ? 0.05 * Math.abs(Math.sin(u * 9)) : 0), cz + 0.04 * (0.25 - u * u) + 0.004 * Math.sin(i * 3.1));
+    }
+  }
+  for (let j = 0; j < rows; j++)
+    for (let i = 0; i < cols; i++) {
+      const a = j * (cols + 1) + i;
+      idx.push(a, a + cols + 1, a + 1, a + 1, a + cols + 1, a + cols + 2);
+    }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const m = part(geo, (mat as THREE.MeshStandardMaterial).clone());
+  (m.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+  return m;
 }
 
 // a strand of hair: a tube along a curve that thins toward the end
@@ -260,31 +331,31 @@ export class Hostess {
       const eye = new THREE.Group();
       eye.position.set(0.105 * side, 0.4, 0.268);
       eye.rotation.y = 0.18 * side;
-      const white_ = part(new THREE.SphereGeometry(0.05, 16, 12), smooth('#f7f4ef', 0.3));
+      const white_ = part(new THREE.SphereGeometry(0.058, 16, 12), smooth('#f7f4ef', 0.3));
       white_.scale.set(1.3, 0.7, 0.45);
       eye.add(white_);
-      eye.add(part(new THREE.CircleGeometry(0.03, 20), smooth(look.eyes, 0.25)).translateZ(0.023));
-      eye.add(part(new THREE.CircleGeometry(0.015, 16), dark).translateZ(0.024));
-      eye.add(part(new THREE.CircleGeometry(0.007, 8), smooth('#ffffff', 0.1, { emissive: '#ffffff', emissiveIntensity: 0.6 })).translateX(0.01).translateY(0.01).translateZ(0.025));
+      eye.add(part(new THREE.CircleGeometry(0.035, 20), smooth(look.eyes, 0.25)).translateZ(0.026));
+      eye.add(part(new THREE.CircleGeometry(0.017, 16), dark).translateZ(0.027));
+      eye.add(part(new THREE.CircleGeometry(0.008, 8), smooth('#ffffff', 0.1, { emissive: '#ffffff', emissiveIntensity: 0.6 })).translateX(0.012).translateY(0.012).translateZ(0.028));
       // the upper lid line, heavier: lashes and liner
-      const lid = part(new THREE.TorusGeometry(0.066, 0.014, 6, 16, Math.PI), dark);
+      const lid = part(new THREE.TorusGeometry(0.076, 0.015, 6, 16, Math.PI), dark);
       lid.scale.set(1, 0.55, 1);
-      lid.position.set(0, 0.002, 0.012);
+      lid.position.set(0, 0.002, 0.014);
       eye.add(lid);
       // the wing at the outer corner
       const wing = part(new THREE.CapsuleGeometry(0.006, 0.035, 3, 6), dark);
-      wing.position.set(0.072 * side, 0.012, 0.012);
+      wing.position.set(0.083 * side, 0.013, 0.014);
       wing.rotation.z = (Math.PI / 2 - 0.45) * -side;
       eye.add(wing);
       // a soft wash of shadow on the lid
-      const shadow = part(new THREE.SphereGeometry(0.06, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), smooth('#' + new THREE.Color(look.skin).multiplyScalar(0.82).getHexString(), 0.5));
+      const shadow = part(new THREE.SphereGeometry(0.069, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), smooth('#' + new THREE.Color(look.skin).multiplyScalar(0.82).getHexString(), 0.5));
       shadow.scale.set(1.15, 0.45, 0.5);
       shadow.position.set(0, 0.006, -0.004);
       eye.add(shadow);
       this.head.add(eye);
       this.eyes.push(eye);
       const brow = part(new THREE.TorusGeometry(0.085, 0.012, 6, 14, 1.9), smooth(browCol, 0.6));
-      brow.position.set(0.105 * side, 0.435, 0.268);
+      brow.position.set(0.105 * side, 0.445, 0.268);
       brow.rotation.z = Math.PI / 2 - 0.95 + (side > 0 ? -0.08 : 0.08);
       brow.scale.set(1, 0.8, 1);
       this.head.add(brow);
@@ -345,42 +416,22 @@ export class Hostess {
     } else {
       // the part: a little more hair swept to one side of the forehead
       const sweep = part(new THREE.SphereGeometry(0.21, 20, 14), hairMat);
-      sweep.scale.set(1.1, 0.32, 0.55);
+      sweep.scale.set(1.05, 0.24, 0.5);
       sweep.position.set(-0.1, 0.59, 0.19);
       sweep.rotation.set(0.6, 0, 0.42);
       this.hair.add(sweep);
       const wavy = look.style === 'waves';
-      // curtains either side of the face, falling in front of the shoulders: full and sleek, or with soft waves over
-      for (const side of [-1, 1]) {
-        const curtain = part(new THREE.CapsuleGeometry(0.16, 0.85, 6, 16), side < 0 ? hairMat : hairLight);
-        curtain.scale.set(0.62, 1, 1);
-        curtain.position.set(0.28 * side, -0.06, 0.02);
-        curtain.rotation.set(0.14, 0, -0.06 * side);
-        this.hair.add(curtain);
-        if (wavy)
-          for (let k = 0; k < 2; k++) {
-            const pts: [number, number, number][] = [];
-            for (let i = 0; i <= 6; i++) pts.push([(0.31 + 0.035 * Math.sin(i * 1.5 + k * 2)) * side, 0.36 - i * 0.16, 0.06 - k * 0.12 + 0.03 * Math.cos(i * 1.5 + k * 2)]);
-            this.hair.add(strand(pts, 0.11, k ? hairMat : hairLight));
-          }
-      }
-      // the length down her back, fuller for the waves
-      this.hair.add(this.pony); // the back length swings like a ponytail does
-      const back = part(new THREE.CapsuleGeometry(wavy ? 0.33 : 0.3, 0.85, 6, 18), hairMat);
-      back.scale.set(wavy ? 1.3 : 1.2, 1, 0.5);
-      back.position.set(0, -0.1, -0.3);
-      back.rotation.x = 0.12;
-      this.pony.add(back);
-      const ends = part(new THREE.CapsuleGeometry(wavy ? 0.3 : 0.26, 0.4, 6, 16), hairLight);
-      ends.scale.set(1.25, 1, 0.44);
-      ends.position.set(0, -0.62, -0.42);
-      this.pony.add(ends);
-      if (wavy)
-        for (let k = -2; k <= 2; k++) {
-          const pts: [number, number, number][] = [];
-          for (let i = 0; i <= 6; i++) pts.push([k * 0.12 + 0.04 * Math.sin(i * 1.5 + k), 0.3 - i * 0.19, -0.42 - 0.06 * Math.cos(i * 1.5 + k)]);
-          this.pony.add(strand(pts, 0.08, (k + 2) % 2 ? hairLight : hairMat));
-        }
+      // the length: one flowing sheet from the crown round the back of her head, framing her face at the sides and
+      // falling down her back past her shoulder blades. The part below the nape swings with the pony group.
+      this.hair.add(this.pony);
+      this.hair.add(hairSheet(wavy, true, hairMat));
+      this.pony.add(hairSheet(wavy, false, hairMat));
+      // a front section each side, falling over the front of the shoulder
+      for (const side of [-1, 1]) this.pony.add(frontLock(side, wavy, side < 0 ? hairMat : hairLight));
+      // the lighter underside, a little shorter, for depth
+      const under = hairSheet(wavy, false, hairLight);
+      under.scale.set(0.95, 0.97, 0.92);
+      this.pony.add(under);
     }
     if (look.extra === 'visor') {
       // a white club visor: a band hugging the head from temple to temple, and a brim out over the eyes
