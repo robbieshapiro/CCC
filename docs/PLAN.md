@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 30, 2026 (a tidier home page: one Play hero, no banner). Pick up from here.
+Last updated Oct 30, 2026 (the board moves up, warms to the Caldera red, and freezes the score on phones). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Oct 30, 2026 (a tidier home page: one Play hero, no banner). Pick u
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #93 | The board comes straight after the Play hero, with the Daily Shot, bar and practice tiles below it. On the Caldera it takes a softer version of the hero's red. On phones the name, total and to-par stay put while the holes scroll. |
 | #92 | A tidier home page: the early-drop banner and the separate "Now open" card are gone. The Play hero says "Now open" and how the last period ended ("October 2026 has closed. Marc takes the title at -6.") until you've played the new course. One Play button. |
 | #90 | Weekly Players at the top of the Committee Room: members who posted a round in the last 7 days (out of all members, Robbie left out), the change on a week ago, and a day-by-day trend line for the 7 days, month or all time. Refreshes every minute. |
 | #88 | No more long wait after a shot: a ball all but stopped on a rough, sandy or rocky slope stops, instead of creeping down it for up to 24 seconds. Rock (and the steep brown scree on the Caldera) now bounces hard, kicks a ball off line for better or worse, and soon dies. |
