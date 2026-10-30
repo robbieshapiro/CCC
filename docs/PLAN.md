@@ -31,7 +31,7 @@ Last updated Oct 30, 2026 (Weekly Players chart at the top of Admin). Pick up fr
 - [x] The #80 schedule SQL, run Oct 29: October closed at midnight going into Oct 30 and the Caldera challenge opened.
 - [x] The #82 SQL (`daily_crown`, `period_honors`), run Oct 29.
 - [x] The #87 playoff SQL, run Oct 29. Checked live: the `playoff_tries` table, all six playoff functions, and the snapshot, honours and Chronicle all read `period_champs`.
-- [ ] Paste the #90 SQL in Supabase (one function, `admin_trend`) so the Weekly Players chart fills in.
+- [x] The #90 SQL (`admin_trend`), run Oct 29.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
