@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 30, 2026 (all six Caldera holes; the sudden-death playoff built). Pick up from here.
+Last updated Oct 30, 2026 (no more long waits for a ball to stop; lively rock on the Caldera). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Oct 30, 2026 (all six Caldera holes; the sudden-death playoff built
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #88 | No more long wait after a shot: a ball all but stopped on a rough, sandy or rocky slope stops, instead of creeping down it for up to 24 seconds. Rock (and the steep brown scree on the Caldera) now bounces hard, kicks a ball off line for better or worse, and soon dies. |
 | #87 | Sudden-death playoff for the club title: a tie when a week closes is played off on Sunday (to midnight ET). Each tied member gets one go at the course's playoff hole (the Homecoming at the Caldera, the Covered Bridge at the Western Reserve), then one shot at the pin that settles it if still level. A no-show forfeits; nobody playing shares the title. A gold card on the home page, "Playoff: A v B" on the plaque, then "won in a playoff". |
 | #85 | The Caldera challenge opens with all six holes (par 25), not three. Geyser Alley is harder (a narrower alley, a smaller, firmer green, livelier vents) and so is the Homecoming (a wider barranca, a tighter run down the hill, a firmer green and a front bunker). |
 | #84 | The cart crew glammed up: made-up faces (liner and lashes, glossy lips, blush), glossy hair in three styles (waves, high ponytail, sleek), a tank or a tailored polo, a visor or aviators on the head, gold hoops and a watch; she walks off the cart, flips her hair, blinks, and winks when you take a drink. |

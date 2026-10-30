@@ -20,7 +20,8 @@ const DT = 1 / 240;
 const MAX_T = 24;
 const CURB_H = 0.9;
 const ROLL = 5 / 7; // a rolling ball feels 5/7 of the slope's pull
-const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40, rock: 7, cinder: 4.5 };
+// (rock is broken and jagged: a ball that lands on it hops about, then soon dies)
+const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40, rock: 16, cinder: 4.5 };
 // how much of a landing ball's speed each surface lets it keep
 const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.45, path: 1, stone: 1, wood: 1, sand: 0.1, rock: 1, cinder: 0.95 };
 // how well each surface grabs a spinning ball: soft greens bite, rough and sand eat the spin
@@ -110,6 +111,21 @@ export function launch(shot: Shot): { vx: number; vy: number; vz: number; ax: nu
   // sideways pull, square to the target line: right for a slice or fade (> 0), left for a hook or draw
   const side = shot.error * club.curve + bend;
   return { vx: dx * flat, vy: dy * flat, vz, ax: Math.cos(shot.angle) * side, ay: -Math.sin(shot.angle) * side };
+}
+
+// On the volcanic island, rough steep enough to be drawn as scree plays as rock (see the scree in scene.ts)
+const SCREE = 0.8;
+function groundAt(h: Hole, p: V2): Surface {
+  const s = surfaceAt(h, p);
+  if (s !== 'rough' || h.theme !== 'volcanic') return s;
+  const g = gradAt(h, p.x, p.y);
+  return Math.hypot(g.x, g.y) > SCREE ? 'rock' : s;
+}
+
+// Rock kicks a landing ball off line, for better or worse: the same spot always kicks the same way
+function kick(x: number, y: number) {
+  const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return (n - Math.floor(n) - 0.5) * 0.7; // up to 20 degrees either way
 }
 
 // slopes past 1.5 are cliff edges in the heightfield; treat them as steep, not vertical
@@ -203,7 +219,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
           sounds.push({ t, s: 'cup' });
           return finish(true, false);
         }
-        const surf = surfaceAt(h, { x, y });
+        const surf = groundAt(h, { x, y });
         sound('land', surf === 'sand' ? 'sand' : 'land');
         // bounce off the local surface normal, then let it settle into a roll
         const gr = capped(gradAt(h, x, y));
@@ -231,7 +247,16 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         // on tour turf a spinning ball's first bounce is a check, not a hop
         const deaden = flying && h.tour ? 1 - 0.45 * Math.max(0, shot.spin ?? 0) * GRIP[surf] : 1;
         flying = false;
-        if (vzRel < -9 && surf !== 'sand') vz = -vzRel * 0.24 * deaden + (vx * gr.x + vy * gr.y);
+        if (surf === 'rock' && vzRel < -4) {
+          // rock: a hard, lively bounce, and a kick off line
+          const a = kick(x, y);
+          const c = Math.cos(a);
+          const s2 = Math.sin(a);
+          [vx, vy] = [vx * c - vy * s2, vx * s2 + vy * c];
+          // (a ball that slams into a steep face doesn't fly off it like a trampoline: a few feet at most)
+          vz = Math.min(14, -vzRel * 0.5 + (vx * gr.x + vy * gr.y));
+          sound('rock', 'wall');
+        } else if (vzRel < -9 && surf !== 'sand') vz = -vzRel * 0.24 * deaden + (vx * gr.x + vy * gr.y);
         else air = false;
       }
     } else {
@@ -256,11 +281,15 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         }
       }
       const sp = Math.hypot(vx, vy);
-      const fr = friction(surfaceAt(h, { x, y })) * DT;
+      const under = friction(groundAt(h, { x, y }));
+      const fr = under * DT;
       if (sp > fr) {
         vx -= (vx / sp) * fr;
         vy -= (vy / sp) * fr;
-      } else if (Math.hypot(gr.x, gr.y) * G * ROLL < greenF * 0.9) {
+        // a ball that's all but stopped stays stopped wherever the slope can't beat what's under it (judged by the
+        // green alone, a ball could creep down a rough or sandy bank for up to 24 seconds); the green and anything
+        // slicker than it judge as before
+      } else if (Math.hypot(gr.x, gr.y) * G * ROLL < Math.max(greenF * 0.9, under)) {
         vx = 0;
         vy = 0;
       }
