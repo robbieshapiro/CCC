@@ -457,6 +457,14 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     };
   },
 
+  // local mode keeps one period at a time, so there's never a playoff to play
+  async playoffState() {
+    return null;
+  },
+  async playoffStart() {},
+  async playoffFinish() {},
+  async playoffShot() {},
+
   async touch(session, kind) {
     const db = load();
     const me = playerByToken(db, session.token);

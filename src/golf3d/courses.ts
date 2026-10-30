@@ -14,10 +14,21 @@ import { redbarn } from './holes/redbarn';
 import { ridge } from './holes/ridge';
 import { sugarmaple } from './holes/sugarmaple';
 import { summit } from './holes/summit';
-import type { Hole } from './types';
+import type { Hole, V2 } from './types';
 
 // previewHoles: before it opens, members can practise this many of its holes; the admin can play them all.
-export type Course = { id: string; opens: string; name: string; tagline: string; holes: Hole[]; par: number; draft?: boolean; previewHoles?: number };
+// playoff: the hole a tie for the week's title is played off on, and where the closest-to-the-pin decider is hit from
+export type Course = {
+  id: string;
+  opens: string;
+  name: string;
+  tagline: string;
+  holes: Hole[];
+  par: number;
+  draft?: boolean;
+  previewHoles?: number;
+  playoff?: { hole: Hole; from: V2; label: string };
+};
 
 const par = (holes: Hole[]) => holes.reduce((a, h) => a + h.par, 0);
 
@@ -39,6 +50,7 @@ const COURSES: Course[] = [
     tagline: 'Six holes on a volcanic island. Lava, geysers and quick greens.',
     holes: [blowhole, lavafield, caldera, lavalift, geyseralley, lavatube],
     par: par([blowhole, lavafield, caldera, lavalift, geyseralley, lavatube]),
+    playoff: { hole: lavatube, from: { x: -8, y: 530 }, label: 'Down the hill' },
   },
   {
     id: 'westernreserve',
@@ -50,6 +62,7 @@ const COURSES: Course[] = [
     tagline: 'Three holes of Ohio in October. Maples, a covered bridge and a red barn.',
     holes: [coveredbridge, sugarmaple, redbarn],
     par: par([coveredbridge, sugarmaple, redbarn]),
+    playoff: { hole: coveredbridge, from: { x: 0, y: 220 }, label: 'Over the creek' },
   },
 ];
 

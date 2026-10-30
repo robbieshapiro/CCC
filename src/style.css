@@ -1049,3 +1049,10 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 /* the Committee's queue */
 .adm-holes li { display: grid; grid-template-columns: 100px 1fr; gap: 12px; align-items: start; }
 .adm-hole-plan canvas { border-radius: 6px; }
+/* the playoff: a tie for the title, played off the Sunday after */
+.news.playoff { background: linear-gradient(160deg, #5a4210, #8a6418 60%, #b8862a); }
+.news.playoff .btn.big { background: var(--cream); border-color: var(--cream); color: #5a4210; }
+.playoff-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.playoff-list li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.18); }
+.playoff-list span { opacity: 0.85; text-align: right; }
+.playoff-intro p { line-height: 1.5; }

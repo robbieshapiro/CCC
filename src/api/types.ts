@@ -46,7 +46,14 @@ export type Round = {
   createdAt: string;
 };
 
-export type Champion = { month: string; playerIds: string[]; total: number; par: number };
+// how: 'won' outright, 'shared' (a tie nobody played off), 'playoff' (tied, and the playoff is today) or 'playoff-won'
+export type Champion = { month: string; playerIds: string[]; total: number; par: number; how?: 'won' | 'shared' | 'playoff' | 'playoff-won' };
+// The playoff being played at your club today, when a week closed with a tie for the title (see playoff_state)
+export type PlayoffState = {
+  period: string;
+  mine: boolean;
+  players: { id: string; name: string; started: boolean; strokes: number | null; shot: boolean; ft: number | null; holed: boolean; lost: boolean }[];
+};
 
 export type Snapshot = {
   today: string;
@@ -68,7 +75,7 @@ export type DailyCrown = { day: string; name: string; club: string; ft: number |
 export type Named = { names: string[]; count?: number; avg?: number; toPar?: number };
 export type Honors = {
   period: string;
-  champions: { name: string; toPar: number }[];
+  champions: { name: string; toPar: number; how?: Champion['how'] }[];
   runnersUp: { name: string; toPar: number }[];
   mostRounds: Named | null;
   aces: { name: string; count: number }[];
@@ -162,4 +169,9 @@ export interface Api {
   openChampions(session: Session): Promise<OpenChampion[]>;
   dailyCrown(session: Session): Promise<DailyCrown | null>;
   periodHonors(session: Session, period: string): Promise<Honors>;
+  // the playoff: one hole, once, then one shot at the pin
+  playoffState(session: Session): Promise<PlayoffState | null>;
+  playoffStart(session: Session): Promise<void>;
+  playoffFinish(session: Session, strokes: number): Promise<void>;
+  playoffShot(session: Session, shot: { ft: number | null; holed: boolean; lost: boolean }): Promise<void>;
 }

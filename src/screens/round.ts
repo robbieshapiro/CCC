@@ -31,6 +31,9 @@ import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
 
+// for screens elsewhere that run their own play on the course (the playoff): closeRound tidies it away too
+export const useGame = (g: Course3D) => void (game = g);
+
 export function closeRound() {
   leavePractice();
   game?.destroy();

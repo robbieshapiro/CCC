@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 30, 2026 (all six Caldera holes; the playoff planned). Pick up from here.
+Last updated Oct 30, 2026 (all six Caldera holes; the sudden-death playoff built). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Oct 30, 2026 (all six Caldera holes; the playoff planned). Pick up 
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #87 | Sudden-death playoff for the club title: a tie when a week closes is played off on Sunday (to midnight ET). Each tied member gets one go at the course's playoff hole (the Homecoming at the Caldera, the Covered Bridge at the Western Reserve), then one shot at the pin that settles it if still level. A no-show forfeits; nobody playing shares the title. A gold card on the home page, "Playoff: A v B" on the plaque, then "won in a playoff". |
 | #85 | The Caldera challenge opens with all six holes (par 25), not three. Geyser Alley is harder (a narrower alley, a smaller, firmer green, livelier vents) and so is the Homecoming (a wider barranca, a tighter run down the hill, a firmer green and a front bunker). |
 | #84 | The cart crew glammed up: made-up faces (liner and lashes, glossy lips, blush), glossy hair in three styles (waves, high ponytail, sleek), a tank or a tailored polo, a visor or aviators on the head, gold hoops and a watch; she walks off the cart, flips her hair, blinks, and winks when you take a drink. |
 | #83 | Putts on the Lava Field and Caldera greens no longer fall into a hidden trench where the tier slope met the top shelf and roll back. New `check-holes greens` sweep putts every green from all round every pin and fails on any hidden hit. |
@@ -27,6 +28,7 @@ Last updated Oct 30, 2026 (all six Caldera holes; the playoff planned). Pick up 
 
 - [x] The #80 schedule SQL, run Oct 29: October closed at midnight going into Oct 30 and the Caldera challenge opened.
 - [x] The #82 SQL (`daily_crown`, `period_honors`), run Oct 29.
+- [ ] Paste the #87 playoff SQL in Supabase (the `playoff_tries` table and the playoff functions; it also updates `get_snapshot`, `period_honors` and `chronicle_facts`). Needed before Sun Nov 8, when the Caldera challenge could end in a tie.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
@@ -61,7 +63,7 @@ The problem with the new members: once your best round is in, there's no reason 
 - **Fri Oct 30 to Sat Nov 7: the Caldera challenge,** all six holes (par 25). Every member's first open of the app lands on a card naming October's champion with the Caldera's Play button (#80).
 - **Week of Sun Nov 8:** The Western Reserve, northeast Ohio in October (#79). It's a draft: only Robbie can play it (Admin → upcoming course). Once he approves, an agent removes `draft: true` in `src/golf3d/courses.ts` and it opens Nov 8. If it's still a draft then, the Caldera carries over.
 - **From Nov 15:** agent-built courses every week.
-- **A tie at the top** will need a sudden-death playoff. To be planned.
+- **A tie at the top** goes to a sudden-death playoff on the Sunday (#87).
 
 **The course pipeline:**
 - A scheduled agent runs every Sunday and builds the course for two weeks out, as code like the Highlands and Caldera. `npm run check-holes` must pass. It opens a PR with the course as a draft.
@@ -75,13 +77,7 @@ The problem with the new members: once your best round is in, there's no reason 
 
 ### Later
 
-- **A sudden-death playoff for the club title** (decided Oct 30; not built yet):
-  - **When:** two or more members of a club tie for the lowest best round when a week closes (Saturday midnight ET). First place only: runner-up and the other honours stay shared. Not for the Open.
-  - **Playoff day, Sunday:** each tied player gets a gold "Playoff" card at the top of the home page and plays one hole from the week that just closed (the course's signature hole, chosen ahead of time per course), one attempt, no restarts. Lowest score wins.
-  - **Still tied:** everyone still level hits one closest-to-the-pin shot from that hole's tee; nearest wins (the Daily Shot's rules).
-  - **Window:** 24 hours, to midnight ET Sunday. A no-show forfeits; if nobody plays, they share the title as now.
-  - **Meanwhile:** the plaque reads "Playoff: Marc v Robbie" and Reginald plays it up; once settled the winner goes up as "won in a playoff", and the title counts for gear.
-  - **Build (one PR, one SQL paste):** `playoffs` and `playoff_tries` tables; the champion rule respects a settled playoff; the playoff card and a one-hole, one-attempt round (reusing the round engine and the Daily Shot's single-try rules); plaque and honours text; an Admin view to see and, if needed, close one. First week it could matter: the Caldera challenge, closing Sat Nov 7.
+- **Playoff extras, if wanted:** Reginald's daily line playing up a playoff day (the card and plaque carry it for now), and an Admin button to settle a playoff by hand. New courses need a `playoff` entry in `src/golf3d/courses.ts` (the hole, and a fairway spot for the shot at the pin) or a tie there can't be played off.
 
 ## Next up (ideas, not started)
 
