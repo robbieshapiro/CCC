@@ -24,39 +24,23 @@ export function scoreClass(strokes: number, par: number) {
 // Last round's date on the club's (Eastern) calendar, e.g. "Oct 24".
 const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: GAME_TZ });
 
-// The first time a member opens the app in a new period: the last one's champion, and the new course open to play.
-// Gone once they tap Play or Later.
+// The first time a member opens the app in a new period, it lands on the home page (see main.ts); opening it counts as
+// seen.
 export const SEEN_PERIOD = 'ccc-seen-period';
 // (from the Caldera challenge on: the months before it just open on the home page as they always did)
 export const newPeriod = (snap: Snapshot) => snap.month >= CALDERA_START && store.get(SEEN_PERIOD) !== snap.month;
 
-function newsCard(snap: Snapshot, course: Course) {
-  if (!newPeriod(snap)) return '';
+// Under the course name, until you've played the new period: how the last one ended
+function lastWord(snap: Snapshot) {
   const last = snap.champions[0];
-  const names = last ? last.playerIds.map((id) => snap.players.find((p) => p.id === id)?.name ?? 'a former member') : [];
-  const crowned = !last
-    ? ''
-    : last.how === 'playoff'
-      ? `<p>${esc(periodName(last.month))} has closed in a tie at <b>${toParLabel(last.total - last.par)}</b>. <b>${names.map(esc).join(' and ')}</b> play off today for the title.</p>`
-      : `<p>${esc(periodName(last.month))} has closed. <b>${names.map(esc).join(' & ')}</b> ${names.length > 1 ? 'share' : last.how === 'playoff-won' ? 'wins a playoff for' : 'takes'} the title at <b>${toParLabel(last.total - last.par)}</b>.</p>`;
-  return `<section class="news${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}" id="news">
-    <p class="eyebrow">Now open · ${esc(periodName(snap.month))}</p>
-    <h2>${esc(course.name)}</h2>
-    <p class="muted">${course.holes.length} holes · par ${course.par} · ${esc(course.tagline)}</p>
-    ${crowned}
-    <div class="news-actions"><a class="btn big" href="#/round" data-seen>Play it now</a><button class="btn ghost" data-seen>Later</button></div>
-  </section>`;
-}
-
-// A thin strip along the top while the Caldera drops early: the night October closes, then through the challenge.
-function scheduleBanner(snap: Snapshot) {
+  if (!last || snap.month < CALDERA_START) return '';
+  const names = last.playerIds.map((id) => esc(snap.players.find((p) => p.id === id)?.name ?? 'a former member'));
+  const at = toParLabel(last.total - last.par);
   const text =
-    snap.month === '2026-10' && snap.today === '2026-10-29'
-      ? '🌋 Early drop: October closes at midnight. The Caldera opens Fri 12am ET, all 6 holes, to Sat Nov 7.'
-      : snap.month === CALDERA_START
-        ? '🌋 The Caldera dropped early: 6 holes, to Sat Nov 7. Weekly courses start Sun Nov 8.'
-        : '';
-  return text ? `<p class="banner">${text}</p>` : '';
+    last.how === 'playoff'
+      ? `${esc(periodName(last.month))} closed in a tie at <b>${at}</b>. <b>${names.join(' and ')}</b> play off today.`
+      : `${esc(periodName(last.month))} has closed. <b>${names.join(' & ')}</b> ${names.length > 1 ? 'share' : last.how === 'playoff-won' ? 'wins a playoff for' : 'takes'} the title at <b>${at}</b>.`;
+  return `<p class="play-news">${text}</p>`;
 }
 
 // The honours for the period that last closed, filled in once the server answers: champion, the Open, runner-up,
@@ -147,16 +131,15 @@ export function home(snap: Snapshot) {
   render(`
     ${header(snap.groupName, 'play')}
     <main>
-      ${scheduleBanner(snap)}
       ${playoffCard()}
-      ${newsCard(snap, course)}
       ${noticesStrip()}
       <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
         <div class="play-reg"><span class="host-face big">${reginaldSvg(mood, 72)}</span><p id="reg-line"><b>Reginald</b> ${line}</p></div>
         <div class="play-main">
-          <p class="eyebrow">${periodName(snap.month)}</p>
+          <p class="eyebrow">${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
+          ${mine ? '' : lastWord(snap)}
           <a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>
         </div>
       </section>
@@ -204,12 +187,7 @@ export function home(snap: Snapshot) {
   void bindDaily(snap.today, snap.crown);
   void bindHonours(snap);
   void bindPlayoff();
-  document.querySelectorAll<HTMLElement>('[data-seen]').forEach((b) =>
-    b.addEventListener('click', () => {
-      store.set(SEEN_PERIOD, snap.month);
-      document.getElementById('news')?.remove();
-    }),
-  );
+  if (newPeriod(snap)) store.set(SEEN_PERIOD, snap.month);
   // in a club you only run, play from your own club: that's where it counts
   document.querySelector<HTMLAnchorElement>('[data-play-home]')?.addEventListener('click', (e) => {
     if (!snap.homeGroupId || !listSessions().some((x) => x.groupId === snap.homeGroupId)) return;

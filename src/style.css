@@ -810,16 +810,13 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .honours li b { font-weight: 700; }
 @media (max-width: 420px) { .honours li { grid-template-columns: 26px 1fr; } .honours li span { grid-column: 2; } }
 /* a thin strip across the top of the home page for schedule news */
-.banner { margin: 0 0 12px; padding: 7px 12px; border-radius: 8px; background: #3a160b; color: #ffd9b0; font-size: 13px; font-weight: 600; line-height: 1.35; text-align: center; }
 /* a new period: the course that's just opened and last period's champion, until the member taps Play or Later */
 .news { display: grid; gap: 8px; padding: 22px 20px; margin-bottom: 14px; border-radius: 12px; background: var(--green); color: var(--cream); box-shadow: 0 0 0 2px var(--gold, #d9a441), 0 12px 32px rgba(22, 59, 44, 0.3); animation: rise 0.45s ease-out both; }
-.news.volcanic { background: linear-gradient(160deg, #2a0f08, #4a1a0c 60%, #7a2c10); }
 .news h2 { margin: 0; font-size: 28px; color: inherit; }
 .news p { margin: 0; }
 .news .muted { color: inherit; opacity: 0.8; }
 .news-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 .news .btn.ghost { color: inherit; border-color: currentColor; }
-.news.volcanic .btn.big { background: #e8501c; border-color: #e8501c; color: #fff; }
 .play-reg { display: flex; align-items: center; gap: 14px; }
 .play-reg p { margin: 0; font-size: 15px; line-height: 1.45; color: #efe6d2; }
 .play-reg b { color: #f0dcae; font-family: var(--serif); font-size: 18px; margin-right: 4px; }
@@ -828,6 +825,7 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .play-main .eyebrow { color: #e6cf9f; }
 .play-main h1 { margin: 2px 0 2px; font-family: var(--serif); font-size: clamp(32px, 8vw, 44px); line-height: 1.05; color: var(--cream); }
 .play-main .muted { color: #cbbf9f; margin: 0 0 14px; }
+.play-news { margin: -6px 0 14px; color: var(--cream); font-size: 15px; line-height: 1.4; }
 .play-main .muted b { color: #fff; }
 .btn.big { display: block; width: 100%; text-align: center; font-size: 18px; padding: 16px; border-radius: 10px; background: var(--gold); color: var(--green); border-color: var(--gold); }
 .play-hero.volcanic .btn.big { background: #e8501c; border-color: #e8501c; color: #fff; }
