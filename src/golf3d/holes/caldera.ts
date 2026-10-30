@@ -88,7 +88,8 @@ export const caldera: Hole = {
     // the green: two tiers, the back one higher, tipped toward the lava behind
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.r + 10, h: FLOOR + 2.4, edge: 10, op: 'set' },
     { kind: 'ramp', x0: GREEN.x - 32, y0: GREEN.y - 2, x1: GREEN.x + 32, y1: GREEN.y + 6, axis: 'y', h0: 0, h1: 0.9, op: 'add' },
-    { kind: 'box', x0: GREEN.x - 32, y0: GREEN.y + 6, x1: GREEN.x + 32, y1: GREEN.y + 32, h: 0.9, edge: 0.5, op: 'add' },
+    // the upper tier picks up exactly where the step ends (a box here would fade in over its edge and leave a trench)
+    { kind: 'ramp', x0: GREEN.x - 32, y0: GREEN.y + 6, x1: GREEN.x + 32, y1: GREEN.y + 32, axis: 'y', h0: 0.9, h1: 0.9, op: 'add' },
     { kind: 'ramp', x0: GREEN.x - 32, y0: GREEN.y - 32, x1: GREEN.x + 32, y1: GREEN.y + 32, axis: 'x', h0: 0.4, h1: -0.4, op: 'add' },
     // bunkers
     ...[[452, 380, 7], [18, 406, 9]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.1, edge: 3, op: 'add' as const })),

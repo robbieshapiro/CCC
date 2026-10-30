@@ -110,7 +110,8 @@ const base: Hole = {
     { kind: 'hill', x: -34, y: 420, r: 22, h: 1 },
     // the green: a lower front tier and a raised back one, with a sharp step between, leaning left
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y + 2, x1: GREEN.x + 30, y1: GREEN.y + 7, axis: 'y', h0: 0, h1: 1.4, op: 'add' },
-    { kind: 'box', x0: GREEN.x - 30, y0: GREEN.y + 7, x1: GREEN.x + 30, y1: GREEN.y + 40, h: 1.4, edge: 0.5, op: 'add' },
+    // the upper tier picks up exactly where the step ends (a box here would fade in over its edge and leave a trench)
+    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y + 7, x1: GREEN.x + 30, y1: GREEN.y + 40, axis: 'y', h0: 1.4, h1: 1.4, op: 'add' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 40, x1: GREEN.x + 30, y1: GREEN.y + 40, axis: 'x', h0: -0.4, h1: 0.4, op: 'add' },
     // bunkers
     ...[[-26, 600, 6], [-50, 330, 9]].map(([x, y, r]) => ({ kind: 'disc' as const, x, y, r, h: -1.1, edge: 3, op: 'add' as const })),

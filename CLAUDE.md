@@ -12,7 +12,7 @@ A private online golf club for friends: a 3D course each month, a daily Closest 
 
 - `npm run build` always (it typechecks).
 - `npm run check-api` if you touched `api/`.
-- `npm run check-holes` if you touched holes, terrain, physics or clubs.
+- `npm run check-holes` if you touched holes, terrain, physics or clubs. Its `greens` sweep (in `quick` and `all`) putts every green from all round every pin; never ship a course that fails it.
 - `npm run check-minigolf` if you touched mini golf or the putting bot.
 
 ## Conventions

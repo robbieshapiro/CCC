@@ -14,6 +14,7 @@ Last updated Oct 29, 2026 (Caldera challenge, Sunday weeks, honours, the crown, 
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
 | #84 | The cart crew glammed up: made-up faces (liner and lashes, glossy lips, blush), glossy hair in three styles (waves, high ponytail, sleek), a tank or a tailored polo, a visor or aviators on the head, gold hoops and a watch; she walks off the cart, flips her hair, blinks, and winks when you take a drink. |
+| #83 | Putts on the Lava Field and Caldera greens no longer fall into a hidden trench where the tier slope met the top shelf and roll back. New `check-holes greens` sweep putts every green from all round every pin and fails on any hidden hit. |
 | #82 | October honours on the home page (champion, the Open, runner-up, Iron Man, ace, steadiest hand, the honest card), refreshed for each closed period; a 👑 for yesterday's Closest to the Pin winner on the boards, Members, member cards and the Daily Shot tile; the Chronicle is admin only (no cron), keyed by the week's Sunday, and introduces the week's course. |
 | #81 | A thin early-drop banner on the home page; Reginald's daily line knows October closes early (and refreshes when the schedule changes); the "now open" card waits for the Caldera instead of showing for October. |
 | #80 | October closes early and the 3-hole Caldera challenge opens Fri Oct 30; Sunday-to-Saturday weeks from Nov 8; the swing meter's gold is now only the pure strip, with silver for close; a "now open" card greets every member on their first open of a new period. |
@@ -24,7 +25,7 @@ Last updated Oct 29, 2026 (Caldera challenge, Sunday weeks, honours, the crown, 
 ## Setup status
 
 - [x] The #80 schedule SQL, run Oct 29: October closed at midnight going into Oct 30 and the Caldera challenge opened.
-- [ ] Paste the #82 SQL (the `daily_crown` and `period_honors` functions) into the SQL Editor and run it. Until then the 👑 and the honours board just don't show.
+- [x] The #82 SQL (`daily_crown`, `period_honors`), run Oct 29.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".

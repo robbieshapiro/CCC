@@ -30,7 +30,8 @@ function piece(p: Piece, x: number, y: number): [number, number] {
       return p.op === 'set' ? [p.h, w] : [p.h * w, 1];
     }
     case 'ramp': {
-      if (x < p.x0 || x > p.x1 || y < p.y0 || y > p.y1) return [0, 0];
+      // half-open, so a ramp that starts where another ends never counts twice on the line between them
+      if (x < p.x0 || x >= p.x1 || y < p.y0 || y >= p.y1) return [0, 0];
       let t = p.axis === 'y' ? (y - p.y0) / (p.y1 - p.y0) : (x - p.x0) / (p.x1 - p.x0);
       if (p.steps) {
         // stairs: flat treads with short steep risers
