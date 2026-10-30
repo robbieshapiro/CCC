@@ -1,8 +1,16 @@
 import type { Champion, Round, Snapshot } from './api/types';
+import { periodName } from './day';
 
-// The crown by a member's name for a day: yesterday's Closest to the Pin winner across every club.
-export const crownFor = (snap: Snapshot, playerId: string) =>
-  snap.crown?.ids.includes(playerId) ? ` <span class="crown" title="Yesterday's Closest to the Pin">👑</span>` : '';
+// The marks by a member's name: 👑 for the club's reigning champion (the last period closed; a title still being
+// played off doesn't count yet), 🎯 for yesterday's Closest to the Pin winner across every club.
+export function crownFor(snap: Snapshot, playerId: string) {
+  const last = snap.champions[0];
+  const champ = last && last.how !== 'playoff' && last.playerIds.includes(playerId);
+  return (
+    (champ ? ` <span class="crown" title="Club champion, ${periodName(last.month)}">👑</span>` : '') +
+    (snap.crown?.ids.includes(playerId) ? ` <span class="crown" title="Yesterday's Closest to the Pin">🎯</span>` : '')
+  );
+}
 
 export type Row = { playerId: string; best: Round | null; rounds: number; last: string | null; toPar: number; rank: number };
 

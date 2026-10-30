@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 30, 2026 (the board moves up, warms to the Caldera red, and freezes the score on phones). Pick up from here.
+Last updated Oct 30, 2026 (champion crowns and Reginald's word for the new champion; the Clubhouse opens on Members; mini golf closed for now). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Oct 30, 2026 (the board moves up, warms to the Caldera red, and fre
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #94 | 👑 now marks each club's reigning champion (Marc in Kellogg, Charles in The Clergy, Eli G and Brian in Boomtown); yesterday's Closest to the Pin winner gets a 🎯. Reginald's word for a new champion runs along the top of the home page for the two days after a title is won (one AI line per club per title, from the honours: score, margin, runner-up, rounds; about $0.05 a week for every club, within the existing 400-lines-a-day cap). The Clubhouse opens on Members and standings. Hollow Hills mini golf is closed for now (its course and code stay). The Caldera's countdown is a muted ember red. |
 | #93 | The board comes straight after the Play hero, with the Daily Shot, bar and practice tiles below it. On the Caldera it takes a softer version of the hero's red. On phones the name, total and to-par stay put while the holes scroll. |
 | #92 | A tidier home page: the early-drop banner and the separate "Now open" card are gone. The Play hero says "Now open" and how the last period ended ("October 2026 has closed. Marc takes the title at -6.") until you've played the new course. One Play button. |
 | #90 | Weekly Players at the top of the Committee Room: members who posted a round in the last 7 days (out of all members, Robbie left out), the change on a week ago, and a day-by-day trend line for the 7 days, month or all time. Refreshes every minute. |
@@ -34,6 +35,8 @@ Last updated Oct 30, 2026 (the board moves up, warms to the Caldera red, and fre
 - [x] The #82 SQL (`daily_crown`, `period_honors`), run Oct 29.
 - [x] The #87 playoff SQL, run Oct 29. Checked live: the `playoff_tries` table, all six playoff functions, and the snapshot, honours and Chronicle all read `period_champs`.
 - [x] The #90 SQL (`admin_trend`), run Oct 29.
+- [ ] Paste the #94 SQL in Supabase (lets Reginald keep the champion's word):
+  `alter table reginald_notes drop constraint if exists reginald_notes_kind_check; alter table reginald_notes add constraint reginald_notes_kind_check check (kind in ('daily', 'round', 'chronicle', 'design', 'champion'));`
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".

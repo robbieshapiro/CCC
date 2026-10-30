@@ -58,8 +58,8 @@ export async function bindDaily(day: string, crown?: DailyCrown | null) {
       ? `Best ${resultLabel(bestTry(state.mine))} · ${left} ${left === 1 ? 'try' : 'tries'} left`
       : `Best ${resultLabel(bestTry(state.mine))}${rank ? ` · ${ordinal(rank)} of ${state.players}` : ''}`;
   el.hidden = false;
-  // yesterday's winner wears the crown, across every club
-  const king = crown ? `<span class="tile-crown">👑 ${esc(crown.name)} · ${esc(resultLabel({ ft: crown.ft, holed: crown.holed, lost: false }))} yesterday</span>` : '';
+  // yesterday's winner, across every club
+  const king = crown ? `<span class="tile-crown">🎯 ${esc(crown.name)} · ${esc(resultLabel({ ft: crown.ft, holed: crown.holed, lost: false }))} yesterday</span>` : '';
   el.innerHTML = `<i>🎯</i><b>Closest to the Pin</b><span>${esc(status)}</span>${king}${state.streak ? `<em class="tile-badge">🔥 ${state.streak}</em>` : ''}`;
 }
 

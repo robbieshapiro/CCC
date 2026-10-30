@@ -30,7 +30,6 @@ export function barPane(snap: Snapshot) {
       </section>
       <div class="bar-games">
         <a class="bar-game" href="#/daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
-        <a class="bar-game spooky" href="#/bar/minigolf"><i>🎃</i><div><b>Hollow Hills Mini Golf</b><span>6 holes · this week</span></div><p data-mine="minigolf"></p><div data-board="minigolf"></div></a>
         <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings · this week</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game members" href="#/bar/members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
@@ -40,9 +39,9 @@ export function barPane(snap: Snapshot) {
 
 export async function fillBar(snap: Snapshot) {
   const s = requireSession();
-  const [daily, minigolf, drive, members, course] = await Promise.all([
+  // (Hollow Hills mini golf is closed for now: its course and code stay, ready to come back)
+  const [daily, drive, members, course] = await Promise.all([
     api.dailyState(s, snap.today).catch(() => null as DailyState | null),
-    api.barBoard(s, 'minigolf').catch(() => null as BarBoard | null),
     api.barBoard(s, 'drive').catch(() => null as BarBoard | null),
     api.barBoard(s, 'members').catch(() => null as BarBoard | null),
     api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => [] as MembersHole[]),
@@ -64,7 +63,7 @@ export async function fillBar(snap: Snapshot) {
     const best = bestTry(daily.mine);
     put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
   }
-  for (const [game, b] of [['minigolf', minigolf], ['drive', drive], ['members', members]] as [BarGame, BarBoard | null][]) {
+  for (const [game, b] of [['drive', drive], ['members', members]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
     put(game, b.mine === null ? 'Not played this week' : `You: ${scoreLabel(game, b.mine)}`, top3(b.board.map((r) => ({ name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
   }

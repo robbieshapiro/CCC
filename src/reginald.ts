@@ -7,6 +7,24 @@ import type { Course } from './golf3d/courses';
 import { requireSession } from './state';
 import { store } from './storage';
 
+// The champion's word for the club, for the two days after a title is won: one line per club, kept on the device
+export async function championWord(period: string): Promise<string | null> {
+  if (!useSupabase) return null;
+  const s = requireSession();
+  const key = `ccc-champ-${s.groupId}-${period}`;
+  const kept = store.get(key);
+  if (kept) return kept;
+  try {
+    const res = await fetch('/api/reginald', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: s.token, kind: 'champion' }) });
+    if (!res.ok) return null;
+    const { text } = (await res.json()) as { text: string | null };
+    if (text) store.set(key, text);
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function askReginald(kind: 'daily' | 'round', course: Course, today: string): Promise<string | null> {
   if (!useSupabase) return null;
   const s = requireSession();

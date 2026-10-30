@@ -1081,6 +1081,9 @@ create table if not exists reginald_notes (
 );
 alter table reginald_notes enable row level security;
 create index if not exists reginald_notes_recent on reginald_notes (created_at);
+-- the champion's word (one per club per title, kept under the champion's name) joined the kinds after the table was made
+alter table reginald_notes drop constraint if exists reginald_notes_kind_check;
+alter table reginald_notes add constraint reginald_notes_kind_check check (kind in ('daily', 'round', 'chronicle', 'design', 'champion'));
 
 -- The Clubhouse Chronicle: Reginald's weekly letter to each club, written by Claude (api/chronicle.ts) on Monday
 -- morning from the week just gone, and kept. Members read their club's editions; only the server writes them.
