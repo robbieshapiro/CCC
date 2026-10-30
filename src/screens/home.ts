@@ -76,6 +76,22 @@ async function bindHonours(snap: Snapshot) {
   el.hidden = false;
 }
 
+// On a phone the name, total and to-par stay put while the holes scroll under them: each frozen cell sticks at the
+// width of the frozen columns before it
+const FROZEN = 4;
+function freezeBoard() {
+  const table = document.querySelector<HTMLTableElement>('#board-club .scorecard');
+  if (!table) return;
+  const widths = [...(table.tHead?.rows[0].cells ?? [])].slice(0, FROZEN).map((c) => c.getBoundingClientRect().width);
+  for (const row of table.rows)
+    [...row.cells].slice(0, FROZEN).forEach((c, i) => {
+      c.classList.add('fz');
+      c.classList.toggle('fz-end', i === FROZEN - 1);
+      c.style.left = `${widths.slice(0, i).reduce((a, w) => a + w, 0)}px`;
+    });
+}
+window.addEventListener('resize', () => freezeBoard());
+
 export function home(snap: Snapshot) {
   const player = (id: string) => snap.players.find((p) => p.id === id);
   const course = courseFor(snap.month);
@@ -104,13 +120,13 @@ export function home(snap: Snapshot) {
     .map((r) => {
       const p = player(r.playerId)!;
       const cells = course.holes.map((h, i) => `<td class="num"><span class="sc ${r.best ? scoreClass(r.best.holes[i], h.par) : ''}">${r.best ? r.best.holes[i] : ''}</span></td>`).join('');
+      const score = (where: 'm' | 'd') => `<td class="num tot ${where}">${r.best ? r.best.total : ''}</td>
+        <td class="num topar ${where} ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>`;
       const feats = p.feats.map((f) => featById(f)?.icon ?? '').join('');
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
         <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${crownFor(snap, p.id)}${feats ? ` <small>${feats}</small>` : ''}<em>${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last!)}` : 'yet to play'}</em></span></a></td>
-        ${cells}
-        <td class="num tot">${r.best ? r.best.total : ''}</td>
-        <td class="num topar ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>
+        ${score('m')}${cells}${score('d')}
       </tr>`;
     })
     .join('');
@@ -143,14 +159,8 @@ export function home(snap: Snapshot) {
           <a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>
         </div>
       </section>
-      <div class="tiles">
-        ${dailyCard()}
-        <a class="tile" href="#/clubhouse/bar"><i>🎃</i><b>The bar</b><span>Mini golf · long drive</span></a>
-        <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
-        ${previewTile(snap.month)}
-      </div>
       ${honoursPane(snap)}
-      <section class="board">
+      <section class="board${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
         ${countdown(snap.month, course)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best round counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist" hidden>
@@ -158,13 +168,19 @@ export function home(snap: Snapshot) {
         </div>
         <div id="board-open" hidden></div>
         <div id="board-club"><div class="table-wrap"><table class="scorecard">
-          <thead><tr><th></th><th>Member</th>${head}<th class="num">Tot</th><th class="num">±</th></tr></thead>
+          <thead><tr><th></th><th>Member</th><th class="num m">Tot</th><th class="num m">±</th>${head}<th class="num d">Tot</th><th class="num d">±</th></tr></thead>
           <tbody>
-            <tr class="par"><td></td><td>Par</td>${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num">${course.par}</td><td></td></tr>
+            <tr class="par"><td></td><td>Par</td><td class="num m">${course.par}</td><td class="m"></td>${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num d">${course.par}</td><td class="d"></td></tr>
             ${body}
           </tbody>
         </table></div></div>
       </section>
+      <div class="tiles">
+        ${dailyCard()}
+        <a class="tile" href="#/clubhouse/bar"><i>🎃</i><b>The bar</b><span>Mini golf · long drive</span></a>
+        <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
+        ${previewTile(snap.month)}
+      </div>
       <section class="plaque">
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
@@ -173,6 +189,7 @@ export function home(snap: Snapshot) {
     </main>`);
 
   tickCountdown();
+  freezeBoard();
   void bindOpen(snap, line, host);
   // today's line, written for you by Reginald (Claude): it takes over from the scripted one when it arrives
   if (!host)
