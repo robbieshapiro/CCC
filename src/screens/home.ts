@@ -9,6 +9,7 @@ import { bindOpen } from './open';
 import { askReginald } from '../reginald';
 import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
+import { bindPlayoff, playoffCard } from './playoff';
 import { board, crownFor, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { store } from '../storage';
@@ -33,7 +34,11 @@ function newsCard(snap: Snapshot, course: Course) {
   if (!newPeriod(snap)) return '';
   const last = snap.champions[0];
   const names = last ? last.playerIds.map((id) => snap.players.find((p) => p.id === id)?.name ?? 'a former member') : [];
-  const crowned = last ? `<p>${esc(periodName(last.month))} has closed. <b>${names.map(esc).join(' & ')}</b> ${names.length > 1 ? 'share' : 'takes'} the title at <b>${toParLabel(last.total - last.par)}</b>.</p>` : '';
+  const crowned = !last
+    ? ''
+    : last.how === 'playoff'
+      ? `<p>${esc(periodName(last.month))} has closed in a tie at <b>${toParLabel(last.total - last.par)}</b>. <b>${names.map(esc).join(' and ')}</b> play off today for the title.</p>`
+      : `<p>${esc(periodName(last.month))} has closed. <b>${names.map(esc).join(' & ')}</b> ${names.length > 1 ? 'share' : last.how === 'playoff-won' ? 'wins a playoff for' : 'takes'} the title at <b>${toParLabel(last.total - last.par)}</b>.</p>`;
   return `<section class="news${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}" id="news">
     <p class="eyebrow">Now open · ${esc(periodName(snap.month))}</p>
     <h2>${esc(course.name)}</h2>
@@ -74,7 +79,7 @@ async function bindHonours(snap: Snapshot) {
   const open = opens.find((o) => o.month === last.month);
   const per = span(last.month);
   const rows: [string, string, string][] = [
-    ['🏆', 'Champion', h.champions.length ? `${names(h.champions.map((c) => c.name))} · ${toParLabel(h.champions[0].toPar)}` : ''],
+    ['🏆', 'Champion', !h.champions.length ? '' : h.champions[0].how === 'playoff' ? `${h.champions.map((c) => esc(c.name)).join(' v ')} · playoff today` : `${names(h.champions.map((c) => c.name))} · ${toParLabel(h.champions[0].toPar)}${h.champions[0].how === 'playoff-won' ? ', won in a playoff' : ''}`],
     ['🌍', 'The Open', open ? `${names(open.names)} · ${toParLabel(open.total - open.par)}` : ''],
     ['🥈', 'Runner-up', h.runnersUp.length ? `${names(h.runnersUp.map((c) => c.name))} · ${toParLabel(h.runnersUp[0].toPar)}` : ''],
     ['🔁', 'Iron Man', h.mostRounds ? `${names(h.mostRounds.names)} · ${h.mostRounds.count} rounds` : ''],
@@ -129,7 +134,11 @@ export function home(snap: Snapshot) {
   const plaque = snap.champions.length
     ? snap.champions
         .slice(0, 6)
-        .map((c) => `<li><span>${periodName(c.month)}</span><b>${c.playerIds.map((id) => `<a href="#/member/${id}">${esc(player(id)?.name ?? '?')}</a>`).join(' & ')}</b><em>${toParLabel(c.total - c.par)}</em></li>`)
+        .map((c) => {
+          const who = c.playerIds.map((id) => `<a href="#/member/${id}">${esc(player(id)?.name ?? '?')}</a>`);
+          const b = c.how === 'playoff' ? `Playoff: ${who.join(' v ')}` : who.join(' & ');
+          return `<li><span>${periodName(c.month)}</span><b>${b}</b><em>${toParLabel(c.total - c.par)}${c.how === 'playoff-won' ? ' · won in a playoff' : ''}</em></li>`;
+        })
         .join('')
     : `<li class="empty">The first name goes up when the ${span(snap.month)} closes.</li>`;
 
@@ -139,6 +148,7 @@ export function home(snap: Snapshot) {
     ${header(snap.groupName, 'play')}
     <main>
       ${scheduleBanner(snap)}
+      ${playoffCard()}
       ${newsCard(snap, course)}
       ${noticesStrip()}
       <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
@@ -193,6 +203,7 @@ export function home(snap: Snapshot) {
   void bindNotices();
   void bindDaily(snap.today, snap.crown);
   void bindHonours(snap);
+  void bindPlayoff();
   document.querySelectorAll<HTMLElement>('[data-seen]').forEach((b) =>
     b.addEventListener('click', () => {
       store.set(SEEN_PERIOD, snap.month);

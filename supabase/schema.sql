@@ -139,6 +139,109 @@ language sql stable security definer set search_path = public, extensions as $$
   ) b
 $$;
 
+-- The playoff: when members tie for a club's title, the Sunday after the week closes (playoff day) each plays one
+-- hole, once, then one shot at the pin. Lowest score wins, then a holed shot or the nearest; a no-show forfeits; if
+-- nobody plays, the title is shared. Old monthly periods had no playoffs.
+create table if not exists playoff_tries (
+  group_id uuid not null references groups on delete cascade,
+  period text not null,
+  player_id uuid not null references players on delete cascade,
+  strokes int check (strokes between 1 and 12), -- null until the hole is finished (a started hole that never finishes counts as a no-show)
+  shot boolean not null default false,
+  ft numeric(7, 1) check (ft is null or ft between 0 and 9999),
+  holed boolean not null default false,
+  lost boolean not null default false,
+  started_at timestamptz not null default now(),
+  primary key (group_id, period, player_id)
+);
+alter table playoff_tries enable row level security;
+
+-- the day a period's playoff is played: the Sunday the next week opens
+create or replace function playoff_day(p_period text) returns date
+language sql immutable as $$
+  select case when p_period = '2026-10-30' then date '2026-11-08' when length(p_period) = 10 then p_period::date + 7 else null end
+$$;
+
+-- Each closed period's champions at a club, and how: 'won' outright, 'playoff' (being played today), 'playoff-won',
+-- or 'shared' (tied, and nobody played the playoff; or a tie from the monthly days)
+create or replace function period_champs(p_group uuid)
+returns table (month text, player_id uuid, total int, par int, how text)
+language sql stable security definer set search_path = public, extensions as $$
+  with lead as (
+    select b.month, b.player_id, b.total, b.par, count(*) over (partition by b.month) as n
+    from month_bests(p_group) b where b.r = 1 and b.month < game_month()
+  ), t as (
+    select l.*, playoff_day(l.month) as pday, pt.strokes, pt.ft, pt.holed, pt.lost
+    from lead l left join playoff_tries pt on pt.group_id = p_group and pt.period = l.month and pt.player_id = l.player_id
+  ), ranked as (
+    select t.*,
+      rank() over (partition by t.month order by t.strokes asc nulls last, t.holed desc, case when t.lost then null else t.ft end asc nulls last) as pr,
+      bool_or(t.strokes is not null) over (partition by t.month) as anyone
+    from t
+  )
+  select month, player_id, total, par,
+    case when n = 1 then 'won'
+      when pday is null or not anyone and game_today() > pday then 'shared'
+      when game_today() <= pday then 'playoff'
+      else 'playoff-won' end
+  from ranked
+  where n = 1 or pday is null or game_today() <= pday or not anyone or pr = 1
+$$;
+
+-- The playoff open at your club today, if any: who's in it, and how each has done so far
+create or replace function playoff_state(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); per text;
+begin
+  select c.month into per from period_champs(me.group_id) c where c.how = 'playoff' order by c.month desc limit 1;
+  if per is null then return null; end if;
+  return json_build_object(
+    'period', per,
+    'mine', exists (select 1 from period_champs(me.group_id) c where c.month = per and c.player_id = me.id),
+    'players', (select json_agg(json_build_object('id', p.id, 'name', p.name, 'started', pt.player_id is not null, 'strokes', pt.strokes,
+        'shot', pt.shot, 'ft', pt.ft, 'holed', pt.holed, 'lost', pt.lost) order by p.name)
+      from period_champs(me.group_id) c join players p on p.id = c.player_id
+      left join playoff_tries pt on pt.group_id = me.group_id and pt.period = per and pt.player_id = c.player_id
+      where c.month = per)
+  );
+end $$;
+
+-- Your one go: start the hole (once), post its score (once), then post your shot at the pin (once)
+create or replace function playoff_start(p_token uuid) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); per text;
+begin
+  select c.month into per from period_champs(me.group_id) c where c.how = 'playoff' and c.player_id = me.id order by c.month desc limit 1;
+  if per is null then raise exception 'There''s no playoff for you today.'; end if;
+  insert into playoff_tries (group_id, period, player_id) values (me.group_id, per, me.id);
+exception when unique_violation then
+  raise exception 'You''ve had your go at the playoff.';
+end $$;
+
+create or replace function playoff_finish(p_token uuid, p_strokes int) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  update playoff_tries set strokes = greatest(1, least(12, p_strokes))
+  where group_id = me.group_id and player_id = me.id and strokes is null and playoff_day(period) = game_today();
+end $$;
+
+create or replace function playoff_shot(p_token uuid, p_ft numeric, p_holed boolean, p_lost boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  update playoff_tries set shot = true, holed = p_holed,
+    lost = p_lost and not p_holed,
+    ft = case when p_holed then 0 when p_lost then null else round(least(greatest(p_ft, 0), 9999), 1) end
+  where group_id = me.group_id and player_id = me.id and strokes is not null and not shot and playoff_day(period) = game_today();
+end $$;
+
+grant execute on function playoff_state(uuid) to anon;
+grant execute on function playoff_start(uuid) to anon;
+grant execute on function playoff_finish(uuid, int) to anon;
+grant execute on function playoff_shot(uuid, numeric, boolean, boolean) to anon;
+revoke all on function period_champs(uuid) from public, anon, authenticated;
+
 -- Hosts: someone can run a club without playing in it (the admin runs several clubs and belongs to one). A
 -- host-only membership is never on that club's board; their play counts at home, the same name and PIN in the club
 -- they belong to.
@@ -390,12 +493,13 @@ begin
     'players', coalesce((
       select json_agg(json_build_object(
         'id', pl.id, 'name', pl.name, 'avatar', pl.avatar, 'joined', pl.created_at, 'host', pl.host_only,
-        -- a win is the lowest best round of a finished month; ties all win
-        'wins', (select count(*) from month_bests(me.group_id) b where b.player_id = pl.id and b.r = 1 and b.month < m),
+        -- a win is the lowest best round of a finished period (ties share it, unless a playoff settles it; one being
+        -- played today doesn't count yet)
+        'wins', (select count(*) from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff'),
         'career', (select json_build_object('rounds', count(*), 'best', min(total - par), 'avg', round(avg(total - par), 1)) from rounds where player_id = pl.id),
         'feats', (select coalesce(json_agg(distinct f), '[]') from (
             select unnest(feats) f from rounds where player_id = pl.id
-            union select 'champion' where exists (select 1 from month_bests(me.group_id) b where b.player_id = pl.id and b.r = 1 and b.month < m)
+            union select 'champion' where exists (select 1 from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff')
           ) fs)
       ) order by pl.created_at)
       -- the club's members, and you; someone who only runs the club isn't on its board
@@ -408,8 +512,8 @@ begin
     ), '[]'),
     'champions', coalesce((
       select json_agg(c order by c.month desc) from (
-        select b.month, json_agg(b.player_id) as "playerIds", min(b.total) as total, min(b.par) as par
-        from month_bests(me.group_id) b where b.r = 1 and b.month < m group by b.month
+        select c.month, json_agg(c.player_id) as "playerIds", min(c.total) as total, min(c.par) as par, min(c.how) as how
+        from period_champs(me.group_id) c group by c.month
       ) c
     ), '[]')
   );
@@ -644,11 +748,18 @@ begin
       from r group by name
     ), ranked as (
       select *, dense_rank() over (order by best) as dr from per
+    ), champs as (
+      -- a playoff settles a tie: its winner is champion and whoever lost it is runner-up
+      select p.name, c.how from period_champs(me.group_id) c join players p on p.id = c.player_id where c.month = p_period
+    ), lost as (
+      select name, best from ranked where dr = 1 and name not in (select name from champs)
     )
     select json_build_object(
       'period', p_period,
-      'champions', (select coalesce(json_agg(json_build_object('name', name, 'toPar', best) order by name), '[]') from ranked where dr = 1),
-      'runnersUp', (select coalesce(json_agg(json_build_object('name', name, 'toPar', best) order by name), '[]') from ranked where dr = 2),
+      'champions', (select coalesce(json_agg(json_build_object('name', r.name, 'toPar', r.best, 'how', c.how) order by r.name), '[]')
+        from ranked r join champs c on c.name = r.name),
+      'runnersUp', (select coalesce(json_agg(json_build_object('name', name, 'toPar', best) order by name), '[]')
+        from (select name, best from lost union all select name, best from ranked where dr = 2 and not exists (select 1 from lost)) u),
       'mostRounds', (select json_build_object('names', json_agg(name order by name), 'count', max(n)) from per where n = (select max(n) from per) having count(*) > 0),
       'aces', (select coalesce(json_agg(json_build_object('name', name, 'count', aces) order by aces desc, name), '[]') from per where aces > 0),
       'lowestAverage', (select json_build_object('names', json_agg(name order by name), 'avg', min(av)) from per where n >= 5 and av = (select min(av) from per where n >= 5) having count(*) > 0),
@@ -996,8 +1107,8 @@ language sql stable security definer set search_path = public, extensions as $$
       where b.game = 'minigolf' and b.created_at > now() - interval '7 days' group by p.name order by max(b.score) desc limit 1),
     'long_drive_best', (select json_build_object('who', p.name, 'yards', max(b.score)) from bar_scores b join members p on p.id = b.player_id
       where b.game = 'drive' and b.created_at > now() - interval '7 days' group by p.name order by max(b.score) desc limit 1),
-    'past_champions', (select coalesce(json_agg(json_build_object('month', b.month, 'who', p.name) order by b.month desc), '[]')
-      from month_bests(p_group) b join members p on p.id = b.player_id where b.r = 1 and b.month < (select month from m))
+    'past_champions', (select coalesce(json_agg(json_build_object('month', c.month, 'who', p.name, 'how', c.how) order by c.month desc), '[]')
+      from period_champs(p_group) c join members p on p.id = c.player_id)
   )
 $$;
 

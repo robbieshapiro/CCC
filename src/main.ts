@@ -9,6 +9,7 @@ import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
 import { barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
+import { playoff } from './screens/playoff';
 import { clubhouse, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
@@ -59,6 +60,7 @@ async function router() {
     }
     if (page === 'round') return round(s);
     if (page === 'daily') return dailyRound(s);
+    if (page === 'playoff') return playoff(s);
     if (page === 'bar') return arg === 'minigolf' || arg === 'putting' ? barRound(s, 'minigolf') : arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     if (page === 'clubhouse') return clubhouse(s, isClubhouseTab(arg) ? arg : 'bar', extra);
