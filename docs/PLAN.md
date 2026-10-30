@@ -35,8 +35,7 @@ Last updated Oct 30, 2026 (champion crowns and Reginald's word for the new champ
 - [x] The #82 SQL (`daily_crown`, `period_honors`), run Oct 29.
 - [x] The #87 playoff SQL, run Oct 29. Checked live: the `playoff_tries` table, all six playoff functions, and the snapshot, honours and Chronicle all read `period_champs`.
 - [x] The #90 SQL (`admin_trend`), run Oct 29.
-- [ ] Paste the #94 SQL in Supabase (lets Reginald keep the champion's word):
-  `alter table reginald_notes drop constraint if exists reginald_notes_kind_check; alter table reginald_notes add constraint reginald_notes_kind_check check (kind in ('daily', 'round', 'chronicle', 'design', 'champion'));`
+- [x] The #94 SQL (the `champion` note kind), run Oct 30.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
