@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 30, 2026 (no more long waits for a ball to stop; lively rock on the Caldera). Pick up from here.
+Last updated Oct 30, 2026 (playoff SQL live; no more long waits for a ball to stop; lively rock on the Caldera). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -29,7 +29,7 @@ Last updated Oct 30, 2026 (no more long waits for a ball to stop; lively rock on
 
 - [x] The #80 schedule SQL, run Oct 29: October closed at midnight going into Oct 30 and the Caldera challenge opened.
 - [x] The #82 SQL (`daily_crown`, `period_honors`), run Oct 29.
-- [ ] Paste the #87 playoff SQL in Supabase (the `playoff_tries` table and the playoff functions; it also updates `get_snapshot`, `period_honors` and `chronicle_facts`). Needed before Sun Nov 8, when the Caldera challenge could end in a tie.
+- [x] The #87 playoff SQL, run Oct 29. Checked live: the `playoff_tries` table, all six playoff functions, and the snapshot, honours and Chronicle all read `period_champs`.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
