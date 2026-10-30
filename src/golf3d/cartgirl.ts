@@ -26,6 +26,8 @@ export class CartGirl {
   private pending: (() => void) | null = null;
   private waved = false; // sent on with a "no thanks" before the cart had stopped
   private fill = new THREE.PointLight('#fff1e2', 0, 26, 1.4);
+  // stepping off the cart: from her seat to her spot by the tee, then turned to face you
+  private step: { from: THREE.Vector3; to: THREE.Vector3; face: number; t: number } | null = null;
 
   // shots: the late visit, with Fireball on the tray as well
   constructor(private scene: THREE.Scene, private hole: Hole, private onOrder: (d: Drink | null) => void, shots = false) {
@@ -95,34 +97,38 @@ export class CartGirl {
         card.hidden = true;
         card.innerHTML = '';
         sfx('tick');
-        this.crew.setPose(d ? 'laugh' : 'wave');
-        // a moment to hand it over, then off
-        window.setTimeout(() => this.leave(), d && this.phase === 'stop' ? 900 : 0);
+        // a wink as she hands it over (then a laugh), or a wave if you pass
+        this.crew.setPose(d ? 'wink' : 'wave');
+        window.setTimeout(() => this.leave(), d && this.phase === 'stop' ? 1400 : 0);
         this.onOrder(d);
       };
     });
     this.pending = () => this.stepOff();
   }
 
-  // Off the cart on the side facing the tee, square to you.
+  // Off the cart on the side facing the tee: she walks round to her spot, turns square to you and flips her hair.
   private stepOff() {
     if (this.waved) return;
     this.serving = true;
     this.group.updateMatrixWorld(true);
     const local = this.group.worldToLocal(this.tee.clone());
     const sx = local.x >= 0 ? 1 : -1;
-    this.crew.group.position.set(3.6 * sx, 0, 0.6);
-    const d = this.crew.group.getWorldPosition(new THREE.Vector3());
-    const face = this.tee.clone().sub(d);
-    this.crew.group.rotation.y = Math.atan2(face.x, face.z) - this.group.rotation.y;
+    // down from her seat on the side facing you, then a few steps forward along the cart, clear of it
+    const from = new THREE.Vector3(2.9 * sx, 0, 1.4);
+    const to = new THREE.Vector3(4.2 * sx, 0, -1.2);
+    // where she'll face once she's there: you, on the tee
+    const there = this.group.localToWorld(to.clone());
+    const face = this.tee.clone().sub(there);
+    this.step = { from, to, face: Math.atan2(face.x, face.z) - this.group.rotation.y, t: 0 };
     // a soft fill from over your shoulder so the face isn't in shadow
-    this.fill.position.copy(d).addScaledVector(face.setY(0).normalize(), 7).add(new THREE.Vector3(0, 7, 0));
+    this.fill.position.copy(there).addScaledVector(face.setY(0).normalize(), 7).add(new THREE.Vector3(0, 7, 0));
     this.fill.intensity = 18;
-    this.crew.setPose('wave');
+    this.crew.setPose('walk');
   }
 
   private leave() {
     this.visited = true;
+    this.step = null;
     this.serving = false;
     this.fill.intensity = 0;
     this.crew.setPose('wave');
@@ -136,6 +142,22 @@ export class CartGirl {
 
   update(dt: number) {
     this.crew.update(dt);
+    if (this.step) {
+      // about a second's walk, heading where she's going, then the turn to you and the flip
+      const st = this.step;
+      st.t += dt;
+      const k = Math.min(1, st.t / 1.1);
+      this.crew.group.position.lerpVectors(st.from, st.to, k * k * (3 - 2 * k));
+      const dir = st.to.clone().sub(st.from);
+      const heading = Math.atan2(dir.x, dir.z);
+      const turn = Math.max(0, (st.t - 0.8) / 0.4);
+      this.crew.group.rotation.y = heading + (st.face - heading) * Math.min(1, turn);
+      if (st.t >= 1.2) {
+        this.crew.group.rotation.y = st.face;
+        this.step = null;
+        if (!this.waved) this.crew.setPose('flip');
+      }
+    }
     if (this.phase === 'idle' || this.phase === 'stop') return;
     this.t += dt;
     const k = Math.min(1, this.t / (this.phase === 'in' ? 2.4 : 3));
