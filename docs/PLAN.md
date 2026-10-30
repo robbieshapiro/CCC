@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 29, 2026 (Caldera challenge, Sunday weeks, honours, the crown, an admin-only Chronicle). Pick up from here.
+Last updated Oct 30, 2026 (all six Caldera holes; the playoff planned). Pick up from here.
 
 ## Shipped (all live on Vercel)
 
@@ -75,7 +75,13 @@ The problem with the new members: once your best round is in, there's no reason 
 
 ### Later
 
-- **A sudden-death playoff** when two or more tie at the top of a week. To be planned.
+- **A sudden-death playoff for the club title** (decided Oct 30; not built yet):
+  - **When:** two or more members of a club tie for the lowest best round when a week closes (Saturday midnight ET). First place only: runner-up and the other honours stay shared. Not for the Open.
+  - **Playoff day, Sunday:** each tied player gets a gold "Playoff" card at the top of the home page and plays one hole from the week that just closed (the course's signature hole, chosen ahead of time per course), one attempt, no restarts. Lowest score wins.
+  - **Still tied:** everyone still level hits one closest-to-the-pin shot from that hole's tee; nearest wins (the Daily Shot's rules).
+  - **Window:** 24 hours, to midnight ET Sunday. A no-show forfeits; if nobody plays, they share the title as now.
+  - **Meanwhile:** the plaque reads "Playoff: Marc v Robbie" and Reginald plays it up; once settled the winner goes up as "won in a playoff", and the title counts for gear.
+  - **Build (one PR, one SQL paste):** `playoffs` and `playoff_tries` tables; the champion rule respects a settled playoff; the playoff card and a one-hole, one-attempt round (reusing the round engine and the Daily Shot's single-try rules); plaque and honours text; an Admin view to see and, if needed, close one. First week it could matter: the Caldera challenge, closing Sat Nov 7.
 
 ## Next up (ideas, not started)
 
