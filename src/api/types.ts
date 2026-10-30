@@ -105,6 +105,8 @@ export type OpenRow = { playerId: string; name: string; club: string; mine: bool
 export type OpenChampion = { month: string; names: string[]; total: number; par: number };
 // The admin tab: every club the admin runs, on one page.
 export type AdminWindow = 'week' | 'month' | 'all';
+// Weekly Players by day: members who posted a round in the 7 days to that day, out of the members there were then
+export type TrendDay = { day: string; players: number; members: number };
 export type AdminOverview = {
   clubs: { id: string; name: string; members: number; active: number; rounds: number; practice: number; newMembers: number }[];
   members: { club: string; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; best: number | null; practice: number; lockers: number }[];
@@ -169,6 +171,7 @@ export interface Api {
   openChampions(session: Session): Promise<OpenChampion[]>;
   dailyCrown(session: Session): Promise<DailyCrown | null>;
   periodHonors(session: Session, period: string): Promise<Honors>;
+  adminTrend(session: Session): Promise<TrendDay[]>;
   // the playoff: one hole, once, then one shot at the pin
   playoffState(session: Session): Promise<PlayoffState | null>;
   playoffStart(session: Session): Promise<void>;
