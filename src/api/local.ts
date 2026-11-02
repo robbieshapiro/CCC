@@ -564,6 +564,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         best: rounds.length ? Math.min(...rounds.map((r) => r.total - r.par)) : null,
         practice: practice.length,
         lockers: days.reduce((a, x) => a + x.lockers, 0),
+        unfinished: 0, // local mode doesn't keep round starts
       };
     });
     const who = (id: string) => db.players.find((p) => p.id === id);

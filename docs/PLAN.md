@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 2, 2026 (Admin tracks rounds started but not finished).
+Last updated Nov 2, 2026 (unfinished rounds in the Admin members table and activity).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 2, 2026 (Admin tracks rounds started but not finished).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #100 | Admin's members table gets an Unfinished column (rounds started and left unfinished in the window), sortable like every column (tap a header, tap again to flip); the activity feed shows "Marc started a round on the Caldera but didn't finish (stopped on hole 4)". |
 | #98 | Admin's Unfinished rounds card: every counted round now logs its start and the furthest hole reached, so the Committee sees started vs finished, the finish rate, the holes where people stop most, who, and the latest rounds left unfinished. Follows the 7 days / Month / All time switch. Counting starts when it ships. |
 | #97 | The cart crew reshaped: narrower shoulders and an hourglass figure (slim waist, a shaped bust, hips in proportion), slender arms with soft shoulders and elbows, a hand that rests naturally on her hip, slimmer legs and neck, a smooth face with a softer chin and bigger eyes, gentler blush, and a collar band on the polo. Long hair worn down is now one flowing sheet down her back, framing her face, with a section falling over the front of each shoulder. |
 | #96 | The Clubhouse members table shows this week (best, rounds) beside all time (rounds, best, average, titles), so a new week never makes it look like history was wiped. Members yet to play this week are listed by all-time rounds. |
@@ -40,6 +41,7 @@ Last updated Nov 2, 2026 (Admin tracks rounds started but not finished).
 - [x] The #90 SQL (`admin_trend`), run Oct 29.
 - [x] The #94 SQL (the `champion` note kind), run Oct 30.
 - [x] The #98 SQL (`round_starts`), run Nov 2.
+- [ ] Paste the #100 SQL in Supabase (the updated `admin_overview`).
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
