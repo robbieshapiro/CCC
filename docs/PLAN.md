@@ -41,7 +41,7 @@ Last updated Nov 2, 2026 (unfinished rounds in the Admin members table and activ
 - [x] The #90 SQL (`admin_trend`), run Oct 29.
 - [x] The #94 SQL (the `champion` note kind), run Oct 30.
 - [x] The #98 SQL (`round_starts`), run Nov 2.
-- [ ] Paste the #100 SQL in Supabase (the updated `admin_overview`).
+- [x] The #100 SQL (`admin_overview` with unfinished rounds), run Nov 2.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
