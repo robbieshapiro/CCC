@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Oct 30, 2026 (the cart crew reshaped: slimmer, curvier, natural arms). Pick up from here.
+Last updated Nov 2, 2026 (Admin tracks rounds started but not finished).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Oct 30, 2026 (the cart crew reshaped: slimmer, curvier, natural arm
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #98 | Admin's Unfinished rounds card: every counted round now logs its start and the furthest hole reached, so the Committee sees started vs finished, the finish rate, the holes where people stop most, who, and the latest rounds left unfinished. Follows the 7 days / Month / All time switch. Counting starts when it ships. |
 | #97 | The cart crew reshaped: narrower shoulders and an hourglass figure (slim waist, a shaped bust, hips in proportion), slender arms with soft shoulders and elbows, a hand that rests naturally on her hip, slimmer legs and neck, a smooth face with a softer chin and bigger eyes, gentler blush, and a collar band on the polo. Long hair worn down is now one flowing sheet down her back, framing her face, with a section falling over the front of each shoulder. |
 | #96 | The Clubhouse members table shows this week (best, rounds) beside all time (rounds, best, average, titles), so a new week never makes it look like history was wiped. Members yet to play this week are listed by all-time rounds. |
 | #94 | 👑 now marks each club's reigning champion (Marc in Kellogg, Charles in The Clergy, Eli G and Brian in Boomtown); yesterday's Closest to the Pin winner gets a 🎯. Reginald's word for a new champion runs along the top of the home page for the two days after a title is won (one AI line per club per title, from the honours: score, margin, runner-up, rounds; about $0.05 a week for every club, within the existing 400-lines-a-day cap). The Clubhouse opens on Members and standings. Hollow Hills mini golf is closed for now (its course and code stay). The Caldera's countdown is a muted ember red. |
@@ -38,6 +39,7 @@ Last updated Oct 30, 2026 (the cart crew reshaped: slimmer, curvier, natural arm
 - [x] The #87 playoff SQL, run Oct 29. Checked live: the `playoff_tries` table, all six playoff functions, and the snapshot, honours and Chronicle all read `period_champs`.
 - [x] The #90 SQL (`admin_trend`), run Oct 29.
 - [x] The #94 SQL (the `champion` note kind), run Oct 30.
+- [ ] Paste the #98 SQL in Supabase (the `round_starts` table and three functions) so rounds get logged.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
