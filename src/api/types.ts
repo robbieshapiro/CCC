@@ -118,8 +118,8 @@ export type RoundStarts = {
 export type TrendDay = { day: string; players: number; members: number };
 export type AdminOverview = {
   clubs: { id: string; name: string; members: number; active: number; rounds: number; practice: number; newMembers: number }[];
-  members: { club: string; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; best: number | null; practice: number; lockers: number }[];
-  feed: { at: string; kind: 'round' | 'practice' | 'join' | 'feedback'; club: string; name: string; course: string | null; total: number | null; par: number | null; what: string | null; shots: number | null }[];
+  members: { club: string; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; unfinished: number; best: number | null; practice: number; lockers: number }[];
+  feed: { at: string; kind: 'round' | 'quit' | 'practice' | 'join' | 'feedback'; club: string; name: string; course: string | null; total: number | null; par: number | null; what: string | null; shots: number | null }[];
   feedback: { id: number; club: string; from: string | null; body: string; context: string | null; createdAt: string }[];
   invites: { id: string; club: string; name: string; code: string; createdAt: string }[];
 };

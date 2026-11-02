@@ -25,13 +25,14 @@ const WINDOWS: { id: AdminWindow; label: string }[] = [
 const WINDOW_KEY = 'ccc-admin-window';
 
 type Members = AdminOverview['members'];
-type SortKey = 'lastSeen' | 'name' | 'club' | 'days' | 'rounds' | 'best' | 'practice' | 'lockers';
+type SortKey = 'lastSeen' | 'name' | 'club' | 'days' | 'rounds' | 'unfinished' | 'best' | 'practice' | 'lockers';
 const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: 'name', label: 'Member' },
   { key: 'club', label: 'Club' },
   { key: 'lastSeen', label: 'Last in' },
   { key: 'days', label: 'Days', num: true },
   { key: 'rounds', label: 'Rounds', num: true },
+  { key: 'unfinished', label: 'Unfinished', num: true },
   { key: 'best', label: 'Best', num: true },
   { key: 'practice', label: 'Practice', num: true },
   { key: 'lockers', label: 'Lockers', num: true },
@@ -505,7 +506,7 @@ function memberTable(all: Members) {
     <tbody>${rows
       .map(
         (m) =>
-          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${esc(m.name)}</b></td><td><small>${esc(m.club)}</small></td><td><small>${ago(m.lastSeen)}</small></td><td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td><td class="num">${m.lockers}</td></tr>`,
+          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${esc(m.name)}</b></td><td><small>${esc(m.club)}</small></td><td><small>${ago(m.lastSeen)}</small></td><td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num${m.unfinished ? ' warn' : ''}">${m.unfinished}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td><td class="num">${m.lockers}</td></tr>`,
       )
       .join('')}</tbody></table></div>`;
 }
@@ -533,10 +534,11 @@ function feed(d: AdminOverview, many: boolean) {
   const line = (e: AdminOverview['feed'][number]) => {
     if (e.kind === 'round') return `posted ${e.total} (${toParLabel((e.total ?? 0) - (e.par ?? 0))}) on ${esc(courseById(e.course ?? '')?.name ?? e.course ?? 'a course')}`;
     if (e.kind === 'practice') return `${PRACTICE[e.what ?? ''] ?? 'practised'}${e.shots ? ` · ${e.shots} shots` : ''}`;
+    if (e.kind === 'quit') return `started a round on ${esc(courseById(e.course ?? '')?.name ?? e.course ?? 'a course')} but didn't finish${e.shots ? ` (stopped on hole ${e.shots})` : ''}`;
     if (e.kind === 'join') return 'joined the club';
     return `sent feedback: “${esc(e.what ?? '')}”`;
   };
-  const icon = { round: '⛳', practice: '🎯', join: '👋', feedback: '✉️' };
+  const icon = { round: '⛳', quit: '🚪', practice: '🎯', join: '👋', feedback: '✉️' };
   return `<ul class="adm-feed">${d.feed.map((e) => `<li><span class="adm-ico">${icon[e.kind]}</span><div>${chip(e.club, many)}<b>${esc(e.name)}</b> ${line(e)}<small>${when(e.at)}</small></div></li>`).join('')}</ul>`;
 }
 

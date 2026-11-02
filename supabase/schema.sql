@@ -810,7 +810,9 @@ begin
         (select count(*) from rounds where player_id = m.id and created_at >= since) as rounds,
         (select min(total - par) from rounds where player_id = m.id and created_at >= since) as best,
         (select count(*) from practice_sessions where player_id = m.id and started_at >= since) as practice,
-        (select coalesce(sum(lockers), 0) from member_days where player_id = m.id and day >= (since at time zone 'America/New_York')::date) as lockers
+        (select coalesce(sum(lockers), 0) from member_days where player_id = m.id and day >= (since at time zone 'America/New_York')::date) as lockers,
+        -- rounds started and left unfinished (one started in the last two hours may still be going)
+        (select count(*) from round_starts where player_id = m.id and started_at >= since and not finished and started_at < now() - interval '2 hours') as unfinished
       from m
     ),
     feed as (
@@ -823,6 +825,11 @@ begin
         union all
         select p.created_at, 'join', g.name, p.name, null, null, null, null, null
           from players p join g on g.id = p.group_id where p.role <> 'admin'
+        union all
+        -- a round started and not finished (shots: the hole they got to)
+        select rs.started_at, 'quit', g.name, p.name, rs.course, null, null, null, rs.hole
+          from round_starts rs join players p on p.id = rs.player_id join g on g.id = rs.group_id
+          where p.role <> 'admin' and not rs.finished and rs.started_at < now() - interval '2 hours'
         union all
         select f.created_at, 'feedback', g.name, coalesce(p.name, 'A member'), null, null, null, left(f.body, 80), null
           from feedback f join g on g.id = f.group_id left join players p on p.id = f.player_id
@@ -839,7 +846,7 @@ begin
         ) order by g.name) from g), '[]'),
       'members', coalesce((select json_agg(json_build_object(
           'club', s.club, 'name', s.name, 'joined', s.created_at, 'lastSeen', s.last_seen, 'days', s.days,
-          'rounds', s.rounds, 'best', s.best, 'practice', s.practice, 'lockers', s.lockers
+          'rounds', s.rounds, 'unfinished', s.unfinished, 'best', s.best, 'practice', s.practice, 'lockers', s.lockers
         ) order by s.last_seen desc nulls last, s.name) from stats s), '[]'),
       'feed', coalesce((select json_agg(json_build_object(
           'at', e.at, 'kind', e.kind, 'club', e.club, 'name', e.name, 'course', e.course, 'total', e.total,
