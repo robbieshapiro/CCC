@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 2, 2026 (a restart counts as an unfinished round at once).
+Last updated Nov 2, 2026 (unfinished rounds folded into Admin's stats).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 2, 2026 (a restart counts as an unfinished round at once).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #104 | The Unfinished rounds card is gone from Admin: the count rides on the Rounds tile ("posted · 12 unfinished"), and stays in the members table's Unfinished column and the activity feed. |
 | #102 | A round counts as unfinished the moment the member starts another (a restart), not only after two hours, so mulligans on hole 1 show up in Admin and the activity feed straight away. |
 | #100 | Admin's members table gets an Unfinished column (rounds started and left unfinished in the window), sortable like every column (tap a header, tap again to flip); the activity feed shows "Marc started a round on the Caldera but didn't finish (stopped on hole 4)". |
 | #98 | Admin's Unfinished rounds card: every counted round now logs its start and the furthest hole reached, so the Committee sees started vs finished, the finish rate, the holes where people stop most, who, and the latest rounds left unfinished. Follows the 7 days / Month / All time switch. Counting starts when it ships. |

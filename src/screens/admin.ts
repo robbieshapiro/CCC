@@ -49,7 +49,6 @@ export function admin(snap: Snapshot) {
         <div class="seg" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
       </div>
       <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
-      <section class="adm-card" id="adm-starts" hidden></section>
       <section class="adm-card adm-do">
         <h2>To do</h2>
         <div id="adm-todo"><p class="muted">Loading…</p></div>
@@ -83,7 +82,6 @@ export function admin(snap: Snapshot) {
   void load();
   void loadHoles(snap);
   void loadTrend();
-  void loadStarts();
 }
 
 // Members' golf holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
@@ -317,40 +315,6 @@ function drawTrend() {
     <p class="trend-key"><i class="k-players"></i> played a round in the 7 days to that day <i class="k-members"></i> members</p>`;
 }
 
-// Rounds started and not finished, for the window picked: the finish rate, where people stop (by hole), who, and the
-// latest ones left unfinished. A round still going isn't counted as unfinished until they start another or two hours pass.
-async function loadStarts() {
-  const el = document.getElementById('adm-starts');
-  if (!el) return;
-  const d = await api.adminRoundStarts(requireSession(), state.window).catch(() => null);
-  if (!document.getElementById('adm-starts')) return;
-  if (!d) {
-    el.hidden = false;
-    el.innerHTML = `<h2>Unfinished rounds</h2><p class="muted">Shows up once its SQL has been run in Supabase.</p>`;
-    return;
-  }
-  const done = d.started - d.going;
-  const quit = done - d.finished;
-  const rate = done ? Math.round((d.finished / done) * 100) : null;
-  const holeName = (course: string, hole: number) => {
-    const c = courseById(course);
-    return `${esc(c?.name.replace(/ Course$/, '') ?? course)} · hole ${hole}${c?.holes[hole - 1] ? `, ${esc(c.holes[hole - 1].name)}` : ''}`;
-  };
-  const win = WINDOWS.find((w) => w.id === state.window)!.label.toLowerCase();
-  el.hidden = false;
-  el.innerHTML = `<div class="adm-head"><h2>Unfinished rounds</h2><span class="muted">${esc(win)}</span></div>
-    ${!d.started ? '<p class="muted">No rounds started yet in this window. Counting began when this went live.</p>' : `
-    <div class="adm-stats">
-      ${stat(d.started, 'Started', 'counted rounds')}
-      ${stat(d.finished, 'Finished', 'card posted')}
-      ${stat(quit, 'Not finished', d.going ? `${d.going} still going` : 'left mid-round')}
-      <div class="adm-stat"><b>${rate === null ? '–' : `${rate}%`}</b><span>Finish rate</span><small>of rounds done</small></div>
-    </div>
-    ${d.quitAt.length ? `<h3>Where they stop</h3><ul class="adm-list">${d.quitAt.slice(0, 6).map((q) => `<li><span>${holeName(q.course, q.hole)}</span><b>${q.count}</b></li>`).join('')}</ul>` : ''}
-    ${quit ? `<h3>Who</h3><ul class="adm-list">${d.members.filter((m) => m.started > m.finished).map((m) => `<li><span>${esc(m.name)} <small>${esc(m.club)}</small></span><b>${m.finished} of ${m.started} finished</b></li>`).join('')}</ul>` : ''}
-    ${d.recent.length ? `<h3>Latest left unfinished</h3><ul class="adm-list">${d.recent.map((r) => `<li><span>${esc(r.name)} <small>${holeName(r.course, r.hole)}</small></span><b>${ago(r.at)}</b></li>`).join('')}</ul>` : ''}`}`;
-}
-
 async function load() {
   const saved = store.get(WINDOW_KEY) as AdminWindow | null;
   state = {
@@ -362,10 +326,7 @@ async function load() {
     b.classList.toggle('on', b.dataset.window === state.window);
     b.onclick = () => {
       store.set(WINDOW_KEY, b.dataset.window!);
-      void load().then(() => {
-        drawTrend();
-        void loadStarts();
-      });
+      void load().then(drawTrend);
     };
   });
   const body = document.getElementById('adm-body');
@@ -390,6 +351,8 @@ function draw() {
   const sum = (k: 'members' | 'active' | 'rounds' | 'practice') => d.clubs.reduce((a, c) => a + c[k], 0);
   const many = d.clubs.length > 1;
   const win = WINDOWS.find((w) => w.id === state.window)!.label.toLowerCase();
+  // rounds started and left unfinished, across the members shown (the Unfinished column has them one by one)
+  const unfinished = d.members.reduce((a, m) => a + m.unfinished, 0);
   const todo = document.getElementById('adm-todo');
   if (todo) {
     todo.innerHTML = d.feedback.length
@@ -418,7 +381,7 @@ function draw() {
       <div class="adm-stats">
         ${stat(sum('members'), 'Members', `${d.clubs.reduce((a, c) => a + c.newMembers, 0)} new`)}
         ${stat(sum('active'), 'Active', win === 'all time' ? 'ever' : `last ${win}`.replace('last month', 'this month'))}
-        ${stat(sum('rounds'), 'Rounds', 'posted')}
+        ${stat(sum('rounds'), 'Rounds', unfinished ? `posted · ${unfinished} unfinished` : 'posted')}
         ${stat(sum('practice'), 'Practice', 'sessions')}
       </div>
       ${

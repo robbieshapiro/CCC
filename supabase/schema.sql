@@ -945,6 +945,7 @@ begin
   where id = p_id and player_id = me.id;
 end $$;
 
+-- (Not shown in the app since #104, which folded unfinished rounds into Admin's stats; kept for a closer look.)
 -- For the admin, across their clubs (the admin left out): started, finished, still going (not abandoned yet),
 -- where unfinished rounds stopped, and member by member
 create or replace function admin_round_starts(p_token uuid, p_window text) returns json
