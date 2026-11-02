@@ -105,6 +105,10 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   game.starter = HANK.firstTee(me.name, snap.today);
   const scores: number[] = [];
   const spots: Spot[] = [];
+  // a counted round logs its start and each hole it reaches, so the Committee can see who stops and where
+  const started = preview ? Promise.resolve(null) : api.startRound(requireSession(), course.id).catch(() => null);
+  const progress = (hole: number, finished = false) =>
+    void started.then((id) => (id === null ? undefined : api.roundProgress(requireSession(), id, hole, finished).catch(() => {})));
   const feats = new Set<string>();
   // the admin's preview can jump to any hole, or start the one they're on over
   let jump: ((i: number) => void) | null = null;
@@ -124,6 +128,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     spots[i] = r.spot;
     r.feats.forEach((f) => feats.add(f));
     i++;
+    if (i < course.holes.length) progress(i + 1);
   }
   if (opts.practice) leavePractice();
   const total = scores.reduce((a, b) => a + b, 0);
@@ -133,6 +138,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   if (!preview)
     try {
       await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots });
+      progress(course.holes.length, true);
     } catch {
       posted = false;
     }

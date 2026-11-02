@@ -1096,3 +1096,4 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .ch-members tr.group th { padding-bottom: 0; border-bottom: 0; font-size: 10px; color: var(--gold); }
 .ch-members .all { border-left: 1px solid var(--line); }
 @media (max-width: 480px) { .ch-members td, .ch-members th { padding: 8px 5px; } .ch-members .avg { display: none; } .ch-members .who .avatar, .ch-members .who svg:first-child { width: 26px; height: 26px; } }
+.adm-card h3 { margin: 14px 0 4px; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }

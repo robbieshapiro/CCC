@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminOverview, Api, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
+import type { AdminOverview, Api, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, RoundStarts, Session, TrendDay, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -110,6 +110,9 @@ export const supabaseApi: Api = {
   openChampions: (s) => rpc<OpenChampion[]>('open_champions', { p_token: s.token }),
   dailyCrown: (s) => rpc<DailyCrown | null>('daily_crown', { p_token: s.token }),
   periodHonors: (s, period) => rpc<Honors>('period_honors', { p_token: s.token, p_period: period }),
+  startRound: (s, course) => rpc<number | null>('start_round', { p_token: s.token, p_course: course }),
+  roundProgress: (s, id, hole, finished) => rpc<void>('round_progress', { p_token: s.token, p_id: id, p_hole: hole, p_finished: finished }),
+  adminRoundStarts: (s, w) => rpc<RoundStarts>('admin_round_starts', { p_token: s.token, p_window: w }),
   adminTrend: (s) => rpc<TrendDay[]>('admin_trend', { p_token: s.token }),
   playoffState: (s) => rpc<PlayoffState | null>('playoff_state', { p_token: s.token }),
   playoffStart: (s) => rpc<void>('playoff_start', { p_token: s.token }),

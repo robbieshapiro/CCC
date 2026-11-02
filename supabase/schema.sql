@@ -893,6 +893,76 @@ begin
   );
 end $$;
 grant execute on function admin_trend(uuid) to anon;
+
+-- Rounds started and not finished: every counted round logs its start and the furthest hole it reached, and is
+-- marked finished when the card goes in. The admin sees started vs finished, where people stop, and who.
+create table if not exists round_starts (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  group_id uuid not null references groups on delete cascade,
+  period text not null,
+  course text not null,
+  hole int not null default 1,
+  finished boolean not null default false,
+  started_at timestamptz not null default now(),
+  finished_at timestamptz
+);
+alter table round_starts enable row level security;
+create index if not exists round_starts_recent on round_starts (started_at);
+
+create or replace function start_round(p_token uuid, p_course text) returns bigint
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); new_id bigint;
+begin
+  insert into round_starts (player_id, group_id, period, course) values (me.id, me.group_id, game_month(), left(p_course, 40))
+  returning id into new_id;
+  return new_id;
+end $$;
+
+-- the furthest hole reached, and finished once the card is in
+create or replace function round_progress(p_token uuid, p_id bigint, p_hole int, p_finished boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  update round_starts set hole = greatest(hole, least(p_hole, 18)),
+    finished = finished or p_finished,
+    finished_at = case when p_finished and not finished then now() else finished_at end
+  where id = p_id and player_id = me.id;
+end $$;
+
+-- For the admin, across their clubs (the admin left out): started, finished, still going (the last two hours),
+-- where unfinished rounds stopped, and member by member
+create or replace function admin_round_starts(p_token uuid, p_window text) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+  since timestamptz := case p_window
+    when 'week' then now() - interval '7 days'
+    when 'month' then (date_trunc('month', now() at time zone 'America/New_York')) at time zone 'America/New_York'
+    else '-infinity'::timestamptz end;
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
+  return (
+    with s as (
+      select rs.*, p.name, g.name as club, (not rs.finished and rs.started_at > now() - interval '2 hours') as going
+      from round_starts rs join players p on p.id = rs.player_id join groups g on g.id = rs.group_id
+      where rs.group_id in (select admin_clubs(me)) and p.role <> 'admin' and rs.started_at >= since
+    )
+    select json_build_object(
+      'started', (select count(*) from s),
+      'finished', (select count(*) from s where finished),
+      'going', (select count(*) from s where going),
+      'quitAt', (select coalesce(json_agg(json_build_object('course', course, 'hole', hole, 'count', n) order by n desc, course, hole), '[]')
+        from (select course, hole, count(*) as n from s where not finished and not going group by course, hole) q),
+      'members', (select coalesce(json_agg(json_build_object('name', name, 'club', club, 'started', st, 'finished', fi) order by st - fi desc, name), '[]')
+        from (select name, club, count(*) as st, count(*) filter (where finished) as fi from s group by name, club) m),
+      'recent', (select coalesce(json_agg(json_build_object('name', name, 'club', club, 'course', course, 'hole', hole, 'at', started_at) order by started_at desc), '[]')
+        from (select * from s where not finished and not going order by started_at desc limit 12) r)
+    )
+  );
+end $$;
+grant execute on function start_round(uuid, text) to anon;
+grant execute on function round_progress(uuid, bigint, int, boolean) to anon;
+grant execute on function admin_round_starts(uuid, text) to anon;
 grant execute on function admin_feedback_done(uuid, bigint, boolean) to anon;
 
 -- The Daily Shot: one shot a day for everyone in every club, three tries, best counts. The shot itself is seeded from
