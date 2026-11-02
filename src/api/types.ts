@@ -105,15 +105,6 @@ export type OpenRow = { playerId: string; name: string; club: string; mine: bool
 export type OpenChampion = { month: string; names: string[]; total: number; par: number };
 // The admin tab: every club the admin runs, on one page.
 export type AdminWindow = 'week' | 'month' | 'all';
-// Rounds started and not finished, for the admin (see admin_round_starts)
-export type RoundStarts = {
-  started: number;
-  finished: number;
-  going: number; // not finished, and not abandoned yet (no newer round, under two hours old)
-  quitAt: { course: string; hole: number; count: number }[];
-  members: { name: string; club: string; started: number; finished: number }[];
-  recent: { name: string; club: string; course: string; hole: number; at: string }[];
-};
 // Weekly Players by day: members who posted a round in the 7 days to that day, out of the members there were then
 export type TrendDay = { day: string; players: number; members: number };
 export type AdminOverview = {
@@ -184,7 +175,6 @@ export interface Api {
   // a counted round's start, how far it got, and whether it finished
   startRound(session: Session, course: string): Promise<number | null>;
   roundProgress(session: Session, id: number, hole: number, finished: boolean): Promise<void>;
-  adminRoundStarts(session: Session, window: AdminWindow): Promise<RoundStarts>;
   // the playoff: one hole, once, then one shot at the pin
   playoffState(session: Session): Promise<PlayoffState | null>;
   playoffStart(session: Session): Promise<void>;

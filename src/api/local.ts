@@ -7,7 +7,7 @@ import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type RoundStarts, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
@@ -457,14 +457,11 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     };
   },
 
-  // local mode doesn't keep round starts: nothing to show
+  // local mode doesn't keep round starts
   async startRound() {
     return null;
   },
   async roundProgress() {},
-  async adminRoundStarts(): Promise<RoundStarts> {
-    return { started: 0, finished: 0, going: 0, quitAt: [], members: [], recent: [] };
-  },
 
   // as on the server: Weekly Players for each day since the first member joined
   async adminTrend(session): Promise<TrendDay[]> {
