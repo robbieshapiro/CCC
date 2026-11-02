@@ -39,7 +39,7 @@ Last updated Nov 2, 2026 (Admin tracks rounds started but not finished).
 - [x] The #87 playoff SQL, run Oct 29. Checked live: the `playoff_tries` table, all six playoff functions, and the snapshot, honours and Chronicle all read `period_champs`.
 - [x] The #90 SQL (`admin_trend`), run Oct 29.
 - [x] The #94 SQL (the `champion` note kind), run Oct 30.
-- [ ] Paste the #98 SQL in Supabase (the `round_starts` table and three functions) so rounds get logged.
+- [x] The #98 SQL (`round_starts`), run Nov 2.
 - [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
