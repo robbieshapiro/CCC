@@ -318,7 +318,7 @@ function drawTrend() {
 }
 
 // Rounds started and not finished, for the window picked: the finish rate, where people stop (by hole), who, and the
-// latest ones left unfinished. A round still going (started in the last two hours) isn't counted as unfinished yet.
+// latest ones left unfinished. A round still going isn't counted as unfinished until they start another or two hours pass.
 async function loadStarts() {
   const el = document.getElementById('adm-starts');
   if (!el) return;

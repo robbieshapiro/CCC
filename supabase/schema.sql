@@ -811,8 +811,8 @@ begin
         (select min(total - par) from rounds where player_id = m.id and created_at >= since) as best,
         (select count(*) from practice_sessions where player_id = m.id and started_at >= since) as practice,
         (select coalesce(sum(lockers), 0) from member_days where player_id = m.id and day >= (since at time zone 'America/New_York')::date) as lockers,
-        -- rounds started and left unfinished (one started in the last two hours may still be going)
-        (select count(*) from round_starts where player_id = m.id and started_at >= since and not finished and started_at < now() - interval '2 hours') as unfinished
+        -- rounds started and abandoned (see round_abandoned)
+        (select count(*) from round_starts rs where rs.player_id = m.id and rs.started_at >= since and round_abandoned(rs)) as unfinished
       from m
     ),
     feed as (
@@ -829,7 +829,7 @@ begin
         -- a round started and not finished (shots: the hole they got to)
         select rs.started_at, 'quit', g.name, p.name, rs.course, null, null, null, rs.hole
           from round_starts rs join players p on p.id = rs.player_id join g on g.id = rs.group_id
-          where p.role <> 'admin' and not rs.finished and rs.started_at < now() - interval '2 hours'
+          where p.role <> 'admin' and round_abandoned(rs)
         union all
         select f.created_at, 'feedback', g.name, coalesce(p.name, 'A member'), null, null, null, left(f.body, 80), null
           from feedback f join g on g.id = f.group_id left join players p on p.id = f.player_id
@@ -917,6 +917,14 @@ create table if not exists round_starts (
 alter table round_starts enable row level security;
 create index if not exists round_starts_recent on round_starts (started_at);
 
+-- A round is abandoned once it's unfinished and the member has started another one since (a restart), or it's two
+-- hours old. Until then it may still be going.
+create or replace function round_abandoned(rs round_starts) returns boolean
+language sql stable as $$
+  select not rs.finished and (rs.started_at < now() - interval '2 hours'
+    or exists (select 1 from round_starts n where n.player_id = rs.player_id and n.started_at > rs.started_at))
+$$;
+
 create or replace function start_round(p_token uuid, p_course text) returns bigint
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); new_id bigint;
@@ -937,7 +945,7 @@ begin
   where id = p_id and player_id = me.id;
 end $$;
 
--- For the admin, across their clubs (the admin left out): started, finished, still going (the last two hours),
+-- For the admin, across their clubs (the admin left out): started, finished, still going (not abandoned yet),
 -- where unfinished rounds stopped, and member by member
 create or replace function admin_round_starts(p_token uuid, p_window text) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
@@ -950,7 +958,7 @@ begin
   if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
   return (
     with s as (
-      select rs.*, p.name, g.name as club, (not rs.finished and rs.started_at > now() - interval '2 hours') as going
+      select rs.*, p.name, g.name as club, (not rs.finished and not round_abandoned(rs)) as going
       from round_starts rs join players p on p.id = rs.player_id join groups g on g.id = rs.group_id
       where rs.group_id in (select admin_clubs(me)) and p.role <> 'admin' and rs.started_at >= since
     )

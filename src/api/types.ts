@@ -109,7 +109,7 @@ export type AdminWindow = 'week' | 'month' | 'all';
 export type RoundStarts = {
   started: number;
   finished: number;
-  going: number; // started in the last two hours and not finished yet
+  going: number; // not finished, and not abandoned yet (no newer round, under two hours old)
   quitAt: { course: string; hole: number; count: number }[];
   members: { name: string; club: string; started: number; finished: number }[];
   recent: { name: string; club: string; course: string; hole: number; at: string }[];
