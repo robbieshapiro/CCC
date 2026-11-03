@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 2, 2026 (unfinished rounds folded into Admin's stats).
+Last updated Nov 3, 2026 (the games suite idea added to Next up).
 
 ## Shipped (all live on Vercel)
 
@@ -97,6 +97,11 @@ The problem with the new members: once your best round is in, there's no reason 
 
 ## Next up (ideas, not started)
 
+- **A suite of games, with the club as the hub.** Golf stays, but CCC grows into many games, each one picked for what it teaches Robbie about building (agents build, every PR explains). Hold until the weekly golf pipeline is settled.
+  - **Step zero, the platform:** a "game cartridge" layer. Each game registers an id, a name, daily or weekly, and whether high or low wins. Scores go in one shared table so boards come for free. Golf moves onto it last.
+  - **Games, roughly in order:** a daily puzzle (one per day for everyone, a share string; plain TypeScript, seeded randomness), Darts at the Bar (Canvas 2D, game loops, hit detection), lawn games in 3D (cornhole, bocce, bowling on the golf physics), Reginald's Mystery (a daily whodunit where Claude plays the staff; needs a per-member cap), and later a live Trivia Night (Supabase realtime).
+  - **The hub:** Club Points across every game, the Chronicle covering all of them, and a "Today at the Club" card on the home page.
+  - **Learning notes:** each game PR adds `docs/learn/NN-name.md` with what was built, the key ideas with real snippets from the PR, and one small change Robbie can try himself.
 - **The Committee.** Robbie appoints elite members and gives titles (Hole Architect, Mini Game Manager). Perks:
   - a premium locker and a badge;
   - a private Committee room with early previews and votes;
