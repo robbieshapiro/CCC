@@ -59,7 +59,7 @@ function members(snap: Snapshot) {
       const c = career(p.id);
       return `<tr class="${me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</span></a></td>
+        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</i></span></a></td>
         <td class="num topar">${r.best ? topar(r.toPar) : '–'}</td>
         <td class="num">${r.rounds}</td>
         <td class="num all">${c.rounds}</td>

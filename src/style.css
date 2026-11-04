@@ -1126,6 +1126,9 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
   .scorecard .d { display: none; }
   .board .scorecard td.who { display: table-cell; }
   .board .scorecard td.who span { max-width: 8.5em; overflow: hidden; text-overflow: ellipsis; }
+  /* the payout leads the line under the name; when a phone is short of room, the last-played date goes, never the money */
+  .board .scorecard td.who em { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .board .scorecard td.who em .last { display: none; }
   .board .scorecard .fz { position: sticky; z-index: 1; background: var(--felt); }
   .board .scorecard tr.me .fz { background: linear-gradient(rgba(184, 149, 90, 0.12), rgba(184, 149, 90, 0.12)), var(--felt); }
   .board .scorecard .fz-end { box-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.6); }
@@ -1204,3 +1207,8 @@ h1 .rank-badge { vertical-align: -2px; }
 .adm-feed-box { max-height: 520px; overflow-y: auto; overscroll-behavior: contain; margin: 0 -4px; padding: 0 4px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .adm-feed li.adm-day { position: sticky; top: 0; z-index: 1; display: block; padding: 8px 0 4px; background: var(--paper); font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); border-top: 0; }
 .adm-sub small { font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 6px; }
+td.who em .last { font-style: normal; }
+/* a member's name with their rank badge and crown beside it, on one line */
+td.who .nm { font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the name column keeps room for a name, its badge and the payout line, however tight the table */
+td.who > a > span, td.who > div > span { min-width: 8em; }
