@@ -1,7 +1,8 @@
 // The Pro Shop, in the Clubhouse: your golfer on a turntable, your balance, and the racks. Tap a piece to try it on;
 // buy it and it's worn straight away. Pieces you own can be put on and taken off for free.
 import { api } from '../api';
-import type { Avatar, Snapshot } from '../api/types';
+import type { Avatar, Player, Snapshot } from '../api/types';
+import { BONUS } from '../bonus';
 import { specOf } from '../avatar';
 import type { GolferSpec } from '../golf3d/golfer';
 import { money } from '../purse';
@@ -40,12 +41,33 @@ export function shopPane(snap: Snapshot) {
           <p class="eyebrow">The Pro Shop</p>
           <p class="shop-balance"><b>${money(balanceOf(me))}</b><span>to spend</span></p>
           <p class="shop-rank">${badgeSvg(rank.id, 22)} <b>${rank.name}</b> · ${money(earned)} career earnings${next ? ` · ${next.name} at ${money(next.from)}` : ''}</p>
-          <p class="muted">Win money in the weekly purse: the top 10 on your club’s board get paid. Spending never touches your career earnings. Everything here is for looks: it shows on the course, in the stands and on your member card.</p>
+          ${earnedFrom(me)}
+          <details class="shop-how"><summary>How to earn</summary>
+            <p><b>The weekly purse</b> is the big money: the top 10 on your club’s board get paid.</p>
+            <p><b>On the side:</b> ${money(BONUS.round)} a day you finish a round, ${money(BONUS.streak3)} on your third day running at the club and ${money(BONUS.streak7)} every seventh, ${money(BONUS.ctp)} for winning Closest to the Pin, and ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle, ${money(BONUS.ace)} an ace.</p>
+            <p class="muted">Spending never touches your career earnings. Everything here is for looks: it shows on the course, in the stands and on your member card.</p>
+          </details>
           <p class="shop-trying" id="shop-trying" hidden></p>
         </div>
       </div>
       ${racks}
     </div>`;
+}
+
+// where the money came from, biggest first
+function earnedFrom(me: Player) {
+  const b = me.bonus;
+  const parts = (
+    [
+      ['Purses', me.earnings ?? 0],
+      ['Rounds', b?.rounds ?? 0],
+      ['Streaks', b?.streaks ?? 0],
+      ['Closest to the Pin', b?.ctp ?? 0],
+      ['Birdies and better', b?.shots ?? 0],
+    ] as [string, number][]
+  ).filter(([, n]) => n > 0);
+  if (!parts.length) return '';
+  return `<p class="shop-from">${parts.map(([k, n]) => `<span>${k} <b>${money(n)}</b></span>`).join('')}</p>`;
 }
 
 function itemCard(i: Item) {

@@ -1,6 +1,8 @@
-// The Pro Shop: flashy gear and swag bought with purse money (src/purse.ts). It's all looks, never performance, and it
-// shows wherever your golfer does: on the course for other members, in the stands, on your member card. Career
-// earnings never go down; what you spend comes out of your balance. Club Pro and Club Legend have racks of their own.
+// The Pro Shop: flashy gear and swag bought with purse money (src/purse.ts) and club bonuses (src/bonus.ts). It's all
+// looks, never performance, and it shows wherever your golfer does: on the course for other members, in the stands, on
+// your member card. Career earnings never go down; what you spend comes out of your balance. Club Pro and Club Legend
+// have racks of their own. Priced so a regular buys something in their first week and reaches Club Pro in a couple of
+// months.
 // The prices and racks are mirrored in supabase/schema.sql (shop_items), which checks every purchase.
 import type { Player } from './api/types';
 import type { GolferSpec } from './golf3d/golfer';
@@ -10,16 +12,17 @@ import type { GolferSpec } from './golf3d/golfer';
 export type Rack = 'member' | 'pro' | 'legend';
 export const RANKS: { id: Rack; name: string; from: number }[] = [
   { id: 'member', name: 'Club Member', from: 0 },
-  { id: 'pro', name: 'Club Pro', from: 15000 },
-  { id: 'legend', name: 'Club Legend', from: 75000 },
+  { id: 'pro', name: 'Club Pro', from: 5000 },
+  { id: 'legend', name: 'Club Legend', from: 25000 },
 ];
 export const rankOf = (earnings: number) => [...RANKS].reverse().find((r) => earnings >= r.from)!;
 export const nextRank = (earnings: number) => RANKS.find((r) => r.from > earnings) ?? null;
 const ORDER: Record<Rack, number> = { member: 0, pro: 1, legend: 2 };
 export const canShop = (rack: Rack, earnings: number) => ORDER[rankOf(earnings).id] >= ORDER[rack];
 
-export const earningsOf = (p: Player) => p.earnings ?? 0;
-export const balanceOf = (p: Player) => Math.max(0, (p.earnings ?? 0) - (p.spent ?? 0));
+// career earnings: the purses (p.earnings, the board's money column) and the club bonuses
+export const earningsOf = (p: Player) => (p.earnings ?? 0) + (p.bonus?.total ?? 0);
+export const balanceOf = (p: Player) => Math.max(0, earningsOf(p) - (p.spent ?? 0));
 
 // The badge: a shield in the rank's colours. Club Member is club green and cream, Club Pro gold with a star, Club Legend
 // black and gold under a laurel.
@@ -60,7 +63,7 @@ const caddieItem: Item = {
   id: 'caddie',
   name: 'Personal caddie',
   kind: 'caddie',
-  price: 60000,
+  price: 15000,
   rack: 'legend',
   what: 'Your own caddie, in a white bib with your name across it, standing by with your bag. On the course, beside your ghost and on your member card.',
   wear: (s) => (s.caddie = true),
@@ -69,19 +72,19 @@ const caddieItem: Item = {
 };
 
 export const ITEMS: Item[] = [
-  top('hawaiian', 'Hawaiian shirt', 2500, 'member', 'Pacific teal with coral hibiscus and palm fronds. Loud.', 'hawaiian'),
-  top('argyle', 'Argyle sweater', 3000, 'member', 'Diamonds in your shirt and accent colours, collar out.', 'argyle'),
-  top('tourpolo', 'Tour polo', 6000, 'pro', 'Crisp white, sponsor patches on the chest and sleeves.', 'tourpolo'),
-  hat('printbucket', 'Loud bucket hat', 1500, 'member', 'Hawaiian print, in your hat colour.', 'printbucket'),
-  hat('tourcap', 'Tour cap', 2500, 'member', 'A gold button on top and a gold crest on the front.', 'tourcap'),
-  hat('cowboy', 'Cowboy hat', 5000, 'pro', 'Tall crown, wide brim. Nobody asked.', 'cowboy'),
-  hat('goldvisor', 'Gold visor', 8000, 'pro', 'A visor with a solid gold band and brim.', 'goldvisor'),
-  flag('aviators', 'Aviators', 2000, 'member', 'Gold-rimmed, mirrored. On at all times.', 'aviators'),
-  flag('watch', 'Gold watch', 4000, 'member', 'On the lead wrist, where it catches the light on the backswing.', 'watch'),
-  flag('chain', 'Gold chain', 10000, 'pro', 'A heavy gold chain with a little club-head pendant.', 'chain'),
-  putter('chrome', 'Chrome putter', 3500, 'member', 'A mirror-polished head.', 'chrome'),
-  bag('schoolbag', 'School bag', 4000, 'member', 'A bag in your school kit’s colours with its letters (pick a school in the Locker).', 'school'),
-  bag('goldstaff', 'Gold staff bag', 12000, 'pro', 'A big tour staff bag in gold, banded in black.', 'goldstaff'),
+  top('hawaiian', 'Hawaiian shirt', 400, 'member', 'Pacific teal with coral hibiscus and palm fronds. Loud.', 'hawaiian'),
+  top('argyle', 'Argyle sweater', 750, 'member', 'Diamonds in your shirt and accent colours, collar out.', 'argyle'),
+  top('tourpolo', 'Tour polo', 1500, 'pro', 'Crisp white, sponsor patches on the chest and sleeves.', 'tourpolo'),
+  hat('printbucket', 'Loud bucket hat', 250, 'member', 'Hawaiian print, in your hat colour.', 'printbucket'),
+  hat('tourcap', 'Tour cap', 500, 'member', 'A gold button on top and a gold crest on the front.', 'tourcap'),
+  hat('cowboy', 'Cowboy hat', 1200, 'pro', 'Tall crown, wide brim. Nobody asked.', 'cowboy'),
+  hat('goldvisor', 'Gold visor', 2000, 'pro', 'A visor with a solid gold band and brim.', 'goldvisor'),
+  flag('aviators', 'Aviators', 350, 'member', 'Gold-rimmed, mirrored. On at all times.', 'aviators'),
+  flag('watch', 'Gold watch', 900, 'member', 'On the lead wrist, where it catches the light on the backswing.', 'watch'),
+  flag('chain', 'Gold chain', 2500, 'pro', 'A heavy gold chain with a little club-head pendant.', 'chain'),
+  putter('chrome', 'Chrome putter', 600, 'member', 'A mirror-polished head.', 'chrome'),
+  bag('schoolbag', 'School bag', 1000, 'member', 'A bag in your school kit’s colours with its letters (pick a school in the Locker).', 'school'),
+  bag('goldstaff', 'Gold staff bag', 3000, 'pro', 'A big tour staff bag in gold, banded in black.', 'goldstaff'),
   caddieItem,
 ];
 export const itemById = (id: string) => ITEMS.find((i) => i.id === id);

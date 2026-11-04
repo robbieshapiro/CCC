@@ -1,13 +1,14 @@
 // Browser-only backend for playing without Supabase. Mirrors supabase/schema.sql.
 import { STOCK_BUDDIES } from '../buddies';
 import { GAME_TZ, periodOf, todayInGameTz } from '../day';
-import { courseFor } from '../golf3d/courses';
+import { courseById, courseFor } from '../golf3d/courses';
+import { bonusOf } from '../bonus';
 import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
 import { payouts } from '../purse';
-import { canShop, itemById } from '../shop';
+import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
 import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
@@ -62,6 +63,25 @@ function paidIn(db: Db, groupId: string, month: string): Payout[] {
     for (const [id, p] of payouts(rows)) if (p.payout > 0) out.push({ month: m, playerId: id, ...p });
   }
   return out;
+}
+
+// every past day's Closest to the Pin winner, as a person ('name|pin'): holed first, holed sooner, then nearest
+function ctpWinners(db: Db): string[] {
+  const today = todayInGameTz();
+  const days = new Map<string, Map<string, { holed: number; ft: number }>>();
+  for (const s of db.daily ?? []) {
+    const p = db.players.find((x) => x.id === s.playerId);
+    if (!p || s.day >= today) continue;
+    const k = `${p.name.toLowerCase()}|${p.pin}`;
+    const day = days.get(s.day) ?? new Map();
+    const x = day.get(k) ?? { holed: Infinity, ft: Infinity };
+    day.set(k, { holed: s.t.holed ? Math.min(x.holed, s.t.try) : x.holed, ft: !s.t.holed && !s.t.lost && s.t.ft !== null ? Math.min(x.ft, s.t.ft) : x.ft });
+    days.set(s.day, day);
+  }
+  return [...days.values()].flatMap((day) => {
+    const top = [...day].filter(([, x]) => x.holed < Infinity || x.ft < Infinity).sort((a, b) => a[1].holed - b[1].holed || a[1].ft - b[1].ft)[0];
+    return top ? [top[0]] : [];
+  });
 }
 
 function playerByToken(db: Db, token: string): DbPlayer {
@@ -160,7 +180,19 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       const ids = new Set(seats.map((x) => x.id));
       const got = [...new Set(seats.map((x) => x.groupId))].flatMap((g) => (g === me.groupId ? paid : paidIn(db, g, month))).filter((x) => ids.has(x.playerId));
       const bought = (db.purchases ?? []).filter((x) => ids.has(x.playerId));
-      return { earnings: got.reduce((a, x) => a + x.payout, 0), top10s: got.length, spent: bought.reduce((a, x) => a + x.price, 0), owned: [...new Set(bought.map((x) => x.item))] };
+      // the club bonuses, as person_bonus does on the server
+      const rs = db.rounds.filter((r) => ids.has(r.playerId));
+      const roundDays = rs.map((r) => todayInGameTz(new Date(r.createdAt)));
+      const bonus = bonusOf({
+        roundDays,
+        days: [...(db.days ?? []).filter((d) => ids.has(d.playerId)).map((d) => d.day), ...roundDays, ...(db.practice ?? []).filter((x) => ids.has(x.playerId)).map((x) => todayInGameTz(new Date(x.startedAt)))],
+        ctpWins: ctpWinners(db).filter((w) => w === `${p.name.toLowerCase()}|${p.pin}`).length,
+        holes: rs.flatMap((r) => {
+          const pars = courseById(r.course)?.holes.map((h) => h.par);
+          return pars?.length === r.holes.length ? r.holes.map((s, i): [number, number] => [s, pars[i]]) : [];
+        }),
+      });
+      return { earnings: got.reduce((a, x) => a + x.payout, 0), top10s: got.length, spent: bought.reduce((a, x) => a + x.price, 0), owned: [...new Set(bought.map((x) => x.item))], bonus };
     };
     return {
       today,
@@ -214,8 +246,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const item = itemById(id);
     if (!item || !p) throw new Error('That isn’t in the shop.');
     if (p.owned?.includes(id)) return;
-    if (!canShop(item.rack, p.earnings ?? 0)) throw new Error('That rack is for higher ranks.');
-    if ((p.earnings ?? 0) - (p.spent ?? 0) < item.price) throw new Error('Not enough in the bank for that.');
+    if (!canShop(item.rack, earningsOf(p))) throw new Error('That rack is for higher ranks.');
+    if (balanceOf(p) < item.price) throw new Error('Not enough in the bank for that.');
     (db.purchases ??= []).push({ playerId: me.id, item: id, price: item.price });
     save(db);
   },

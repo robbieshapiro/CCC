@@ -1177,6 +1177,12 @@ h1 .rank-badge { vertical-align: -2px; }
 .shop-balance span { font-size: 13px; color: #d9cfb3; }
 .shop-rank { margin: 0; font-size: 14px; }
 .shop-rank .rank-badge { margin: 0 4px 0 0; }
+.shop-from { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.shop-from span { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.78); }
+.shop-from b { color: #f3d98b; }
+.shop-how { font-size: 13px; }
+.shop-how summary { cursor: pointer; font-weight: 700; color: #e6cf9f; }
+.shop-how p { margin: 6px 0 0; }
 .shop-wallet .muted { color: #cbbf9f; font-size: 13px; margin: 0; }
 .shop-trying { margin: 0; padding: 8px 10px; border-radius: 8px; background: rgba(243, 217, 138, 0.15); font-size: 14px; }
 .shop-rack h2 { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 22px; margin: 0 0 10px; }
