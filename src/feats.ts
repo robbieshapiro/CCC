@@ -15,7 +15,7 @@ export const FEATS: Feat[] = [
   { id: 'ashroad', name: 'The Ash Road', icon: '♨️', how: 'Run the ash road down Geyser Alley' },
   { id: 'seaarch', name: 'The Speed Slot', icon: '🚀', how: 'Nuke one down the gully on The Homecoming' },
   { id: 'underpar', name: 'Under Par Round', icon: '📉', how: 'Finish a round under par' },
-  { id: 'nineteenth', name: 'The Nineteenth Hole', icon: '🍹', how: 'Try all three drinks from the cart' },
+  { id: 'nineteenth', name: 'The Nineteenth Hole', icon: '🍹', how: 'Try the Arnold Palmer, the Lager and the Sparkling Water from the cart' },
   { id: 'champion', name: 'Club Champion', icon: '🏆', how: 'Win a week' },
 ];
 

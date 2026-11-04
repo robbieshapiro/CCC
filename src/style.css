@@ -318,7 +318,7 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
   .brand b { font-size: 18px; }
   .g3-title b { font-size: 20px; }
   .g3-club button { min-width: 58px; padding: 4px 6px; font-size: 12px; }
-  .cart-drinks { grid-template-columns: 1fr; gap: 6px; }
+  .cart-drinks { grid-template-columns: 1fr 1fr; gap: 6px; }
   .cart-drinks button { padding: 8px 10px; }
   .cart-card { padding: 12px 14px; gap: 8px; }
   .cart-card .msg { font-size: 15px; }

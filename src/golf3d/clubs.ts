@@ -43,10 +43,14 @@ export const carryOf = (club: ClubId, power: number, boost = 1) => {
 };
 
 // Drinks from the beverage cart: they tweak the next two full swings.
-export type Drink = 'palmer' | 'lager' | 'water' | 'fireball';
+export type Drink = 'palmer' | 'lager' | 'espresso' | 'transfusion' | 'water' | 'fireball';
 export const DRINKS: Record<Drink, { name: string; blurb: string; sweet: number; boost: number; needle: number }> = {
   palmer: { name: 'Arnold Palmer', blurb: 'Slower meter · 2 swings', sweet: 1, boost: 1, needle: 0.82 },
   lager: { name: 'Clubhouse Lager', blurb: '+10% distance · 2 swings', sweet: 1, boost: 1.1, needle: 1.12 },
+  // a jittery needle, but a far bigger gold window: rewards a sharp tap
+  espresso: { name: 'Espresso', blurb: 'Quick needle, wide gold · 2 swings', sweet: 1.35, boost: 1, needle: 1.2 },
+  // the golfer's recovery drink (grape juice, ginger ale, a splash of vodka): steady hands, a little shorter
+  transfusion: { name: 'Transfusion', blurb: 'Steady hands, 5% shorter · 2 swings', sweet: 1.2, boost: 0.95, needle: 0.9 },
   water: { name: 'Sparkling Water', blurb: 'Does nothing. Reginald approves.', sweet: 1, boost: 1, needle: 1 },
   // on the cart's late visit: one swing only
   fireball: { name: 'Fireball', blurb: '+15% distance · 1 swing', sweet: 1, boost: 1.15, needle: 1.2 },

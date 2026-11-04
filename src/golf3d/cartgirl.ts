@@ -34,7 +34,7 @@ export class CartGirl {
     const look = CREW[Math.floor(Math.random() * CREW.length)];
     this.name = look.name;
     this.crew = new Hostess(look);
-    this.menu = shots ? ['fireball', 'lager', 'palmer'] : ['palmer', 'lager', 'water'];
+    this.menu = shots ? ['fireball', 'lager', 'palmer'] : ['palmer', 'lager', 'espresso', 'transfusion', 'water'];
     this.crew.setPose('idle');
     this.group.add(this.cart, this.crew.group);
     this.crew.group.position.set(3.4, 0, 1.5);
