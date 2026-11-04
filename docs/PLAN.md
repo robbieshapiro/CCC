@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (the weekly purse and the money list).
+Last updated Nov 4, 2026 (the Pro Shop and the money-list ranks).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (the weekly purse and the money list).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #PR | The Pro Shop, a Clubhouse tab: purse money buys flashy looks that show wherever your golfer does (on the course for other members, in the stands, on member cards). Career earnings only go up; spending comes out of a separate balance. Sixteen pieces across tops, headwear, bling, bags and putters, from a $1,500 bucket hat to a $30,000 black diamond putter. Your golfer stands on a turntable: tap a piece to try it on, tap again to buy, and owned pieces go on and off for free. Ranks by career earnings, with a badge by every name: Club Member for everyone, Club Pro from $15,000, Club Legend from $75,000; the Pro and Legend racks open with the rank. Title gear (tartan, blazers, gold putter, crested bag) stays title-only. Looks only: nothing in the shop changes how a shot plays. |
 | #108 | The weekly purse: every club's board pays its top 10 in play money, like a tour event. $1,000 goes in for each member who posts a round that week, and all of it goes to the top 10 in tour proportions (the winner about 30%, tenth about 4.5%); ties split the places they cover, a playoff winner takes first money. The countdown strip on the board shows the club purse, and each of the top 10 shows what they would take if the week ended now; the end-of-round card shows your place and projected payout; the honours show what the purse paid; career earnings and top 10s on member cards, the Locker and the Clubhouse members table. The last period's honours moved down the home page, under the board and tiles. Nothing to spend it on. |
 | #107 | The Pacific Bluffs goes Southern California: gnarled Torrey pines line the fairways and cover the cliff tops, sandstone barrancas cut across Sea Lion Point (past the drive) and The Lighthouse (in front of the tee), coastal sage scrub in the rough and beyond, paragliders over the cliffs and fan palms behind the first tee. Fairways are about a third narrower, so the drives are harder (the beginner sim goes from about +1.6 to +2.1 a hole). The trees are drawn in code: the free model sites are blocked from the build environment. |
 | #105 | The Pacific Bluffs replaces the Western Reserve as the Nov 8 course (a draft until Robbie plays it): Sea Lion Point (par 4), The Lighthouse (par 5) and The Carry (par 3, the playoff hole), on California sea cliffs at golden hour. A new `coastal` look: sandstone cliffs, Monterey cypress, ice plant, surf on the rocks, sea stacks, sails, a turning lighthouse and sea lions, with the coast running on past the edge of each hole. Every hole now opens on an intro card during the flyover (number, name, par, yards, wind, a line on how to play it); the coast gets a longer flyover that swings round the green, a navy and sunset HUD, and a Pacific-blue Play hero, board and countdown. Hank's first-tee line names the course's hazard. |
@@ -53,6 +54,7 @@ Last updated Nov 4, 2026 (the weekly purse and the money list).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
 - [ ] Paste the purse SQL from #108 (`period_payouts` and `get_snapshot`). Until then the board's purse and projected payouts work, but career earnings and last week's payouts show nothing.
+- [ ] Paste the Pro Shop SQL from #PR (`shop_items`, `purchases`, `buy_item`, and `get_snapshot` again). It needs the #108 purse SQL in first; the PR's block includes `period_payouts` again so it works either way.
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
@@ -102,7 +104,7 @@ The problem with the new members: once your best round is in, there's no reason 
 
 ## Next up (ideas, not started)
 
-- **Something to spend purse money on,** if it should mean more: a pro shop for looks, entry fees for mini tournaments, a season-long money list with its own title.
+- **More to spend purse money on:** sponsor a week's purse ("presented by"), naming rights on a hole, an engraved line on the plaque, entry fees for mini tournaments, a season money list with its own title. Restock the shop now and then so prices keep up with what the club earns.
 
 - **The Committee.** Robbie appoints elite members and gives titles (Hole Architect, Mini Game Manager). Perks:
   - a premium locker and a badge;

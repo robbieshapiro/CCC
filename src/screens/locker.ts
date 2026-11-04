@@ -107,7 +107,7 @@ export function lockerPanel(start: GolferSpec, wins: number, onChange: (s: Golfe
     const t = tabs.find((x) => x.id === tab)!;
     const prestige =
       tab === 'gear'
-        ? `<div class="pick"><span>Pro shop</span><div class="chips-row">${PRESTIGE.filter((p) => ['goldputter', 'crestbag'].includes(p.key))
+        ? `<div class="pick"><span>Title gear</span><div class="chips-row">${PRESTIGE.filter((p) => ['goldputter', 'crestbag'].includes(p.key))
             .map((p) => `<button class="chip-btn ${p.has(spec) ? 'on' : ''}" data-prestige="${p.key}" ${wins >= p.wins ? '' : 'disabled'}>${wins >= p.wins ? '' : '🔒 '}${p.name}${wins >= p.wins ? '' : ` · ${p.wins} ${p.wins === 1 ? 'title' : 'titles'}`}</button>`)
             .join('')}</div></div>${kitRow(spec)}`
         : '';

@@ -56,6 +56,9 @@ export const supabaseApi: Api = {
       await rpc('submit_round', args);
     }
   },
+  buyItem: async (s, item) => {
+    await rpc('buy_item', { p_token: s.token, p_item: item });
+  },
   saveAvatar: async (s, avatar) => {
     await rpc('save_avatar', { p_token: s.token, p_avatar: avatar });
   },

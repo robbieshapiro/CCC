@@ -8,6 +8,7 @@ import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
+import { leaveShop } from './screens/shop';
 import { barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { playoff } from './screens/playoff';
 import { clubhouse, isClubhouseTab } from './screens/clubhouse';
@@ -26,6 +27,7 @@ let routing = false; // the router draws the page itself; the refresh hook mustn
 async function router() {
   closeRound();
   leaveCard();
+  leaveShop();
   leaveMember();
   closeWelcome();
   const hash = location.hash.replace(/^#\/?/, '');

@@ -1,6 +1,7 @@
 // Your Locker: your golfer, how your week is going and your trophies. Edit your look from here. (The club's
 // members are in the Clubhouse.)
 import { span } from '../day';
+import { badgeFor, balanceOf } from '../shop';
 import { money } from '../purse';
 import { api, setSession } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
@@ -35,7 +36,7 @@ export function card(snap: Snapshot) {
       <section class="lk-hero">
         <div class="stage" id="stage"></div>
         <div class="lk-who">
-          <h1>${esc(me.name)}</h1>
+          <h1>${esc(me.name)}${badgeFor(me, 26)}</h1>
           <p class="muted">${me.host ? `Runs ${esc(snap.groupName)} · plays for ${esc(snap.homeName ?? 'their club')}` : esc(snap.groupName)}${me.wins ? ` · 🏆 ${me.wins}` : ''}</p>
           ${
             me.host
@@ -47,6 +48,7 @@ export function card(snap: Snapshot) {
             <div><b>${money(me.earnings ?? 0)}</b><span>Career earnings</span></div>
           </div>`
           }
+          ${me.host ? '' : `<a class="btn" href="#/clubhouse/shop">Pro Shop · ${money(balanceOf(me))} to spend</a>`}
           <button class="btn ghost" id="edit-look">Edit your look</button>
         </div>
       </section>

@@ -30,6 +30,8 @@ export type Player = {
   career?: { rounds: number; best: number | null; avg: number | null }; // every round they've played, to par
   earnings?: number; // the money list: play money won from the weekly purses (src/purse.ts)
   top10s?: number;
+  spent?: number; // what they've spent in the Pro Shop (src/shop.ts): their balance is earnings less this
+  owned?: string[]; // the Pro Shop items they own
 };
 
 // Where a tee shot came to rest, in course feet. Null if it found the water or went out.
@@ -142,6 +144,7 @@ export interface Api {
   snapshot(session: Session): Promise<Snapshot>;
   submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[]; spots?: Spot[] }): Promise<void>;
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;
+  buyItem(session: Session, item: string): Promise<void>; // the Pro Shop: checks rank and balance, then it's yours
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
   listInvites(session: Session): Promise<Invite[]>;
   deleteInvite(session: Session, id: string): Promise<void>;
