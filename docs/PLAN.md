@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (two new drinks on the beverage cart).
+Last updated Nov 4, 2026 (Boomtown merges into The Clergy).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (two new drinks on the beverage cart).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #114 | Boomtown merges into The Clergy, one club with a bigger board and purse from this week. Every past title and payout stays as it was won: rounds remember the board they counted on (`rounds.board_group`), so the weeks before the merge still rank Boomtown and The Clergy apart. Members, rounds, invitations, notices and practice all move across; Boomtown's club code and personal invites keep working and land in The Clergy (`group_aliases`). A month with a champion on each old board shows both names on the plaque. |
 | #113 | Two new drinks on the beverage cart, free like the rest (one pick a round): an Espresso (a quick needle but a much wider gold window, 2 swings) and a Transfusion (a wider gold window and a calmer needle, 5% shorter, 2 swings). Drinks stay free; purse money doesn't buy boosts. |
 | #111 | The Pro Shop, a Clubhouse tab: purse money buys flashy looks that show wherever your golfer does (on the course for other members, in the stands, on member cards). Career earnings only go up; spending comes out of a separate balance. Fourteen pieces across tops, headwear, bling, bags and putters, from a $1,500 bucket hat to a $12,000 gold staff bag; the Club Legend rack is one piece, a $60,000 personal caddie (#112). Your golfer stands on a turntable: tap a piece to try it on, tap again to buy, and owned pieces go on and off for free. Ranks by career earnings, with a badge by every name: Club Member for everyone, Club Pro from $15,000, Club Legend from $75,000; the Pro and Legend racks open with the rank. Title gear (tartan, blazers, gold putter, crested bag) stays title-only. Looks only: nothing in the shop changes how a shot plays. |
 | #108 | The weekly purse: every club's board pays its top 10 in play money, like a tour event. $1,000 goes in for each member who posts a round that week, and all of it goes to the top 10 in tour proportions (the winner about 30%, tenth about 4.5%); ties split the places they cover, a playoff winner takes first money. The countdown strip on the board shows the club purse, and each of the top 10 shows what they would take if the week ended now; the end-of-round card shows your place and projected payout; the honours show what the purse paid; career earnings and top 10s on member cards, the Locker and the Clubhouse members table. The last period's honours moved down the home page, under the board and tiles. Nothing to spend it on. |
@@ -54,9 +55,10 @@ Last updated Nov 4, 2026 (two new drinks on the beverage cart).
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
-- [ ] Paste the purse SQL from #108 (`period_payouts` and `get_snapshot`). Until then the board's purse and projected payouts work, but career earnings and last week's payouts show nothing.
-- [ ] Paste the Pro Shop SQL from #111 (`shop_items`, `purchases`, `buy_item`, and `get_snapshot` again). It needs the #108 purse SQL in first; the PR's block includes `period_payouts` again so it works either way.
+- [x] The #108 purse SQL, run Nov 4.
+- [x] The #111 Pro Shop SQL, run Nov 4 (checked: the shop tables are live and the app shows balances and earnings).
 - [ ] Paste the Legend rack SQL from #112 (the new `shop_items` list and the line that takes off the sequin jacket, diamond stud and black diamond putter).
+- [ ] Paste the club merge SQL from #114: the schema part, then the one-time merge of Boomtown into The Clergy. All or nothing: if it finds a playing member of both clubs, it stops and changes nothing.
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
