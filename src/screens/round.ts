@@ -102,7 +102,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       )
       .catch(() => {});
   }
-  game.starter = HANK.firstTee(me.name, snap.today);
+  game.starter = HANK.firstTee(me.name, snap.today, course.holes[0]?.theme);
   const scores: number[] = [];
   const spots: Spot[] = [];
   // a counted round logs its start and each hole it reaches, so the Committee can see who stops and where

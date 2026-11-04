@@ -113,11 +113,11 @@ export function launch(shot: Shot): { vx: number; vy: number; vz: number; ax: nu
   return { vx: dx * flat, vy: dy * flat, vz, ax: Math.cos(shot.angle) * side, ay: -Math.sin(shot.angle) * side };
 }
 
-// On the volcanic island, rough steep enough to be drawn as scree plays as rock (see the scree in scene.ts)
+// On the volcanic island (and the sandstone cliffs on the coast), rough steep enough to be drawn as scree plays as rock (see the scree in scene.ts)
 const SCREE = 0.8;
 function groundAt(h: Hole, p: V2): Surface {
   const s = surfaceAt(h, p);
-  if (s !== 'rough' || h.theme !== 'volcanic') return s;
+  if (s !== 'rough' || (h.theme !== 'volcanic' && h.theme !== 'coastal')) return s;
   const g = gradAt(h, p.x, p.y);
   return Math.hypot(g.x, g.y) > SCREE ? 'rock' : s;
 }
