@@ -605,8 +605,9 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       ...members.map((p) => ({ at: p.joined, kind: 'join' as const, club: club(p.groupId), name: p.name, course: null, total: null, par: null, what: null, shots: null })),
       ...(db.feedback ?? []).filter((f) => clubs.has(f.groupId)).map((f) => ({ at: f.createdAt, kind: 'feedback' as const, club: club(f.groupId), name: who(f.playerId)?.name ?? 'A member', course: null, total: null, par: null, what: f.body.slice(0, 80), shots: null })),
     ]
+      .filter((e) => e.at >= since)
       .sort((a, b) => b.at.localeCompare(a.at))
-      .slice(0, 25);
+      .slice(0, 1000);
     return {
       clubs: [...clubs]
         .map((id) => {
