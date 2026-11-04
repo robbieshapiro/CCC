@@ -181,11 +181,11 @@ export function home(snap: Snapshot) {
           <p class="eyebrow">${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
+          <p class="hero-purse"><b>💰 ${money(purseOf(field.length))}</b><span>${field.length ? `club purse · ${field.length} ${field.length === 1 ? 'player' : 'players'} in · top 10 paid` : 'club purse · $1,000 goes in with every player'}</span></p>
           ${mine ? '' : lastWord(snap)}
           <a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>
         </div>
       </section>
-      ${honoursPane(snap)}
       <section class="board${look(course)}">
         ${countdown(snap.month, course)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best round counts</span></div>
@@ -208,6 +208,7 @@ export function home(snap: Snapshot) {
         <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
         ${previewTile(snap.month)}
       </div>
+      ${honoursPane(snap)}
       <section class="plaque">
         <h2>Past Champions</h2>
         <ol>${plaque}</ol>
