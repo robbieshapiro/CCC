@@ -6,8 +6,9 @@ import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
+import { payouts } from '../purse';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
@@ -127,6 +128,16 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       .map((m) => periodChampion(m, mine))
       .filter((c): c is Champion => !!c);
     const wins = (id: string) => champions.filter((c) => c.playerIds.includes(id)).length;
+    // the purses of every closed period, as period_payouts does on the server
+    const paid: Payout[] = [];
+    for (const m of [...new Set(mine.filter((r) => r.month < month).map((r) => r.month))].sort()) {
+      const best = new Map<string, number>();
+      for (const r of mine.filter((x) => x.month === m && !db.players.find((p) => p.id === x.playerId)?.host)) best.set(r.playerId, Math.min(best.get(r.playerId) ?? Infinity, r.total - r.par));
+      const sorted = [...best.entries()].sort((a, b) => a[1] - b[1]);
+      const rows = sorted.map(([id, tp]) => ({ id, rank: sorted.findIndex((x) => x[1] === tp) + 1 }));
+      for (const [id, p] of payouts(rows)) if (p.payout > 0) paid.push({ month: m, playerId: id, ...p });
+    }
+    const lastPaid = paid.length ? paid.filter((p) => p.month === paid[paid.length - 1].month).sort((a, b) => a.place - b.place) : [];
     return {
       today,
       month,
@@ -147,9 +158,12 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           wins: wins(p.id),
           feats: [...new Set([...mine.filter((r) => r.playerId === p.id).flatMap((r) => r.feats), ...(wins(p.id) ? ['champion'] : [])])],
           career: career(mine.filter((r) => r.playerId === p.id)),
+          earnings: paid.filter((x) => x.playerId === p.id).reduce((a, x) => a + x.payout, 0),
+          top10s: paid.filter((x) => x.playerId === p.id).length,
         })),
       rounds: mine.filter((r) => r.month === month).map(strip),
       champions,
+      payouts: lastPaid,
     };
   },
 

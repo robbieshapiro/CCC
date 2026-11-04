@@ -1,6 +1,7 @@
 // Another member's card: their golfer on the turntable, the card itself, and how they've been playing.
 // Anyone can look at anyone; only your own card has the wardrobe.
 import { periodName } from '../day';
+import { money } from '../purse';
 import type { Snapshot } from '../api/types';
 import { portrait, specOf } from '../avatar';
 import { crest } from '../brand';
@@ -63,6 +64,7 @@ export function member(snap: Snapshot, id: string) {
               <div><dt>Member No.</dt><dd>${number}</dd></div>
               <div><dt>Since</dt><dd>${since}</dd></div>
               <div><dt>Titles</dt><dd>${p.wins}</dd></div>
+              <div><dt>Career earnings</dt><dd>${money(p.earnings ?? 0)}${p.top10s ? ` · ${p.top10s} top ${p.top10s === 1 ? '10' : '10s'}` : ''}</dd></div>
             </dl>
           </div>
         </div>

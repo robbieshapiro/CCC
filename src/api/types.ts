@@ -28,6 +28,8 @@ export type Player = {
   feats: string[];
   joined: string; // ISO date, for the member number
   career?: { rounds: number; best: number | null; avg: number | null }; // every round they've played, to par
+  earnings?: number; // the money list: play money won from the weekly purses (src/purse.ts)
+  top10s?: number;
 };
 
 // Where a tee shot came to rest, in course feet. Null if it found the water or went out.
@@ -67,7 +69,9 @@ export type Snapshot = {
   rounds: Round[]; // this period, whole group
   champions: Champion[]; // past periods, newest first
   crown?: DailyCrown | null; // filled in by state.refresh alongside the snapshot
+  payouts?: Payout[]; // what the last closed period's purse paid, best first
 };
+export type Payout = { month: string; playerId: string; place: number; tied: boolean; payout: number };
 
 // Yesterday's Closest to the Pin winner across every club. ids: their member ids in your club, if they're in it.
 export type DailyCrown = { day: string; name: string; club: string; ft: number | null; holed: boolean; ids: string[] };
