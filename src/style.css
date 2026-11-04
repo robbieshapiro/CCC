@@ -1195,3 +1195,9 @@ h1 .rank-badge { vertical-align: -2px; }
 .shop-item.owned em { background: #eaf3ec; border-color: #9cc5a6; color: #2f7d4a; }
 .shop-item.worn { border-color: #2f7d4a; }
 @media (max-width: 640px) { .shop-head { grid-template-columns: 1fr; } .shop-stage { height: 260px; } .shop-balance b { font-size: 38px; } }
+/* the Legend rack: one piece, shown big */
+.shop-rack.rack-legend .shop-items { grid-template-columns: 1fr; }
+.shop-rack.rack-legend .shop-item { padding: 18px; background: linear-gradient(135deg, #141414, #2a2418); border-color: #e6c35c; color: #f3ecdc; }
+.shop-rack.rack-legend .shop-item b { font-size: 24px; color: #f3d98a; }
+.shop-rack.rack-legend .shop-item span { color: #d9cfb3; font-size: 14px; max-width: 46em; }
+.shop-rack.rack-legend .shop-item em { background: transparent; border-color: #e6c35c; color: #f3d98a; }

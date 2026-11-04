@@ -1383,10 +1383,10 @@ create table if not exists shop_items (
 );
 alter table shop_items enable row level security;
 insert into shop_items (id, price, rack) values
-  ('hawaiian', 2500, 'member'), ('argyle', 3000, 'member'), ('tourpolo', 6000, 'pro'), ('sequin', 25000, 'legend'),
+  ('hawaiian', 2500, 'member'), ('argyle', 3000, 'member'), ('tourpolo', 6000, 'pro'),
   ('printbucket', 1500, 'member'), ('tourcap', 2500, 'member'), ('cowboy', 5000, 'pro'), ('goldvisor', 8000, 'pro'),
-  ('aviators', 2000, 'member'), ('watch', 4000, 'member'), ('chain', 10000, 'pro'), ('stud', 20000, 'legend'),
-  ('chrome', 3500, 'member'), ('schoolbag', 4000, 'member'), ('goldstaff', 12000, 'pro'), ('blackdiamond', 30000, 'legend')
+  ('aviators', 2000, 'member'), ('watch', 4000, 'member'), ('chain', 10000, 'pro'),
+  ('chrome', 3500, 'member'), ('schoolbag', 4000, 'member'), ('goldstaff', 12000, 'pro'), ('caddie', 60000, 'legend')
 on conflict (id) do update set price = excluded.price, rack = excluded.rack;
 
 create table if not exists purchases (
@@ -1398,6 +1398,8 @@ create table if not exists purchases (
   unique (player_id, item)
 );
 alter table purchases enable row level security;
+-- taken off the Legend rack before anyone bought them (kept if someone ever did)
+delete from shop_items where id in ('sequin', 'stud', 'blackdiamond') and id not in (select item from purchases);
 
 create or replace function buy_item(p_token uuid, p_item text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
