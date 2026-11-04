@@ -173,7 +173,8 @@ export class Course3D {
   private raf = 0;
   private last = performance.now();
   private clock = 0; // hole clock: drives movers, matches the physics
-  private slow = 0; // seconds of slow frames, for the automatic quality drop
+  private slow = 0; // seconds spent below a smooth frame rate, for the automatic quality drop
+  private frameAvg = 1 / 60; // a running average of frame time, in seconds
 
   private ballSink = 0; // how far the drawn ball is lowered to sit a smaller ball on the ground
   // the green read on a tour green while you putt: dots streaming downhill, quicker where it's steeper
@@ -494,8 +495,11 @@ export class Course3D {
   private sharpen(on: boolean) {
     if (this.sharp === on) return;
     this.sharp = on;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, on ? 3 : 2));
-    const size = on ? 4096 : 2048;
+    // phones and tablets (a touch screen) get the standard shadow detail and never more than 2x resolution: the extra
+    // is hard to see on a small screen and costs their graphics chips dearly
+    const touch = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, on && !touch ? 3 : 2));
+    const size = on && !touch ? 4096 : 2048;
     if (this.sun.shadow.mapSize.x !== size) {
       this.sun.shadow.mapSize.set(size, size);
       this.sun.shadow.map?.dispose();
@@ -1872,10 +1876,12 @@ export class Course3D {
     const dt = Math.min(0.05, raw);
     this.last = now;
     if (!this.hole) return;
-    // drop the pixel ratio if the device is struggling
-    this.slow = raw > 0.034 ? this.slow + raw : Math.max(0, this.slow - raw);
+    // drop the pixel ratio if the device is struggling: when the running average falls below about 48 frames a second
+    // for two seconds (a one-off hitch, or a stretch in a background tab, doesn't count)
+    if (raw < 0.25) this.frameAvg += (raw - this.frameAvg) * 0.1;
+    this.slow = this.frameAvg > 1 / 48 ? this.slow + Math.min(raw, 0.1) : Math.max(0, this.slow - raw);
     // in half steps, so a struggling phone gets a little softer, not suddenly blurry
-    if (this.slow > 3 && this.renderer.getPixelRatio() > 1) {
+    if (this.slow > 2 && this.renderer.getPixelRatio() > 1) {
       this.renderer.setPixelRatio(Math.max(1, this.renderer.getPixelRatio() - 0.5));
       this.resize();
       this.slow = 0;

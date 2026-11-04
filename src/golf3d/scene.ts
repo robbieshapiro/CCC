@@ -502,19 +502,27 @@ export function buildWorld(h: Hole, number: number): World {
     if (w.look === 'lava') root.add(lavaSmoke(h, w, anim));
     if (w.look === 'slime') slimeBubbles(h, w, root, anim);
     if (coastal && w.look === 'sea') surf(h, w, root, anim);
-    const posAttr = water.geometry.attributes.position as THREE.BufferAttribute;
-    const base = Float32Array.from(posAttr.array as Float32Array);
     const lava = w.look === 'lava';
     const material = water.material as THREE.MeshStandardMaterial;
+    // the ripples run on the graphics chip: the sheet is sent once, and each frame only the time changes (moving every
+    // point of a sea on the processor and re-sending it each frame made tablets stutter)
+    const ripple = {
+      uTime: { value: 0 },
+      uSpeed: { value: lava ? 0.35 : 1.6 },
+      // the open Pacific has a proper swell on it
+      uAmp: { value: lava ? 0.05 : coastal && w.look === 'sea' ? 0.16 : 0.06 },
+    };
+    material.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, ripple);
+      sh.vertexShader =
+        'uniform float uTime;\nuniform float uSpeed;\nuniform float uAmp;\n' +
+        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y += sin(uTime * uSpeed + position.x * 0.35 + position.z * 0.22) * uAmp;');
+    };
+    material.customProgramCacheKey = () => 'ripple';
     anim.push((clock) => {
       // the whole sheet rides the tide (or the swell of the lava); ripples on top
       water.position.y = levelOf(w, clock) - w.level;
-      const a = posAttr.array as Float32Array;
-      const speed = lava ? 0.35 : 1.6;
-      // the open Pacific has a proper swell on it
-      const amp = lava ? 0.05 : coastal && w.look === 'sea' ? 0.16 : 0.06;
-      for (let i = 0; i < a.length; i += 3) a[i + 1] = base[i + 1] + Math.sin(clock * speed + base[i] * 0.35 + base[i + 2] * 0.22) * amp;
-      posAttr.needsUpdate = true;
+      ripple.uTime.value = clock;
       // the cracks breathe, slowly and not quite in time
       if (lava) {
         // the flow creeps along
