@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (the Legend rack is a personal caddie).
+Last updated Nov 4, 2026 (two new drinks on the beverage cart).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (the Legend rack is a personal caddie).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #113 | Two new drinks on the beverage cart, free like the rest (one pick a round): an Espresso (a quick needle but a much wider gold window, 2 swings) and a Transfusion (a wider gold window and a calmer needle, 5% shorter, 2 swings). Drinks stay free; purse money doesn't buy boosts. |
 | #111 | The Pro Shop, a Clubhouse tab: purse money buys flashy looks that show wherever your golfer does (on the course for other members, in the stands, on member cards). Career earnings only go up; spending comes out of a separate balance. Fourteen pieces across tops, headwear, bling, bags and putters, from a $1,500 bucket hat to a $12,000 gold staff bag; the Club Legend rack is one piece, a $60,000 personal caddie (#112). Your golfer stands on a turntable: tap a piece to try it on, tap again to buy, and owned pieces go on and off for free. Ranks by career earnings, with a badge by every name: Club Member for everyone, Club Pro from $15,000, Club Legend from $75,000; the Pro and Legend racks open with the rank. Title gear (tartan, blazers, gold putter, crested bag) stays title-only. Looks only: nothing in the shop changes how a shot plays. |
 | #108 | The weekly purse: every club's board pays its top 10 in play money, like a tour event. $1,000 goes in for each member who posts a round that week, and all of it goes to the top 10 in tour proportions (the winner about 30%, tenth about 4.5%); ties split the places they cover, a playoff winner takes first money. The countdown strip on the board shows the club purse, and each of the top 10 shows what they would take if the week ended now; the end-of-round card shows your place and projected payout; the honours show what the purse paid; career earnings and top 10s on member cards, the Locker and the Clubhouse members table. The last period's honours moved down the home page, under the board and tiles. Nothing to spend it on. |
 | #107 | The Pacific Bluffs goes Southern California: gnarled Torrey pines line the fairways and cover the cliff tops, sandstone barrancas cut across Sea Lion Point (past the drive) and The Lighthouse (in front of the tee), coastal sage scrub in the rough and beyond, paragliders over the cliffs and fan palms behind the first tee. Fairways are about a third narrower, so the drives are harder (the beginner sim goes from about +1.6 to +2.1 a hole). The trees are drawn in code: the free model sites are blocked from the build environment. |

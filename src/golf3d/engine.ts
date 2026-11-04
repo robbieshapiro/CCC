@@ -860,8 +860,8 @@ export class Course3D {
       try {
         const k = 'ccc-drinks';
         const had = new Set<string>(JSON.parse(localStorage.getItem(k) || '[]'));
-        // the Nineteenth Hole feat is the three cart drinks; the fireball doesn't count toward it
-        if (kind !== 'fireball') had.add(kind);
+        // the Nineteenth Hole feat is the cart's three original drinks; the newer ones and the fireball don't count
+        if (kind === 'palmer' || kind === 'lager' || kind === 'water') had.add(kind);
         localStorage.setItem(k, JSON.stringify([...had]));
         if (had.size === 3) this.zones.add('nineteenth');
       } catch {
@@ -1174,7 +1174,7 @@ export class Course3D {
     m.classList.toggle('fireball', kind === 'fireball');
     const tag = this.overlay.querySelector('[data-swing-tag]') as HTMLElement;
     tag.hidden = !drink || kind === 'water';
-    if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · a touch slower' : kind === 'lager' ? 'Lager · +10% · swing into the fire' : kind === 'fireball' ? 'Fireball · +15% · swing into the fire' : '';
+    if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · a touch slower' : kind === 'lager' ? 'Lager · +10% · swing into the fire' : kind === 'fireball' ? 'Fireball · +15% · swing into the fire' : kind === 'espresso' ? 'Espresso · quick needle, wide gold' : kind === 'transfusion' ? 'Transfusion · steady hands, a touch shorter' : '';
     // righties have the meter on the left, out of the way of the golfer; lefties on the right
     m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.power));
