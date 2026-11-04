@@ -2,6 +2,7 @@
 // games), Reginald's weekly Chronicle, every club this month, how the game works, and a note to the Committee. Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
 import { periodName, span } from '../day';
+import { money } from '../purse';
 import { api } from '../api';
 import type { Chronicle, ClubRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
@@ -61,6 +62,7 @@ function members(snap: Snapshot) {
         <td class="num topar">${topar(c.best)}</td>
         <td class="num avg">${c.avg === null ? '–' : toParLabel(Math.round(c.avg * 10) / 10)}</td>
         <td class="num">${p.wins || ''}</td>
+        <td class="num earn">${p.earnings ? money(p.earnings) : ''}</td>
       </tr>`;
     })
     .join('');
@@ -69,8 +71,8 @@ function members(snap: Snapshot) {
     <div class="ch-head"><h1>${esc(snap.groupName)}</h1><p class="muted">${rows.length} ${rows.length === 1 ? 'member' : 'members'} · ${periodName(snap.month)}</p></div>
     ${rows.length ? `<div class="table-wrap"><table class="ch-table ch-members">
       <thead>
-        <tr class="group"><th colspan="2"></th><th colspan="2" class="num">${per}</th><th colspan="2" class="num all">All time</th><th class="avg"></th><th></th></tr>
-        <tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rds</th><th class="num all">Rds</th><th class="num">Best</th><th class="num avg">Avg</th><th class="num" title="Titles">🏆</th></tr>
+        <tr class="group"><th colspan="2"></th><th colspan="2" class="num">${per}</th><th colspan="2" class="num all">All time</th><th class="avg"></th><th></th><th></th></tr>
+        <tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rds</th><th class="num all">Rds</th><th class="num">Best</th><th class="num avg">Avg</th><th class="num" title="Titles">🏆</th><th class="num" title="Career earnings from the weekly purses">💰</th></tr>
       </thead>
       <tbody>${body}</tbody></table></div>` : '<p class="muted">No members yet.</p>'}`;
 }

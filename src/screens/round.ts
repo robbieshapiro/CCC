@@ -27,6 +27,8 @@ import { buildHole } from '../designer/hole';
 import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
+import { board } from '../standings';
+import { money, payouts, placeLabel, purseOf } from '../purse';
 import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
@@ -161,11 +163,26 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
             ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry')
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
+      ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
       <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
       <div class="summary-actions"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the club</button></div>
       <button class="link" data-feedback>Leave feedback</button>
     </div>`;
   el.appendChild(sheet);
+  // where this leaves you on the board, and what the purse would pay you if the week ended now
+  if (!preview && posted)
+    void refresh()
+      .then((s) => {
+        const rows = board(s).filter((r) => r.best);
+        const mine = payouts(rows.map((r) => ({ id: r.playerId, rank: r.rank }))).get(s.me);
+        const line = sheet.querySelector<HTMLElement>('#purse-line');
+        if (!line || !mine) return;
+        line.innerHTML = mine.payout
+          ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${rows.length} if the week ended now · purse ${money(purseOf(rows.length))}</span>`
+          : `<b>${placeLabel(mine.place, mine.tied)} of ${rows.length}</b><span>Top 10 get paid. Purse ${money(purseOf(rows.length))}</span>`;
+        line.hidden = false;
+      })
+      .catch(() => {});
   // Reginald reads the card (Claude) and his note replaces the stock line when it comes
   if (!preview && posted) {
     const note = sheet.querySelector<HTMLElement>('#reg-note p');

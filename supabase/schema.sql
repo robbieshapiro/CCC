@@ -188,6 +188,39 @@ language sql stable security definer set search_path = public, extensions as $$
   where n = 1 or pday is null or game_today() <= pday or not anyone or pr = 1
 $$;
 
+-- The weekly purse (src/purse.ts): each closed period's board pays its top ten like a tour event. The purse is $1,000
+-- for every member with a round that period, all of it paid to the top ten (everyone, if fewer played) in the
+-- proportions of a tour purse (18% to 2.725% of a full one, scaled up so the places paid share it all). Ties share the places
+-- they cover; a playoff winner takes first money and the others split the places below. Play money, for the money list.
+create or replace function period_payouts(p_group uuid)
+returns table (month text, player_id uuid, place int, tied boolean, payout int)
+language sql stable security definer set search_path = public, extensions as $$
+  with b as (select mb.month, mb.player_id, mb.r::int as r from month_bests(p_group) mb where mb.month < game_month()),
+  f as (select b.month, count(*)::int as n from b group by b.month),
+  g as (select b.month, b.r, count(*)::int as k from b group by b.month, b.r),
+  w as (select c.month, c.player_id from period_champs(p_group) c where c.how = 'playoff-won'),
+  sp as (
+    select b.month, b.player_id, f.n,
+      case when b.r = 1 and g.k > 1 and exists (select 1 from w where w.month = b.month)
+        then case when exists (select 1 from w where w.month = b.month and w.player_id = b.player_id) then 1 else 2 end
+        else b.r end as p0,
+      case when b.r = 1 and g.k > 1 and exists (select 1 from w where w.month = b.month)
+        then case when exists (select 1 from w where w.month = b.month and w.player_id = b.player_id) then 1 else g.k - 1 end
+        else g.k end as kk
+    from b join f on f.month = b.month join g on g.month = b.month and g.r = b.r
+  )
+  select sp.month, sp.player_id, sp.p0, sp.kk > 1,
+    round(sp.n * 1000 * coalesce((
+      select sum((array[0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725]::numeric[])[i])
+      from generate_series(sp.p0, least(10, sp.p0 + sp.kk - 1)) i
+    ), 0) / (
+      select sum((array[0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725]::numeric[])[i])
+      from generate_series(1, least(10, sp.n)) i
+    ) / sp.kk)::int
+  from sp
+$$;
+revoke all on function period_payouts(uuid) from public, anon, authenticated;
+
 -- The playoff open at your club today, if any: who's in it, and how each has done so far
 create or replace function playoff_state(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
@@ -497,13 +530,25 @@ begin
         -- played today doesn't count yet)
         'wins', (select count(*) from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff'),
         'career', (select json_build_object('rounds', count(*), 'best', min(total - par), 'avg', round(avg(total - par), 1)) from rounds where player_id = pl.id),
+        -- the money list: everything won from the weekly purses, and how many top tens
+        'earnings', coalesce(pay.earned, 0),
+        'top10s', coalesce(pay.top10s, 0),
         'feats', (select coalesce(json_agg(distinct f), '[]') from (
             select unnest(feats) f from rounds where player_id = pl.id
             union select 'champion' where exists (select 1 from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff')
           ) fs)
       ) order by pl.created_at)
       -- the club's members, and you; someone who only runs the club isn't on its board
-      from players pl where pl.group_id = me.group_id and (not pl.host_only or pl.id = me.id)
+      from players pl
+      left join (select pp.player_id, sum(pp.payout)::int as earned, count(*) filter (where pp.payout > 0)::int as top10s
+        from period_payouts(me.group_id) pp group by pp.player_id) pay on pay.player_id = pl.id
+      where pl.group_id = me.group_id and (not pl.host_only or pl.id = me.id)
+    ), '[]'),
+    -- what the last closed period paid out
+    'payouts', coalesce((
+      select json_agg(json_build_object('month', pp.month, 'playerId', pp.player_id, 'place', pp.place, 'tied', pp.tied, 'payout', pp.payout) order by pp.place)
+      from period_payouts(me.group_id) pp
+      where pp.payout > 0 and pp.month = (select max(x.month) from period_payouts(me.group_id) x)
     ), '[]'),
     'rounds', coalesce((
       select json_agg(json_build_object('playerId', r.player_id, 'month', r.month, 'course', r.course, 'holes', r.holes,

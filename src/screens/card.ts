@@ -1,6 +1,7 @@
 // Your Locker: your golfer, how your week is going and your trophies. Edit your look from here. (The club's
 // members are in the Clubhouse.)
 import { span } from '../day';
+import { money } from '../purse';
 import { api, setSession } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
 import { portrait, specOf } from '../avatar';
@@ -43,6 +44,7 @@ export function card(snap: Snapshot) {
             <div><b>${best ? toParLabel(best.total - best.par) : '–'}</b><span>Best this ${span(snap.month)}</span></div>
             <div><b>${mine?.best ? ordinal(mine.rank) : '–'}</b><span>In the club</span></div>
             <div><b>${mine?.rounds ?? 0}</b><span>Rounds</span></div>
+            <div><b>${money(me.earnings ?? 0)}</b><span>Career earnings</span></div>
           </div>`
           }
           <button class="btn ghost" id="edit-look">Edit your look</button>

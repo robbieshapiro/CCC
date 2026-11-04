@@ -1144,3 +1144,26 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .ch-members .all { border-left: 1px solid var(--line); }
 @media (max-width: 480px) { .ch-members td, .ch-members th { padding: 8px 5px; } .ch-members .avg { display: none; } .ch-members .who .avatar, .ch-members .who svg:first-child { width: 26px; height: 26px; } }
 .adm-members td.warn { color: #b0442e; font-weight: 800; }
+
+/* The weekly purse (src/purse.ts): on the board, in the honours, and on the card after a round */
+.purse { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin: 0 0 12px; padding: 10px 14px; border-radius: 8px; background: linear-gradient(90deg, rgba(230, 195, 92, 0.22), rgba(230, 195, 92, 0.06)); border: 1px solid rgba(230, 195, 92, 0.45); }
+.purse b { font-family: var(--serif); font-size: 22px; color: #f3d98a; font-variant-numeric: tabular-nums; }
+.purse span { font-size: 12px; color: #d9cfb3; }
+.board .pay { color: #f3d98a; font-weight: 800; font-style: normal; font-variant-numeric: tabular-nums; }
+.paid { margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(184, 149, 90, 0.5); }
+.paid > b { font-size: 14px; }
+.paid ol { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; max-width: 420px; }
+.paid li { display: grid; grid-template-columns: 3em 1fr auto; gap: 8px; font-size: 14px; }
+.paid li span { color: var(--muted); font-weight: 700; }
+.paid li b { color: #2f7d4a; font-variant-numeric: tabular-nums; }
+.paid li.me { font-weight: 800; }
+.purse-line { width: 100%; display: grid; gap: 2px; margin: 0; padding: 10px 12px; border-radius: 8px; background: #fbf4e0; border: 1px solid rgba(214, 169, 64, 0.6); animation: rise 0.45s ease-out both; }
+.purse-line b { font-family: var(--serif); font-size: 26px; color: #8a6514; }
+.purse-line span { font-size: 13px; color: var(--muted); }
+.ch-members .earn { color: #8a6514; font-weight: 700; white-space: nowrap; }
+.honours .paid li { display: grid; grid-template-columns: 3em 1fr auto; align-items: baseline; gap: 8px; }
+.honours .paid li span { grid-column: auto; }
+/* the running purse on the Play hero */
+.hero-purse { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: -6px 0 14px; padding: 6px 12px; border-radius: 999px; background: rgba(230, 195, 92, 0.16); border: 1px solid rgba(230, 195, 92, 0.5); }
+.hero-purse b { font-family: var(--serif); font-size: 20px; color: #f3d98a; font-variant-numeric: tabular-nums; }
+.hero-purse span { font-size: 12px; color: #e6d7b0; }

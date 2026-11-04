@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (the Pacific Bluffs goes SoCal: Torrey pines, barrancas, narrower drives).
+Last updated Nov 4, 2026 (the weekly purse and the money list).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (the Pacific Bluffs goes SoCal: Torrey pines, barrancas
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #108 | The weekly purse: every club's board pays its top 10 in play money, like a tour event. $1,000 goes in for each member who posts a round that week, and all of it goes to the top 10 in tour proportions (the winner about 30%, tenth about 4.5%); ties split the places they cover, a playoff winner takes first money. The board shows the club purse and what each of the top 10 would take if the week ended now; the end-of-round card shows your place and projected payout; the honours show what the purse paid; career earnings and top 10s on member cards, the Locker and the Clubhouse members table. The running purse sits on the Play hero, and the last period's honours moved down the home page, under the board and tiles. Nothing to spend it on. |
 | #107 | The Pacific Bluffs goes Southern California: gnarled Torrey pines line the fairways and cover the cliff tops, sandstone barrancas cut across Sea Lion Point (past the drive) and The Lighthouse (in front of the tee), coastal sage scrub in the rough and beyond, paragliders over the cliffs and fan palms behind the first tee. Fairways are about a third narrower, so the drives are harder (the beginner sim goes from about +1.6 to +2.1 a hole). The trees are drawn in code: the free model sites are blocked from the build environment. |
 | #105 | The Pacific Bluffs replaces the Western Reserve as the Nov 8 course (a draft until Robbie plays it): Sea Lion Point (par 4), The Lighthouse (par 5) and The Carry (par 3, the playoff hole), on California sea cliffs at golden hour. A new `coastal` look: sandstone cliffs, Monterey cypress, ice plant, surf on the rocks, sea stacks, sails, a turning lighthouse and sea lions, with the coast running on past the edge of each hole. Every hole now opens on an intro card during the flyover (number, name, par, yards, wind, a line on how to play it); the coast gets a longer flyover that swings round the green, a navy and sunset HUD, and a Pacific-blue Play hero, board and countdown. Hank's first-tee line names the course's hazard. |
 | #104 | The Unfinished rounds card is gone from Admin: the count rides on the Rounds tile ("posted · 12 unfinished"), and stays in the members table's Unfinished column and the activity feed. |
@@ -51,6 +52,7 @@ Last updated Nov 4, 2026 (the Pacific Bluffs goes SoCal: Torrey pines, barrancas
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
+- [ ] Paste the purse SQL from #108 (`period_payouts` and `get_snapshot`). Until then the board's purse and projected payouts work, but career earnings and last week's payouts show nothing.
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
@@ -99,6 +101,8 @@ The problem with the new members: once your best round is in, there's no reason 
 - **Playoff extras, if wanted:** Reginald's daily line playing up a playoff day (the card and plaque carry it for now), and an Admin button to settle a playoff by hand. New courses need a `playoff` entry in `src/golf3d/courses.ts` (the hole, and a fairway spot for the shot at the pin) or a tie there can't be played off.
 
 ## Next up (ideas, not started)
+
+- **Something to spend purse money on,** if it should mean more: a pro shop for looks, entry fees for mini tournaments, a season-long money list with its own title.
 
 - **The Committee.** Robbie appoints elite members and gives titles (Hole Architect, Mini Game Manager). Perks:
   - a premium locker and a badge;
