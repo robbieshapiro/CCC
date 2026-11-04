@@ -24,9 +24,9 @@ export function shopPane(snap: Snapshot) {
   const rank = rankOf(earned);
   const next = nextRank(earned);
   const racks = RANKS.map(
-    (r) => `<section class="shop-rack${canShop(r.id, earned) ? '' : ' locked'}">
+    (r) => `<section class="shop-rack rack-${r.id}${canShop(r.id, earned) ? '' : ' locked'}">
       <h2>${badgeSvg(r.id, 22)} ${r.id === 'member' ? 'The shop floor' : `${r.name} rack`}${canShop(r.id, earned) ? '' : ` <small>🔒 opens at ${money(r.from)} career earnings</small>`}</h2>
-      <div class="shop-items">${(['top', 'hat', 'bling', 'bag', 'putter'] as Kind[])
+      <div class="shop-items">${(['top', 'hat', 'bling', 'bag', 'putter', 'caddie'] as Kind[])
         .flatMap((k) => ITEMS.filter((i) => i.rack === r.id && i.kind === k))
         .map((i) => itemCard(i))
         .join('')}</div>
@@ -66,6 +66,7 @@ export function bindShop(snap: Snapshot) {
   } catch {
     host.hidden = true;
   }
+  spec.caddieBib = me.name;
   const show = () => stage?.set(trying ? tryOn(spec, trying) : spec);
   const label = (i: Item) => {
     if (owned.has(i.id)) return i.worn(spec) ? 'Wearing · take off' : 'Owned · wear';
@@ -97,7 +98,7 @@ export function bindShop(snap: Snapshot) {
       const i = ITEMS.find((x) => x.id === b.dataset.item)!;
       // owned: put it on or take it off
       if (owned.has(i.id)) {
-        spec = { ...spec };
+        spec = { ...spec, caddieBib: me.name };
         if (i.worn(spec)) i.off(spec);
         else i.wear(spec);
         trying = null;

@@ -37,7 +37,7 @@ export const badgeFor = (p: Player, size = 18) => (p.host ? '' : badgeSvg(rankOf
 
 // ---------- the catalogue ----------
 
-export type Kind = 'top' | 'hat' | 'bling' | 'bag' | 'putter';
+export type Kind = 'top' | 'hat' | 'bling' | 'bag' | 'putter' | 'caddie';
 export type Item = {
   id: string;
   name: string;
@@ -51,15 +51,27 @@ export type Item = {
 };
 const top = (id: string, name: string, price: number, rack: Rack, what: string, t: GolferSpec['top']): Item => ({ id, name, kind: 'top', price, rack, what, wear: (s) => (s.top = t), off: (s) => (s.top = 'polo'), worn: (s) => s.top === t });
 const hat = (id: string, name: string, price: number, rack: Rack, what: string, h: GolferSpec['hat']): Item => ({ id, name, kind: 'hat', price, rack, what, wear: (s) => (s.hat = h), off: (s) => (s.hat = 'cap'), worn: (s) => s.hat === h });
-const flag = (id: string, name: string, price: number, rack: Rack, what: string, k: 'aviators' | 'chain' | 'watch' | 'stud'): Item => ({ id, name, kind: 'bling', price, rack, what, wear: (s) => (s[k] = true), off: (s) => (s[k] = false), worn: (s) => !!s[k] });
+const flag = (id: string, name: string, price: number, rack: Rack, what: string, k: 'aviators' | 'chain' | 'watch'): Item => ({ id, name, kind: 'bling', price, rack, what, wear: (s) => (s[k] = true), off: (s) => (s[k] = false), worn: (s) => !!s[k] });
 const putter = (id: string, name: string, price: number, rack: Rack, what: string, f: GolferSpec['putter']): Item => ({ id, name, kind: 'putter', price, rack, what, wear: (s) => (s.putter = f), off: (s) => (s.putter = 'classic'), worn: (s) => s.putter === f });
 const bag = (id: string, name: string, price: number, rack: Rack, what: string, b: GolferSpec['bagStyle']): Item => ({ id, name, kind: 'bag', price, rack, what, wear: (s) => (s.bagStyle = b), off: (s) => (s.bagStyle = undefined), worn: (s) => s.bagStyle === b });
+
+// the Club Legend's one piece: their own caddie
+const caddieItem: Item = {
+  id: 'caddie',
+  name: 'Personal caddie',
+  kind: 'caddie',
+  price: 60000,
+  rack: 'legend',
+  what: 'Your own caddie, in a white bib with your name across it, standing by with your bag. On the course, beside your ghost and on your member card.',
+  wear: (s) => (s.caddie = true),
+  off: (s) => (s.caddie = false),
+  worn: (s) => !!s.caddie,
+};
 
 export const ITEMS: Item[] = [
   top('hawaiian', 'Hawaiian shirt', 2500, 'member', 'Pacific teal with coral hibiscus and palm fronds. Loud.', 'hawaiian'),
   top('argyle', 'Argyle sweater', 3000, 'member', 'Diamonds in your shirt and accent colours, collar out.', 'argyle'),
   top('tourpolo', 'Tour polo', 6000, 'pro', 'Crisp white, sponsor patches on the chest and sleeves.', 'tourpolo'),
-  top('sequin', 'Sequin dinner jacket', 25000, 'legend', 'Black sequins, satin lapels, bow tie. For the very rich.', 'sequin'),
   hat('printbucket', 'Loud bucket hat', 1500, 'member', 'Hawaiian print, in your hat colour.', 'printbucket'),
   hat('tourcap', 'Tour cap', 2500, 'member', 'A gold button on top and a gold crest on the front.', 'tourcap'),
   hat('cowboy', 'Cowboy hat', 5000, 'pro', 'Tall crown, wide brim. Nobody asked.', 'cowboy'),
@@ -67,11 +79,10 @@ export const ITEMS: Item[] = [
   flag('aviators', 'Aviators', 2000, 'member', 'Gold-rimmed, mirrored. On at all times.', 'aviators'),
   flag('watch', 'Gold watch', 4000, 'member', 'On the lead wrist, where it catches the light on the backswing.', 'watch'),
   flag('chain', 'Gold chain', 10000, 'pro', 'A heavy gold chain with a little club-head pendant.', 'chain'),
-  flag('stud', 'Diamond stud', 20000, 'legend', 'One stone, one ear. It sparkles.', 'stud'),
   putter('chrome', 'Chrome putter', 3500, 'member', 'A mirror-polished head.', 'chrome'),
   bag('schoolbag', 'School bag', 4000, 'member', 'A bag in your school kit’s colours with its letters (pick a school in the Locker).', 'school'),
   bag('goldstaff', 'Gold staff bag', 12000, 'pro', 'A big tour staff bag in gold, banded in black.', 'goldstaff'),
-  putter('blackdiamond', 'Black diamond putter', 30000, 'legend', 'A black head with a row of diamonds along the top line.', 'blackdiamond'),
+  caddieItem,
 ];
 export const itemById = (id: string) => ITEMS.find((i) => i.id === id);
-export const KIND_NAME: Record<Kind, string> = { top: 'Tops', hat: 'Headwear', bling: 'Bling', bag: 'Bags', putter: 'Putters' };
+export const KIND_NAME: Record<Kind, string> = { top: 'Tops', hat: 'Headwear', bling: 'Bling', bag: 'Bags', putter: 'Putters', caddie: 'Service' };

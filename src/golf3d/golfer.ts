@@ -8,7 +8,7 @@ export type Build = 'slim' | 'regular' | 'broad';
 export type HairStyle = 'short' | 'side' | 'curly' | 'long' | 'bun' | 'bald';
 export type FaceHair = 'none' | 'stubble' | 'moustache' | 'beard';
 // the last four tops and hats come from the Pro Shop (src/shop.ts)
-export type Top = 'polo' | 'quarterzip' | 'vest' | 'cardigan' | 'cashmere' | 'blazer' | 'goldblazer' | 'tweed' | 'uniform' | 'hawaiian' | 'argyle' | 'tourpolo' | 'sequin';
+export type Top = 'polo' | 'quarterzip' | 'vest' | 'cardigan' | 'cashmere' | 'blazer' | 'goldblazer' | 'tweed' | 'uniform' | 'hawaiian' | 'argyle' | 'tourpolo';
 export type Bottoms = 'trousers' | 'shorts' | 'plusfours' | 'tartan' | 'skirt';
 export type Hat = 'none' | 'cap' | 'visor' | 'flatcap' | 'bucket' | 'printbucket' | 'tourcap' | 'goldvisor' | 'cowboy';
 
@@ -29,14 +29,15 @@ export type GolferSpec = {
   glove: boolean;
   shoes: 'white' | 'saddle' | 'black';
   bag: string;
-  putter?: 'classic' | 'gold' | 'chrome' | 'blackdiamond';
+  putter?: 'classic' | 'gold' | 'chrome';
   crestBag?: boolean;
   // Pro Shop pieces (src/shop.ts)
   bagStyle?: 'goldstaff' | 'school';
   aviators?: boolean;
   chain?: boolean;
   watch?: boolean;
-  stud?: boolean;
+  caddie?: boolean; // the Club Legend's own caddie, standing by with the bag
+  caddieBib?: string; // the name on the caddie's bib
   bowtie?: boolean;
   monocle?: boolean;
   kit?: string; // a school's fall kit (see kits.ts): a quarter-zip in its colours with its letters on the chest
@@ -130,7 +131,7 @@ function monoTex(text: string, color: string) {
   return mat;
 }
 
-function patternTex(kind: 'argyle' | 'tartan' | 'tweed' | 'hawaiian' | 'sequin', a: string, b: string) {
+function patternTex(kind: 'argyle' | 'tartan' | 'tweed' | 'hawaiian', a: string, b: string) {
   const key = `${kind}|${a}|${b}`;
   const hit = mats.get(key) as THREE.MeshStandardMaterial | undefined;
   if (hit) return hit;
@@ -181,15 +182,6 @@ function patternTex(kind: 'argyle' | 'tartan' | 'tweed' | 'hawaiian' | 'sequin',
     flower(46, 40, 7, b);
     flower(54, 8, 4, '#f4f1e8');
     flower(20, 48, 4, '#f4f1e8');
-  } else if (kind === 'sequin') {
-    // a dark ground covered in little discs that catch the light
-    for (let yy = 2; yy < 64; yy += 5)
-      for (let xx = (yy % 10) / 2; xx < 64; xx += 5) {
-        x.fillStyle = Math.random() < 0.3 ? '#ffffff' : Math.random() < 0.5 ? b : '#2a2a3a';
-        x.beginPath();
-        x.arc(xx, yy, 1.8, 0, Math.PI * 2);
-        x.fill();
-      }
   } else if (kind === 'tartan') {
     x.globalAlpha = 0.55;
     x.fillStyle = b;
@@ -208,7 +200,7 @@ function patternTex(kind: 'argyle' | 'tartan' | 'tweed' | 'hawaiian' | 'sequin',
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(2, 2);
   t.colorSpace = THREE.SRGBColorSpace;
-  const mat = new THREE.MeshStandardMaterial({ map: t, roughness: kind === 'sequin' ? 0.25 : 0.85, metalness: kind === 'sequin' ? 0.7 : 0 });
+  const mat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.85 });
   mats.set(key, mat);
   return mat;
 }
@@ -265,12 +257,9 @@ export function buildClub(id: ClubId, finish: GolferSpec['putter'] = 'classic') 
     head.scale.set(1.35, 0.7, 1);
     head.position.set(0.2, -len, 0.04);
   } else if (id === 'putter') {
-    const look = finish === 'gold' ? m('#d4af37', 0.25, { metalness: 0.9 }) : finish === 'chrome' ? m('#eef2f6', 0.05, { metalness: 1 }) : finish === 'blackdiamond' ? m('#15161a', 0.2, { metalness: 0.6 }) : m('#b9bcc2', 0.25, { metalness: 0.9 });
+    const look = finish === 'gold' ? m('#d4af37', 0.25, { metalness: 0.9 }) : finish === 'chrome' ? m('#eef2f6', 0.05, { metalness: 1 }) : m('#b9bcc2', 0.25, { metalness: 0.9 });
     head = mesh(new THREE.BoxGeometry(0.42, 0.14, 0.12), look);
     head.position.set(0.15, -len, 0);
-    // black diamond: a row of stones set along the top line
-    if (finish === 'blackdiamond')
-      for (let k = 0; k < 5; k++) head.add(mesh(new THREE.OctahedronGeometry(0.03, 0), m('#ffffff', 0.05, { metalness: 0.2, emissive: '#9fdcff', emissiveIntensity: 0.6 })).translateX(-0.15 + k * 0.075).translateY(0.08));
   } else {
     head = mesh(new THREE.BoxGeometry(0.36, 0.08, 0.2), m('#c9ccd1', 0.2, { metalness: 0.9 }));
     head.rotation.z = id === 'wedge' ? 0.9 : id === 'chip' ? 0.7 : 0.55;
@@ -313,6 +302,42 @@ function buildBag(color: string, crest: boolean, style?: GolferSpec['bagStyle'],
   return g;
 }
 
+// ---------- the caddie ----------
+
+// A Club Legend's caddie: club-green shirt under a white bib with the member's name across it, a white cap, and the
+// member's own bag at their side.
+function caddie(owner: GolferSpec) {
+  const spec: GolferSpec = {
+    ...DEFAULT_SPEC,
+    skin: '#c08a60',
+    hair: 'short',
+    hairColor: '#2b1d14',
+    top: 'vest',
+    topColor: '#163b2c',
+    accent: '#f7f7f4',
+    bottoms: 'trousers',
+    bottomsColor: '#1f2d4a',
+    hat: 'cap',
+    hatColor: '#f7f7f4',
+    glove: false,
+    shoes: 'white',
+    bag: owner.bag,
+    crestBag: owner.crestBag,
+    bagStyle: owner.bagStyle,
+    kit: owner.kit,
+    height: 0.97,
+    caddie: false,
+  };
+  const g = new Golfer(spec).group;
+  const name = (owner.caddieBib ?? '').toUpperCase().slice(0, 12);
+  if (name) {
+    const bib = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.2), patchTex(name, '#f7f7f4', '#163b2c'));
+    bib.position.set(0, 4.3, 0.43);
+    g.add(bib);
+  }
+  return g;
+}
+
 // ---------- the golfer ----------
 
 export type PoseName = 'idle' | 'address' | 'cheer' | 'groan' | 'wave' | 'clasp';
@@ -344,9 +369,7 @@ export class Golfer {
           ? patternTex('hawaiian', '#1f8a9e', '#f0603f')
           : s.top === 'argyle'
             ? patternTex('argyle', s.topColor, s.accent)
-            : s.top === 'sequin'
-              ? patternTex('sequin', '#14141c', '#c9a24a')
-              : m(s.top === 'cashmere' ? '#eadfc8' : s.top === 'tourpolo' ? '#f7f7f4' : s.topColor, s.top === 'cardigan' || s.top === 'cashmere' ? 0.95 : 0.7);
+            : m(s.top === 'cashmere' ? '#eadfc8' : s.top === 'tourpolo' ? '#f7f7f4' : s.topColor, s.top === 'cardigan' || s.top === 'cashmere' ? 0.95 : 0.7);
     // short sleeves and an open collar
     const shortSleeve = s.top === 'polo' || s.top === 'vest' || s.top === 'uniform' || s.top === 'hawaiian' || s.top === 'tourpolo';
     const bottomMat = s.bottoms === 'tartan' ? patternTex('tartan', s.bottomsColor, '#163b2c') : m(s.bottomsColor, 0.8);
@@ -431,12 +454,11 @@ export class Golfer {
       belly.position.set(0, 1.18, 0.4 * w);
       this.spine.add(belly);
     }
-    if (s.top === 'cardigan' || s.top === 'blazer' || s.top === 'goldblazer' || s.top === 'tweed' || s.top === 'sequin') {
+    if (s.top === 'cardigan' || s.top === 'blazer' || s.top === 'goldblazer' || s.top === 'tweed') {
       // shirt and tie showing at the open front, and lapels
       this.spine.add(mesh(new THREE.BoxGeometry(0.34, 0.75, 0.05), m('#f6f3ea', 0.6)).translateY(1.45).translateZ(0.37 * w));
-      if (s.top === 'sequin') this.spine.add(mesh(new THREE.BoxGeometry(0.3, 0.1, 0.06), m('#0d0d10', 0.4)).translateY(1.72).translateZ(0.38));
-      else if (s.top !== 'cardigan' && !s.bowtie) this.spine.add(mesh(new THREE.BoxGeometry(0.1, 0.6, 0.03), m(s.top === 'goldblazer' ? '#b8955a' : '#7a1f2b', 0.5)).translateY(1.4).translateZ(0.4 * w));
-      const trim = s.top === 'goldblazer' ? m('#c9a24a', 0.3, { metalness: 0.6 }) : s.top === 'sequin' ? m('#0d0d10', 0.15, { metalness: 0.3 }) : topMat;
+      if (s.top !== 'cardigan' && !s.bowtie) this.spine.add(mesh(new THREE.BoxGeometry(0.1, 0.6, 0.03), m(s.top === 'goldblazer' ? '#b8955a' : '#7a1f2b', 0.5)).translateY(1.4).translateZ(0.4 * w));
+      const trim = s.top === 'goldblazer' ? m('#c9a24a', 0.3, { metalness: 0.6 }) : topMat;
       for (const side of [-1, 1]) {
         const lap = mesh(new THREE.BoxGeometry(0.14, 0.7, 0.04), trim);
         lap.position.set(0.17 * side, 1.45, 0.39 * w);
@@ -487,7 +509,6 @@ export class Golfer {
       }
       this.head.add(mesh(new THREE.BoxGeometry(0.42, 0.02, 0.02), GOLD()).translateY(0.6).translateZ(0.44));
     }
-    if (s.stud) this.head.add(mesh(new THREE.OctahedronGeometry(0.045, 0), m('#ffffff', 0.02, { metalness: 0.3, emissive: '#bfe8ff', emissiveIntensity: 0.9 })).translateX(0.44).translateY(0.4));
     if (s.monocle) {
       const mono = mesh(new THREE.TorusGeometry(0.08, 0.012, 6, 16), m('#b8955a', 0.3, { metalness: 0.8 }));
       mono.position.set(-0.14, 0.55, 0.42);
@@ -519,10 +540,19 @@ export class Golfer {
     }
 
     // bag at the side
-    const bag = buildBag(s.bag, !!s.crestBag, s.bagStyle, kitByKey(s.kit));
-    bag.position.set(0.6, 0, -2.4);
-    bag.name = 'bag';
-    this.group.add(bag);
+    // the bag at the side, or for a Club Legend, their caddie standing by with it
+    if (s.caddie) {
+      const c = caddie(s);
+      c.position.set(2.9, 0, -1.1);
+      c.rotation.y = -0.3;
+      c.name = 'bag';
+      this.group.add(c);
+    } else {
+      const bag = buildBag(s.bag, !!s.crestBag, s.bagStyle, kitByKey(s.kit));
+      bag.position.set(0.6, 0, -2.4);
+      bag.name = 'bag';
+      this.group.add(bag);
+    }
 
     this.group.scale.setScalar(s.height);
     this.group.traverse((o) => (o.castShadow = true));

@@ -186,6 +186,8 @@ export class GolferStage {
   private last = performance.now();
   private spin = 0.35;
   private drag: number | null = null;
+  private plinth: THREE.Mesh | null = null;
+  private ring: THREE.Mesh | null = null;
 
   constructor(private host: HTMLElement, spec: GolferSpec) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -205,9 +207,11 @@ export class GolferStage {
     plinth.position.y = -0.15;
     plinth.receiveShadow = true;
     this.turn.add(plinth);
+    this.plinth = plinth;
     const ring = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.04, 6, 60), new THREE.MeshStandardMaterial({ color: '#b8955a', metalness: 0.7, roughness: 0.3 }));
     ring.rotation.x = Math.PI / 2;
     this.turn.add(ring);
+    this.ring = ring;
     this.scene.add(this.turn);
     this.set(spec);
     const el = this.renderer.domElement;
@@ -235,6 +239,11 @@ export class GolferStage {
     this.golfer.holdClub('driver');
     this.golfer.setPose('idle');
     this.golfer.group.position.y = 0;
+    // a wider plinth when there's a caddie to stand on it too, with the pair centred on it
+    const wide = spec.caddie ? 1.75 : 1;
+    this.plinth?.scale.set(wide, 1, wide);
+    this.ring?.scale.set(wide, wide, 1);
+    this.golfer.group.position.x = spec.caddie ? -1.6 * spec.height : 0;
     this.turn.add(this.golfer.group);
   }
 
