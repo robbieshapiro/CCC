@@ -36,14 +36,15 @@ export const STAFF: Record<StaffId, { name: string; role: string; voice: string;
 const pick = <T,>(list: T[], seed: string) => list[[...seed].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % list.length];
 
 export const HANK = {
-  firstTee: (name: string, day: string) =>
+  // the last line names the course's hazard
+  firstTee: (name: string, day: string, theme?: string) =>
     pick(
       [
         `${name}, you're on the tee. Fairways and greens.`,
         `On the tee, ${name}. Smooth tempo. Go.`,
         `${name}. Breathe. Pick a target. Send it.`,
         `You're up, ${name}. Nobody's watching. Everybody's watching.`,
-        `${name}, tee's yours. Keep it out of the lava.`,
+        theme === 'coastal' ? `${name}, tee's yours. The ocean's right there. Ignore it.` : theme === 'volcanic' ? `${name}, tee's yours. Keep it out of the lava.` : `${name}, tee's yours. Keep it in the short grass.`,
       ],
       `${day}:${name}`,
     ),

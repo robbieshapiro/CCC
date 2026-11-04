@@ -198,6 +198,10 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   geyseralley: { from: { x: -46, y: 124 }, clubs: ['putter'], angles: [-8, 8] },
   // the speed slot: a nuked drive (full power, dead centre, 20% further) down the middle finds the gully off the lip
   lavatube: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [-1, 1], boost: 1.2, near: 120 },
+  // the Pacific Bluffs: roll round the cliff walk, land on Sea Lion Rock, roll down the keeper's road
+  sealion: { from: { x: -34, y: 348 }, clubs: ['putter'], angles: [-6, 6] },
+  thecarry: { from: { x: 0, y: 0 }, clubs: ['iron', 'wedge'], angles: [-12, 0] },
+  lighthouse: { from: { x: 96, y: 572 }, clubs: ['putter'], angles: [-14, -4] },
   // the Western Reserve: putt through the covered bridge, go long and right off the bank, roll through the barn
   coveredbridge: { from: { x: -30, y: 226 }, clubs: ['putter'], angles: [-3, 3] },
   sugarmaple: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [6, 18] },
@@ -363,7 +367,7 @@ if (mode === 'all' || mode === 'basic') {
   ok(periodClosesAt('2026-10').toISOString() === '2026-10-30T04:00:00.000Z' && periodClosesAt('2026-10-30').toISOString() === '2026-11-08T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
   ok(periodOf('2026-10-29') === '2026-10' && periodOf('2026-10-30') === '2026-10-30' && periodOf('2026-11-07') === '2026-10-30' && periodOf('2026-11-08') === '2026-11-08' && periodOf('2026-11-14') === '2026-11-08' && periodOf('2026-11-15') === '2026-11-15', 'weeks start on Sunday from November 8');
   ok(periodClosesAt('2026-11-08').toISOString() === '2026-11-15T05:00:00.000Z', 'a week closes at midnight Eastern going into Sunday');
-  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 6 && courseFor('2026-11-08').id === (courseById('westernreserve')!.draft ? 'caldera' : 'westernreserve'), 'October is the Highlands, the Caldera challenge is all six holes, then the Western Reserve once it is out of draft');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 6 && courseFor('2026-11-08').id === (courseById('pacificbluffs')!.draft ? 'caldera' : 'pacificbluffs'), 'October is the Highlands, the Caldera challenge is all six holes, then the Pacific Bluffs once it is out of draft');
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)
