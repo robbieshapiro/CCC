@@ -3,7 +3,6 @@ import { badgeFor } from '../shop';
 import { money, payouts, placeLabel, purseOf } from '../purse';
 import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
-import { featById } from '../feats';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { CALDERA_START, GAME_TZ, periodClosesAt, periodName, span } from '../day';
 import { REGINALD, reginaldSvg, type Mood } from '../host';
@@ -148,10 +147,9 @@ export function home(snap: Snapshot) {
       const cells = course.holes.map((h, i) => `<td class="num"><span class="sc ${r.best ? scoreClass(r.best.holes[i], h.par) : ''}">${r.best ? r.best.holes[i] : ''}</span></td>`).join('');
       const score = (where: 'm' | 'd') => `<td class="num tot ${where}">${r.best ? r.best.total : ''}</td>
         <td class="num topar ${where} ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>`;
-      const feats = p.feats.map((f) => featById(f)?.icon ?? '').join('');
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i>${feats ? ` <small>${feats}</small>` : ''}<em>${pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
+        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
         ${score('m')}${cells}${score('d')}
       </tr>`;
     })
