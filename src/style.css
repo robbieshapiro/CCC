@@ -1213,3 +1213,4 @@ td.who .nm { font-style: normal; white-space: nowrap; overflow: hidden; text-ove
 /* the name column keeps room for a name, its badge and the payout line, however tight the table */
 td.who > a > span, td.who > div > span { min-width: 8em; }
 td.who .nm .crown { display: inline; margin-left: 4px; }
+.board .pay.away { color: #b9ad95; font-weight: 700; }

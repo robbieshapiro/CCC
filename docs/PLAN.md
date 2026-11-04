@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (smoother play on iPads and phones).
+Last updated Nov 4, 2026 (one golfer across clubs).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (smoother play on iPads and phones).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #122 | One golfer across clubs. Your look, closet, wallet, career earnings and rank follow you (same name and PIN) into every club you play in: buy a Hawaiian shirt once and you wear it everywhere. Scores and titles count on every board you play, but only your home club's purse pays you; another club pays its purse as if you weren't in the field, and its board shows what you'd have taken in muted gold. |
 | #121 | Smoother play on iPads and phones. The sea, lakes and lava ripple on the graphics chip instead of the processor moving every point of the water and re-sending it each frame (the scenery's work per frame drops from about 3 ms to 0.03 ms on the coast). The automatic quality guard now steps the resolution down when play averages under about 48 frames a second for two seconds, not only under 30. Touch screens get the standard shadow detail and at most 2x resolution on the newer courses. |
 | #120 | A cleaner board: each member is two lines, their name with the rank badge and any 👑 or 🎯 beside it, then their payout and rounds. The row of trophy icons is gone from the board (trophies are still on member cards and in the Locker). |
 | #119 | Board payouts no longer get cut off on phones ("$1…"): the money leads the line under each name and the last-played date makes way on small screens. The rank badge sits back beside the name instead of on a line of its own, on the board and the Members table. |
@@ -68,6 +69,7 @@ Last updated Nov 4, 2026 (smoother play on iPads and phones).
 - [x] The #114 club merge, run Nov 4 (checked: two clubs left, Kellogg and The Clergy; Boomtown's code points to The Clergy).
 - [x] The #116 two-clubs SQL, run Nov 4 (checked: `play_seat` is live, and Robbie's Clergy seat plays and is still admin).
 - [x] The #117 activity SQL, run Nov 4 (checked: the feed returns up to 1,000 events).
+- [ ] The #122 one-golfer SQL (Claude applies it after merge).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.

@@ -28,7 +28,7 @@ import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
 import { board } from '../standings';
-import { money, payouts, placeLabel, purseOf } from '../purse';
+import { clubPurse, money, placeLabel, purseOf } from '../purse';
 import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
@@ -174,12 +174,16 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     void refresh()
       .then((s) => {
         const rows = board(s).filter((r) => r.best);
-        const mine = payouts(rows.map((r) => ({ id: r.playerId, rank: r.rank }))).get(s.me);
+        const away = !!s.players.find((x) => x.id === s.me)?.away;
+        const purse = clubPurse(rows, (id) => !!s.players.find((x) => x.id === id)?.away);
+        const mine = (away ? purse.shown : purse.pay).get(s.me);
         const line = sheet.querySelector<HTMLElement>('#purse-line');
         if (!line || !mine) return;
+        // playing from another club: show where you stand and what it's worth here, but the money is your home club's
+        const note = away ? ' · your home club pays you' : '';
         line.innerHTML = mine.payout
-          ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${rows.length} if the week ended now · purse ${money(purseOf(rows.length))}</span>`
-          : `<b>${placeLabel(mine.place, mine.tied)} of ${rows.length}</b><span>Top 10 get paid. Purse ${money(purseOf(rows.length))}</span>`;
+          ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${rows.length} if the week ended now · purse ${money(purseOf(purse.field))}${note}</span>`
+          : `<b>${placeLabel(mine.place, mine.tied)} of ${rows.length}</b><span>Top 10 get paid. Purse ${money(purseOf(purse.field))}${note}</span>`;
         line.hidden = false;
       })
       .catch(() => {});
