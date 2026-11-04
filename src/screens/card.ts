@@ -48,7 +48,7 @@ export function card(snap: Snapshot) {
             <div><b>${money(earningsOf(me))}</b><span>Career earnings</span></div>
           </div>`
           }
-          ${me.host ? '' : `<a class="btn" href="#/clubhouse/shop">Pro Shop · ${money(balanceOf(me))} to spend</a>`}
+          ${me.host ? '' : `<a class="btn lk-shop" href="#/clubhouse/shop"><span>🛍️ Pro Shop</span><b>${money(balanceOf(me))} to spend</b></a>`}
           <button class="btn ghost" id="edit-look">Edit your look</button>
         </div>
       </section>
@@ -79,7 +79,7 @@ export function card(snap: Snapshot) {
         await api.saveAvatar(requireSession(), avatar);
         me.avatar = avatar;
       }, 400);
-    }),
+    }, me.host ? undefined : (me.owned ?? [])),
   );
   const edit = document.getElementById('lk-edit')!;
   document.getElementById('edit-look')!.onclick = (e) => {
