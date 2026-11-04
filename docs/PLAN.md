@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (wrong PINs now lock a name).
+Last updated Nov 4, 2026 (checks on every PR).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (wrong PINs now lock a name).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #130 | Behind the scenes: a Checks workflow runs the build and API check on every PR, plus the hole, mini golf and SQL checks when those files change. `main` only takes changes through a passing PR. The old root `PLAN.md` is gone; this file is the plan. |
 | #129 | Sign-in lockout. Five wrong PINs in a row lock that name for 15 minutes, and each further five doubles it, up to a day. A correct PIN or a lapse in the lock is the only way back in; members already signed in aren't affected. To free someone early, an agent deletes their row from `pin_failures`. The old `sign_in` function is gone. |
 | #128 | An away player's board row says "Paid at Kellogg" (their home club) instead of a muted figure. The figure was what they'd take if everyone were paid there, so Robbie in 1st at The Clergy showed $1,769 while Hunter in 2nd showed $2,011 as the top Clergy member. The end-of-round line says the same. |
 | #127 | One closet. What you own from the Pro Shop shows in the Locker's matching tab (Top, Hat, Gear) under a Pro Shop row: tap to put it on or take it off. Pieces you don't own show locked with their price and link to the shop. The Locker's Pro Shop button is now big and gold, with your balance. |
