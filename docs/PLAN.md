@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (Pro Shop pieces in the Locker).
+Last updated Nov 4, 2026 (away players show 'Paid at Kellogg', no figure).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (Pro Shop pieces in the Locker).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #128 | An away player's board row says "Paid at Kellogg" (their home club) instead of a muted figure. The figure was what they'd take if everyone were paid there, so Robbie in 1st at The Clergy showed $1,769 while Hunter in 2nd showed $2,011 as the top Clergy member. The end-of-round line says the same. |
 | #127 | One closet. What you own from the Pro Shop shows in the Locker's matching tab (Top, Hat, Gear) under a Pro Shop row: tap to put it on or take it off. Pieces you don't own show locked with their price and link to the shop. The Locker's Pro Shop button is now big and gold, with your balance. |
 | #126 | Reginald's home line can't go stale. His Claude-written line for the day no longer sees or quotes standings (it's written once a day), and a live line under it always gives the board as it stands: who leads, and where you are. Lines already written today are replaced. Also fixes his scripted line when you're tied for the lead. No extra AI cost. |
 | #125 | Away players' entries go into the purse. Someone playing in from another club puts their $1,000 in like everyone else but takes nothing out (their home club pays them), so the club's own members split a bigger pot. Robbie at The Clergy: 4 players, $4,000 purse, all of it to Clergy members. |
