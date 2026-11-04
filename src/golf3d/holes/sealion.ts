@@ -16,9 +16,24 @@ const WALK: V2[] = [
 ];
 const WALK_H = [25.2, 24, 22.8, 21.6];
 
+// the barranca: a sandstone canyon across the hole past the drive, so a big one that runs through the fairway is in it
+const BARRANCA: V2[] = [
+  { x: -170, y: 334 },
+  { x: -90, y: 326 },
+  { x: -30, y: 318 },
+  { x: 10, y: 312 },
+];
+
 const cypress: Post[] = [
-  // the grove down the left
-  ...[40, 120, 200, 290, 380].map((y, i) => ({ x: -128 - (i % 2) * 14, y, r: 2.2, h: 20, look: 'monterey' as const })),
+  // Torrey pines hard up against the left of the fairway, and a second row behind
+  ...[70, 130, 190, 250, 300].map((y, i) => ({ x: -42 - (i % 2) * 6, y, r: 2.4, h: 22, look: 'torrey' as const })),
+  ...[40, 120, 200, 280, 380].map((y, i) => ({ x: -100 - (i % 2) * 18, y, r: 2.4, h: 22, look: 'torrey' as const })),
+  // a pair of tall fan palms behind the tee: this is Southern California
+  { x: -30, y: -32, r: 1, h: 30, look: 'palm' },
+  { x: 34, y: -36, r: 1, h: 30, look: 'palm' },
+  // two on the cliff edge on the right, squeezing the landing
+  { x: 30, y: 150, r: 2.4, h: 20, look: 'torrey' },
+  { x: 32, y: 262, r: 2.4, h: 20, look: 'torrey' },
   // the old one guarding the left of the green, and two behind it
   { x: -4, y: 470, r: 2.4, h: 22, look: 'monterey' },
   { x: -66, y: 470, r: 2.2, h: 20, look: 'monterey' },
@@ -36,7 +51,7 @@ export const sealion: Hole = {
   theme: 'coastal',
   tour: true,
   yards: 335,
-  blurb: 'The Pacific all down the right. Drive up the left, then across the corner of the cove.',
+  blurb: 'A narrow drive between the pines and the cliff, short of the barranca. Then across the corner of the cove.',
   tee: { x: 0, y: 0 },
   cup: { x: 48, y: 442 },
   pins: [{ x: 48, y: 442 }, { x: 36, y: 434 }, { x: 58, y: 446 }, { x: 44, y: 452 }],
@@ -52,8 +67,8 @@ export const sealion: Hole = {
   regions: [
     { poly: rect(-14, -12, 14, 12), surface: 'fairway' },
     // the drive: wide up the left, tighter as it runs toward the cove
-    { poly: blob(-8, 184, 38, 118, 1, 0.08), surface: 'fringe' },
-    { poly: blob(-8, 184, 34, 114, 1, 0.08), surface: 'fairway' },
+    { poly: blob(-8, 190, 25, 110, 1, 0.08), surface: 'fringe' },
+    { poly: blob(-8, 190, 21, 106, 1, 0.08), surface: 'fairway' },
     // round the top of the cove: the safe way in
     { poly: blob(-62, 392, 30, 40, 2, 0.1), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
@@ -78,6 +93,8 @@ export const sealion: Hole = {
     // rolls in the fairway
     { kind: 'hill', x: 20, y: 150, r: 30, h: 1.2 },
     { kind: 'hill', x: -40, y: 210, r: 26, h: 1 },
+    // the barranca
+    { kind: 'channel', pts: BARRANCA, width: 15, depth: 11 },
     // the cliff walk, a raised path round the rim of the cove
     { kind: 'embankment', pts: WALK, h: WALK_H, width: 4, edge: 4 },
     // worn into a shallow groove by a century of walkers, so a rolling ball keeps to it
