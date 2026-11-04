@@ -46,21 +46,24 @@ const career = (rs: Round[]) => {
   return { rounds: d.length, best: d.length ? Math.min(...d) : null, avg: d.length ? Math.round((d.reduce((a, b) => a + b, 0) / d.length) * 10) / 10 : null };
 };
 
-// The purses of every closed period at a club, as period_payouts does on the server: only members whose home club it
-// is take money (someone playing in from another club is paid at home), ranked among themselves
+// The purses of every closed period at a club, as period_payouts does on the server: everyone who played puts in, but
+// only members whose home club it is take money out (someone playing in from another club is paid at home)
 function paidIn(db: Db, groupId: string, month: string): Payout[] {
   const rounds = db.rounds.filter((r) => r.groupId === groupId && r.month < month);
   const out: Payout[] = [];
   for (const m of [...new Set(rounds.map((r) => r.month))].sort()) {
     const best = new Map<string, number>();
+    const entries = new Set<string>();
     for (const r of rounds.filter((x) => x.month === m)) {
       const p = db.players.find((x) => x.id === r.playerId);
-      if (!p || p.host || homeOf(db, p).groupId !== groupId) continue;
+      if (!p || p.host) continue;
+      entries.add(p.id);
+      if (homeOf(db, p).groupId !== groupId) continue;
       best.set(r.playerId, Math.min(best.get(r.playerId) ?? Infinity, r.total - r.par));
     }
     const sorted = [...best.entries()].sort((a, b) => a[1] - b[1]);
     const rows = sorted.map(([id, tp]) => ({ id, rank: sorted.findIndex((x) => x[1] === tp) + 1 }));
-    for (const [id, p] of payouts(rows)) if (p.payout > 0) out.push({ month: m, playerId: id, ...p });
+    for (const [id, p] of payouts(rows, null, entries.size)) if (p.payout > 0) out.push({ month: m, playerId: id, ...p });
   }
   return out;
 }

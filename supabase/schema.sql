@@ -214,9 +214,10 @@ $$;
 create or replace function period_payouts(p_group uuid)
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
 language sql stable security definer set search_path = public, extensions as $$
-  -- the money: only members whose home club this is. Someone playing here from another club keeps their place on the
-  -- board and can win the title, but their home club pays them; here the purse goes round as if they weren't playing.
-  with b as (
+  -- the money: everyone who played puts $1,000 in, but only members whose home club this is take it out. Someone
+  -- playing here from another club keeps their place on the board and can win the title; their home club pays them.
+  with e as (select mb.month, mb.board, count(*)::int as n from month_bests(p_group) mb where mb.month < game_month() group by mb.month, mb.board),
+  b as (
     select mb.month, mb.player_id, mb.board, rank() over (partition by mb.month, mb.board order by mb.total - mb.par)::int as r
     from month_bests(p_group) mb join players pl on pl.id = mb.player_id
     where mb.month < game_month() and (home_of(pl)).group_id = p_group
@@ -225,7 +226,7 @@ language sql stable security definer set search_path = public, extensions as $$
   g as (select b.month, b.board, b.r, count(*)::int as k from b group by b.month, b.board, b.r),
   w as (select c.month, c.player_id from period_champs(p_group) c join b on b.month = c.month and b.player_id = c.player_id where c.how = 'playoff-won'),
   sp as (
-    select b.month, b.player_id, f.n,
+    select b.month, b.player_id, f.n, e.n as entries,
       case when b.r = 1 and g.k > 1 and exists (select 1 from w where w.month = b.month)
         then case when exists (select 1 from w where w.month = b.month and w.player_id = b.player_id) then 1 else 2 end
         else b.r end as p0,
@@ -233,9 +234,10 @@ language sql stable security definer set search_path = public, extensions as $$
         then case when exists (select 1 from w where w.month = b.month and w.player_id = b.player_id) then 1 else g.k - 1 end
         else g.k end as kk
     from b join f on f.month = b.month and f.board = b.board join g on g.month = b.month and g.board = b.board and g.r = b.r
+      join e on e.month = b.month and e.board = b.board
   )
   select sp.month, sp.player_id, sp.p0, sp.kk > 1,
-    round(sp.n * 1000 * coalesce((
+    round(sp.entries * 1000 * coalesce((
       select sum((array[0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725]::numeric[])[i])
       from generate_series(sp.p0, least(10, sp.p0 + sp.kk - 1)) i
     ), 0) / (
