@@ -1,5 +1,5 @@
-import { api, getSession, setSession } from './api';
-import type { Session, Snapshot } from './api/types';
+import { api, dropSession, getSession, listSessions, setSession } from './api';
+import type { DailyCrown, Session, Snapshot } from './api/types';
 import { processSnapshot } from './nudges';
 
 let current: Snapshot | null = null;
@@ -14,9 +14,19 @@ export function requireSession(): Session {
 }
 
 export async function refresh(): Promise<Snapshot> {
-  const session = requireSession();
+  let session = requireSession();
   // yesterday's Closest to the Pin crown comes with it; the snapshot never waits on it or fails for it
-  const [snap, crown] = await Promise.all([api.snapshot(session), api.dailyCrown(session).catch(() => null)]);
+  let got: [Snapshot, DailyCrown | null];
+  try {
+    got = await Promise.all([api.snapshot(session), api.dailyCrown(session).catch(() => null)]);
+  } catch (err) {
+    // a saved club whose seat is gone (merged into another club, say): forget it and carry on in another club
+    if (!/session expired/i.test((err as Error).message) || listSessions().length < 2) throw err;
+    dropSession(session.token);
+    session = requireSession();
+    got = await Promise.all([api.snapshot(session), api.dailyCrown(session).catch(() => null)]);
+  }
+  const [snap, crown] = got;
   snap.crown = crown;
   // a club renamed since this device signed in: keep the saved name (and the club switcher) up to date
   if (snap.groupName && snap.groupName !== session.groupName) setSession({ ...session, groupName: snap.groupName });

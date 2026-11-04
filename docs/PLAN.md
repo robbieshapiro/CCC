@@ -1,18 +1,19 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (Boomtown merges into The Clergy).
+Last updated Nov 4, 2026 (Boomtown merged into The Clergy; dead saved clubs drop out by themselves).
 
 ## Shipped (all live on Vercel)
 
 | PR | What |
 |---|---|
-| #66 | One home club: Robbie belongs to Kellogg and runs Clergy and Boomtown as host only. The Member Card and Locker Room merged into one Locker page. |
+| #66 | One home club: Robbie belongs to Kellogg and runs The Clergy as host only (Boomtown merged into The Clergy in #114). The Member Card and Locker Room merged into one Locker page. |
 | #67 | The Clubhouse: Bar, Members, Clubs, How to play, Feedback. A bottom tab bar on phones. |
 | #68 | Hollow Hills haunted mini golf replaced the putting contest at the bar. The preview tile is now a plain tile. |
 | #69 | iPad layouts for every page. |
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #115 | A saved club whose seat is gone (like the admin's Boomtown host seat after the merge) no longer shows "Session expired": the app forgets it and opens another club the device is signed in to. |
 | #114 | Boomtown merges into The Clergy, one club with a bigger board and purse from this week. Every past title and payout stays as it was won: rounds remember the board they counted on (`rounds.board_group`), so the weeks before the merge still rank Boomtown and The Clergy apart. Members, rounds, invitations, notices and practice all move across; Boomtown's club code and personal invites keep working and land in The Clergy (`group_aliases`). A month with a champion on each old board shows both names on the plaque. |
 | #113 | Two new drinks on the beverage cart, free like the rest (one pick a round): an Espresso (a quick needle but a much wider gold window, 2 swings) and a Transfusion (a wider gold window and a calmer needle, 5% shorter, 2 swings). Drinks stay free; purse money doesn't buy boosts. |
 | #111 | The Pro Shop, a Clubhouse tab: purse money buys flashy looks that show wherever your golfer does (on the course for other members, in the stands, on member cards). Career earnings only go up; spending comes out of a separate balance. Fourteen pieces across tops, headwear, bling, bags and putters, from a $1,500 bucket hat to a $12,000 gold staff bag; the Club Legend rack is one piece, a $60,000 personal caddie (#112). Your golfer stands on a turntable: tap a piece to try it on, tap again to buy, and owned pieces go on and off for free. Ranks by career earnings, with a badge by every name: Club Member for everyone, Club Pro from $15,000, Club Legend from $75,000; the Pro and Legend racks open with the rank. Title gear (tartan, blazers, gold putter, crested bag) stays title-only. Looks only: nothing in the shop changes how a shot plays. |
@@ -57,8 +58,8 @@ Last updated Nov 4, 2026 (Boomtown merges into The Clergy).
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
 - [x] The #108 purse SQL, run Nov 4.
 - [x] The #111 Pro Shop SQL, run Nov 4 (checked: the shop tables are live and the app shows balances and earnings).
-- [ ] Paste the Legend rack SQL from #112 (the new `shop_items` list and the line that takes off the sequin jacket, diamond stud and black diamond putter).
-- [ ] Paste the club merge SQL from #114: the schema part, then the one-time merge of Boomtown into The Clergy. All or nothing: if it finds a playing member of both clubs, it stops and changes nothing.
+- [x] The #112 Legend rack SQL, run Nov 4 (checked: 14 pieces in `shop_items`).
+- [x] The #114 club merge, run Nov 4 (checked: two clubs left, Kellogg and The Clergy; Boomtown's code points to The Clergy).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
