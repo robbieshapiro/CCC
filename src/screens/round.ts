@@ -195,14 +195,22 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         const rows = board(s).filter((r) => r.best);
         const away = !!s.players.find((x) => x.id === s.me)?.away;
         const purse = clubPurse(rows, (id) => !!s.players.find((x) => x.id === id)?.away);
-        const mine = (away ? purse.shown : purse.pay).get(s.me);
+        const mine = purse.pay.get(s.me);
         const line = sheet.querySelector<HTMLElement>('#purse-line');
-        if (!line || !mine) return;
-        // playing from another club: show where you stand and what it's worth here, but the money is your home club's
-        const note = away ? ' · your home club pays you' : '';
+        if (!line) return;
+        // playing from another club: your place here, but no money (your home club pays you)
+        if (away) {
+          const me = rows.find((r) => r.playerId === s.me);
+          if (!me) return;
+          const at = rows.filter((r) => r.toPar < me.toPar).length + 1;
+          line.innerHTML = `<b>${placeLabel(at, rows.filter((r) => r.toPar === me.toPar).length > 1)} of ${rows.length}</b><span>Paid at ${esc(s.homeName ?? 'your home club')}, your home club. Purse here ${money(purseOf(purse.field))}, for its own members</span>`;
+          line.hidden = false;
+          return;
+        }
+        if (!mine) return;
         line.innerHTML = mine.payout
-          ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${rows.length} if the week ended now · purse ${money(purseOf(purse.field))}${note}</span>`
-          : `<b>${placeLabel(mine.place, mine.tied)} of ${rows.length}</b><span>Top 10 get paid. Purse ${money(purseOf(purse.field))}${note}</span>`;
+          ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${rows.length} if the week ended now · purse ${money(purseOf(purse.field))}</span>`
+          : `<b>${placeLabel(mine.place, mine.tied)} of ${rows.length}</b><span>Top 10 get paid. Purse ${money(purseOf(purse.field))}</span>`;
         line.hidden = false;
       })
       .catch(() => {});

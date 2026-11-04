@@ -42,10 +42,10 @@ export const placeLabel = (place: number, tied: boolean) => `${tied ? 'T' : ''}$
 
 // A club's board as the purse sees it: everyone who plays puts $1,000 in, but members playing from another club take
 // nothing out (their home club pays them), so the club's own members split it all. Away players keep their place and
-// can win the title. `shown` is what each would take if everyone were paid here, for the line under an away player.
+// can win the title; the board shows them as paid at home, with no figure here.
 export function clubPurse(rows: { playerId: string; best: unknown; toPar: number }[], isAway: (id: string) => boolean) {
   const played = rows.filter((r) => r.best);
   const money = played.filter((r) => !isAway(r.playerId));
   const rank = (list: typeof played) => list.map((r) => ({ id: r.playerId, rank: list.filter((x) => x.toPar < r.toPar).length + 1 }));
-  return { field: played.length, pay: payouts(rank(money), null, played.length), shown: payouts(rank(played)) };
+  return { field: played.length, pay: payouts(rank(money), null, played.length) };
 }
