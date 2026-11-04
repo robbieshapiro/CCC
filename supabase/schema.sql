@@ -295,6 +295,16 @@ begin
   return coalesce(h, me);
 end $$;
 
+-- Where a round (and Pro Shop spending) counts: the seat you're playing from, if it's a playing seat; from a club you
+-- only host, your home club. Someone with playing seats in two clubs plays for whichever club they're in. (The Daily
+-- Shot, practice and the bar always count at home: see home_of.)
+create or replace function play_seat(me players) returns players
+language plpgsql stable security definer set search_path = public, extensions as $$
+begin
+  if not me.host_only then return me; end if;
+  return home_of(me);
+end $$;
+
 
 create or replace function player_for(p_token uuid) returns players
 language plpgsql stable security definer set search_path = public, extensions as $$
@@ -500,7 +510,7 @@ end $$;
 drop function if exists submit_round(uuid, text, int[], int[], text[]);
 create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[], p_spots jsonb default null) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := home_of(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
+declare me players := play_seat(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
 begin
   if n not between 1 and 9 or n <> coalesce(array_length(p_pars, 1), 0) then raise exception 'That round is not a full card.'; end if;
   if char_length(coalesce(p_course, '')) not between 1 and 40 then raise exception 'Unknown course.'; end if;
@@ -1420,7 +1430,7 @@ delete from shop_items where id in ('sequin', 'stud', 'blackdiamond') and id not
 
 create or replace function buy_item(p_token uuid, p_item text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := home_of(player_for(p_token)); it shop_items; earned int; spent int;
+declare me players := play_seat(player_for(p_token)); it shop_items; earned int; spent int;
 begin
   select * into it from shop_items where id = p_item;
   if it.id is null then raise exception 'That isn''t in the shop.'; end if;

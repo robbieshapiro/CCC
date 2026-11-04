@@ -1,18 +1,19 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (Boomtown merged into The Clergy; dead saved clubs drop out by themselves).
+Last updated Nov 4, 2026 (Robbie plays in Kellogg and The Clergy).
 
 ## Shipped (all live on Vercel)
 
 | PR | What |
 |---|---|
-| #66 | One home club: Robbie belongs to Kellogg and runs The Clergy as host only (Boomtown merged into The Clergy in #114). The Member Card and Locker Room merged into one Locker page. |
+| #66 | One home club: Robbie belongs to Kellogg and runs The Clergy as host only (Boomtown merged into The Clergy in #114; since #116 he plays in The Clergy too). The Member Card and Locker Room merged into one Locker page. |
 | #67 | The Clubhouse: Bar, Members, Clubs, How to play, Feedback. A bottom tab bar on phones. |
 | #68 | Hollow Hills haunted mini golf replaced the putting contest at the bar. The preview tile is now a plain tile. |
 | #69 | iPad layouts for every page. |
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #116 | Robbie plays in both Kellogg and The Clergy: a round counts for the club you play it in (`play_seat`), and so does Pro Shop spending, since each club's purse pays its own seat. The Daily Shot, practice and bar games still count at the home club (Kellogg). His Clergy seat is a playing seat now, and he stays its admin. |
 | #115 | A saved club whose seat is gone (like the admin's Boomtown host seat after the merge) no longer shows "Session expired": the app forgets it and opens another club the device is signed in to. |
 | #114 | Boomtown merges into The Clergy, one club with a bigger board and purse from this week. Every past title and payout stays as it was won: rounds remember the board they counted on (`rounds.board_group`), so the weeks before the merge still rank Boomtown and The Clergy apart. Members, rounds, invitations, notices and practice all move across; Boomtown's club code and personal invites keep working and land in The Clergy (`group_aliases`). A month with a champion on each old board shows both names on the plaque. |
 | #113 | Two new drinks on the beverage cart, free like the rest (one pick a round): an Espresso (a quick needle but a much wider gold window, 2 swings) and a Transfusion (a wider gold window and a calmer needle, 5% shorter, 2 swings). Drinks stay free; purse money doesn't buy boosts. |
@@ -60,6 +61,7 @@ Last updated Nov 4, 2026 (Boomtown merged into The Clergy; dead saved clubs drop
 - [x] The #111 Pro Shop SQL, run Nov 4 (checked: the shop tables are live and the app shows balances and earnings).
 - [x] The #112 Legend rack SQL, run Nov 4 (checked: 14 pieces in `shop_items`).
 - [x] The #114 club merge, run Nov 4 (checked: two clubs left, Kellogg and The Clergy; Boomtown's code points to The Clergy).
+- [ ] Paste the two-clubs SQL from #116 (`play_seat`, `submit_round`, `buy_item`, then the one-time switch of Robbie's Clergy seat to a playing seat).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
