@@ -392,7 +392,7 @@ function draw() {
           : ''
       }
       ${dailyBars(state.daily)}
-      <h3 class="adm-sub">Latest</h3>
+      <h3 class="adm-sub">Activity <small>${d.feed.length >= 1000 ? 'the latest 1,000' : `${d.feed.length} ${d.feed.length === 1 ? 'event' : 'events'}`} · ${(WINDOWS.find((w) => w.id === state.window)?.label ?? '').toLowerCase().replace('month', 'this month')}</small></h3>
       ${feed(d, many)}
     </section>
     <section class="adm-card">
@@ -474,18 +474,6 @@ function memberTable(all: Members) {
       .join('')}</tbody></table></div>`;
 }
 
-// today's events get the time; older ones the day
-const when = (iso: string) => {
-  const a = ago(iso);
-  return a === 'today'
-    ? new Date(iso).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: GAME_TZ,
-      })
-    : a;
-};
-
 const PRACTICE: Record<string, string> = {
   range: 'hit the range',
   shortgame: 'worked the short game',
@@ -502,7 +490,21 @@ function feed(d: AdminOverview, many: boolean) {
     return `sent feedback: “${esc(e.what ?? '')}”`;
   };
   const icon = { round: '⛳', quit: '🚪', practice: '🎯', join: '👋', feedback: '✉️' };
-  return `<ul class="adm-feed">${d.feed.map((e) => `<li><span class="adm-ico">${icon[e.kind]}</span><div>${chip(e.club, many)}<b>${esc(e.name)}</b> ${line(e)}<small>${when(e.at)}</small></div></li>`).join('')}</ul>`;
+  // everything in the window, newest first, under a heading for each day, in a box that scrolls on its own
+  const day = (iso: string) => new Date(iso).toLocaleDateString('en-US', { timeZone: GAME_TZ, weekday: 'short', month: 'short', day: 'numeric' });
+  const today = day(new Date().toISOString());
+  const yesterday = day(new Date(Date.now() - 86_400_000).toISOString());
+  const time = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { timeZone: GAME_TZ, hour: 'numeric', minute: '2-digit' });
+  let last = '';
+  const rows = d.feed
+    .map((e) => {
+      const dd = day(e.at);
+      const head = dd !== last ? `<li class="adm-day">${dd === today ? 'Today' : dd === yesterday ? 'Yesterday' : dd}</li>` : '';
+      last = dd;
+      return `${head}<li><span class="adm-ico">${icon[e.kind]}</span><div>${chip(e.club, many)}<b>${esc(e.name)}</b> ${line(e)}<small>${time(e.at)}</small></div></li>`;
+    })
+    .join('');
+  return `<div class="adm-feed-box"><ul class="adm-feed">${rows}</ul></div>`;
 }
 
 // Daily Shot players a day for the last week, oldest on the left

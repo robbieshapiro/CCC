@@ -908,7 +908,7 @@ begin
         union all
         select f.created_at, 'feedback', g.name, coalesce(p.name, 'A member'), null, null, null, left(f.body, 80), null
           from feedback f join g on g.id = f.group_id left join players p on p.id = f.player_id
-      ) e order by at desc limit 25
+      ) e where at >= since order by at desc limit 1000
     )
     select json_build_object(
       'clubs', coalesce((select json_agg(json_build_object(

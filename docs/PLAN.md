@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (Robbie plays in Kellogg and The Clergy).
+Last updated Nov 4, 2026 (Admin's activity shows everything in the window).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (Robbie plays in Kellogg and The Clergy).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #PR | Admin's activity feed shows everything in the chosen window (7 days, this month, all time; up to the latest 1,000) instead of only the last 25, in its own scrolling box with a heading for each day and the time of each event. |
 | #116 | Robbie plays in both Kellogg and The Clergy: a round counts for the club you play it in (`play_seat`), and so does Pro Shop spending, since each club's purse pays its own seat. The Daily Shot, practice and bar games still count at the home club (Kellogg). His Clergy seat is a playing seat now, and he stays its admin. |
 | #115 | A saved club whose seat is gone (like the admin's Boomtown host seat after the merge) no longer shows "Session expired": the app forgets it and opens another club the device is signed in to. |
 | #114 | Boomtown merges into The Clergy, one club with a bigger board and purse from this week. Every past title and payout stays as it was won: rounds remember the board they counted on (`rounds.board_group`), so the weeks before the merge still rank Boomtown and The Clergy apart. Members, rounds, invitations, notices and practice all move across; Boomtown's club code and personal invites keep working and land in The Clergy (`group_aliases`). A month with a champion on each old board shows both names on the plaque. |
@@ -62,6 +63,7 @@ Last updated Nov 4, 2026 (Robbie plays in Kellogg and The Clergy).
 - [x] The #112 Legend rack SQL, run Nov 4 (checked: 14 pieces in `shop_items`).
 - [x] The #114 club merge, run Nov 4 (checked: two clubs left, Kellogg and The Clergy; Boomtown's code points to The Clergy).
 - [ ] Paste the two-clubs SQL from #116 (`play_seat`, `submit_round`, `buy_item`, then the one-time switch of Robbie's Clergy seat to a playing seat).
+- [ ] Paste the activity SQL from #PR (`admin_overview`). Until then the feed still stops at 25, now in the new box.
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.

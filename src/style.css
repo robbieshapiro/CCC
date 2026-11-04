@@ -1017,8 +1017,6 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
   .tiles { grid-template-columns: repeat(4, 1fr); }
   .bar-games { grid-template-columns: repeat(3, 1fr); }
   .bar-games .bar-game:first-child { grid-column: auto; }
-  .adm-feed { display: block; columns: 2; column-gap: 28px; }
-  .adm-feed li { break-inside: avoid; }
 }
 @media (min-width: 1100px) {
   .top, main { max-width: 1060px; }
@@ -1201,3 +1199,8 @@ h1 .rank-badge { vertical-align: -2px; }
 .shop-rack.rack-legend .shop-item b { font-size: 24px; color: #f3d98a; }
 .shop-rack.rack-legend .shop-item span { color: #d9cfb3; font-size: 14px; max-width: 46em; }
 .shop-rack.rack-legend .shop-item em { background: transparent; border-color: #e6c35c; color: #f3d98a; }
+
+/* Admin's activity: everything in the window, in its own scrolling box, a heading for each day */
+.adm-feed-box { max-height: 520px; overflow-y: auto; overscroll-behavior: contain; margin: 0 -4px; padding: 0 4px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.adm-feed li.adm-day { position: sticky; top: 0; z-index: 1; display: block; padding: 8px 0 4px; background: var(--paper); font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); border-top: 0; }
+.adm-sub small { font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 6px; }
