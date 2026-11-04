@@ -13,7 +13,7 @@ Last updated Nov 4, 2026 (Claude applies SQL now, with Robbie's approval).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
-| #PR | SQL gets easier: Claude tests each change on a scratch database, then applies it to the live one through the Supabase connector, with Robbie approving each run (CLAUDE.md, "Applying SQL"). No more pasting. |
+| #118 | SQL gets easier: Claude tests each change on a scratch database, then applies it to the live one through the Supabase connector, with Robbie approving each run (CLAUDE.md, "Applying SQL"). No more pasting. |
 | #117 | Admin's activity feed shows everything in the chosen window (7 days, this month, all time; up to the latest 1,000) instead of only the last 25, in its own scrolling box with a heading for each day and the time of each event. |
 | #116 | Robbie plays in both Kellogg and The Clergy: a round counts for the club you play it in (`play_seat`), and so does Pro Shop spending, since each club's purse pays its own seat. The Daily Shot, practice and bar games still count at the home club (Kellogg). His Clergy seat is a playing seat now, and he stays its admin. |
 | #115 | A saved club whose seat is gone (like the admin's Boomtown host seat after the merge) no longer shows "Session expired": the app forgets it and opens another club the device is signed in to. |
