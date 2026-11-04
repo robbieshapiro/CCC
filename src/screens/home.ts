@@ -186,9 +186,8 @@ export function home(snap: Snapshot) {
         </div>
       </section>
       <section class="board${look(course)}">
-        ${countdown(snap.month, course)}
+        ${countdown(snap.month, course, field.length)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best round counts</span></div>
-        ${field.length ? `<div class="purse"><b>💰 Club purse ${money(purseOf(field.length))}</b><span>Top 10 paid when the ${span(snap.month)} closes · 1st takes ${money([...pay.values()].find((x) => x.place === 1)?.payout ?? 0)} · grows $1,000 with every player</span></div>` : `<div class="purse"><b>💰 Club purse $0</b><span>$1,000 goes in for every member who posts a round. Top 10 get paid.</span></div>`}
         <div class="board-tabs" id="board-tabs" role="tablist" hidden>
           <button role="tab" data-tab="open">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club">My club</button>
         </div>
@@ -252,12 +251,13 @@ export function home(snap: Snapshot) {
 }
 
 // The period's clock: how long until the board closes and the champion goes up.
-function countdown(month: string, course: Course) {
+// with the club purse alongside: it's paid when the clock runs out
+function countdown(month: string, course: Course, field: number) {
   const ends = periodClosesAt(month);
   const day = new Date(ends.getTime() - 1).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
   return `<div class="countdown${look(course)}" data-countdown="${ends.getTime()}">
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
-    <small>This ${span(month)}'s champion is crowned at midnight ET, ${day}.</small>
+    <small><em class="cd-purse">💰 ${money(purseOf(field))} purse</em> · top 10 paid${field ? '' : ' · $1,000 in with every player'} · champion crowned midnight ET, ${day}</small>
   </div>`;
 }
 
