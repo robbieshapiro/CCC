@@ -141,8 +141,7 @@ export type InvitePeek = { name: string; code: string; groupName: string; used: 
 export interface Api {
   mode: 'local' | 'supabase';
   join(invite: string, name: string, pin: string): Promise<Session>;
-  signIn(name: string, pin: string): Promise<Session>; // returning members: no code needed
-  myClubs(name: string, pin: string): Promise<Session[]>; // every club that name and PIN belong to
+  myClubs(name: string, pin: string): Promise<Session[]>; // returning members: every club that name and PIN belong to
   createClub(session: Session, name: string): Promise<Session>; // the admin starts another club
   snapshot(session: Session): Promise<Snapshot>;
   submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[]; spots?: Spot[] }): Promise<void>;

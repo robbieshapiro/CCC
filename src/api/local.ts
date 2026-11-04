@@ -131,16 +131,6 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return { token: p.token, playerId: p.id, groupId: group.id, groupName: group.name };
   },
 
-  async signIn(name, pin) {
-    const db = load();
-    const found = db.players.filter((p) => p.name.toLowerCase() === name.trim().toLowerCase() && p.pin === pin);
-    if (!found.length) throw new Error('No member by that name and PIN. Check both and try again.');
-    if (found.length > 1) throw new Error('More than one member by that name. Ask the committee for help.');
-    const p = found[0];
-    const group = Object.values(db.groups).find((g) => g.id === p.groupId)!;
-    return { token: p.token, playerId: p.id, groupId: p.groupId, groupName: group.name };
-  },
-
   async myClubs(name, pin) {
     const db = load();
     return db.players

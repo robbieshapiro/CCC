@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (away players show 'Paid at Kellogg', no figure).
+Last updated Nov 4, 2026 (wrong PINs now lock a name).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (away players show 'Paid at Kellogg', no figure).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #129 | Sign-in lockout. Five wrong PINs in a row lock that name for 15 minutes, and each further five doubles it, up to a day. A correct PIN or a lapse in the lock is the only way back in; members already signed in aren't affected. To free someone early, an agent deletes their row from `pin_failures`. The old `sign_in` function is gone. |
 | #128 | An away player's board row says "Paid at Kellogg" (their home club) instead of a muted figure. The figure was what they'd take if everyone were paid there, so Robbie in 1st at The Clergy showed $1,769 while Hunter in 2nd showed $2,011 as the top Clergy member. The end-of-round line says the same. |
 | #127 | One closet. What you own from the Pro Shop shows in the Locker's matching tab (Top, Hat, Gear) under a Pro Shop row: tap to put it on or take it off. Pieces you don't own show locked with their price and link to the shop. The Locker's Pro Shop button is now big and gold, with your balance. |
 | #126 | Reginald's home line can't go stale. His Claude-written line for the day no longer sees or quotes standings (it's written once a day), and a live line under it always gives the board as it stands: who leads, and where you are. Lines already written today are replaced. Also fixes his scripted line when you're tied for the lead. No extra AI cost. |
@@ -79,6 +80,7 @@ Last updated Nov 4, 2026 (away players show 'Paid at Kellogg', no figure).
 - [x] The #123 bonus SQL, run Nov 4 (checked: bonuses paid back for 22 members, Robbie $3,900).
 - [x] The #124 birdie fix SQL, run Nov 4 (checked: Marc $1,650 in bonuses against $2,972 in purses).
 - [x] The #125 purse SQL, run Nov 4 (checked: October's closed purses unchanged, $9,998 Kellogg and $4,000 The Clergy).
+- [ ] The #129 lockout SQL, applied right after merge (the app must deploy first).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.

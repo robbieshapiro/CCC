@@ -350,6 +350,45 @@ create table if not exists group_aliases (
 );
 alter table group_aliases enable row level security;
 
+-- Wrong PINs: five in a row locks that name for 15 minutes, and each further five doubles it, up to a day.
+-- The right PIN doesn't get through a lock. A failure has to be recorded in a call that returns normally,
+-- because raising an exception rolls the record back.
+create table if not exists pin_failures (
+  name_key text primary key,
+  fails integer not null default 0,
+  locked_until timestamptz
+);
+alter table pin_failures enable row level security;
+
+create or replace function pin_gate(p_key text) returns void
+language plpgsql set search_path = public, extensions as $$
+begin
+  if exists (select 1 from pin_failures where name_key = p_key and locked_until > now()) then
+    raise exception 'Too many wrong PINs for that name. Try again a little later.';
+  end if;
+end $$;
+
+create or replace function pin_failed(p_key text) returns void
+language plpgsql set search_path = public, extensions as $$
+begin
+  if not exists (select 1 from players where lower(name) = p_key) then return; end if;
+  insert into pin_failures (name_key, fails) values (p_key, 1)
+  on conflict (name_key) do update set fails = pin_failures.fails + 1;
+  update pin_failures
+    set locked_until = now() + least(interval '24 hours', interval '15 minutes' * power(2, fails / 5 - 1))
+    where name_key = p_key and fails % 5 = 0;
+end $$;
+
+create or replace function pin_passed(p_key text) returns void
+language plpgsql set search_path = public, extensions as $$
+begin
+  delete from pin_failures where name_key = p_key;
+end $$;
+
+revoke all on function pin_gate(text) from public, anon, authenticated;
+revoke all on function pin_failed(text) from public, anon, authenticated;
+revoke all on function pin_passed(text) from public, anon, authenticated;
+
 create or replace function join_group(p_invite text, p_name text, p_pin text) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare g groups; p players; inv invitations; v_code text := lower(trim(p_invite)); clean text := trim(p_name);
@@ -369,9 +408,12 @@ begin
   select * into p from players where group_id = g.id and lower(name) = lower(clean);
   if found then
     -- members sign back in with their name and PIN, whichever code they use
+    perform pin_gate(lower(clean));
     if p.pin_hash <> crypt(p_pin, p.pin_hash) then
-      raise exception 'That name is taken and the PIN does not match.';
+      perform pin_failed(lower(clean));
+      return json_build_object('error', 'That name is taken and the PIN does not match.');
     end if;
+    perform pin_passed(lower(clean));
   elsif not exists (select 1 from players where group_id = g.id) then
     -- the first member of a new club runs it
     insert into players (group_id, name, pin_hash, role) values (g.id, clean, crypt(p_pin, gen_salt('bf')), 'admin') returning * into p;
@@ -385,28 +427,25 @@ begin
   return json_build_object('token', p.token, 'playerId', p.id, 'groupId', g.id, 'groupName', g.name);
 end $$;
 
--- Members sign back in with just their name and PIN. Codes are only for joining.
-create or replace function sign_in(p_name text, p_pin text) returns json
-language plpgsql security definer set search_path = public, extensions as $$
-declare p players; n int; clean text := trim(p_name);
-begin
-  select count(*) into n from players where lower(name) = lower(clean) and pin_hash = crypt(p_pin, pin_hash);
-  if n = 0 then raise exception 'No member by that name and PIN. Check both and try again.'; end if;
-  if n > 1 then raise exception 'More than one member by that name. Ask the committee for help.'; end if;
-  select * into p from players where lower(name) = lower(clean) and pin_hash = crypt(p_pin, pin_hash);
-  return json_build_object('token', p.token, 'playerId', p.id, 'groupId', p.group_id, 'groupName', (select name from groups where id = p.group_id));
-end $$;
+-- The old one-club sign-in had no lockout. my_clubs does the job now.
+drop function if exists sign_in(text, text);
 
 -- Every club a name and PIN belong to: someone in more than one club (the admin, usually) can move between them.
 create or replace function my_clubs(p_name text, p_pin text) returns json
-language plpgsql stable security definer set search_path = public, extensions as $$
-declare clean text := trim(p_name);
+language plpgsql security definer set search_path = public, extensions as $$
+declare clean text := trim(p_name); found json;
 begin
-  return coalesce((
-    select json_agg(json_build_object('token', p.token, 'playerId', p.id, 'groupId', p.group_id, 'groupName', g.name) order by p.created_at)
+  perform pin_gate(lower(clean));
+  select json_agg(json_build_object('token', p.token, 'playerId', p.id, 'groupId', p.group_id, 'groupName', g.name) order by p.created_at)
+    into found
     from players p join groups g on g.id = p.group_id
-    where lower(p.name) = lower(clean) and p.pin_hash = crypt(p_pin, p.pin_hash)
-  ), '[]');
+    where lower(p.name) = lower(clean) and p.pin_hash = crypt(p_pin, p.pin_hash);
+  if found is null then
+    perform pin_failed(lower(clean));
+    return '[]'::json;
+  end if;
+  perform pin_passed(lower(clean));
+  return found;
 end $$;
 
 -- The admin starts a new club: its own members, board, champions and committee panels, invisible to every
@@ -822,7 +861,6 @@ grant execute on function list_invites(uuid) to anon;
 grant execute on function delete_invite(uuid, text) to anon;
 grant execute on function peek_invite(text) to anon;
 revoke all on function invite_code() from public, anon, authenticated;
-grant execute on function sign_in(text, text) to anon;
 grant execute on function my_clubs(text, text) to anon;
 grant execute on function create_club(uuid, text) to anon;
 grant execute on function submit_feedback(uuid, text, text) to anon;
