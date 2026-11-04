@@ -187,7 +187,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         roundDays,
         days: [...(db.days ?? []).filter((d) => ids.has(d.playerId)).map((d) => d.day), ...roundDays, ...(db.practice ?? []).filter((x) => ids.has(x.playerId)).map((x) => todayInGameTz(new Date(x.startedAt)))],
         ctpWins: ctpWinners(db).filter((w) => w === `${p.name.toLowerCase()}|${p.pin}`).length,
-        holes: rs.flatMap((r) => {
+        // birdies and better pay on the day's first finished round only
+        holes: rs.filter((r, i) => !rs.slice(0, i).some((x) => todayInGameTz(new Date(x.createdAt)) === todayInGameTz(new Date(r.createdAt)))).flatMap((r) => {
           const pars = courseById(r.course)?.holes.map((h) => h.par);
           return pars?.length === r.holes.length ? r.holes.map((s, i): [number, number] => [s, pars[i]]) : [];
         }),

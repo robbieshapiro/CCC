@@ -1489,17 +1489,19 @@ $$;
 revoke all on function ctp_winners() from public, anon, authenticated;
 
 -- what a person has earned on the side, across their clubs: $50 a day they finish a round, $100 on the third day running
--- at the club and $250 every seventh, $150 a Closest to the Pin win, and $25 a birdie, $100 an eagle, $500 an ace
+-- at the club and $250 every seventh, $150 a Closest to the Pin win, and $25 a birdie, $100 an eagle, $500 an ace on
+-- the day's first finished round (so replaying a short course isn't a money farm)
 create or replace function person_bonus(p players) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with seats as (select person_seats(p) as id),
   r as (
-    select r.holes, r.created_at, coalesce(r.pars, cp.pars) as hp
+    select r.holes, r.created_at, coalesce(r.pars, cp.pars) as hp,
+      row_number() over (partition by (r.created_at at time zone 'America/New_York')::date order by r.created_at) as nth
     from rounds r left join course_pars cp on cp.course = r.course where r.player_id in (select id from seats)
   ),
   shots as (
     select r.holes[i] as s, r.hp[i] as par from r cross join lateral generate_subscripts(r.holes, 1) i
-    where array_length(r.hp, 1) = array_length(r.holes, 1)
+    where r.nth = 1 and array_length(r.hp, 1) = array_length(r.holes, 1)
   ),
   days as (
     select distinct d from (

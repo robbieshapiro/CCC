@@ -44,7 +44,7 @@ export function shopPane(snap: Snapshot) {
           ${earnedFrom(me)}
           <details class="shop-how"><summary>How to earn</summary>
             <p><b>The weekly purse</b> is the big money: the top 10 on your club’s board get paid.</p>
-            <p><b>On the side:</b> ${money(BONUS.round)} a day you finish a round, ${money(BONUS.streak3)} on your third day running at the club and ${money(BONUS.streak7)} every seventh, ${money(BONUS.ctp)} for winning Closest to the Pin, and ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle, ${money(BONUS.ace)} an ace.</p>
+            <p><b>On the side:</b> ${money(BONUS.round)} for your first round of the day, plus ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle and ${money(BONUS.ace)} an ace on it. ${money(BONUS.streak3)} on your third day running at the club and ${money(BONUS.streak7)} every seventh. ${money(BONUS.ctp)} for winning Closest to the Pin.</p>
             <p class="muted">Spending never touches your career earnings. Everything here is for looks: it shows on the course, in the stands and on your member card.</p>
           </details>
           <p class="shop-trying" id="shop-trying" hidden></p>

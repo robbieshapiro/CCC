@@ -7,7 +7,7 @@ export const BONUS = {
   streak3: 100, // the third day running at the club (opened the app, played or practised)
   streak7: 250, // every seventh day running
   ctp: 150, // the day's Closest to the Pin winner, across every club
-  birdie: 25,
+  birdie: 25, // birdies and better pay on the day's first finished round only
   eagle: 100,
   ace: 500,
 };
