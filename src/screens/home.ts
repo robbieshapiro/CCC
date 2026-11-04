@@ -151,7 +151,7 @@ export function home(snap: Snapshot) {
       const feats = p.feats.map((f) => featById(f)?.icon ?? '').join('');
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}${feats ? ` <small>${feats}</small>` : ''}<em>${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last!)}` : 'yet to play'}${pay.get(p.id)?.payout ? ` · <b class="pay">${money(pay.get(p.id)!.payout)}</b>` : ''}</em></span></a></td>
+        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i>${feats ? ` <small>${feats}</small>` : ''}<em>${pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
         ${score('m')}${cells}${score('d')}
       </tr>`;
     })
