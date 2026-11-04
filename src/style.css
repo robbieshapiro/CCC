@@ -1163,7 +1163,3 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .ch-members .earn { color: #8a6514; font-weight: 700; white-space: nowrap; }
 .honours .paid li { display: grid; grid-template-columns: 3em 1fr auto; align-items: baseline; gap: 8px; }
 .honours .paid li span { grid-column: auto; }
-/* the running purse on the Play hero */
-.hero-purse { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: -6px 0 14px; padding: 6px 12px; border-radius: 999px; background: rgba(230, 195, 92, 0.16); border: 1px solid rgba(230, 195, 92, 0.5); }
-.hero-purse b { font-family: var(--serif); font-size: 20px; color: #f3d98a; font-variant-numeric: tabular-nums; }
-.hero-purse span { font-size: 12px; color: #e6d7b0; }
