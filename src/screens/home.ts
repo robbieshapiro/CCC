@@ -181,7 +181,6 @@ export function home(snap: Snapshot) {
           <p class="eyebrow">${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
-          <p class="hero-purse"><b>💰 ${money(purseOf(field.length))}</b><span>${field.length ? `club purse · ${field.length} ${field.length === 1 ? 'player' : 'players'} in · top 10 paid` : 'club purse · $1,000 goes in with every player'}</span></p>
           ${mine ? '' : lastWord(snap)}
           <a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>
         </div>
