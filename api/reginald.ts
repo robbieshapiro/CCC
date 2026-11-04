@@ -183,9 +183,9 @@ export async function POST(request: Request) {
   if (kind === 'champion') return champion(db, s, body.token);
   const round = kind === 'round' ? roundFacts(s, course!) : null;
   if (kind === 'round' && !round) return json({ text: null, why: 'no recent round' });
-  // a day's line is about the board as it stands, so it's kept for the day and for when the board closes: a schedule
-  // change gets a fresh one
-  const key = kind === 'daily' ? `${s.today}>${periodEnds(s.month)}` : round!.key;
+  // a day's line is kept for the day and for when the board closes (a schedule change gets a fresh one). It leaves the
+  // standings alone: they change all day, and the app shows them live under his line ('b:' marks lines written so)
+  const key = kind === 'daily' ? `b:${s.today}>${periodEnds(s.month)}` : round!.key;
 
   // already written: hand it back
   const { data: kept } = await db.from('reginald_notes').select('body').eq('player_id', me.id).eq('kind', kind).eq('key', key).maybeSingle();
@@ -200,10 +200,16 @@ export async function POST(request: Request) {
   if ((kind === 'round' && (mineToday ?? 0) >= ROUND_NOTES_A_DAY) || (allToday ?? 0) >= CLUB_LINES_A_DAY) return json({ text: null, why: 'cap' });
 
   const { data: open } = await db.rpc('open_board', { p_token: body.token });
-  const context = { ...facts(s, (open ?? []) as { name: string; total: number; par: number; mine: boolean }[], course!), ...(round ? { just_played: round.round } : {}) };
+  const context: Record<string, unknown> = { ...facts(s, (open ?? []) as { name: string; total: number; par: number; mine: boolean }[], course!), ...(round ? { just_played: round.round } : {}) };
+  // the day's line never sees the standings, so it can't quote one that's gone stale by lunchtime
+  if (kind === 'daily') {
+    delete context.the_open;
+    const week = context[`this_${span(s.month)}`] as Record<string, unknown> | undefined;
+    if (week) for (const k of ['best', 'place_in_club', 'leading', 'next_one_ahead', 'next_one_behind']) delete week[k];
+  }
   const task =
     kind === 'daily'
-      ? `Write today's greeting for ${me.name}, shown at the top of the club's Play page above the button to play this ${span(s.month)}'s course. Make them want to play today.`
+      ? `Write today's greeting for ${me.name}, shown at the top of the club's Play page above the button to play this ${span(s.month)}'s course. Make them want to play today. Don't mention scores, places or who leads: the live standings are shown just under your line.`
       : `${me.name} has just finished a round of this ${span(s.month)}'s course (just_played). Write your note on their scorecard about this round: the moment that mattered most, and what it means for their ${span(s.month)}.`;
 
   const text = await write(task, context);

@@ -131,13 +131,25 @@ export function home(snap: Snapshot) {
   let mood: Mood = 'dry';
   if (!played.length) line = `${line} ${REGINALD.nobody(snap.today)}`;
   else if (!mine) line = REGINALD.notYet(played.length);
-  else if (played[0].playerId === snap.me) {
+  else if (me && me.toPar === played[0].toPar) {
     line = REGINALD.leading(toParLabel(me.toPar), snap.today);
     mood = 'pleased';
   } else {
     const top = played[0];
     line = played.length > 2 ? REGINALD.others(player(top.playerId)!.name, toParLabel(top.toPar)) : REGINALD.behind(player(top.playerId)!.name, toParLabel(top.toPar), me.toPar - top.toPar);
   }
+  // the board as it stands, in plain words, always from this snapshot: it goes under Reginald's own line for the day
+  const standing = (() => {
+    if (!played.length) return 'No rounds on the board yet.';
+    const lead = played.filter((r) => r.toPar === played[0].toPar);
+    const names = lead.map((r) => (r.playerId === snap.me ? 'You' : player(r.playerId)!.name));
+    const at = toParLabel(played[0].toPar);
+    const top = lead.length === 1 ? `${esc(names[0])} ${names[0] === 'You' ? 'lead' : 'leads'} at <b>${at}</b>` : `${esc(names.join(' & '))} share the lead at <b>${at}</b>`;
+    if (!mine || !me?.best) return `${top}. You haven’t posted yet.`;
+    if (me.toPar === played[0].toPar) return `${top}.`;
+    const gap = me.toPar - played[0].toPar;
+    return `${top}. You’re ${placeLabel(played.filter((r) => r.toPar < me.toPar).length + 1, played.filter((r) => r.toPar === me.toPar).length > 1)} at ${toParLabel(me.toPar)}, ${gap} back.`;
+  })();
 
   if (host) line = REGINALD.host(snap.groupName, snap.homeName ?? 'your club');
 
@@ -224,7 +236,7 @@ export function home(snap: Snapshot) {
       if (!text || !say) return;
       say.dataset.ai = '1';
       say.classList.add('reg-fresh');
-      say.innerHTML = `<b>Reginald</b> ${esc(text)}`;
+      say.innerHTML = `<b>Reginald</b> ${esc(text)}${host ? '' : ` <span class="reg-board">${standing}</span>`}`;
     });
   void bindNotices();
   void bindDaily(snap.today, snap.crown);

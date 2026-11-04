@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (away players' entries go into the purse).
+Last updated Nov 4, 2026 (Reginald's daily line and live standings).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (away players' entries go into the purse).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #PR | Reginald's home line can't go stale. His Claude-written line for the day no longer sees or quotes standings (it's written once a day), and a live line under it always gives the board as it stands: who leads, and where you are. Lines already written today are replaced. Also fixes his scripted line when you're tied for the lead. No extra AI cost. |
 | #125 | Away players' entries go into the purse. Someone playing in from another club puts their $1,000 in like everyone else but takes nothing out (their home club pays them), so the club's own members split a bigger pot. Robbie at The Clergy: 4 players, $4,000 purse, all of it to Clergy members. |
 | #124 | Birdies, eagles and aces pay on the day's first finished round only, like the $50 round bonus, so replaying a short course isn't a money farm (Marc had $4,375 from birdies against $2,972 from purses). |
 | #123 | Cheaper Pro Shop and more ways to earn. Prices cut to about a sixth (Hawaiian shirt $400, shop floor $250 to $1,000), Club Pro at $5,000 career and Club Legend at $25,000 (caddie $15,000). Club bonuses on top of the purse, paid back for everything already played: $50 a day you finish a round, $100 on the third day running at the club and $250 every seventh, $150 for the day's Closest to the Pin, $25 a birdie, $100 an eagle, $500 an ace. They count toward career earnings and rank; the board's money column stays purse only. The Pro Shop shows where your money came from, and the end of a round shows the bonus it earned. Designing holes doesn't pay, on purpose (it would reward the AI calls). |
@@ -75,7 +76,7 @@ Last updated Nov 4, 2026 (away players' entries go into the purse).
 - [x] The #122 one-golfer SQL, run Nov 4 (checked: Robbie is one golfer with $1,469 in both clubs, away at The Clergy, paid at Kellogg).
 - [x] The #123 bonus SQL, run Nov 4 (checked: bonuses paid back for 22 members, Robbie $3,900).
 - [x] The #124 birdie fix SQL, run Nov 4 (checked: Marc $1,650 in bonuses against $2,972 in purses).
-- [ ] The #125 purse SQL (Claude applies it after merge).
+- [x] The #125 purse SQL, run Nov 4 (checked: October's closed purses unchanged, $9,998 Kellogg and $4,000 The Clergy).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
