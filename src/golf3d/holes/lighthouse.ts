@@ -18,9 +18,21 @@ const ROAD: V2[] = [
 ];
 const ROAD_H = [27, 25.2, 23.4, 21.8];
 
+// a barranca across the front of the tee: a topped drive drops into the canyon
+const BARRANCA: V2[] = [
+  { x: -60, y: 104 },
+  { x: 60, y: 112 },
+  { x: 160, y: 104 },
+  { x: 230, y: 116 },
+];
+
 const cypress: Post[] = [
+  // Torrey pines framing the drive: a line down the right of the fairway, two out on the cliff edge on the left
+  ...[150, 200, 250, 300].map((y, i) => ({ x: 70 + (i % 2) * 6, y, r: 2.4, h: 22, look: 'torrey' as const })),
+  { x: 4, y: 170, r: 2.4, h: 20, look: 'torrey' },
+  { x: 8, y: 262, r: 2.4, h: 20, look: 'torrey' },
   // down the right, along the road
-  ...[60, 150, 240, 330, 420].map((y, i) => ({ x: 176 + (i % 2) * 14, y, r: 2.2, h: 20, look: 'monterey' as const })),
+  ...[60, 150, 240, 330, 420].map((y, i) => ({ x: 176 + (i % 2) * 14, y, r: 2.2, h: 20, look: 'torrey' as const })),
   ...[560, 640, 710].map((y, i) => ({ x: 130 + (i % 2) * 12, y, r: 2.2, h: 20, look: 'monterey' as const })),
   // the lone one out on the corner of the cove
   { x: 6, y: 300, r: 2.4, h: 22, look: 'monterey' },
@@ -39,7 +51,7 @@ const base: Hole = {
   yards: 585,
   maxTime: 30,
   greenFirm: 0.04,
-  blurb: 'The long one, with the sea on the left. Carry the cove with your second if you dare.',
+  blurb: 'Carry the barranca, then thread the pines. Sea on the left. Carry the cove with your second if you dare.',
   tee: { x: 0, y: 0 },
   cup: { x: 22, y: 678 },
   pins: [{ x: 22, y: 678 }, { x: 10, y: 670 }, { x: 32, y: 684 }, { x: 16, y: 688 }],
@@ -55,8 +67,8 @@ const base: Hole = {
   regions: [
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the drive
-    { poly: blob(40, 190, 30, 116, 1, 0.08), surface: 'fringe' },
-    { poly: blob(40, 190, 26, 112, 1, 0.08), surface: 'fairway' },
+    { poly: blob(38, 214, 22, 92, 1, 0.08), surface: 'fringe' },
+    { poly: blob(38, 214, 18, 88, 1, 0.08), surface: 'fairway' },
     // the layup, right of the cove
     { poly: blob(110, 430, 28, 40, 2, 0.1), surface: 'fairway' },
     { poly: blob(78, 346, 9, 7, 9, 0.15), surface: 'sand' },
@@ -91,6 +103,8 @@ const base: Hole = {
     // rolls in the fairway
     { kind: 'hill', x: 50, y: 140, r: 30, h: 1.2 },
     { kind: 'hill', x: 20, y: 250, r: 24, h: -0.8 },
+    // the barranca in front of the tee
+    { kind: 'channel', pts: BARRANCA, width: 13, depth: 10 },
     // the keeper's road: a gentle, steady fall to the green
     { kind: 'embankment', pts: ROAD, h: ROAD_H, width: 4, edge: 4 },
     // two wheel ruts worn into it, so a rolling ball keeps to the road

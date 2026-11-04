@@ -17,7 +17,7 @@ export type Piece =
   | { kind: 'embankment'; pts: V2[]; h: number[]; width: number; edge: number; wobble?: number };
 
 export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' | 'iron' | 'crypt' | 'blade' | 'teeth' | 'barn' };
-export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' | 'cactus' | 'gorse' | 'maple' | 'monterey' | 'lighthouse' };
+export type Post = { x: number; y: number; r: number; h: number; e?: number; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' | 'cactus' | 'gorse' | 'maple' | 'monterey' | 'torrey' | 'lighthouse' };
 export type Region = { poly: V2[]; surface: Surface };
 // A lake or creek: its outline and the flat height of its surface. Ground inside that sits under the surface is wet.
 // The sea can run a tide and lava can pulse: the level swings by `amp` either way over `period` seconds of the hole clock.

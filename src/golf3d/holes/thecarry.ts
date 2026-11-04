@@ -17,10 +17,10 @@ const BAIL: V2[] = [
 ];
 
 const cypress: Post[] = [
-  { x: -40, y: -24, r: 2.4, h: 22, look: 'monterey' },
-  { x: -118, y: 96, r: 2.2, h: 20, look: 'monterey' },
-  { x: -112, y: 190, r: 2.2, h: 20, look: 'monterey' },
-  { x: -48, y: 232, r: 2.4, h: 22, look: 'monterey' },
+  { x: -40, y: -24, r: 2.4, h: 22, look: 'torrey' },
+  { x: -118, y: 96, r: 2.2, h: 20, look: 'torrey' },
+  { x: -112, y: 190, r: 2.2, h: 20, look: 'torrey' },
+  { x: -48, y: 232, r: 2.4, h: 22, look: 'torrey' },
 ];
 
 const rocks: Post[] = [
