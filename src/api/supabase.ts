@@ -56,6 +56,15 @@ export const supabaseApi: Api = {
       await rpc('submit_round', args);
     }
   },
+  buyItem: async (s, item) => {
+    try {
+      await rpc('buy_item', { p_token: s.token, p_item: item });
+    } catch (err) {
+      // the shop's SQL isn't in yet
+      if (/buy_item|schema cache/i.test((err as Error).message)) throw new Error('The Pro Shop isn’t open yet. Check back soon.');
+      throw err;
+    }
+  },
   saveAvatar: async (s, avatar) => {
     await rpc('save_avatar', { p_token: s.token, p_avatar: avatar });
   },

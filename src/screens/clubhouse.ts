@@ -1,4 +1,4 @@
-// The Clubhouse: everything off the course, as tabs. Your club's members and standings (the default), the bar (its
+// The Clubhouse: everything off the course, as tabs. Your club's members and standings (the default), the Pro Shop, the bar (its
 // games), Reginald's weekly Chronicle, every club this month, how the game works, and a note to the Committee. Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
 import { periodName, span } from '../day';
@@ -12,10 +12,13 @@ import { board, crownFor, toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc, header, render } from '../ui';
 import { barPane, fillBar } from './bar';
+import { bindShop, shopPane } from './shop';
+import { badgeFor } from '../shop';
 
-export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'clubs' | 'how' | 'feedback';
+export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'clubs' | 'how' | 'feedback';
 const TABS: [ClubhouseTab, string][] = [
   ['members', 'Members'],
+  ['shop', 'Pro Shop'],
   ['bar', 'Bar'],
   ['chronicle', 'Chronicle'],
   ['clubs', 'Clubs'],
@@ -27,7 +30,7 @@ export const isClubhouseTab = (t: string | undefined): t is ClubhouseTab => TABS
 const topar = (n: number | null) => (n === null ? '–' : `<span class="${n < 0 ? 'under' : n > 0 ? 'over' : ''}">${toParLabel(n)}</span>`);
 
 export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: string) {
-  const pane = { bar: barPane, chronicle: chroniclePane, members, clubs, how, feedback }[tab](snap);
+  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, clubs, how, feedback }[tab](snap);
   render(`
     ${header(snap.groupName, 'clubhouse')}
     <main class="clubhouse">
@@ -35,6 +38,7 @@ export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: 
       <section class="ch-pane">${pane}</section>
     </main>`);
   document.querySelector('.ch-tabs .on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  if (tab === 'shop') bindShop(snap);
   if (tab === 'bar') void fillBar(snap);
   if (tab === 'clubs') void fillClubs();
   if (tab === 'chronicle') void fillChronicle(snap, week);
@@ -55,7 +59,7 @@ function members(snap: Snapshot) {
       const c = career(p.id);
       return `<tr class="${me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</span></a></td>
+        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</span></a></td>
         <td class="num topar">${r.best ? topar(r.toPar) : '–'}</td>
         <td class="num">${r.rounds}</td>
         <td class="num all">${c.rounds}</td>

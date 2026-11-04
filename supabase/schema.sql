@@ -533,6 +533,9 @@ begin
         -- the money list: everything won from the weekly purses, and how many top tens
         'earnings', coalesce(pay.earned, 0),
         'top10s', coalesce(pay.top10s, 0),
+        -- the Pro Shop: what they've spent and what they own
+        'spent', (select coalesce(sum(price), 0) from purchases where player_id = pl.id),
+        'owned', (select coalesce(json_agg(item), '[]') from purchases where player_id = pl.id),
         'feats', (select coalesce(json_agg(distinct f), '[]') from (
             select unnest(feats) f from rounds where player_id = pl.id
             union select 'champion' where exists (select 1 from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff')
@@ -1369,3 +1372,47 @@ grant execute on function submit_design(uuid, bigint, int) to anon;
 grant execute on function design_queue(uuid) to anon;
 grant execute on function review_design(uuid, bigint, boolean) to anon;
 grant execute on function members_course(uuid) to anon;
+
+-- The Pro Shop (src/shop.ts): looks bought with purse money. Career earnings (period_payouts) never go down; what a
+-- member spends comes out of their balance. Club Pro ($15,000 earned) and Club Legend ($75,000) have racks of their own.
+-- The prices here must match src/shop.ts.
+create table if not exists shop_items (
+  id text primary key,
+  price int not null check (price > 0),
+  rack text not null check (rack in ('member', 'pro', 'legend'))
+);
+alter table shop_items enable row level security;
+insert into shop_items (id, price, rack) values
+  ('hawaiian', 2500, 'member'), ('argyle', 3000, 'member'), ('tourpolo', 6000, 'pro'), ('sequin', 25000, 'legend'),
+  ('printbucket', 1500, 'member'), ('tourcap', 2500, 'member'), ('cowboy', 5000, 'pro'), ('goldvisor', 8000, 'pro'),
+  ('aviators', 2000, 'member'), ('watch', 4000, 'member'), ('chain', 10000, 'pro'), ('stud', 20000, 'legend'),
+  ('chrome', 3500, 'member'), ('schoolbag', 4000, 'member'), ('goldstaff', 12000, 'pro'), ('blackdiamond', 30000, 'legend')
+on conflict (id) do update set price = excluded.price, rack = excluded.rack;
+
+create table if not exists purchases (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  item text not null references shop_items,
+  price int not null,
+  created_at timestamptz not null default now(),
+  unique (player_id, item)
+);
+alter table purchases enable row level security;
+
+create or replace function buy_item(p_token uuid, p_item text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); it shop_items; earned int; spent int;
+begin
+  select * into it from shop_items where id = p_item;
+  if it.id is null then raise exception 'That isn''t in the shop.'; end if;
+  if exists (select 1 from purchases where player_id = me.id and item = p_item) then return; end if;
+  select coalesce(sum(payout), 0) into earned from period_payouts(me.group_id) where player_id = me.id;
+  select coalesce(sum(price), 0) into spent from purchases where player_id = me.id;
+  if (it.rack = 'pro' and earned < 15000) or (it.rack = 'legend' and earned < 75000) then
+    raise exception 'That rack is for higher ranks.';
+  end if;
+  if earned - spent < it.price then raise exception 'Not enough in the bank for that.'; end if;
+  insert into purchases (player_id, item, price) values (me.id, p_item, it.price);
+end $$;
+grant execute on function buy_item(uuid, text) to anon;
+

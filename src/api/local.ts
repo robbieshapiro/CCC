@@ -7,6 +7,7 @@ import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
 import { payouts } from '../purse';
+import { canShop, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
 import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
@@ -15,7 +16,7 @@ type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[] };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[] };
 
 const KEY = 'ccc-local-db';
 
@@ -160,6 +161,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           career: career(mine.filter((r) => r.playerId === p.id)),
           earnings: paid.filter((x) => x.playerId === p.id).reduce((a, x) => a + x.payout, 0),
           top10s: paid.filter((x) => x.playerId === p.id).length,
+          spent: (db.purchases ?? []).filter((x) => x.playerId === p.id).reduce((a, x) => a + x.price, 0),
+          owned: (db.purchases ?? []).filter((x) => x.playerId === p.id).map((x) => x.item),
         })),
       rounds: mine.filter((r) => r.month === month).map(strip),
       champions,
@@ -179,6 +182,20 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     if (total < course.par) feats.push('underpar');
     const spots = r.spots?.length === holes.length ? r.spots.map((p) => (p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null)) : null;
     db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, createdAt: new Date().toISOString() });
+    save(db);
+  },
+
+  async buyItem(session, id) {
+    const snap = await this.snapshot(session);
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const p = snap.players.find((x) => x.id === me.id);
+    const item = itemById(id);
+    if (!item || !p) throw new Error('That isn’t in the shop.');
+    if (p.owned?.includes(id)) return;
+    if (!canShop(item.rack, p.earnings ?? 0)) throw new Error('That rack is for higher ranks.');
+    if ((p.earnings ?? 0) - (p.spent ?? 0) < item.price) throw new Error('Not enough in the bank for that.');
+    (db.purchases ??= []).push({ playerId: me.id, item: id, price: item.price });
     save(db);
   },
 
