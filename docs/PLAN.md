@@ -69,7 +69,7 @@ Last updated Nov 4, 2026 (one golfer across clubs).
 - [x] The #114 club merge, run Nov 4 (checked: two clubs left, Kellogg and The Clergy; Boomtown's code points to The Clergy).
 - [x] The #116 two-clubs SQL, run Nov 4 (checked: `play_seat` is live, and Robbie's Clergy seat plays and is still admin).
 - [x] The #117 activity SQL, run Nov 4 (checked: the feed returns up to 1,000 events).
-- [ ] The #122 one-golfer SQL (Claude applies it after merge).
+- [x] The #122 one-golfer SQL, run Nov 4 (checked: Robbie is one golfer with $1,469 in both clubs, away at The Clergy, paid at Kellogg).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
