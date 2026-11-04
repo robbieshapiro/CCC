@@ -73,7 +73,7 @@ Last updated Nov 4, 2026 (birdie bonuses on the day's first round only).
 - [x] The #117 activity SQL, run Nov 4 (checked: the feed returns up to 1,000 events).
 - [x] The #122 one-golfer SQL, run Nov 4 (checked: Robbie is one golfer with $1,469 in both clubs, away at The Clergy, paid at Kellogg).
 - [x] The #123 bonus SQL, run Nov 4 (checked: bonuses paid back for 22 members, Robbie $3,900).
-- [ ] The #124 birdie fix SQL (Claude applies it after merge).
+- [x] The #124 birdie fix SQL, run Nov 4 (checked: Marc $1,650 in bonuses against $2,972 in purses).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
