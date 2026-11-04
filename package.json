@@ -20,6 +20,7 @@
     "three": "0.170.0"
   },
   "devDependencies": {
+    "@types/node": "^24.19.2",
     "@types/three": "0.170.0",
     "rolldown": "1.2.14",
     "typescript": "~5.9.3",

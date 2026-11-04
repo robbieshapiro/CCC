@@ -1,0 +1,54 @@
+name: Checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One job, so branch protection has a single required check. Slow steps run only when their files changed.
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: What changed
+        id: changed
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          files=$(git diff --name-only "$BASE" HEAD)
+          has() { echo "$files" | grep -qE "$1" && echo true || echo false; }
+          echo "holes=$(has '^(src/golf3d/|scripts/check-holes)')" >> "$GITHUB_OUTPUT"
+          echo "minigolf=$(has '^(src/golf3d/(minigolf|haunted|putbot)|scripts/check-minigolf)')" >> "$GITHUB_OUTPUT"
+          echo "sql=$(has '^supabase/schema\.sql$')" >> "$GITHUB_OUTPUT"
+      - run: npm run build
+      - run: npm run check-api
+      - if: steps.changed.outputs.holes == 'true'
+        run: npm run check-holes -- quick
+      - if: steps.changed.outputs.minigolf == 'true'
+        run: npm run check-minigolf
+      - name: schema.sql loads, and loads again on top
+        if: steps.changed.outputs.sql == 'true'
+        env:
+          PGPASSWORD: postgres
+          PGHOST: localhost
+          PGUSER: postgres
+          PGOPTIONS: -c search_path=public,extensions
+        run: |
+          psql -c 'create role anon; create role authenticated; create schema extensions; create extension pgcrypto schema extensions;'
+          psql -v ON_ERROR_STOP=1 -q -f supabase/schema.sql
+          psql -v ON_ERROR_STOP=1 -q -f supabase/schema.sql

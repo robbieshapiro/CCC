@@ -10,6 +10,8 @@ A private online golf club for friends: a 3D course each month, a daily Closest 
 
 ## Before you push
 
+The Checks workflow runs all of this on every PR and has to pass before merging. Run them yourself first anyway.
+
 - `npm run build` always (it typechecks).
 - `npm run check-api` if you touched `api/`.
 - `npm run check-holes` if you touched holes, terrain, physics or clubs. Its `greens` sweep (in `quick` and `all`) putts every green from all round every pin; never ship a course that fails it.
