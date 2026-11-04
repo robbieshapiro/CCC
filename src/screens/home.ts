@@ -168,7 +168,7 @@ export function home(snap: Snapshot) {
       ${championStrip(snap)}
       ${playoffCard()}
       ${noticesStrip()}
-      <section class="play-hero${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
+      <section class="play-hero${look(course)}">
         <div class="play-reg"><span class="host-face big">${reginaldSvg(mood, 72)}</span><p id="reg-line"><b>Reginald</b> ${line}</p></div>
         <div class="play-main">
           <p class="eyebrow">${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
@@ -179,7 +179,7 @@ export function home(snap: Snapshot) {
         </div>
       </section>
       ${honoursPane(snap)}
-      <section class="board${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}">
+      <section class="board${look(course)}">
         ${countdown(snap.month, course)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best round counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist" hidden>
@@ -247,7 +247,7 @@ export function home(snap: Snapshot) {
 function countdown(month: string, course: Course) {
   const ends = periodClosesAt(month);
   const day = new Date(ends.getTime() - 1).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
-  return `<div class="countdown${course.holes[0]?.theme === 'volcanic' ? ' volcanic' : ''}" data-countdown="${ends.getTime()}">
+  return `<div class="countdown${look(course)}" data-countdown="${ends.getTime()}">
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
     <small>This ${span(month)}'s champion is crowned at midnight ET, ${day}.</small>
   </div>`;
@@ -286,12 +286,16 @@ function tickCountdown() {
 
 const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 
+// The week's course dresses the Play hero, the board and its countdown: ember red for the Caldera, Pacific blue and a
+// sunset for the coast
+const look = (c: Course) => (c.holes[0]?.theme === 'volcanic' ? ' volcanic' : c.holes[0]?.theme === 'coastal' ? ' coastal' : '');
+
 // The headline at the top of the home page: the next course's Open, counting down to its first day, with its practice
 // preview as the main button. Volcanic courses get the red glow.
 function previewTile(month: string) {
   const next = nextCourse(month);
   if (!next) return '';
   const starts = periodClosesAt(month);
-  return `<a class="tile" href="#/practice/${next.id}"><i>${next.holes[0]?.theme === 'autumn' ? '🍁' : next.holes[0]?.theme === 'volcanic' ? '🌋' : '⛳'}</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
+  return `<a class="tile" href="#/practice/${next.id}"><i>${({ autumn: '🍁', volcanic: '🌋', coastal: '🌊' } as Record<string, string>)[next.holes[0]?.theme ?? ''] ?? '⛳'}</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
 }
 

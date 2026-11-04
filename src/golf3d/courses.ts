@@ -4,16 +4,16 @@
 // from the preview.
 import { blowhole } from './holes/blowhole';
 import { caldera } from './holes/caldera';
-import { coveredbridge } from './holes/coveredbridge';
 import { geyseralley } from './holes/geyseralley';
 import { island } from './holes/island';
 import { lavafield } from './holes/lavafield';
 import { lavalift } from './holes/lavalift';
 import { lavatube } from './holes/lavatube';
-import { redbarn } from './holes/redbarn';
+import { lighthouse } from './holes/lighthouse';
 import { ridge } from './holes/ridge';
-import { sugarmaple } from './holes/sugarmaple';
+import { sealion } from './holes/sealion';
 import { summit } from './holes/summit';
+import { thecarry } from './holes/thecarry';
 import type { Hole, V2 } from './types';
 
 // previewHoles: before it opens, members can practise this many of its holes; the admin can play them all.
@@ -53,16 +53,17 @@ const COURSES: Course[] = [
     playoff: { hole: lavatube, from: { x: -8, y: 530 }, label: 'Down the hill' },
   },
   {
-    id: 'westernreserve',
-    // the first weekly course: northeast Ohio in October. A draft until Robbie has played it: then drop `draft` and
-    // it opens on the Sunday below
+    id: 'pacificbluffs',
+    // the first weekly course: the California coast at golden hour. A draft until Robbie has played it: then drop
+    // `draft` and it opens on the Sunday below. (The Western Reserve, the autumn course it replaced, is still in
+    // src/golf3d/holes for a later week.)
     opens: '2026-11-08',
     draft: true,
-    name: 'The Western Reserve',
-    tagline: 'Three holes of Ohio in October. Maples, a covered bridge and a red barn.',
-    holes: [coveredbridge, sugarmaple, redbarn],
-    par: par([coveredbridge, sugarmaple, redbarn]),
-    playoff: { hole: coveredbridge, from: { x: 0, y: 220 }, label: 'Over the creek' },
+    name: 'The Pacific Bluffs',
+    tagline: 'Three holes on the California cliffs. Cypress, surf and a lighthouse.',
+    holes: [sealion, lighthouse, thecarry],
+    par: par([sealion, lighthouse, thecarry]),
+    playoff: { hole: thecarry, from: { x: -80, y: 120 }, label: 'Off the cliff top' },
   },
 ];
 

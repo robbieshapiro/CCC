@@ -73,13 +73,15 @@ function nameTag(name: string, score: string) {
   return s;
 }
 
-type Look = 'day' | 'night' | 'links' | 'desert' | 'autumn';
+type Look = 'day' | 'night' | 'links' | 'desert' | 'autumn' | 'coastal';
 const LOOKS: Record<Look, { sky: string; ground: string; hemi: number; sunColor: string; sun: number; fog: string; near: number; far: number; env: number }> = {
   day: { sky: '#d6e8f5', ground: '#46612f', hemi: 1.25, sunColor: '#ffeccc', sun: 2.6, fog: '#e3ebe2', near: 420, far: 1300, env: 1 },
   night: { sky: '#6f63a8', ground: '#231a33', hemi: 1.1, sunColor: '#aebcff', sun: 1.5, fog: '#24163a', near: 90, far: 620, env: 0.35 },
   links: { sky: '#c9d3d8', ground: '#7a7350', hemi: 1.45, sunColor: '#f1ede2', sun: 1.7, fog: '#cfd5d3', near: 300, far: 1150, env: 0.8 },
   desert: { sky: '#d9ecf8', ground: '#a07a4a', hemi: 1.2, sunColor: '#ffe2b0', sun: 3.0, fog: '#efe0c4', near: 450, far: 1500, env: 1 },
   autumn: { sky: '#d3e1ee', ground: '#6b5a2e', hemi: 1.2, sunColor: '#ffd59a', sun: 2.5, fog: '#e7dcc8', near: 400, far: 1300, env: 0.9 },
+  // the California coast at golden hour: warm low light, a soft sea haze, and you can see a long way out
+  coastal: { sky: '#d9eaf4', ground: '#7a7444', hemi: 1.4, sunColor: '#ffd6a0', sun: 3.0, fog: '#f3e2c8', near: 650, far: 2100, env: 1.15 },
 };
 
 // a soft round glow, for the moon's halo
@@ -162,7 +164,7 @@ export class Course3D {
   private hemi = new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25);
   // the sky for each kind of country: day (the courses), night (the haunted mini golf), an overcast links and a hot
   // desert: sky, sun or moon, light and fog
-  private skies: Record<Look, THREE.Object3D[]> = { day: [], night: [], links: [], desert: [], autumn: [] };
+  private skies: Record<Look, THREE.Object3D[]> = { day: [], night: [], links: [], desert: [], autumn: [], coastal: [] };
   private look: Look | null = null;
   private night = false;
   private world: World | null = null;
@@ -230,7 +232,7 @@ export class Course3D {
     slow: { from: number; to: number } | null;
   } | null = null;
   private practice = false; // warm-up swings on the first tee: they don't count
-  private fly: { curve: THREE.CatmullRomCurve3; t: number } | null = null;
+  private fly: { curve: THREE.CatmullRomCurve3; t: number; dur: number; pin: THREE.Vector3 | null } | null = null;
   private follow = new THREE.Vector3(0, 0, -1);
   private camPos = new THREE.Vector3();
   private camLook = new THREE.Vector3();
@@ -394,7 +396,7 @@ export class Course3D {
     this.drawTrail();
     this.placeBall();
     this.sharpen(!!hole.tour);
-    const look: Look = hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? 'autumn' : 'day';
+    const look: Look = hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? 'autumn' : hole.theme === 'coastal' ? 'coastal' : 'day';
     if (this.look !== look) this.setLook(look);
     this.fitShadows();
     this.petalsFor(hole);
@@ -459,7 +461,16 @@ export class Course3D {
     const autumn = this.skyMesh(1, ['#4f86c0', '#9fc0de', '#efd9b0']);
     const low = new THREE.Mesh(new THREE.SphereGeometry(42, 16, 10), new THREE.MeshBasicMaterial({ color: '#ffe3b0', fog: false }));
     low.position.set(-1000, 420, 1100);
-    this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot], autumn: [autumn, low] };
+    // the coast: deep Pacific blue overhead going to peach at the horizon, and a big warm sun low over the water
+    // with a glow round it
+    const coastal = this.skyMesh(1, ['#2c6aa8', '#94c3e0', '#f9d6a4']);
+    const evening = new THREE.Group();
+    evening.add(new THREE.Mesh(new THREE.SphereGeometry(50, 20, 12), new THREE.MeshBasicMaterial({ color: '#fff0c8', fog: false })));
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('#ffd08a'), transparent: true, opacity: 0.85, fog: false, depthWrite: false }));
+    glow.scale.setScalar(620);
+    evening.add(glow);
+    evening.position.set(1250, 230, -900);
+    this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot], autumn: [autumn, low], coastal: [coastal, evening] };
     for (const o of Object.values(this.skies).flat()) this.scene.add(o);
     this.setLook('day');
   }
@@ -470,7 +481,7 @@ export class Course3D {
     this.look = look;
     this.night = look === 'night';
     for (const [k, objs] of Object.entries(this.skies)) objs.forEach((o) => (o.visible = k === look));
-    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links' || look === 'autumn'));
+    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links' || look === 'autumn' || look === 'coastal'));
     const L = LOOKS[look];
     this.hemi.color.set(L.sky);
     this.hemi.groundColor.set(L.ground);
@@ -552,6 +563,8 @@ export class Course3D {
     // tour courses tuck the strike ball up out of the thumb's way, on the far side from the hand you hit with
     this.overlay.classList.toggle('tour', !!h.tour);
     this.overlay.classList.toggle('lefty', this.golfer.spec.hand === 'left');
+    // the HUD takes on the course's colours
+    this.overlay.dataset.theme = h.theme ?? '';
     this.overlay.innerHTML = `
       <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-flash" data-flash aria-hidden="true"></div>
@@ -587,6 +600,7 @@ export class Course3D {
         <p data-swing-tip></p>
       </div>
       <div class="g3-callout" data-callout></div>
+      <div class="g3-intro" data-intro aria-live="polite"></div>
       <div class="g3-hint" data-hint></div>
       <div class="g3-read" data-read hidden></div>
       <div class="g3-cart" data-cart hidden></div>
@@ -940,23 +954,53 @@ export class Course3D {
   // ---------- flyover ----------
 
   private startFlyover() {
-    const pts = this.hole.flyover.map((p, i, a) => {
+    // the coast gets the long version: up high over the water for the opening shot, down the hole, then a slow swing
+    // round the green with the camera on the flag
+    const cine = this.hole.theme === 'coastal' && !this.drill;
+    const cup = this.hole.cup;
+    let src = this.hole.flyover;
+    if (cine) {
+      const last = src[src.length - 2];
+      const a0 = Math.atan2(last.x - cup.x, last.y - cup.y);
+      src = [...src.slice(0, -1), ...[0, 0.5, 1].map((t) => ({ x: cup.x + Math.sin(a0 + t * 1.8) * 70, y: cup.y + Math.cos(a0 + t * 1.8) * 70 }))];
+    }
+    const pts = src.map((p, i, a) => {
       const k = i / (a.length - 1);
-      return w3(p.x, p.y, heightAt(this.hole, p.x, p.y) + 70 - k * 34);
+      return w3(p.x, p.y, heightAt(this.hole, p.x, p.y) + (cine ? 130 - k * 92 : 70 - k * 34));
     });
-    this.fly = { curve: new THREE.CatmullRomCurve3(pts), t: 0 };
+    this.fly = { curve: new THREE.CatmullRomCurve3(pts), t: 0, dur: cine ? 9 : 6, pin: cine ? w3(cup.x, cup.y, heightAt(this.hole, cup.x, cup.y) + 2) : null };
     this.mode = 'fly';
     this.overlay.querySelector('[data-skip]')?.classList.add('show');
-    this.callout(this.hole.name, this.drill ? this.drill.title : `Hole ${this.number} · Par ${this.hole.par}`, 3200);
+    if (this.drill) this.callout(this.hole.name, this.drill.title, 3200);
+    else this.introCard();
     this.hint('');
     this.golfer.setPose('idle');
     sfx('whoosh');
+  }
+
+  // The hole's card while the camera flies it: its number, name, par and length, a line on how to play it, and a bar
+  // that runs with the flyover.
+  private introCard() {
+    const el = this.overlay.querySelector('[data-intro]') as HTMLElement | null;
+    if (!el) return;
+    const h = this.hole;
+    const yards = h.yards ?? Math.round((Math.hypot(h.cup.x - h.tee.x, h.cup.y - h.tee.y) * SCALE) / 3);
+    el.innerHTML = `
+      <div class="g3-intro-num"><small>Hole</small><b>${this.number}</b><small>of ${this.holesInRound}</small></div>
+      <div class="g3-intro-body">
+        <b>${h.name}</b>
+        <span>Par ${h.par}${h.putterOnly ? '' : ` · ${yards} yd`}${this.wind?.mph ? ` · wind ${this.wind.mph} mph` : ''}</span>
+        ${h.blurb ? `<p>${h.blurb}</p>` : ''}
+      </div>
+      <i class="g3-intro-bar"><i data-intro-bar></i></i>`;
+    el.classList.add('show');
   }
 
   private endFlyover() {
     if (this.mode !== 'fly') return;
     this.fly = null;
     this.overlay.querySelector('[data-skip]')?.classList.remove('show');
+    this.overlay.querySelector('[data-intro]')?.classList.remove('show');
     if (this.cart && !this.cart.visited) {
       this.mode = 'cart';
       this.overlay.classList.add('carting');
@@ -1903,13 +1947,18 @@ export class Course3D {
     }
 
     if (this.mode === 'fly' && this.fly) {
-      this.fly.t += dt / 6;
+      this.fly.t += dt / this.fly.dur;
       const k = Math.min(1, this.fly.t);
       const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
       const p = this.fly.curve.getPoint(e);
       const ahead = this.fly.curve.getPoint(Math.min(1, e + 0.12));
       this.camera.position.copy(p);
-      this.camera.lookAt(ahead.x, ahead.y - 34, ahead.z);
+      const look = new THREE.Vector3(ahead.x, ahead.y - 34, ahead.z);
+      // the long flyover turns to hold the flag as it swings round the green
+      if (this.fly.pin) look.lerp(this.fly.pin, Math.min(1, Math.max(0, (e - 0.55) / 0.25)));
+      this.camera.lookAt(look);
+      const bar = this.overlay.querySelector('[data-intro-bar]') as HTMLElement | null;
+      if (bar) bar.style.transform = `scaleX(${k})`;
       if (k >= 1) this.endFlyover();
     } else {
       if (this.mode === 'roll' && this.shot) this.stepShot(dt);

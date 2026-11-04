@@ -14,6 +14,7 @@ Last updated Nov 4, 2026 (club ranks, gear and the end-of-round rewards).
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
 | #106 | Club ranks: Caddie, Junior Member, Member, Captain (three tiers each) and Club Legend, then Prestige stars. XP from rounds, birdies and better, breaking par, secrets, new weeks, the Daily Shot, practice, the bar, the Design Desk and titles; the first tier of each rank also asks for things done (a birdie, a secret, weeks played). A badge beside every member's name on the board, the Members table, member cards and the Locker, which gets a Your rank section (XP bar, what's next, the ladder, how to earn XP). Gear that comes with rank gives a small, capped edge, steadier and never longer: putters show the start of a putt's true line on quick greens (the Gold putter shows the first half), balls cut wind drift, irons and drivers widen the gold window. An XP chip during counted rounds pops for birdies and secrets; the end of a round shows XP line by line, the rank bar filling, any promotion with what it unlocked, new accolades and the next unlock, then Challenge a friend, Play again and Back to the clubhouse. Design a Hole opens at Junior Member (anyone who has designed one keeps it). |
+| #105 | The Pacific Bluffs replaces the Western Reserve as the Nov 8 course (a draft until Robbie plays it): Sea Lion Point (par 4), The Lighthouse (par 5) and The Carry (par 3, the playoff hole), on California sea cliffs at golden hour. A new `coastal` look: sandstone cliffs, Monterey cypress, ice plant, surf on the rocks, sea stacks, sails, a turning lighthouse and sea lions, with the coast running on past the edge of each hole. Every hole now opens on an intro card during the flyover (number, name, par, yards, wind, a line on how to play it); the coast gets a longer flyover that swings round the green, a navy and sunset HUD, and a Pacific-blue Play hero, board and countdown. Hank's first-tee line names the course's hazard. |
 | #104 | The Unfinished rounds card is gone from Admin: the count rides on the Rounds tile ("posted · 12 unfinished"), and stays in the members table's Unfinished column and the activity feed. |
 | #102 | A round counts as unfinished the moment the member starts another (a restart), not only after two hours, so mulligans on hole 1 show up in Admin and the activity feed straight away. |
 | #100 | Admin's members table gets an Unfinished column (rounds started and left unfinished in the window), sortable like every column (tap a header, tap again to flip); the activity feed shows "Marc started a round on the Caldera but didn't finish (stopped on hole 4)". |
@@ -46,7 +47,7 @@ Last updated Nov 4, 2026 (club ranks, gear and the end-of-round rewards).
 - [x] The #98 SQL (`round_starts`), run Nov 2.
 - [x] The #100 SQL (`admin_overview` with unfinished rounds), run Nov 2.
 - [x] The #102 SQL (`round_abandoned`), run Nov 2.
-- [ ] Before Nov 8: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change.
+- [ ] Before Nov 8: play The Pacific Bluffs (Admin → "Preview The Pacific Bluffs (draft)") and tell an agent to take it out of draft, or what to change. If it's still a draft on Nov 8, the Caldera carries over.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
@@ -79,7 +80,8 @@ The problem with the new members: once your best round is in, there's no reason 
 
 **Schedule:**
 - **Fri Oct 30 to Sat Nov 7: the Caldera challenge,** all six holes (par 25). Every member's first open of the app lands on a card naming October's champion with the Caldera's Play button (#80).
-- **Week of Sun Nov 8:** The Western Reserve, northeast Ohio in October (#79). It's a draft: only Robbie can play it (Admin → upcoming course). Once he approves, an agent removes `draft: true` in `src/golf3d/courses.ts` and it opens Nov 8. If it's still a draft then, the Caldera carries over.
+- **Week of Sun Nov 8:** The Pacific Bluffs, the California coast (#105). It's a draft: only Robbie can play it (Admin → upcoming course). Once he approves, an agent removes `draft: true` in `src/golf3d/courses.ts` and it opens Nov 8. If it's still a draft then, the Caldera carries over.
+- **The Western Reserve** (#79) is off the schedule. Its holes and the `autumn` look are still in the code, ready for a later week: add it back to `COURSES` with a new `opens`.
 - **From Nov 15:** agent-built courses every week.
 - **A tie at the top** goes to a sudden-death playoff on the Sunday (#87).
 
@@ -134,7 +136,8 @@ Expect roughly $15–35 a month for a club of about 20 active members. The Anthr
   - `src/designer/hole.ts`: the spec, builder and quick check;
   - `src/designer/samples.ts`: four sample holes;
   - `src/screens/design.ts`: the Desk UI.
-- **New looks:** `src/golf3d/lands.ts` (links and desert). Sky per look is in `src/golf3d/engine.ts`, in `setLook`.
+- **New looks:** `src/golf3d/lands.ts` (links and desert), `src/golf3d/autumn.ts`, `src/golf3d/coastal.ts` (the California coast: cypress, lighthouse, surf, and the land beyond the hole). Sky per look is in `src/golf3d/engine.ts`, in `setLook`.
+- **A hole's intro card:** set `blurb` (one line on how to play it) and `yards` on the hole; the card shows during the flyover.
 - **Mini golf:**
   - `src/golf3d/minigolf.ts` and `src/golf3d/haunted.ts`;
   - the putting bot is `src/golf3d/putbot.ts`;

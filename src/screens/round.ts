@@ -109,7 +109,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       )
       .catch(() => {});
   }
-  game.starter = HANK.firstTee(me.name, snap.today);
+  game.starter = HANK.firstTee(me.name, snap.today, course.holes[0]?.theme);
   // your rank's gear is in the bag, and a chip keeps count of the XP this round has earned so far
   const counted = !preview && !me.host;
   const stats0 = statsOf(me);
