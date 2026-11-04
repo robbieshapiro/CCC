@@ -33,17 +33,13 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
 // All reads and writes go through security-definer functions in supabase/schema.sql.
 export const supabaseApi: Api = {
   mode: 'supabase',
-  join: (invite, name, pin) => rpc('join_group', { p_invite: invite, p_name: name, p_pin: pin }),
-  signIn: (name, pin) => rpc('sign_in', { p_name: name, p_pin: pin }),
-  myClubs: async (name, pin) => {
-    try {
-      return await rpc<Session[]>('my_clubs', { p_name: name, p_pin: pin });
-    } catch (err) {
-      // a database without clubs yet: the one-club sign-in still works
-      if (!/my_clubs|function|schema cache/i.test((err as Error).message)) throw err;
-      return [await rpc<Session>('sign_in', { p_name: name, p_pin: pin })];
-    }
+  join: async (invite, name, pin) => {
+    // a wrong PIN comes back as a value, not an error, so the database keeps count of it
+    const r = await rpc<Session & { error?: string }>('join_group', { p_invite: invite, p_name: name, p_pin: pin });
+    if (r.error) throw new Error(r.error);
+    return r;
   },
+  myClubs: (name, pin) => rpc<Session[]>('my_clubs', { p_name: name, p_pin: pin }),
   createClub: (s, name) => rpc<Session>('create_club', { p_token: s.token, p_name: name }),
   snapshot: (s) => rpc<Snapshot>('get_snapshot', { p_token: s.token }),
   submitRound: async (s, r) => {
