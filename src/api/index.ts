@@ -45,6 +45,17 @@ export function setSession(s: Session | null) {
   store.set(SESSION_KEY, JSON.stringify(s));
 }
 
+// Forget one club this device was signed in to (its seat is gone: a merged club, say) and fall back to another.
+// Returns the club now active, or null if there's none left.
+export function dropSession(token: string): Session | null {
+  const list = listSessions().filter((x) => x.token !== token);
+  store.set(CLUBS_KEY, JSON.stringify(list));
+  const next = list[list.length - 1] ?? null;
+  if (next) store.set(SESSION_KEY, JSON.stringify(next));
+  else store.remove(SESSION_KEY);
+  return next;
+}
+
 export function switchClub(groupId: string) {
   const s = listSessions().find((x) => x.groupId === groupId);
   if (s) store.set(SESSION_KEY, JSON.stringify(s));
