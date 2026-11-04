@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (one golfer across clubs).
+Last updated Nov 4, 2026 (cheaper Pro Shop and club bonuses).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (one golfer across clubs).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #PR | Cheaper Pro Shop and more ways to earn. Prices cut to about a sixth (Hawaiian shirt $400, shop floor $250 to $1,000), Club Pro at $5,000 career and Club Legend at $25,000 (caddie $15,000). Club bonuses on top of the purse, paid back for everything already played: $50 a day you finish a round, $100 on the third day running at the club and $250 every seventh, $150 for the day's Closest to the Pin, $25 a birdie, $100 an eagle, $500 an ace. They count toward career earnings and rank; the board's money column stays purse only. The Pro Shop shows where your money came from, and the end of a round shows the bonus it earned. Designing holes doesn't pay, on purpose (it would reward the AI calls). |
 | #122 | One golfer across clubs. Your look, closet, wallet, career earnings and rank follow you (same name and PIN) into every club you play in: buy a Hawaiian shirt once and you wear it everywhere. Scores and titles count on every board you play, but only your home club's purse pays you; another club pays its purse as if you weren't in the field, and its board shows what you'd have taken in muted gold. |
 | #121 | Smoother play on iPads and phones. The sea, lakes and lava ripple on the graphics chip instead of the processor moving every point of the water and re-sending it each frame (the scenery's work per frame drops from about 3 ms to 0.03 ms on the coast). The automatic quality guard now steps the resolution down when play averages under about 48 frames a second for two seconds, not only under 30. Touch screens get the standard shadow detail and at most 2x resolution on the newer courses. |
 | #120 | A cleaner board: each member is two lines, their name with the rank badge and any 👑 or 🎯 beside it, then their payout and rounds. The row of trophy icons is gone from the board (trophies are still on member cards and in the Locker). |
@@ -70,6 +71,7 @@ Last updated Nov 4, 2026 (one golfer across clubs).
 - [x] The #116 two-clubs SQL, run Nov 4 (checked: `play_seat` is live, and Robbie's Clergy seat plays and is still admin).
 - [x] The #117 activity SQL, run Nov 4 (checked: the feed returns up to 1,000 events).
 - [x] The #122 one-golfer SQL, run Nov 4 (checked: Robbie is one golfer with $1,469 in both clubs, away at The Clergy, paid at Kellogg).
+- [ ] The #PR bonus SQL (Claude applies it after merge).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.

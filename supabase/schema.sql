@@ -39,6 +39,8 @@ alter table rounds add column if not exists spots jsonb;
 -- which club's board a round counted on, when that's no longer its club: when two clubs merge, the past weeks keep the
 -- boards (and so the champions and purses) they were played on. Null means the round's own club.
 alter table rounds add column if not exists board_group uuid;
+-- each hole's par, for the club bonuses' birdies and eagles (rounds from before Nov 4, 2026 use course_pars)
+alter table rounds add column if not exists pars int[];
 create index if not exists rounds_group_month on rounds (group_id, month);
 
 drop table if exists hole_scores cascade;
@@ -551,8 +553,8 @@ begin
         then jsonb_build_object('x', round(greatest(-2000, least(2000, (e->>'x')::numeric)), 1), 'y', round(greatest(-2000, least(2000, (e->>'y')::numeric)), 1))
         else 'null'::jsonb end order by k) from jsonb_array_elements(p_spots) with ordinality as t(e, k));
   end if;
-  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots)
-  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp);
+  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots, pars)
+  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp, p_pars);
 end $$;
 
 create or replace function save_avatar(p_token uuid, p_avatar jsonb) returns void
@@ -588,6 +590,8 @@ begin
         'top10s', coalesce(pay.top10s, 0) + (person_away_earned(pl)->>'top10s')::int,
         'spent', (select coalesce(sum(price), 0) from purchases where player_id in (select person_seats(pl))),
         'owned', (select coalesce(json_agg(distinct item), '[]') from purchases where player_id in (select person_seats(pl))),
+        -- the side money (club bonuses): counts toward career earnings and rank, not the board's purse column
+        'bonus', person_bonus(pl),
         -- playing here from another club: on the board and in for the title, but paid at home
         'away', (home_of(pl)).group_id <> pl.group_id,
         'feats', (select coalesce(json_agg(distinct f), '[]') from (
@@ -1427,8 +1431,9 @@ grant execute on function design_queue(uuid) to anon;
 grant execute on function review_design(uuid, bigint, boolean) to anon;
 grant execute on function members_course(uuid) to anon;
 
--- The Pro Shop (src/shop.ts): looks bought with purse money. Career earnings (period_payouts) never go down; what a
--- member spends comes out of their balance. Club Pro ($15,000 earned) and Club Legend ($75,000) have racks of their own.
+-- The Pro Shop (src/shop.ts): looks bought with purse money and club bonuses. Career earnings (period_payouts plus
+-- person_bonus) never go down; what a member spends comes out of their balance. Club Pro ($5,000 earned) and Club
+-- Legend ($25,000) have racks of their own.
 -- The prices here must match src/shop.ts.
 create table if not exists shop_items (
   id text primary key,
@@ -1437,10 +1442,10 @@ create table if not exists shop_items (
 );
 alter table shop_items enable row level security;
 insert into shop_items (id, price, rack) values
-  ('hawaiian', 2500, 'member'), ('argyle', 3000, 'member'), ('tourpolo', 6000, 'pro'),
-  ('printbucket', 1500, 'member'), ('tourcap', 2500, 'member'), ('cowboy', 5000, 'pro'), ('goldvisor', 8000, 'pro'),
-  ('aviators', 2000, 'member'), ('watch', 4000, 'member'), ('chain', 10000, 'pro'),
-  ('chrome', 3500, 'member'), ('schoolbag', 4000, 'member'), ('goldstaff', 12000, 'pro'), ('caddie', 60000, 'legend')
+  ('hawaiian', 400, 'member'), ('argyle', 750, 'member'), ('tourpolo', 1500, 'pro'),
+  ('printbucket', 250, 'member'), ('tourcap', 500, 'member'), ('cowboy', 1200, 'pro'), ('goldvisor', 2000, 'pro'),
+  ('aviators', 350, 'member'), ('watch', 900, 'member'), ('chain', 2500, 'pro'),
+  ('chrome', 600, 'member'), ('schoolbag', 1000, 'member'), ('goldstaff', 3000, 'pro'), ('caddie', 15000, 'legend')
 on conflict (id) do update set price = excluded.price, rack = excluded.rack;
 
 create table if not exists purchases (
@@ -1455,6 +1460,67 @@ alter table purchases enable row level security;
 -- taken off the Legend rack before anyone bought them (kept if someone ever did)
 delete from shop_items where id in ('sequin', 'stud', 'blackdiamond') and id not in (select item from purchases);
 
+-- ---------- Club bonuses (src/bonus.ts): the side money on top of the purse ----------
+
+-- each hole's par on the courses played before rounds kept their own (and the ones since, as a fallback)
+create table if not exists course_pars (course text primary key, pars int[] not null);
+alter table course_pars enable row level security;
+insert into course_pars (course, pars) values ('highlands', '{5,3,4}'), ('caldera', '{4,5,5,3,4,4}'), ('pacificbluffs', '{4,5,3}')
+on conflict (course) do update set pars = excluded.pars;
+
+-- every past day's Closest to the Pin winner across all clubs, as a person (lower name, PIN hash), ranked as
+-- daily_crown ranks a day: holed first, holed sooner, then nearest, then the next-best try, then the earlier player
+create or replace function ctp_winners() returns table (day date, k text, h text)
+language sql stable security definer set search_path = public, extensions as $$
+  with t as (
+    select s.day, lower(p.name) as k, p.pin_hash as h, s.try, s.holed, s.lost, s.ft, s.created_at
+    from daily_shots s join players p on p.id = s.player_id
+    where s.day < (now() at time zone 'America/New_York')::date
+  ), best as (
+    select t.day, t.k, t.h, bool_or(t.holed) as holed, min(t.try) filter (where t.holed) as htry,
+      array_agg(case when t.holed then 0 when t.lost then null else t.ft end order by case when t.holed then 0 when t.lost then null else t.ft end asc nulls last) as fts,
+      min(t.created_at) as first_at
+    from t group by t.day, t.k, t.h
+  )
+  select distinct on (b.day) b.day, b.k, b.h from best b
+  where b.holed or b.fts[1] is not null
+  order by b.day, b.holed desc, b.htry asc nulls last, b.fts[1] asc nulls last, b.fts[2] asc nulls last, b.fts[3] asc nulls last, b.first_at
+$$;
+revoke all on function ctp_winners() from public, anon, authenticated;
+
+-- what a person has earned on the side, across their clubs: $50 a day they finish a round, $100 on the third day running
+-- at the club and $250 every seventh, $150 a Closest to the Pin win, and $25 a birdie, $100 an eagle, $500 an ace
+create or replace function person_bonus(p players) returns json
+language sql stable security definer set search_path = public, extensions as $$
+  with seats as (select person_seats(p) as id),
+  r as (
+    select r.holes, r.created_at, coalesce(r.pars, cp.pars) as hp
+    from rounds r left join course_pars cp on cp.course = r.course where r.player_id in (select id from seats)
+  ),
+  shots as (
+    select r.holes[i] as s, r.hp[i] as par from r cross join lateral generate_subscripts(r.holes, 1) i
+    where array_length(r.hp, 1) = array_length(r.holes, 1)
+  ),
+  days as (
+    select distinct d from (
+      select md.day as d from member_days md where md.player_id in (select id from seats)
+      union select (x.created_at at time zone 'America/New_York')::date from rounds x where x.player_id in (select id from seats)
+      union select (ps.started_at at time zone 'America/New_York')::date from practice_sessions ps where ps.player_id in (select id from seats)
+    ) u
+  ),
+  runs as (select count(*)::int as n from (select d - (row_number() over (order by d))::int as grp from days) z group by grp),
+  b as (
+    select
+      50 * (select count(distinct (r.created_at at time zone 'America/New_York')::date) from r)::int as rounds,
+      (select coalesce(sum(case when n >= 3 then 100 else 0 end + (n / 7) * 250), 0) from runs)::int as streaks,
+      150 * (select count(*) from ctp_winners() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
+      (select coalesce(sum(case when s = 1 then 500 when s <= par - 2 then 100 when s = par - 1 then 25 else 0 end), 0) from shots)::int as shots
+  )
+  select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'shots', b.shots,
+    'total', b.rounds + b.streaks + b.ctp + b.shots) from b
+$$;
+revoke all on function person_bonus(players) from public, anon, authenticated;
+
 create or replace function buy_item(p_token uuid, p_item text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := play_seat(player_for(p_token)); it shop_items; earned int; spent int;
@@ -1466,8 +1532,9 @@ begin
   select coalesce(sum(pp.payout), 0) into earned
     from (select distinct s.group_id from players s where s.id in (select person_seats(me))) g
     cross join lateral period_payouts(g.group_id) pp where pp.player_id in (select person_seats(me));
+  earned := earned + (person_bonus(me)->>'total')::int;
   select coalesce(sum(price), 0) into spent from purchases where player_id in (select person_seats(me));
-  if (it.rack = 'pro' and earned < 15000) or (it.rack = 'legend' and earned < 75000) then
+  if (it.rack = 'pro' and earned < 5000) or (it.rack = 'legend' and earned < 25000) then
     raise exception 'That rack is for higher ranks.';
   end if;
   if earned - spent < it.price then raise exception 'Not enough in the bank for that.'; end if;

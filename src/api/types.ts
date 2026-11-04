@@ -1,3 +1,4 @@
+import type { Bonus } from '../bonus';
 export const MAX_OVER_PAR = 3; // pick up at par + 3
 
 import type { GolferSpec } from '../golf3d/golfer';
@@ -32,6 +33,7 @@ export type Player = {
   top10s?: number;
   spent?: number; // what they've spent in the Pro Shop (src/shop.ts): their balance is earnings less this
   owned?: string[]; // the Pro Shop items they own (earnings, spent and owned follow the person across their clubs)
+  bonus?: Bonus; // the side money (src/bonus.ts): rounds, streaks, Closest to the Pin, birdies and better
   away?: boolean; // playing here from another club: on the board and in for the title, but their home club pays them
 };
 

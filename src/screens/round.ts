@@ -7,6 +7,7 @@ import { crest } from '../brand';
 import { sfx } from '../fx/sound';
 import { Course3D, scoreName, type Ghost } from '../golf3d/engine';
 import { todayInGameTz } from '../day';
+import { BONUS, shotBonus } from '../bonus';
 import type { Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
 import { hostChip, REGINALD } from '../host';
@@ -145,6 +146,22 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       posted = false;
     }
   sfx(best ? 'cheer' : 'ooh');
+  // the club bonus this round earned: the day's first finished round, and birdies or better (src/bonus.ts)
+  const bonusLine = (() => {
+    if (preview || !posted) return '';
+    const firstToday = !snap.rounds.some((x) => x.playerId === snap.me && todayInGameTz(new Date(x.createdAt)) === todayInGameTz());
+    const kinds = new Map<string, { n: number; v: number }>();
+    scores.forEach((s, i) => {
+      const v = shotBonus(s, course.holes[i].par);
+      if (!v) return;
+      const k = s === 1 ? 'ace' : v === BONUS.eagle ? 'eagle' : 'birdie';
+      const x = kinds.get(k) ?? { n: 0, v: 0 };
+      kinds.set(k, { n: x.n + 1, v: x.v + v });
+    });
+    const parts = [...(firstToday ? [`round ${money(BONUS.round)}`] : []), ...[...kinds].map(([k, x]) => `${x.n > 1 ? `${x.n} ${k}s` : `${k}`} ${money(x.v)}`)];
+    const sum = (firstToday ? BONUS.round : 0) + [...kinds.values()].reduce((a, x) => a + x.v, 0);
+    return sum ? `<p class="purse-line bonus-line"><b>+${money(sum)}</b><span>Club bonus · ${parts.join(' · ')}</span></p>` : '';
+  })();
   const sheet = document.createElement('div');
   sheet.className = 'summary';
   sheet.innerHTML = `
@@ -164,6 +181,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
       ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
+      ${bonusLine}
       <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
       <div class="summary-actions"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the club</button></div>
       <button class="link" data-feedback>Leave feedback</button>

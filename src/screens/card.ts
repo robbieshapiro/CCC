@@ -1,7 +1,7 @@
 // Your Locker: your golfer, how your week is going and your trophies. Edit your look from here. (The club's
 // members are in the Clubhouse.)
 import { span } from '../day';
-import { badgeFor, balanceOf } from '../shop';
+import { badgeFor, balanceOf, earningsOf } from '../shop';
 import { money } from '../purse';
 import { api, setSession } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
@@ -45,7 +45,7 @@ export function card(snap: Snapshot) {
             <div><b>${best ? toParLabel(best.total - best.par) : '–'}</b><span>Best this ${span(snap.month)}</span></div>
             <div><b>${mine?.best ? ordinal(mine.rank) : '–'}</b><span>In the club</span></div>
             <div><b>${mine?.rounds ?? 0}</b><span>Rounds</span></div>
-            <div><b>${money(me.earnings ?? 0)}</b><span>Career earnings</span></div>
+            <div><b>${money(earningsOf(me))}</b><span>Career earnings</span></div>
           </div>`
           }
           ${me.host ? '' : `<a class="btn" href="#/clubhouse/shop">Pro Shop · ${money(balanceOf(me))} to spend</a>`}
