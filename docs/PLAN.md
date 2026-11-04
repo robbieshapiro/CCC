@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (board payouts readable on phones).
+Last updated Nov 4, 2026 (a cleaner board: no trophy icons).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (board payouts readable on phones).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #120 | A cleaner board: each member is two lines, their name with the rank badge and any 👑 or 🎯 beside it, then their payout and rounds. The row of trophy icons is gone from the board (trophies are still on member cards and in the Locker). |
 | #119 | Board payouts no longer get cut off on phones ("$1…"): the money leads the line under each name and the last-played date makes way on small screens. The rank badge sits back beside the name instead of on a line of its own, on the board and the Members table. |
 | #118 | SQL gets easier: Claude tests each change on a scratch database, then applies it to the live one through the Supabase connector, with Robbie approving each run (CLAUDE.md, "Applying SQL"). No more pasting. |
 | #117 | Admin's activity feed shows everything in the chosen window (7 days, this month, all time; up to the latest 1,000) instead of only the last 25, in its own scrolling box with a heading for each day and the time of each event. |
