@@ -59,7 +59,9 @@ function todaysField(snap: Snapshot): Ghost[] {
   });
 }
 
-export async function round(snap: Snapshot, opts: { course?: Course; holes?: number; practice?: boolean } = {}) {
+// demo: the admin's look at the end of a round without playing one. A made-up round on this week's course (par, with a
+// birdie on the first), shown on the real rewards screen and never posted; 'promo' starts you just short of a promotion
+export async function round(snap: Snapshot, opts: { course?: Course; holes?: number; practice?: boolean; demo?: 'plain' | 'promo' } = {}) {
   closeRound();
   const preview = !!opts.course;
   const full = opts.course ?? courseFor(snap.month);
@@ -112,21 +114,25 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   game.starter = HANK.firstTee(me.name, snap.today, course.holes[0]?.theme);
   // your rank's gear is in the bag, and a chip keeps count of the XP this round has earned so far
   const counted = !preview && !me.host;
-  const stats0 = statsOf(me);
+  const stats0 =
+    opts.demo === 'promo'
+      ? { rounds: 2, weeks: 1, underPar: 0, birdies: 1, eagles: 0, aces: 0, daily: 1, practice: 20, bar: 10, designs: 0, wins: 0, secrets: 0 }
+      : statsOf(me);
   const rank0 = rankOf(stats0);
   game.gear = me.host ? null : fxOf(rank0.level, me.wins);
-  const chip = counted ? xpChip(el, rank0) : null;
+  const chip = counted && !opts.demo ? xpChip(el, rank0) : null;
   const scores: number[] = [];
   const spots: Spot[] = [];
   // a counted round logs its start and each hole it reaches, so the Committee can see who stops and where
-  const started = preview ? Promise.resolve(null) : api.startRound(requireSession(), course.id).catch(() => null);
+  const started = preview || opts.demo ? Promise.resolve(null) : api.startRound(requireSession(), course.id).catch(() => null);
   const progress = (hole: number, finished = false) =>
     void started.then((id) => (id === null ? undefined : api.roundProgress(requireSession(), id, hole, finished).catch(() => {})));
   const feats = new Set<string>();
   // the admin's preview can jump to any hole, or start the one they're on over
   let jump: ((i: number) => void) | null = null;
   if (preview && !opts.practice) game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
-  for (let i = 0; i < course.holes.length; ) {
+  if (opts.demo) course.holes.forEach((h, i) => (scores[i] = i === 0 ? h.par - 1 : h.par));
+  for (let i = opts.demo ? course.holes.length : 0; i < course.holes.length; ) {
     const h = course.holes[i];
     const par = course.holes.reduce((a, x, j) => a + (scores[j] === undefined ? 0 : x.par), 0);
     const jumped = new Promise<number>((res) => (jump = res));
@@ -154,7 +160,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const toPar = total - course.holes.reduce((a, h, i) => a + (scores[i] === undefined ? 0 : h.par), 0);
   const best = !preview && (!before || toPar < before.total - before.par);
   let posted = true;
-  if (!preview)
+  if (!preview && !opts.demo)
     try {
       await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots });
       progress(course.holes.length, true);
@@ -190,14 +196,14 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
             ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry')
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
-      <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
+      <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : opts.demo ? 'A sample round to show the end screen. Nothing was posted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
       <div class="summary-actions cta">${opts.practice || preview ? '' : '<button class="btn" data-challenge>Challenge a friend</button>'}<button class="btn ${opts.practice || preview ? '' : 'ghost'}" data-again>Play again</button><button class="btn ghost" data-back>Back to the clubhouse</button></div>
       <button class="link" data-feedback>Leave feedback</button>
     </div>`;
   el.appendChild(sheet);
   if (counted && posted) rewards.animate(sheet);
   // Reginald reads the card (Claude) and his note replaces the stock line when it comes
-  if (!preview && posted) {
+  if (!preview && !opts.demo && posted) {
     const note = sheet.querySelector<HTMLElement>('#reg-note p');
     note?.classList.add('reg-thinking');
     void askReginald('round', full, snap.today).then((text) => {

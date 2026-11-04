@@ -56,6 +56,8 @@ export function admin(snap: Snapshot) {
           <button class="btn" data-tool="notice">📣 Post a notice</button>
           <button class="btn" data-tool="invite">✉️ Invite someone</button>
           ${next.map((c) => `<a class="btn ghost" href="#/preview/${c.id}">⛳ Preview ${esc(c.name.replace(/ Course$/, ''))}${c.draft ? ' (draft)' : ''}</a>`).join('')}
+          <a class="btn ghost" href="#/round/demo">🏁 Preview end of round</a>
+          <a class="btn ghost" href="#/round/promo">🎖️ Preview a promotion</a>
           <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
         </div>
         <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>

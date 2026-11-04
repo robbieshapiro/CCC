@@ -58,7 +58,8 @@ async function router() {
       location.replace('#/');
       return;
     }
-    if (page === 'round') return round(s);
+    // the admin's look at the end-of-round screen: #/round/demo, or #/round/promo for one with a promotion
+    if (page === 'round') return round(s, s.admin && (arg === 'demo' || arg === 'promo') ? { demo: arg === 'promo' ? 'promo' : 'plain' } : {});
     if (page === 'daily') return dailyRound(s);
     if (page === 'playoff') return playoff(s);
     if (page === 'bar') return arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');
