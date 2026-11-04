@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (Admin's activity shows everything in the window).
+Last updated Nov 4, 2026 (Claude applies SQL now, with Robbie's approval).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (Admin's activity shows everything in the window).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #118 | SQL gets easier: Claude tests each change on a scratch database, then applies it to the live one through the Supabase connector, with Robbie approving each run (CLAUDE.md, "Applying SQL"). No more pasting. |
 | #117 | Admin's activity feed shows everything in the chosen window (7 days, this month, all time; up to the latest 1,000) instead of only the last 25, in its own scrolling box with a heading for each day and the time of each event. |
 | #116 | Robbie plays in both Kellogg and The Clergy: a round counts for the club you play it in (`play_seat`), and so does Pro Shop spending, since each club's purse pays its own seat. The Daily Shot, practice and bar games still count at the home club (Kellogg). His Clergy seat is a playing seat now, and he stays its admin. |
 | #115 | A saved club whose seat is gone (like the admin's Boomtown host seat after the merge) no longer shows "Session expired": the app forgets it and opens another club the device is signed in to. |
@@ -62,8 +63,8 @@ Last updated Nov 4, 2026 (Admin's activity shows everything in the window).
 - [x] The #111 Pro Shop SQL, run Nov 4 (checked: the shop tables are live and the app shows balances and earnings).
 - [x] The #112 Legend rack SQL, run Nov 4 (checked: 14 pieces in `shop_items`).
 - [x] The #114 club merge, run Nov 4 (checked: two clubs left, Kellogg and The Clergy; Boomtown's code points to The Clergy).
-- [ ] Paste the two-clubs SQL from #116 (`play_seat`, `submit_round`, `buy_item`, then the one-time switch of Robbie's Clergy seat to a playing seat).
-- [ ] Paste the activity SQL from #117 (`admin_overview`). Until then the feed still stops at 25, now in the new box.
+- [x] The #116 two-clubs SQL, run Nov 4 (checked: `play_seat` is live, and Robbie's Clergy seat plays and is still admin).
+- [x] The #117 activity SQL, run Nov 4 (checked: the feed returns up to 1,000 events).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
@@ -152,5 +153,5 @@ Expect roughly $15–35 a month for a club of about 20 active members. The Anthr
   - `src/golf3d/minigolf.ts` and `src/golf3d/haunted.ts`;
   - the putting bot is `src/golf3d/putbot.ts`;
   - `npm run check-minigolf`.
-- **Database:** everything is in `supabase/schema.sql`, which is safe to re-run. Robbie runs SQL himself.
+- **Database:** everything is in `supabase/schema.sql`, which is safe to re-run. Claude applies changes through the Supabase connector with Robbie's approval (CLAUDE.md, "Applying SQL").
 - **For agents:** `CLAUDE.md` has the working rules. This plan lives at `docs/PLAN.md`, and old plans are kept in `docs/plans/`.

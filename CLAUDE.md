@@ -19,17 +19,28 @@ A private online golf club for friends: a 3D course each month, a daily Closest 
 
 - One feature per PR, merged as a squash. Titles are a plain sentence about what members get: "Hollow Hills: haunted mini golf replaces the putting contest".
 - Data access goes through the `Api` interface in `src/api/types.ts`. Add a method to both `src/api/supabase.ts` and `src/api/local.ts` so local mode keeps working with no keys.
-- All SQL lives in `supabase/schema.sql` and must be safe to re-run (`create table if not exists`, `create or replace function`, `add column if not exists`). Never run SQL against the live database. Robbie pastes it in himself.
+- All SQL lives in `supabase/schema.sql` and must be safe to re-run (`create table if not exists`, `create or replace function`, `add column if not exists`). See "Applying SQL" below for how it reaches the live database.
 - AI calls are server-side only, in `api/*.ts`, each with a per-member daily cap. Keep a cap on anything new and note the expected cost in the plan.
 - New weekly courses: hole files in `src/golf3d/holes/`, then an entry in `COURSES` in `src/golf3d/courses.ts` with `opens` set to its Sunday (`'2026-11-15'`) and a `playoff` (the hole a tie is played off on, and a fairway spot for the shot at the pin). Weeks run Sunday to Saturday.
 - The game period lives in a field still called `month` (rounds, the snapshot, champions): `'YYYY-MM'` for the old months, `'2026-10-30'` for the Caldera challenge (Oct 30 to Nov 7), then the week's Sunday `'YYYY-MM-DD'` from Nov 8 2026. Use the helpers in `src/day.ts` (`periodOf`, `periodClosesAt`, `periodName`, `span`), never slice a date to get a month.
 - Words members see: short, warm, plain. No em dashes.
 
+## Applying SQL (since Nov 4, 2026)
+
+Claude applies database changes itself through the Supabase connector (project "CCC", id `xixfekrwgyknbzttyrtp`); Robbie approves each live run in the tool's prompt. Robbie no longer pastes SQL.
+
+1. Test first, every time: start a scratch Postgres (`/usr/lib/postgresql/16/bin`; create the `anon` and `authenticated` roles), load the whole `supabase/schema.sql`, seed what the change touches, and check the result. Then load it again on top to prove it re-runs.
+2. Apply to live only after the PR merges (or when Robbie says): just that PR's statements, as copied from `schema.sql`, with `apply_migration` named after the PR (e.g. `pr_118_purse`).
+3. Verify right after with a read-only `select` (the function is there and says what it should; the rows look right), and tick the box in the plan.
+4. One-off data changes (like the Boomtown merge) are a single all-or-nothing `do` block that checks what it's about to touch and stops, changing nothing, on any surprise. They go in the PR description, not `schema.sql`.
+5. Read-only queries are fine any time to check something. Never drop, delete or rewrite live data unless Robbie asked for that change.
+6. In a session without the Supabase connector, fall back to the old way: put the exact SQL in the PR's "Robbie to do" for him to paste.
+
 ## Keep the plan current (part of every PR)
 
 In the same PR as the change:
 - add the shipped item to the "Shipped" table in `docs/PLAN.md` (use the PR number once you know it);
-- add anything Robbie must do (SQL to paste, env vars, a setting to flip) as an unchecked box under "Setup status";
+- add anything still to do outside the code (SQL to apply, env vars, a setting to flip) as an unchecked box under "Setup status", and tick it once done and checked;
 - move an idea out of "Next up" if you built it;
 - update "Last updated".
 
@@ -37,4 +48,4 @@ When a milestone wraps up and the plan gets rewritten, first copy the old one to
 
 ## In the PR description
 
-End with a "Robbie to do" list: the exact SQL to paste or settings to change, or "Nothing".
+End with a "Robbie to do" list: settings to change, or "Nothing". For SQL, say what will be applied (and when) under "Applying SQL".
