@@ -146,10 +146,11 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       posted = false;
     }
   sfx(best ? 'cheer' : 'ooh');
-  // the club bonus this round earned: the day's first finished round, and birdies or better (src/bonus.ts)
+  // the club bonus this round earned: the day's first finished round pays, with its birdies or better (src/bonus.ts)
   const bonusLine = (() => {
     if (preview || !posted) return '';
     const firstToday = !snap.rounds.some((x) => x.playerId === snap.me && todayInGameTz(new Date(x.createdAt)) === todayInGameTz());
+    if (!firstToday) return '';
     const kinds = new Map<string, { n: number; v: number }>();
     scores.forEach((s, i) => {
       const v = shotBonus(s, course.holes[i].par);
