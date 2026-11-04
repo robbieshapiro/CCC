@@ -52,6 +52,9 @@ function playerByToken(db: Db, token: string): DbPlayer {
 }
 
 // Where someone's play counts: their membership in the club they belong to, not one they only run (host).
+// Where a round (and shop spending) counts: a playing seat plays for its own club; a host-only seat plays at home
+const playSeat = (db: Db, me: DbPlayer) => (me.host ? homeOf(db, me) : me);
+
 function homeOf(db: Db, me: DbPlayer): DbPlayer {
   return db.players.find((p) => !p.host && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin) ?? me;
 }
@@ -172,7 +175,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
 
   async submitRound(session, r) {
     const db = load();
-    const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
+    const me = playSeat(db, playerByToken(db, session.token)); // a playing seat plays here; a host seat plays at home
     const month = periodOf(todayInGameTz());
     const course = courseFor(month);
     if (r.course !== course.id || r.holes.length !== course.holes.length) throw new Error("That round doesn't match this month's course.");
@@ -188,7 +191,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
   async buyItem(session, id) {
     const snap = await this.snapshot(session);
     const db = load();
-    const me = homeOf(db, playerByToken(db, session.token));
+    const me = playSeat(db, playerByToken(db, session.token));
     const p = snap.players.find((x) => x.id === me.id);
     const item = itemById(id);
     if (!item || !p) throw new Error('That isn’t in the shop.');
