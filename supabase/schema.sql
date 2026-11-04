@@ -131,6 +131,16 @@ alter table rounds add constraint rounds_month_check check (month ~ '^\d{4}-\d{2
 -- (see home_of below: a host runs a club without playing in it)
 alter table players add column if not exists host_only boolean not null default false;
 
+-- Where someone's play counts: their membership in the club they belong to, not one they only run (see below)
+create or replace function home_of(me players) returns players
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare h players;
+begin
+  select * into h from players p where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash and not p.host_only
+    order by p.created_at limit 1;
+  return coalesce(h, me);
+end $$;
+
 -- Each member's best round of each period at a club, ranked on its board. A club that took in another keeps the old
 -- boards apart for the weeks before the merge (board: see rounds.board_group).
 drop function if exists month_bests(uuid);
@@ -202,10 +212,16 @@ $$;
 create or replace function period_payouts(p_group uuid)
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
 language sql stable security definer set search_path = public, extensions as $$
-  with b as (select mb.month, mb.player_id, mb.r::int as r, mb.board from month_bests(p_group) mb where mb.month < game_month()),
+  -- the money: only members whose home club this is. Someone playing here from another club keeps their place on the
+  -- board and can win the title, but their home club pays them; here the purse goes round as if they weren't playing.
+  with b as (
+    select mb.month, mb.player_id, mb.board, rank() over (partition by mb.month, mb.board order by mb.total - mb.par)::int as r
+    from month_bests(p_group) mb join players pl on pl.id = mb.player_id
+    where mb.month < game_month() and (home_of(pl)).group_id = p_group
+  ),
   f as (select b.month, b.board, count(*)::int as n from b group by b.month, b.board),
   g as (select b.month, b.board, b.r, count(*)::int as k from b group by b.month, b.board, b.r),
-  w as (select c.month, c.player_id from period_champs(p_group) c where c.how = 'playoff-won'),
+  w as (select c.month, c.player_id from period_champs(p_group) c join b on b.month = c.month and b.player_id = c.player_id where c.how = 'playoff-won'),
   sp as (
     select b.month, b.player_id, f.n,
       case when b.r = 1 and g.k > 1 and exists (select 1 from w where w.month = b.month)
@@ -286,14 +302,22 @@ revoke all on function period_champs(uuid) from public, anon, authenticated;
 -- host-only membership is never on that club's board; their play counts at home, the same name and PIN in the club
 -- they belong to.
 
-create or replace function home_of(me players) returns players
-language plpgsql stable security definer set search_path = public, extensions as $$
-declare h players;
-begin
-  select * into h from players p where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash and not p.host_only
-    order by p.created_at limit 1;
-  return coalesce(h, me);
-end $$;
+
+-- One golfer, however many clubs: their seats are the players with the same name and PIN. Looks, the Pro Shop and the
+-- money list follow the person, not the club.
+create or replace function person_seats(p players) returns setof uuid
+language sql stable security definer set search_path = public, extensions as $$
+  select s.id from players s where lower(s.name) = lower(p.name) and s.pin_hash = p.pin_hash
+$$;
+
+-- What the purses of a person's other clubs paid them (their home club's purse, when this seat is an away one)
+create or replace function person_away_earned(p players) returns json
+language sql stable security definer set search_path = public, extensions as $$
+  select json_build_object('earned', coalesce(sum(pp.payout), 0), 'top10s', count(*) filter (where pp.payout > 0))
+  from (select distinct s.group_id from players s where s.id in (select person_seats(p)) and s.group_id <> p.group_id) g
+  cross join lateral period_payouts(g.group_id) pp
+  where pp.player_id in (select person_seats(p))
+$$;
 
 -- Where a round (and Pro Shop spending) counts: the seat you're playing from, if it's a playing seat; from a club you
 -- only host, your home club. Someone with playing seats in two clubs plays for whichever club they're in. (The Daily
@@ -535,7 +559,8 @@ create or replace function save_avatar(p_token uuid, p_avatar jsonb) returns voi
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
 begin
-  update players set avatar = p_avatar where id = me.id;
+  -- your look is the same in every club you belong to
+  update players set avatar = p_avatar where id in (select person_seats(me));
 end $$;
 
 create or replace function get_snapshot(p_token uuid) returns json
@@ -558,11 +583,13 @@ begin
         'wins', (select count(*) from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff'),
         'career', (select json_build_object('rounds', count(*), 'best', min(total - par), 'avg', round(avg(total - par), 1)) from rounds where player_id = pl.id),
         -- the money list: everything won from the weekly purses, and how many top tens
-        'earnings', coalesce(pay.earned, 0),
-        'top10s', coalesce(pay.top10s, 0),
-        -- the Pro Shop: what they've spent and what they own
-        'spent', (select coalesce(sum(price), 0) from purchases where player_id = pl.id),
-        'owned', (select coalesce(json_agg(item), '[]') from purchases where player_id = pl.id),
+        -- the money list and the Pro Shop follow the person across their clubs
+        'earnings', coalesce(pay.earned, 0) + (person_away_earned(pl)->>'earned')::int,
+        'top10s', coalesce(pay.top10s, 0) + (person_away_earned(pl)->>'top10s')::int,
+        'spent', (select coalesce(sum(price), 0) from purchases where player_id in (select person_seats(pl))),
+        'owned', (select coalesce(json_agg(distinct item), '[]') from purchases where player_id in (select person_seats(pl))),
+        -- playing here from another club: on the board and in for the title, but paid at home
+        'away', (home_of(pl)).group_id <> pl.group_id,
         'feats', (select coalesce(json_agg(distinct f), '[]') from (
             select unnest(feats) f from rounds where player_id = pl.id
             union select 'champion' where exists (select 1 from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff')
@@ -1434,9 +1461,12 @@ declare me players := play_seat(player_for(p_token)); it shop_items; earned int;
 begin
   select * into it from shop_items where id = p_item;
   if it.id is null then raise exception 'That isn''t in the shop.'; end if;
-  if exists (select 1 from purchases where player_id = me.id and item = p_item) then return; end if;
-  select coalesce(sum(payout), 0) into earned from period_payouts(me.group_id) where player_id = me.id;
-  select coalesce(sum(price), 0) into spent from purchases where player_id = me.id;
+  -- one wallet and one closet, whichever club you shop from
+  if exists (select 1 from purchases where player_id in (select person_seats(me)) and item = p_item) then return; end if;
+  select coalesce(sum(pp.payout), 0) into earned
+    from (select distinct s.group_id from players s where s.id in (select person_seats(me))) g
+    cross join lateral period_payouts(g.group_id) pp where pp.player_id in (select person_seats(me));
+  select coalesce(sum(price), 0) into spent from purchases where player_id in (select person_seats(me));
   if (it.rack = 'pro' and earned < 15000) or (it.rack = 'legend' and earned < 75000) then
     raise exception 'That rack is for higher ranks.';
   end if;

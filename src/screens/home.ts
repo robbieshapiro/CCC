@@ -1,6 +1,6 @@
 import { api, listSessions, localApi, switchClub, useSupabase } from '../api';
 import { badgeFor } from '../shop';
-import { money, payouts, placeLabel, purseOf } from '../purse';
+import { clubPurse, money, placeLabel, purseOf } from '../purse';
 import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
@@ -119,8 +119,9 @@ export function home(snap: Snapshot) {
   const course = courseFor(snap.month);
   const rows = board(snap);
   // the week's purse, and what each of the top ten would take if it ended now
-  const field = rows.filter((r) => r.best);
-  const pay = payouts(field.map((r) => ({ id: r.playerId, rank: r.rank })));
+  // members playing from another club are paid at home, so the purse here goes round without them
+  const purse = clubPurse(rows, (id) => !!player(id)?.away);
+  const pay = purse.pay;
   const played = rows.filter((r) => r.best);
   const mine = myBest(snap);
   const me = rows.find((r) => r.playerId === snap.me)!; // absent when you only run this club
@@ -149,7 +150,7 @@ export function home(snap: Snapshot) {
         <td class="num topar ${where} ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>`;
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
+        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${p.away ? (purse.shown.get(p.id)?.payout ? `<b class="pay away" title="Paid at their home club">${money(purse.shown.get(p.id)!.payout)}</b> · ` : '') : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
         ${score('m')}${cells}${score('d')}
       </tr>`;
     })
@@ -185,7 +186,7 @@ export function home(snap: Snapshot) {
         </div>
       </section>
       <section class="board${look(course)}">
-        ${countdown(snap.month, course, field.length)}
+        ${countdown(snap.month, course, purse.field)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best round counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist" hidden>
           <button role="tab" data-tab="open">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club">My club</button>

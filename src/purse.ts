@@ -38,3 +38,13 @@ export function payouts(rows: { id: string; rank: number }[], winner?: string | 
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
 export const placeLabel = (place: number, tied: boolean) => `${tied ? 'T' : ''}${place}${place % 100 >= 11 && place % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][place % 10] ?? 'th'}`;
+
+// A club's board as the purse sees it: members playing from another club keep their place and can win the title, but
+// the purse goes round as if they weren't there (their home club pays them). `shown` is what each would take if
+// everyone counted, for the line under an away player's name.
+export function clubPurse(rows: { playerId: string; best: unknown; toPar: number }[], isAway: (id: string) => boolean) {
+  const played = rows.filter((r) => r.best);
+  const money = played.filter((r) => !isAway(r.playerId));
+  const rank = (list: typeof played) => list.map((r) => ({ id: r.playerId, rank: list.filter((x) => x.toPar < r.toPar).length + 1 }));
+  return { field: money.length, pay: payouts(rank(money)), shown: payouts(rank(played)) };
+}

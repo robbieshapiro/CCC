@@ -45,6 +45,25 @@ const career = (rs: Round[]) => {
   return { rounds: d.length, best: d.length ? Math.min(...d) : null, avg: d.length ? Math.round((d.reduce((a, b) => a + b, 0) / d.length) * 10) / 10 : null };
 };
 
+// The purses of every closed period at a club, as period_payouts does on the server: only members whose home club it
+// is take money (someone playing in from another club is paid at home), ranked among themselves
+function paidIn(db: Db, groupId: string, month: string): Payout[] {
+  const rounds = db.rounds.filter((r) => r.groupId === groupId && r.month < month);
+  const out: Payout[] = [];
+  for (const m of [...new Set(rounds.map((r) => r.month))].sort()) {
+    const best = new Map<string, number>();
+    for (const r of rounds.filter((x) => x.month === m)) {
+      const p = db.players.find((x) => x.id === r.playerId);
+      if (!p || p.host || homeOf(db, p).groupId !== groupId) continue;
+      best.set(r.playerId, Math.min(best.get(r.playerId) ?? Infinity, r.total - r.par));
+    }
+    const sorted = [...best.entries()].sort((a, b) => a[1] - b[1]);
+    const rows = sorted.map(([id, tp]) => ({ id, rank: sorted.findIndex((x) => x[1] === tp) + 1 }));
+    for (const [id, p] of payouts(rows)) if (p.payout > 0) out.push({ month: m, playerId: id, ...p });
+  }
+  return out;
+}
+
 function playerByToken(db: Db, token: string): DbPlayer {
   const p = db.players.find((x) => x.token === token);
   if (!p) throw new Error('Session expired. Rejoin with your invite link.');
@@ -132,16 +151,17 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       .map((m) => periodChampion(m, mine))
       .filter((c): c is Champion => !!c);
     const wins = (id: string) => champions.filter((c) => c.playerIds.includes(id)).length;
-    // the purses of every closed period, as period_payouts does on the server
-    const paid: Payout[] = [];
-    for (const m of [...new Set(mine.filter((r) => r.month < month).map((r) => r.month))].sort()) {
-      const best = new Map<string, number>();
-      for (const r of mine.filter((x) => x.month === m && !db.players.find((p) => p.id === x.playerId)?.host)) best.set(r.playerId, Math.min(best.get(r.playerId) ?? Infinity, r.total - r.par));
-      const sorted = [...best.entries()].sort((a, b) => a[1] - b[1]);
-      const rows = sorted.map(([id, tp]) => ({ id, rank: sorted.findIndex((x) => x[1] === tp) + 1 }));
-      for (const [id, p] of payouts(rows)) if (p.payout > 0) paid.push({ month: m, playerId: id, ...p });
-    }
+    const paid = paidIn(db, me.groupId, month);
     const lastPaid = paid.length ? paid.filter((p) => p.month === paid[paid.length - 1].month).sort((a, b) => a.place - b.place) : [];
+    // the money list and the Pro Shop follow the person across their clubs
+    const seatsOf = (p: DbPlayer) => db.players.filter((x) => x.name.toLowerCase() === p.name.toLowerCase() && x.pin === p.pin);
+    const money = (p: DbPlayer) => {
+      const seats = seatsOf(p);
+      const ids = new Set(seats.map((x) => x.id));
+      const got = [...new Set(seats.map((x) => x.groupId))].flatMap((g) => (g === me.groupId ? paid : paidIn(db, g, month))).filter((x) => ids.has(x.playerId));
+      const bought = (db.purchases ?? []).filter((x) => ids.has(x.playerId));
+      return { earnings: got.reduce((a, x) => a + x.payout, 0), top10s: got.length, spent: bought.reduce((a, x) => a + x.price, 0), owned: [...new Set(bought.map((x) => x.item))] };
+    };
     return {
       today,
       month,
@@ -162,10 +182,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           wins: wins(p.id),
           feats: [...new Set([...mine.filter((r) => r.playerId === p.id).flatMap((r) => r.feats), ...(wins(p.id) ? ['champion'] : [])])],
           career: career(mine.filter((r) => r.playerId === p.id)),
-          earnings: paid.filter((x) => x.playerId === p.id).reduce((a, x) => a + x.payout, 0),
-          top10s: paid.filter((x) => x.playerId === p.id).length,
-          spent: (db.purchases ?? []).filter((x) => x.playerId === p.id).reduce((a, x) => a + x.price, 0),
-          owned: (db.purchases ?? []).filter((x) => x.playerId === p.id).map((x) => x.item),
+          ...money(p),
+          away: homeOf(db, p).groupId !== p.groupId,
         })),
       rounds: mine.filter((r) => r.month === month).map(strip),
       champions,
@@ -191,7 +209,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
   async buyItem(session, id) {
     const snap = await this.snapshot(session);
     const db = load();
-    const me = playSeat(db, playerByToken(db, session.token));
+    const me = playerByToken(db, session.token);
     const p = snap.players.find((x) => x.id === me.id);
     const item = itemById(id);
     if (!item || !p) throw new Error('That isn’t in the shop.');
@@ -204,7 +222,9 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
 
   async saveAvatar(session, avatar) {
     const db = load();
-    playerByToken(db, session.token).avatar = avatar;
+    // your look is the same in every club you belong to
+    const me = playerByToken(db, session.token);
+    for (const p of db.players) if (p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin) p.avatar = avatar;
     save(db);
   },
 

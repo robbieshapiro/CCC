@@ -31,7 +31,8 @@ export type Player = {
   earnings?: number; // the money list: play money won from the weekly purses (src/purse.ts)
   top10s?: number;
   spent?: number; // what they've spent in the Pro Shop (src/shop.ts): their balance is earnings less this
-  owned?: string[]; // the Pro Shop items they own
+  owned?: string[]; // the Pro Shop items they own (earnings, spent and owned follow the person across their clubs)
+  away?: boolean; // playing here from another club: on the board and in for the title, but their home club pays them
 };
 
 // Where a tee shot came to rest, in course feet. Null if it found the water or went out.
