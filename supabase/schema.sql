@@ -36,6 +36,9 @@ create table if not exists rounds (
 );
 -- where each tee shot came to rest, per hole ({x, y} or null), so today's players can stand on the course
 alter table rounds add column if not exists spots jsonb;
+-- which club's board a round counted on, when that's no longer its club: when two clubs merge, the past weeks keep the
+-- boards (and so the champions and purses) they were played on. Null means the round's own club.
+alter table rounds add column if not exists board_group uuid;
 create index if not exists rounds_group_month on rounds (group_id, month);
 
 drop table if exists hole_scores cascade;
@@ -128,16 +131,20 @@ alter table rounds add constraint rounds_month_check check (month ~ '^\d{4}-\d{2
 -- (see home_of below: a host runs a club without playing in it)
 alter table players add column if not exists host_only boolean not null default false;
 
+-- Each member's best round of each period at a club, ranked on its board. A club that took in another keeps the old
+-- boards apart for the weeks before the merge (board: see rounds.board_group).
+drop function if exists month_bests(uuid);
 create or replace function month_bests(p_group uuid)
-returns table (month text, player_id uuid, total int, par int, r bigint)
+returns table (month text, player_id uuid, total int, par int, r bigint, board uuid)
 language sql stable security definer set search_path = public, extensions as $$
-  select b.month, b.player_id, b.total, b.par, rank() over (partition by b.month order by b.total - b.par)
+  select b.month, b.player_id, b.total, b.par, rank() over (partition by b.month, b.board order by b.total - b.par), b.board
   from (
-    select distinct on (month, player_id) month, player_id, total, par
+    select distinct on (month, player_id) month, player_id, total, par, coalesce(board_group, group_id) as board
     from rounds where group_id = p_group and not exists (select 1 from players h where h.id = rounds.player_id and h.host_only)
     order by month, player_id, total - par, created_at
   ) b
 $$;
+revoke all on function month_bests(uuid) from public, anon, authenticated;
 
 -- The playoff: when members tie for a club's title, the Sunday after the week closes (playoff day) each plays one
 -- hole, once, then one shot at the pin. Lowest score wins, then a holed shot or the nearest; a no-show forfeits; if
@@ -168,15 +175,15 @@ create or replace function period_champs(p_group uuid)
 returns table (month text, player_id uuid, total int, par int, how text)
 language sql stable security definer set search_path = public, extensions as $$
   with lead as (
-    select b.month, b.player_id, b.total, b.par, count(*) over (partition by b.month) as n
+    select b.month, b.player_id, b.total, b.par, b.board, count(*) over (partition by b.month, b.board) as n
     from month_bests(p_group) b where b.r = 1 and b.month < game_month()
   ), t as (
     select l.*, playoff_day(l.month) as pday, pt.strokes, pt.ft, pt.holed, pt.lost
     from lead l left join playoff_tries pt on pt.group_id = p_group and pt.period = l.month and pt.player_id = l.player_id
   ), ranked as (
     select t.*,
-      rank() over (partition by t.month order by t.strokes asc nulls last, t.holed desc, case when t.lost then null else t.ft end asc nulls last) as pr,
-      bool_or(t.strokes is not null) over (partition by t.month) as anyone
+      rank() over (partition by t.month, t.board order by t.strokes asc nulls last, t.holed desc, case when t.lost then null else t.ft end asc nulls last) as pr,
+      bool_or(t.strokes is not null) over (partition by t.month, t.board) as anyone
     from t
   )
   select month, player_id, total, par,
@@ -195,9 +202,9 @@ $$;
 create or replace function period_payouts(p_group uuid)
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
 language sql stable security definer set search_path = public, extensions as $$
-  with b as (select mb.month, mb.player_id, mb.r::int as r from month_bests(p_group) mb where mb.month < game_month()),
-  f as (select b.month, count(*)::int as n from b group by b.month),
-  g as (select b.month, b.r, count(*)::int as k from b group by b.month, b.r),
+  with b as (select mb.month, mb.player_id, mb.r::int as r, mb.board from month_bests(p_group) mb where mb.month < game_month()),
+  f as (select b.month, b.board, count(*)::int as n from b group by b.month, b.board),
+  g as (select b.month, b.board, b.r, count(*)::int as k from b group by b.month, b.board, b.r),
   w as (select c.month, c.player_id from period_champs(p_group) c where c.how = 'playoff-won'),
   sp as (
     select b.month, b.player_id, f.n,
@@ -207,7 +214,7 @@ language sql stable security definer set search_path = public, extensions as $$
       case when b.r = 1 and g.k > 1 and exists (select 1 from w where w.month = b.month)
         then case when exists (select 1 from w where w.month = b.month and w.player_id = b.player_id) then 1 else g.k - 1 end
         else g.k end as kk
-    from b join f on f.month = b.month join g on g.month = b.month and g.r = b.r
+    from b join f on f.month = b.month and f.board = b.board join g on g.month = b.month and g.board = b.board and g.r = b.r
   )
   select sp.month, sp.player_id, sp.p0, sp.kk > 1,
     round(sp.n * 1000 * coalesce((
@@ -298,12 +305,22 @@ begin
   return p;
 end $$;
 
+-- An old club's code, kept working after it merged into another club: it signs people up to the club it joined
+create table if not exists group_aliases (
+  code text primary key,
+  group_id uuid not null references groups on delete cascade
+);
+alter table group_aliases enable row level security;
+
 create or replace function join_group(p_invite text, p_name text, p_pin text) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare g groups; p players; inv invitations; v_code text := lower(trim(p_invite)); clean text := trim(p_name);
 begin
   select * into g from groups where invite_code = v_code;
   if not found then
+    select gr.* into g from group_aliases a join groups gr on gr.id = a.group_id where a.code = v_code;
+  end if;
+  if g.id is null then
     select * into inv from invitations where code = v_code;
     if not found then raise exception 'That invite code is not valid.'; end if;
     select * into g from groups where id = inv.group_id;
