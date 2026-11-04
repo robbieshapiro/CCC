@@ -7,7 +7,7 @@ import { DESERT_SURFACE, LANDS_FLOOR, LINKS_SURFACE, landsFrame, landsPost } fro
 import { brewFx, HAUNTED_FLOOR, HAUNTED_SURFACE, hauntedDecor, hauntedGrounds, hauntedMover, hauntedPortal, hauntedPost, hauntedWall, slimeBubbles, slimeMaterial } from './haunted';
 import * as stands from './stands';
 import { AUTUMN_FLOOR, AUTUMN_SURFACE, autumnDecor, autumnFrame, BARN_RED, gableRoof, maple } from './autumn';
-import { COASTAL_SURFACE, coastalDecor, coastalFrame, lighthouse, montereyCypress, PACIFIC, PACIFIC_BED, SANDSTONE, surf } from './coastal';
+import { COASTAL_SURFACE, coastalDecor, coastalFrame, lighthouse, montereyCypress, torreyPine, PACIFIC, PACIFIC_BED, SANDSTONE, surf } from './coastal';
 import { mat, mesh, P } from './props';
 import { gradAt, heightAt, inPoly, levelOf, surfaceAt, wetIn } from './terrain';
 import type { Hole, Surface, V2, Wall, Water } from './types';
@@ -552,6 +552,7 @@ export function buildWorld(h: Hole, number: number): World {
     else if (look === 'ghost') continue;
     else if (look === 'pine') root.add(fadeable(at(props.pine(vary), p.x, p.y, -0.2), p.x, p.y, 5.5));
     else if (look === 'monterey') root.add(fadeable(at(montereyCypress(vary * Math.max(0.8, p.h / 20), Math.round(p.x * 7 + p.y)), p.x, p.y, -0.2), p.x, p.y, 8));
+    else if (look === 'torrey') root.add(fadeable(at(torreyPine(vary * Math.max(0.8, p.h / 22), Math.round(p.x * 7 + p.y)), p.x, p.y, -0.4), p.x, p.y, 9));
     else if (look === 'lighthouse') root.add(fadeable(at(lighthouse(anim), p.x, p.y, -0.3), p.x, p.y, 7));
     else if (look === 'maple') root.add(fadeable(at(maple(vary * Math.max(0.7, p.h / 22), Math.round(p.x * 7 + p.y)), p.x, p.y, -0.2), p.x, p.y, 7));
     else if (look === 'tree') root.add(fadeable(at(props.leafyTree(1.1), p.x, p.y, -0.2), p.x, p.y, 6));

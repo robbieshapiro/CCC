@@ -5,7 +5,8 @@
 import * as THREE from 'three';
 import { makeRng } from '../seed';
 import { mat, mesh } from './props';
-import { heightAt, inPoly, levelOf } from './terrain';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { heightAt, inPoly, levelOf, surfaceAt } from './terrain';
 import type { Decor, Hole, Surface, Water } from './types';
 
 export const COASTAL_SURFACE: Partial<Record<Surface, string>> = {
@@ -71,6 +72,131 @@ export function montereyCypress(scale = 1, seed = 0) {
   cap.position.set(at.x + 2 * scale, at.y + 1.6 * scale, at.z);
   g.add(cap);
   g.rotation.y = rng.next() * 0.6 - 0.3;
+  return g;
+}
+
+// A Torrey pine: the rare pine of the San Diego bluffs. A thick, twisting trunk that splits low into a few long limbs
+// reaching out sideways, bent by the sea wind, each ending in bottlebrush clusters of long blue-green needles. The
+// whole tree is two merged meshes (bark and needles), so a hillside of them stays cheap to draw.
+const PINE_BARK = new THREE.MeshStandardMaterial({ color: '#6b5444', roughness: 0.95 });
+const PINE_NEEDLES = new THREE.MeshStandardMaterial({ color: '#3d5a3c', roughness: 0.9, flatShading: true });
+const PINE_TIPS = new THREE.MeshStandardMaterial({ color: '#58764d', roughness: 0.9, flatShading: true });
+export function torreyPine(scale = 1, seed = 0) {
+  const rng = makeRng(`torrey:${seed}`);
+  const bark: THREE.BufferGeometry[] = [];
+  const needles: THREE.BufferGeometry[] = [];
+  const tips: THREE.BufferGeometry[] = [];
+  const up = new THREE.Vector3(0, 1, 0);
+  // a tapered piece of branch from a to b
+  const limb = (a: THREE.Vector3, b: THREE.Vector3, r0: number, r1: number) => {
+    const d = b.clone().sub(a);
+    const g = new THREE.CylinderGeometry(r1, r0, d.length(), 5, 1, true);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.clone().normalize()));
+    g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+    bark.push(g);
+  };
+  // a bottlebrush of needles at the end of a limb, pointing up and out
+  const tuft = (at: THREE.Vector3, dir: THREE.Vector3, size: number) => {
+    for (let k = 0; k < 3; k++) {
+      const g = new THREE.ConeGeometry(size * (0.9 - k * 0.15), size * 2.4, 5, 1, true);
+      const aim = dir.clone().add(new THREE.Vector3((rng.next() - 0.5) * 0.9, 0.9 + rng.next() * 0.5, (rng.next() - 0.5) * 0.9)).normalize();
+      g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, aim));
+      g.translate(at.x + (rng.next() - 0.5) * size, at.y + k * size * 0.4, at.z + (rng.next() - 0.5) * size);
+      (k === 2 ? tips : needles).push(g);
+    }
+  };
+  // the trunk: three bends, leaning with the wind
+  const lean = new THREE.Vector3(0.35 + rng.next() * 0.3, 1, (rng.next() - 0.5) * 0.4);
+  let at = new THREE.Vector3();
+  let r = 1.1;
+  for (let i = 0; i < 3; i++) {
+    const step = new THREE.Vector3(lean.x * (0.3 + rng.next() * 0.6) * (i % 2 ? -0.6 : 1), 1, lean.z + (rng.next() - 0.5) * 0.5).normalize().multiplyScalar(3.4 + rng.next() * 1.4);
+    const next = at.clone().add(step);
+    limb(at, next, r, r * 0.8);
+    at = next;
+    r *= 0.8;
+  }
+  // the crown: four to six long limbs reaching out and up, each forking once
+  const n = 4 + Math.floor(rng.next() * 3);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + rng.next() * 0.8;
+    // downwind limbs reach further
+    const reach = 5 + rng.next() * 5 + Math.max(0, Math.cos(a)) * 4;
+    const out = new THREE.Vector3(Math.cos(a), 0.35 + rng.next() * 0.55, Math.sin(a)).normalize();
+    const mid = at.clone().add(out.clone().multiplyScalar(reach * 0.6));
+    limb(at, mid, r * 0.75, r * 0.45);
+    for (const side of [-1, 1]) {
+      const fork = out.clone().applyAxisAngle(up, side * (0.35 + rng.next() * 0.3)).add(new THREE.Vector3(0, 0.35, 0)).normalize();
+      const end = mid.clone().add(fork.multiplyScalar(reach * (0.4 + rng.next() * 0.3)));
+      limb(mid, end, r * 0.42, r * 0.2);
+      tuft(end, fork, 1.6 + rng.next() * 0.8);
+    }
+    tuft(mid.clone().add(new THREE.Vector3(0, 0.6, 0)), out, 1.3);
+  }
+  const g = new THREE.Group();
+  const merged = (parts: THREE.BufferGeometry[], m: THREE.Material) => {
+    const geo = mergeGeometries(parts.map((p) => p.toNonIndexed()), false);
+    parts.forEach((p) => p.dispose());
+    const out = new THREE.Mesh(geo, m);
+    out.castShadow = true;
+    out.receiveShadow = true;
+    return out;
+  };
+  g.add(merged(bark, PINE_BARK), merged(needles, PINE_NEEDLES), merged(tips, PINE_TIPS));
+  g.scale.setScalar(scale);
+  g.rotation.y = rng.next() * Math.PI * 2;
+  return g;
+}
+
+// Chaparral: the coastal sage scrub that covers the canyon sides, low grey-green and olive clumps, a few in flower.
+// All of a hole's scrub is one instanced mesh.
+export function chaparral(spots: { x: number; y: number; z: number; s: number }[], seed = 0) {
+  const rng = makeRng(`chaparral:${seed}`);
+  // sage green and grey-green, with the odd buckwheat gone rusty
+  const colors = ['#6f8452', '#7f9160', '#5f7448', '#8c9a6c', '#73865a', '#9c8a5a'];
+  const mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ roughness: 1 }), spots.length * 3);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const c = new THREE.Color();
+  let i = 0;
+  for (const p of spots)
+    for (let k = 0; k < 3; k++) {
+      const s = p.s * (0.7 + rng.next() * 0.6);
+      q.setFromEuler(new THREE.Euler(0, rng.next() * 6, 0));
+      m.compose(new THREE.Vector3(p.x + (rng.next() - 0.5) * 2.2 * p.s, p.z + s * 0.35, -(p.y + (rng.next() - 0.5) * 2.2 * p.s)), q, new THREE.Vector3(s * 1.1, s * 0.75, s * 1.05));
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, c.set(colors[Math.floor(rng.next() * colors.length)]));
+      i++;
+    }
+  mesh.count = i;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+// A paraglider riding the updraft along the cliffs: a bright arched wing and a pilot hanging below, circling slowly
+export function paraglider(anim: ((clock: number, dt: number) => void)[], centre: THREE.Vector3, radius: number, seed = 0) {
+  const g = new THREE.Group();
+  const colors = ['#e2543d', '#f2b134', '#2f7fbf', '#7a4bb3', '#2fa37a'];
+  const wing = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 2.6, 16, 1, true, -1.1, 2.2), new THREE.MeshStandardMaterial({ color: colors[seed % colors.length], side: THREE.DoubleSide, roughness: 0.6 }));
+  wing.rotation.z = Math.PI / 2;
+  wing.rotation.y = Math.PI / 2;
+  wing.position.y = 9;
+  g.add(wing);
+  const pilot = mesh(new THREE.CapsuleGeometry(0.35, 1, 3, 6), mat('#2b2b2b'), false);
+  pilot.position.y = 0.6;
+  g.add(pilot);
+  const lines = new THREE.LineSegments(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 1.2, 0), new THREE.Vector3(-5, 8.5, 0), new THREE.Vector3(0, 1.2, 0), new THREE.Vector3(5, 8.5, 0)]),
+    new THREE.LineBasicMaterial({ color: '#dddddd', transparent: true, opacity: 0.6 }),
+  );
+  g.add(lines);
+  const phase = seed * 1.7;
+  anim.push((clock) => {
+    const a = clock * 0.04 + phase;
+    g.position.set(centre.x + Math.cos(a) * radius, centre.y + Math.sin(clock * 0.15 + phase) * 6, centre.z + Math.sin(a) * radius);
+    g.rotation.y = -a;
+    g.rotation.z = 0.18;
+  });
   return g;
 }
 
@@ -296,6 +422,31 @@ function apron(h: Hole, level: number) {
   return m;
 }
 
+// Scrub in a hole's rough: on dry, not-too-steep ground, well clear of the fairway, the green and the paths. Scenery
+// only: it doesn't touch the ball.
+function holeScrub(h: Hole, level: number) {
+  const out: { x: number; y: number; z: number; s: number }[] = [];
+  const rng = makeRng(`holescrub:${h.id}`);
+  const { x0, y0, x1, y1 } = h.bounds;
+  const clear = (x: number, y: number) =>
+    [[0, 0], [16, 0], [-16, 0], [0, 16], [0, -16], [11, 11], [-11, -11], [11, -11], [-11, 11]].every(([dx, dy]) => {
+      const p = { x: x + dx, y: y + dy };
+      return !inPoly(p, h.border) || surfaceAt(h, p) === 'rough';
+    });
+  for (let x = x0 + 4; x < x1 - 4; x += 9)
+    for (let y = y0 + 4; y < y1 - 4; y += 9) {
+      if (rng.next() > 0.22) continue;
+      const p = { x: x + (rng.next() - 0.5) * 8, y: y + (rng.next() - 0.5) * 8 };
+      if (!inPoly(p, h.border)) continue;
+      const z = heightAt(h, p.x, p.y);
+      if (z < level + 2 || !clear(p.x, p.y)) continue;
+      if (h.posts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 6)) continue;
+      // smaller near the tee, where you look at it close up
+      out.push({ ...p, z, s: (0.6 + rng.next() * 0.7) * Math.min(1, 0.5 + Math.hypot(p.x - h.tee.x, p.y - h.tee.y) / 160) });
+    }
+  return out;
+}
+
 // Beyond the course: the Pacific out to the horizon, sea stacks and a sail or two, and behind the course the coast
 // running on into hills gone gold, dotted with dark cypress.
 export function coastalFrame(h: Hole, root: THREE.Group, anim: ((clock: number, dt: number) => void)[], level: number, seaSide: number) {
@@ -303,8 +454,8 @@ export function coastalFrame(h: Hole, root: THREE.Group, anim: ((clock: number, 
   const { x0, y0, x1, y1 } = h.bounds;
   const cy = (y0 + y1) / 2;
   root.add(apron(h, level));
-  // cypress along the cliff tops just past the edge of the hole
-  for (let i = 0, tries = 0; i < 60 && tries < 600; tries++) {
+  // Torrey pines (and the odd cypress) along the cliff tops just past the edge of the hole, thickest close in
+  for (let i = 0, tries = 0; i < 70 && tries < 900; tries++) {
     const side = Math.floor(rng.next() * 4);
     const off = 14 + rng.next() * 200;
     const x = side === 0 ? x0 - off : side === 1 ? x1 + off : x0 - 100 + (x1 - x0 + 200) * rng.next();
@@ -313,9 +464,28 @@ export function coastalFrame(h: Hole, root: THREE.Group, anim: ((clock: number, 
     const z = apronHeight(h, level, x, y);
     if (z < level + 4) continue;
     i++;
-    const t = montereyCypress(1.1 + rng.next() * 0.7, i * 11 + 3);
+    const t = rng.next() < 0.78 ? torreyPine(0.9 + rng.next() * 0.6, i * 11 + 3) : montereyCypress(1.1 + rng.next() * 0.7, i * 11 + 3);
+    // only the trees close in throw a shadow onto the hole
+    if (off > 60) t.traverse((o) => (o.castShadow = false));
     t.position.set(x, z - 0.5, -y);
     root.add(t);
+  }
+  // coastal sage scrub over the land past the edge, and in the rough on the hole itself away from the short grass
+  const scrub: { x: number; y: number; z: number; s: number }[] = [];
+  for (let k = 0; k < 900 && scrub.length < 520; k++) {
+    const x = x0 - 260 + (x1 - x0 + 520) * rng.next();
+    const y = y0 - 260 + (y1 - y0 + 520) * rng.next();
+    if (x > x0 && x < x1 && y > y0 && y < y1) continue;
+    const z = apronHeight(h, level, x, y);
+    if (z > level + 3) scrub.push({ x, y, z, s: 1.2 + rng.next() * 1.4 });
+  }
+  scrub.push(...holeScrub(h, level));
+  if (scrub.length) root.add(chaparral(scrub, scrub.length));
+  // paragliders riding the lift off the cliffs
+  for (let i = 0; i < 3; i++) {
+    const along = y0 + (y1 - y0) * (0.2 + i * 0.3);
+    const out = (seaSide > 0 ? x1 : x0) + seaSide * (60 + i * 50);
+    root.add(paraglider(anim, new THREE.Vector3(out, level + 80 + i * 25, -along), 70 + i * 30, i));
   }
   // sea stacks: craggy sandstone, each with a ring of white water at its foot
   const stone = new THREE.MeshStandardMaterial({ color: '#a2856a', roughness: 1, flatShading: true });
