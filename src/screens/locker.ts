@@ -2,6 +2,8 @@
 import * as THREE from 'three';
 import { kitByKey, pickKit } from '../kits';
 import { CLOTH, DEFAULT_SPEC, Golfer, HAIR_COLOURS, LOCKED_BOTTOMS, LOCKED_TOPS, PRESTIGE, SKIN_TONES, type GolferSpec } from '../golf3d/golfer';
+import { money } from '../purse';
+import { ITEMS, type Kind } from '../shop';
 import { esc } from '../ui';
 
 type Opt<T> = { v: T; label: string; lock?: number };
@@ -97,8 +99,25 @@ function kitRow(spec: GolferSpec) {
   }</div></div>`;
 }
 
-// Builds the option panel. Calls onChange with a fresh spec on every tap.
-export function lockerPanel(start: GolferSpec, wins: number, onChange: (s: GolferSpec) => void): HTMLElement {
+// The Pro Shop row on a tab: what you own to wear (tap to put on or take off), then the rest, locked with their price,
+// each a link to the shop. One closet: the locker wears everything, the shop sells it.
+const SHOP_TABS: Record<string, Kind[]> = { top: ['top'], hat: ['hat'], gear: ['bling', 'putter', 'bag', 'caddie'] };
+function shopRow(tab: string, spec: GolferSpec, owned: string[] | undefined) {
+  const kinds = SHOP_TABS[tab];
+  if (!owned || !kinds) return '';
+  const items = ITEMS.filter((i) => kinds.includes(i.kind)).sort((a, b) => Number(owned.includes(b.id)) - Number(owned.includes(a.id)) || a.price - b.price);
+  return `<div class="pick"><span>Pro Shop</span><div class="chips-row">${items
+    .map((i) =>
+      owned.includes(i.id)
+        ? `<button class="chip-btn shop-chip ${i.worn(spec) ? 'on' : ''}" data-shop="${i.id}">${esc(i.name)}</button>`
+        : `<a class="chip-btn shop-chip locked" href="#/clubhouse/shop">🔒 ${esc(i.name)} · ${money(i.price)}</a>`,
+    )
+    .join('')}</div></div>`;
+}
+
+// Builds the option panel. Calls onChange with a fresh spec on every tap. owned: the Pro Shop pieces you own (the
+// welcome locker leaves it out).
+export function lockerPanel(start: GolferSpec, wins: number, onChange: (s: GolferSpec) => void, owned?: string[]): HTMLElement {
   const spec: GolferSpec = { ...DEFAULT_SPEC, ...start };
   const el = document.createElement('div');
   el.className = 'locker-panel';
@@ -128,7 +147,8 @@ export function lockerPanel(start: GolferSpec, wins: number, onChange: (s: Golfe
                 .join('')}</div>`;
             else if (f.kind === 'range') body = `<input type="range" min="0.92" max="1.08" step="0.02" value="${val}" data-key="${f.key}" aria-label="${f.label}">`;
             else body = `<div class="chips-row"><button class="chip-btn ${val ? 'on' : ''}" data-key="${f.key}" data-val="${!val}">${val ? 'On' : 'Off'}</button></div>`;
-            return `<div class="pick"><span>${f.label}</span>${body}</div>`;
+            // what you own from the Pro Shop sits right under the tab's first row (the style)
+            return `<div class="pick"><span>${f.label}</span>${body}</div>${f === t.fields[0] ? shopRow(tab, spec, owned) : ''}`;
           })
           .join('')}
         ${prestige}
@@ -156,6 +176,12 @@ export function lockerPanel(start: GolferSpec, wins: number, onChange: (s: Golfe
     }
     if (b.dataset.tab) tab = b.dataset.tab;
     else if (b.dataset.prestige) PRESTIGE.find((p) => p.key === b.dataset.prestige)!.apply(spec);
+    else if (b.dataset.shop) {
+      const item = ITEMS.find((i) => i.id === b.dataset.shop)!;
+      if (item.worn(spec)) item.off(spec);
+      else item.wear(spec);
+      onChange({ ...spec });
+    }
     else if (b.dataset.key) {
       const key = b.dataset.key as keyof GolferSpec;
       const raw = b.dataset.val!;
