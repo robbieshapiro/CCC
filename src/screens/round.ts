@@ -27,6 +27,10 @@ import { buildHole } from '../designer/hole';
 import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
+import { addStats, badgeSvg, bagOf, fxOf, holeXp, levelName, LEVELS, nextUnlock, playedThisWeek, rankOf, roundXp, secretsOf, statsOf, unlocksAt, type Rank } from '../rank';
+import { featById } from '../feats';
+import { specOf } from '../avatar';
+import { toast } from '../nudges';
 import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
@@ -69,7 +73,10 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const el = document.getElementById('g3')!;
   let quit = false;
   try {
-    game = new Course3D(el, me.avatar, () => {
+    // the Gold putter, once your rank has earned it, is the one you're seen holding
+    const gold = !me.host && bagOf(rankOf(statsOf(me)).level, me.wins).putter.id === 'gold';
+    const look = gold ? { ...me.avatar, golfer: { ...specOf(me.avatar), putter: 'gold' as const } } : me.avatar;
+    game = new Course3D(el, look, () => {
       quit = true;
       closeRound();
       navigate('#/');
@@ -103,6 +110,12 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       .catch(() => {});
   }
   game.starter = HANK.firstTee(me.name, snap.today);
+  // your rank's gear is in the bag, and a chip keeps count of the XP this round has earned so far
+  const counted = !preview && !me.host;
+  const stats0 = statsOf(me);
+  const rank0 = rankOf(stats0);
+  game.gear = me.host ? null : fxOf(rank0.level, me.wins);
+  const chip = counted ? xpChip(el, rank0) : null;
   const scores: number[] = [];
   const spots: Spot[] = [];
   // a counted round logs its start and each hole it reaches, so the Committee can see who stops and where
@@ -126,7 +139,13 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     }
     scores[i] = r.strokes;
     spots[i] = r.spot;
+    const fresh = r.feats.filter((f) => !feats.has(f) && !me.feats.includes(f) && secretsOf([f]));
     r.feats.forEach((f) => feats.add(f));
+    if (chip) {
+      const hx = holeXp(r.strokes, h.par);
+      if (hx) chip.add(hx.xp, hx.label);
+      for (const f of fresh) chip.add(250, `Secret: ${featById(f)?.name ?? f}`);
+    }
     i++;
     if (i < course.holes.length) progress(i + 1);
   }
@@ -143,6 +162,15 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       posted = false;
     }
   sfx(best ? 'cheer' : 'ooh');
+  chip?.remove();
+  // what the round earned: XP line by line, the rank bar, a promotion and what it unlocks, new accolades
+  const won = roundXp({
+    holes: scores,
+    pars: course.holes.map((h) => h.par),
+    newSecrets: [...feats].filter((f) => !me.feats.includes(f) && secretsOf([f])),
+    firstOfWeek: !playedThisWeek(snap, me.id),
+  });
+  const rewards = rewardsPanel(rank0, rankOf(addStats(stats0, won.add)), won.lines, [...feats, ...(toPar < 0 ? ['underpar'] : [])].filter((f, k, a) => a.indexOf(f) === k && !me.feats.includes(f)), me.wins);
   const sheet = document.createElement('div');
   sheet.className = 'summary';
   sheet.innerHTML = `
@@ -154,6 +182,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       ${opts.practice ? '' : `<table class="scorecard"><thead><tr>${course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('')}<th class="num">Tot</th></tr></thead>
         <tbody><tr class="par">${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num">${course.par}</td></tr>
         <tr>${course.holes.map((_, i) => scores[i]).map((s, i) => s === undefined ? '<td class="num">–</td>' : `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>`}
+      ${counted && posted ? rewards.html : counted ? '' : `<p class="fine rw-none">${preview ? 'Preview' : 'Practice'} rounds don’t earn XP.</p>`}
       ${
         opts.practice
           ? hostChip('Practice. Nobody is keeping score, least of all me. Come November it counts.', 'dry')
@@ -162,10 +191,11 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
       <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
-      <div class="summary-actions"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the club</button></div>
+      <div class="summary-actions cta">${opts.practice || preview ? '' : '<button class="btn" data-challenge>Challenge a friend</button>'}<button class="btn ${opts.practice || preview ? '' : 'ghost'}" data-again>Play again</button><button class="btn ghost" data-back>Back to the clubhouse</button></div>
       <button class="link" data-feedback>Leave feedback</button>
     </div>`;
   el.appendChild(sheet);
+  if (counted && posted) rewards.animate(sheet);
   // Reginald reads the card (Claude) and his note replaces the stock line when it comes
   if (!preview && posted) {
     const note = sheet.querySelector<HTMLElement>('#reg-note p');
@@ -182,9 +212,105 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   sheet.querySelector<HTMLButtonElement>('[data-feedback]')!.onclick = () => openFeedback(`After a ${total} (${toParLabel(toPar)}) on ${course.name}`, el);
   sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {
     closeRound();
-    navigate('#/');
+    navigate('#/clubhouse');
+  };
+  // put a friend up to it: the phone's share sheet, or the message copied to paste anywhere
+  const challenge = sheet.querySelector<HTMLButtonElement>('[data-challenge]');
+  if (challenge)
+    challenge.onclick = async () => {
+      const text = `I shot ${total} (${toParLabel(toPar)}) on ${course.name} at ${snap.groupName}. Your move.`;
+      const url = `${location.origin}/#/`;
+      try {
+        if (navigator.share) return void (await navigator.share({ title: 'Claude Country Club', text, url }));
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
+      }
+      try {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        toast('Copied. Paste it to whoever needs humbling.');
+      } catch {
+        toast(text);
+      }
+    };
+}
+
+// The chip in the corner during a counted round: your badge, the XP so far, and a pop for each birdie or secret
+function xpChip(host: HTMLElement, rank: Rank) {
+  const el = document.createElement('div');
+  el.className = 'xp-chip';
+  el.innerHTML = `${badgeSvg(rank, 26)}<div><b data-xp>+0 XP</b><small>${esc(rank.name)}</small></div><em data-pop></em>`;
+  host.appendChild(el);
+  let total = 0;
+  return {
+    add(xp: number, label: string) {
+      total += xp;
+      el.querySelector('[data-xp]')!.textContent = `+${total.toLocaleString()} XP`;
+      const pop = el.querySelector<HTMLElement>('[data-pop]')!;
+      pop.textContent = `${label} +${xp}`;
+      pop.classList.remove('go');
+      void pop.offsetWidth;
+      pop.classList.add('go');
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+    },
+    remove: () => el.remove(),
   };
 }
+
+// how far through a level its XP bar is, 0 to 100
+function barPct(r: Rank) {
+  if (!r.next) return 100;
+  const from = LEVELS[r.level].xp + (r.level === LEVELS.length - 1 ? r.prestige * 6000 : 0);
+  return Math.max(0, Math.min(100, ((r.xp - from) / Math.max(1, r.next.xp - from)) * 100));
+}
+
+function rewardsPanel(r0: Rank, r1: Rank, lines: { label: string; xp: number }[], accolades: string[], wins: number) {
+  const gained = lines.reduce((a, l) => a + l.xp, 0);
+  const up = r1.level > r0.level || r1.prestige > r0.prestige;
+  // everything that opened between the old rank and the new one
+  const opened = up ? Array.from({ length: r1.level - r0.level }, (_, k) => unlocksAt(r0.level + 1 + k)) : [];
+  const gear = opened.flatMap((u) => u.gear);
+  const features = opened.flatMap((u) => u.features);
+  const bag = bagOf(r1.level, wins);
+  const next = nextUnlock(r1.level);
+  const reqs = r1.next?.reqs ?? [];
+  const toGo = r1.next ? r1.next.xp - r1.xp : 0;
+  const html = `
+    <section class="rw${up ? ' up' : ''}">
+      <div class="rw-rank">
+        <span class="rw-badge">${badgeSvg(r1, 58)}</span>
+        <div><small>${up ? 'Promoted' : 'Your rank'}</small><b>${esc(r1.name)}${r1.prestige ? ` <i>Prestige ${r1.prestige}</i>` : ''}</b><span>${r1.xp.toLocaleString()} XP</span></div>
+        <em class="rw-gain">+${gained.toLocaleString()} XP</em>
+      </div>
+      <div class="rw-bar" aria-hidden="true"><i data-from="${up ? 0 : barPct(r0)}" data-to="${barPct(r1)}"></i></div>
+      <p class="rw-next">${
+        !r1.next ? '' : r1.blocked ? `You have the XP for <b>${esc(r1.next.name)}</b>. To be promoted:` : `<b>${toGo.toLocaleString()} XP</b> to ${esc(r1.next.name)}${reqs.length ? ', and:' : ''}`
+      }</p>
+      ${reqs.length ? `<ul class="rw-reqs">${reqs.map((q) => `<li class="${q.met ? 'met' : ''}"><i>${q.met ? '✓' : '○'}</i>${esc(q.label)}<small>${q.have}</small></li>`).join('')}</ul>` : ''}
+      <ul class="rw-lines">${lines.map((l) => `<li><span>${esc(l.label)}</span><b>+${l.xp}</b></li>`).join('')}</ul>
+      ${
+        gear.length || features.length
+          ? `<div class="rw-unlocks"><small>Unlocked</small>${gear.map((g) => `<div class="rw-item"><i>${GEAR_ICON[g.kind]}</i><b>${esc(g.name)}</b><span>${esc(g.what)}</span></div>`).join('')}${features.map((f) => `<div class="rw-item"><i>✨</i><b>${esc(f.name)}${f.soon ? ' <em>coming soon</em>' : ''}</b><span>${esc(f.what)}</span></div>`).join('')}</div>`
+          : ''
+      }
+      ${accolades.length ? `<div class="rw-accolades"><small>New accolades</small>${accolades.map((id) => featById(id)).filter((f) => !!f).map((f) => `<span title="${esc(f!.how)}"><i>${f!.icon}</i>${esc(f!.name)}</span>`).join('')}</div>` : ''}
+      <p class="rw-bag">In your bag: ${[bag.putter, bag.ball, bag.irons, bag.driver].map((g) => esc(g.name)).join(' · ')}</p>
+      ${next ? `<p class="rw-teaser">Next unlock at <b>${esc(levelName(next.level))}</b>: ${[...next.gear.map((g) => g.name), ...next.features.map((f) => f.name)].map(esc).join(', ')}</p>` : ''}
+    </section>`;
+  return {
+    html,
+    animate(root: HTMLElement) {
+      const bar = root.querySelector<HTMLElement>('.rw-bar i');
+      if (!bar) return;
+      bar.style.width = `${bar.dataset.from}%`;
+      requestAnimationFrame(() => requestAnimationFrame(() => (bar.style.width = `${bar.dataset.to}%`)));
+      if (up) window.setTimeout(() => sfx('cheer'), 900);
+    },
+  };
+}
+
+const GEAR_ICON: Record<string, string> = { putter: '🏌️', ball: '⚪', irons: '🔩', driver: '🪵' };
 
 // A practice round on the next course: straight in. The how-to card covers what plays differently.
 export function practice(snap: Snapshot, next: Course) {

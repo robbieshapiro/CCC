@@ -17,6 +17,7 @@ import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
 import { accuracyError, goldHalf, OVERSWING, PURE, powerSpeed, returnSpeed, type MeterStyle } from './swing';
 import type { Hole, Shot, V2 } from './types';
+import type { GearFx } from '../rank';
 
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
@@ -178,6 +179,9 @@ export class Course3D {
   // the green read on a tour green, Golden Tee style: how much it climbs or falls and breaks between the ball and cup
   private read: { slope: number; brk: number } | null = null;
   private holesInRound = 3;
+  // the member's gear (src/rank.ts): a wider gold window, less wind drift, and how much of a putt's true line shows
+  gear: GearFx | null = null;
+  private readLine: { key: string; pts: V2[] } | null = null;
   private ball = props.mesh(new THREE.SphereGeometry(BALL_R, 18, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
   private golfer: Golfer;
   private dots: THREE.InstancedMesh;
@@ -1149,7 +1153,7 @@ export class Course3D {
       const drink = this.drink ? DRINKS[this.drink.kind] : null;
       m.phase = 'accuracy';
       const fire = (drink?.boost ?? 1) > 1;
-      m.half = goldHalf(this.club, m.p, drink?.sweet ?? 1, this.style(), fire);
+      m.half = goldHalf(this.club, m.p, (drink?.sweet ?? 1) * (this.gear?.sweet[this.club] ?? 1), this.style(), fire);
       m.speed = returnSpeed(this.club, m.p, drink?.needle ?? 1, this.style(), fire);
       const box = this.overlay.querySelector('[data-swing]') as HTMLElement;
       box.classList.add('accuracy');
@@ -1193,7 +1197,7 @@ export class Course3D {
 
   private hit(club: ClubId, power: number, error: number) {
     const full = club !== 'putter';
-    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind?.accel };
+    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind ? { x: this.wind.accel.x * (this.gear?.wind ?? 1), y: this.wind.accel.y * (this.gear?.wind ?? 1) } : undefined };
     const r = simulate(this.hole, this.pos, shot);
     // every shot starts from a stock strike
     this.setStrike(0, 0);
@@ -1649,6 +1653,27 @@ export class Course3D {
   // Reading the green, the way Golden Tee does it: along the line from the ball to the cup, how many degrees it climbs
   // or falls, and how many it breaks left or right. The last third counts double: that's where the putt is slowest and
   // the break bites.
+  // where this putt would really roll, cut to the share of its length the putter shows; worked out once per aim
+  private truePutt(share: number): V2[] {
+    const key = `${this.pos.x},${this.pos.y},${this.aim.toFixed(4)},${this.power.toFixed(3)},${share}`;
+    if (this.readLine?.key === key) return this.readLine.pts;
+    const r = simulate(this.hole, this.pos, { angle: this.aim, power: this.power, club: 'putter', error: 0, clock: this.clock }, true);
+    let total = 0;
+    for (let i = 1; i < r.frames.length; i++) total += Math.hypot(r.frames[i].x - r.frames[i - 1].x, r.frames[i].y - r.frames[i - 1].y);
+    const pts: V2[] = [];
+    let run = 0;
+    let next = 1.5;
+    for (let i = 1; i < r.frames.length && run < total * share; i++) {
+      run += Math.hypot(r.frames[i].x - r.frames[i - 1].x, r.frames[i].y - r.frames[i - 1].y);
+      if (run >= next) {
+        pts.push({ x: r.frames[i].x, y: r.frames[i].y });
+        next += 1.1;
+      }
+    }
+    this.readLine = { key, pts };
+    return pts;
+  }
+
   private readGreen() {
     const from = this.pos;
     const cup = this.hole.cup;
@@ -1708,6 +1733,14 @@ export class Course3D {
           m.setPosition(w3(x, y, heightAt(this.hole, x, y) + 0.2));
           this.dots.setMatrixAt(n++, m);
         }
+        // a better putter shows the start of the putt's true line on quick greens, break and all (the Gold putter
+        // shows the first half of the roll)
+        if (this.hole.tour && this.gear?.read && this.power > 0.03 && this.mode === 'aim')
+          for (const p of this.truePutt(this.gear.read)) {
+            if (n >= 80) break;
+            m.setPosition(w3(p.x, p.y, heightAt(this.hole, p.x, p.y) + 0.2));
+            this.dots.setMatrixAt(n++, m);
+          }
         const end = this.hole.tour ? Math.max(6, (v * v) / (2 * TOUR_GREEN)) : len;
         this.landing.copy(w3(this.pos.x + dx * end, this.pos.y + dy * end, heightAt(this.hole, this.pos.x + dx * end, this.pos.y + dy * end)));
       } else {

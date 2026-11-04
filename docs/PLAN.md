@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 2, 2026 (unfinished rounds folded into Admin's stats).
+Last updated Nov 4, 2026 (club ranks, gear and the end-of-round rewards).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 2, 2026 (unfinished rounds folded into Admin's stats).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #PR | Club ranks: Caddie, Junior Member, Member, Captain (three tiers each) and Club Legend, then Prestige stars. XP from rounds, birdies and better, breaking par, secrets, new weeks, the Daily Shot, practice, the bar, the Design Desk and titles; the first tier of each rank also asks for things done (a birdie, a secret, weeks played). A badge beside every member's name on the board, the Members table, member cards and the Locker, which gets a Your rank section (XP bar, what's next, the ladder, how to earn XP). Gear that comes with rank gives a small, capped edge, steadier and never longer: putters show the start of a putt's true line on quick greens (the Gold putter shows the first half), balls cut wind drift, irons and drivers widen the gold window. An XP chip during counted rounds pops for birdies and secrets; the end of a round shows XP line by line, the rank bar filling, any promotion with what it unlocked, new accolades and the next unlock, then Challenge a friend, Play again and Back to the clubhouse. Design a Hole opens at Junior Member (anyone who has designed one keeps it). |
 | #104 | The Unfinished rounds card is gone from Admin: the count rides on the Rounds tile ("posted · 12 unfinished"), and stays in the members table's Unfinished column and the activity feed. |
 | #102 | A round counts as unfinished the moment the member starts another (a restart), not only after two hours, so mulligans on hole 1 show up in Admin and the activity feed straight away. |
 | #100 | Admin's members table gets an Unfinished column (rounds started and left unfinished in the window), sortable like every column (tap a header, tap again to flip); the activity feed shows "Marc started a round on the Caldera but didn't finish (stopped on hole 4)". |
@@ -49,6 +50,7 @@ Last updated Nov 2, 2026 (unfinished rounds folded into Admin's stats).
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
+- [ ] Paste the ranks SQL from #PR (the `pars` column on rounds, `submit_round`, `get_snapshot` and the new `player_stats`). Until then ranks count only rounds, titles and secrets, so nobody can pass Caddie III (Junior Member asks for a birdie and the Daily Shot).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
@@ -96,6 +98,10 @@ The problem with the new members: once your best round is in, there's no reason 
 - **Playoff extras, if wanted:** Reginald's daily line playing up a playoff day (the card and plaque carry it for now), and an Admin button to settle a playoff by hand. New courses need a `playoff` entry in `src/golf3d/courses.ts` (the hole, and a fairway spot for the shot at the pin) or a tie there can't be played off.
 
 ## Next up (ideas, not started)
+
+- **Ranks, phase 2:** AI insights after a round, down to the shot (the engine would log each shot: club, lie, distance, result). Needs a per-member daily cap like the round notes.
+- **Ranks, phase 3:** mini tournaments, opening at Captain I (already on the ladder as "coming soon").
+- **Ranks, later:** the gear only applies in counted rounds and previews today; maybe the Daily Shot and bar games too. The rank is worked out in the browser, so the Design Desk's lock is client-side only.
 
 - **The Committee.** Robbie appoints elite members and gives titles (Hole Architect, Mini Game Manager). Perks:
   - a premium locker and a badge;

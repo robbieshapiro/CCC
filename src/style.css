@@ -1097,3 +1097,77 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .ch-members .all { border-left: 1px solid var(--line); }
 @media (max-width: 480px) { .ch-members td, .ch-members th { padding: 8px 5px; } .ch-members .avg { display: none; } .ch-members .who .avatar, .ch-members .who svg:first-child { width: 26px; height: 26px; } }
 .adm-members td.warn { color: #b0442e; font-weight: 800; }
+
+/* ---------- Ranks (src/rank.ts) ---------- */
+.rank-badge { display: inline-block; vertical-align: -5px; flex: none; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.25)); }
+.who .rank-badge, h1 .rank-badge { margin-left: 6px; }
+/* the XP chip during a counted round: badge, XP so far, and a pop for each birdie or secret */
+.xp-chip { position: absolute; z-index: 3; left: max(14px, env(safe-area-inset-left, 0px)); top: calc(122px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; background: rgba(15, 42, 31, 0.72); border: 1px solid rgba(184, 149, 90, 0.7); color: var(--cream); pointer-events: none; line-height: 1.05; }
+.xp-chip b { display: block; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.xp-chip small { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #e6cf9f; }
+.xp-chip em { position: absolute; left: 100%; top: 50%; margin-left: 8px; white-space: nowrap; font-style: normal; font-weight: 800; font-size: 13px; color: #ffe08a; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); opacity: 0; transform: translateY(-50%); }
+.xp-chip em.go { animation: xp-pop 2.4s ease-out; }
+.xp-chip.bump { animation: xp-bump 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes xp-pop { 0% { opacity: 0; transform: translate(-6px, -50%); } 12%, 70% { opacity: 1; transform: translate(0, -50%); } 100% { opacity: 0; transform: translate(0, -110%); } }
+@keyframes xp-bump { 40% { transform: scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .xp-chip.bump { animation: none; } .xp-chip em.go { animation-duration: 0.01s; animation-delay: 2s; } }
+@media (max-width: 640px) { .xp-chip { top: calc(112px + env(safe-area-inset-top, 0px)); } }
+
+/* the rewards at the end of a round */
+.rw { width: 100%; display: grid; gap: 10px; text-align: left; padding: 14px; border-radius: 10px; background: #fbf6ea; border: 1px solid rgba(184, 149, 90, 0.5); }
+.rw.up { background: radial-gradient(120% 90% at 0% 0%, rgba(230, 195, 92, 0.32), transparent 60%), #fbf6ea; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(230, 195, 92, 0.25); }
+.rw-rank { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; }
+.rw-badge { display: grid; }
+.rw.up .rw-badge { animation: rw-promote 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+@keyframes rw-promote { 0% { transform: scale(0.4) rotate(-12deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.rw-rank small { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+.rw-rank b { display: block; font-family: var(--serif); font-size: 22px; line-height: 1.1; color: var(--green); }
+.rw-rank b i { font-family: var(--font); font-style: normal; font-size: 12px; color: var(--gold); }
+.rw-rank span { font-size: 12px; color: var(--muted); }
+.rw-gain { font-style: normal; font-weight: 800; font-size: 18px; color: #2f7d4a; white-space: nowrap; }
+.rw-bar { height: 10px; border-radius: 999px; background: rgba(22, 59, 44, 0.12); overflow: hidden; }
+.rw-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--green), #2f7d4a 60%, var(--gold)); transition: width 1.4s cubic-bezier(0.3, 0.7, 0.2, 1) 0.3s; }
+.rw-next { margin: 0; font-size: 14px; }
+.rw-reqs, .rw-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rw-reqs li { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; font-size: 13px; color: var(--muted); }
+.rw-reqs li.met { color: #2f7d4a; }
+.rw-reqs i { font-style: normal; font-weight: 800; }
+.rw-lines { padding: 8px 0; border-top: 1px dashed rgba(184, 149, 90, 0.5); border-bottom: 1px dashed rgba(184, 149, 90, 0.5); }
+.rw-lines li { display: flex; justify-content: space-between; font-size: 14px; }
+.rw-lines b { color: #2f7d4a; font-variant-numeric: tabular-nums; }
+.rw-unlocks, .rw-accolades { display: grid; gap: 6px; }
+.rw-unlocks > small, .rw-accolades > small { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+.rw-item { display: grid; grid-template-columns: 28px 1fr; gap: 0 8px; align-items: baseline; padding: 8px 10px; border-radius: 8px; background: #fff; border: 1px solid rgba(184, 149, 90, 0.45); animation: rise 0.45s ease-out both; animation-delay: 1s; }
+.rw-item i { grid-row: span 2; font-style: normal; font-size: 20px; }
+.rw-item b { font-size: 14px; }
+.rw-item b em { font-style: normal; font-size: 11px; color: var(--muted); }
+.rw-item span { font-size: 12px; color: var(--muted); }
+.rw-accolades { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.rw-accolades > small { grid-column: 1 / -1; }
+.rw-accolades span { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 6px 8px; border-radius: 999px; background: #fff; border: 1px solid var(--gold); }
+.rw-accolades span i { font-style: normal; }
+.rw-bag, .rw-teaser { margin: 0; font-size: 12px; color: var(--muted); }
+.rw-teaser b { color: var(--ink); }
+.rw-none { margin: 0; }
+.summary-actions.cta { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+.summary-actions.cta .btn { width: 100%; }
+.summary-actions.cta .btn:first-child { grid-column: 1 / -1; }
+@media (prefers-reduced-motion: reduce) { .rw-bar i { transition: none; } .rw.up .rw-badge, .rw-item { animation: none; } }
+
+/* the Locker's rank: badge, XP bar, what's needed next, and the whole ladder with its unlocks */
+.lk-rank { display: grid; gap: 12px; }
+.lk-rank-head { display: flex; align-items: center; gap: 14px; }
+.lk-rank-head b { display: block; font-family: var(--serif); font-size: 26px; color: var(--green); line-height: 1.1; }
+.lk-rank-head span { font-size: 13px; color: var(--muted); }
+.ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ladder li { display: grid; grid-template-columns: 30px 1fr auto; gap: 2px 10px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); }
+.ladder li.done { opacity: 0.7; }
+.ladder li.now { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(184, 149, 90, 0.25); }
+.ladder li.locked .rank-badge { filter: grayscale(1) opacity(0.45); }
+.ladder b { font-size: 14px; }
+.ladder small { font-size: 12px; color: var(--muted); }
+.ladder em { grid-column: 2 / -1; font-style: normal; font-size: 12px; color: var(--ink); }
+.xp-how { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.xp-how li { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dotted var(--line); padding: 2px 0; }
+.xp-how b { color: #2f7d4a; }
+.lock-card { display: grid; gap: 10px; justify-items: start; padding: 18px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); }

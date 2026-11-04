@@ -7,10 +7,10 @@ import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type PlayerStats, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
-type DbRound = Round & { groupId: string };
+type DbRound = Round & { groupId: string; pars?: number[] };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
@@ -42,6 +42,32 @@ const career = (rs: Round[]) => {
   const d = rs.map((r) => r.total - r.par);
   return { rounds: d.length, best: d.length ? Math.min(...d) : null, avg: d.length ? Math.round((d.reduce((a, b) => a + b, 0) / d.length) * 10) / 10 : null };
 };
+
+// A member's all-time counts for their rank, as player_stats does on the server
+function statsFor(db: Db, id: string): PlayerStats {
+  const rs = db.rounds.filter((r) => r.playerId === id);
+  let birdies = 0;
+  let eagles = 0;
+  let aces = 0;
+  for (const r of rs)
+    r.holes.forEach((s, i) => {
+      if (s === 1) aces++;
+      else if (r.pars && s <= r.pars[i] - 2) eagles++;
+      else if (r.pars && s === r.pars[i] - 1) birdies++;
+    });
+  return {
+    rounds: rs.length,
+    weeks: new Set(rs.map((r) => r.month)).size,
+    underPar: rs.filter((r) => r.total < r.par).length,
+    birdies,
+    eagles,
+    aces,
+    daily: new Set((db.daily ?? []).filter((d) => d.playerId === id).map((d) => d.day)).size,
+    practice: (db.practice ?? []).filter((p) => p.playerId === id).length,
+    bar: (db.bar ?? []).filter((b) => b.playerId === id).length,
+    designs: (db.designs ?? []).filter((d) => d.playerId === id && (d.status === 'submitted' || d.status === 'approved')).length,
+  };
+}
 
 function playerByToken(db: Db, token: string): DbPlayer {
   const p = db.players.find((x) => x.token === token);
@@ -147,6 +173,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           wins: wins(p.id),
           feats: [...new Set([...mine.filter((r) => r.playerId === p.id).flatMap((r) => r.feats), ...(wins(p.id) ? ['champion'] : [])])],
           career: career(mine.filter((r) => r.playerId === p.id)),
+          stats: statsFor(db, p.id),
         })),
       rounds: mine.filter((r) => r.month === month).map(strip),
       champions,
@@ -164,7 +191,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const feats = [...new Set(r.feats)];
     if (total < course.par) feats.push('underpar');
     const spots = r.spots?.length === holes.length ? r.spots.map((p) => (p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null)) : null;
-    db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, createdAt: new Date().toISOString() });
+    db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, pars: course.holes.map((h) => h.par), createdAt: new Date().toISOString() });
     save(db);
   },
 
@@ -717,7 +744,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
               })
             : null;
           const createdAt = new Date(m === month ? Date.now() - (k * 3 + i + 1) * 3_600_000 : startOf(m) + (k + i) * 86_400_000).toISOString();
-          db.rounds.push({ playerId: p.id, groupId: me.groupId, month: m, course: course.id, holes, total, par: course.par, feats: total < course.par ? ['underpar'] : [], spots, createdAt });
+          db.rounds.push({ playerId: p.id, groupId: me.groupId, month: m, course: course.id, holes, total, par: course.par, feats: total < course.par ? ['underpar'] : [], spots, pars: course.holes.map((h) => h.par), createdAt });
         }
     });
     save(db);

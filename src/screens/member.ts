@@ -1,6 +1,7 @@
 // Another member's card: their golfer on the turntable, the card itself, and how they've been playing.
 // Anyone can look at anyone; only your own card has the wardrobe.
 import { periodName } from '../day';
+import { badgeFor, rankOfPlayer } from '../rank';
 import type { Snapshot } from '../api/types';
 import { portrait, specOf } from '../avatar';
 import { crest } from '../brand';
@@ -54,11 +55,11 @@ export function member(snap: Snapshot, id: string) {
       <p><a class="link" href="#/clubhouse/members">‹ Members</a></p>
       ${hostChip(remark(p.name, p.wins, row.rank, row.best ? 1 : 0, c.rounds), p.wins ? 'pleased' : 'dry')}
       <section class="member-card">
-        <div class="mc-top">${crest(46, 'mc')}<div><p class="eyebrow">Claude Country Club</p><p class="mc-kind">Full Member</p></div></div>
+        <div class="mc-top">${crest(46, 'mc')}<div><p class="eyebrow">Claude Country Club</p><p class="mc-kind">${p.host ? 'Full Member' : esc(rankOfPlayer(p).name)}</p></div></div>
         <div class="mc-body">
           <div class="mc-portrait">${portrait(p.avatar, 120)}</div>
           <div>
-            <h1>${esc(p.name)}${crownFor(snap, p.id)}</h1>
+            <h1>${esc(p.name)}${badgeFor(p, 26)}${crownFor(snap, p.id)}</h1>
             <dl>
               <div><dt>Member No.</dt><dd>${number}</dd></div>
               <div><dt>Since</dt><dd>${since}</dd></div>

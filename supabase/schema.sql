@@ -36,6 +36,8 @@ create table if not exists rounds (
 );
 -- where each tee shot came to rest, per hole ({x, y} or null), so today's players can stand on the course
 alter table rounds add column if not exists spots jsonb;
+-- each hole's par, so birdies and eagles can be counted for ranks (rounds before this went in have none)
+alter table rounds add column if not exists pars int[];
 create index if not exists rounds_group_month on rounds (group_id, month);
 
 drop table if exists hole_scores cascade;
@@ -467,8 +469,8 @@ begin
         then jsonb_build_object('x', round(greatest(-2000, least(2000, (e->>'x')::numeric)), 1), 'y', round(greatest(-2000, least(2000, (e->>'y')::numeric)), 1))
         else 'null'::jsonb end order by k) from jsonb_array_elements(p_spots) with ordinality as t(e, k));
   end if;
-  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots)
-  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp);
+  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots, pars)
+  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp, p_pars);
 end $$;
 
 create or replace function save_avatar(p_token uuid, p_avatar jsonb) returns void
@@ -497,6 +499,7 @@ begin
         -- played today doesn't count yet)
         'wins', (select count(*) from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff'),
         'career', (select json_build_object('rounds', count(*), 'best', min(total - par), 'avg', round(avg(total - par), 1)) from rounds where player_id = pl.id),
+        'stats', player_stats(pl.id),
         'feats', (select coalesce(json_agg(distinct f), '[]') from (
             select unnest(feats) f from rounds where player_id = pl.id
             union select 'champion' where exists (select 1 from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff')
@@ -1324,3 +1327,23 @@ grant execute on function submit_design(uuid, bigint, int) to anon;
 grant execute on function design_queue(uuid) to anon;
 grant execute on function review_design(uuid, bigint, boolean) to anon;
 grant execute on function members_course(uuid) to anon;
+
+-- Ranks (src/rank.ts): what a member has done, all time, for their XP and badge. Birdies and eagles count from
+-- rounds that kept their pars (from when this went in).
+create or replace function player_stats(p_id uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+begin
+  return json_build_object(
+    'rounds', (select count(*) from rounds where player_id = p_id),
+    'weeks', (select count(distinct month) from rounds where player_id = p_id),
+    'underPar', (select count(*) from rounds where player_id = p_id and total < par),
+    'birdies', (select count(*) from rounds r, unnest(r.holes, r.pars) as h(s, p) where r.player_id = p_id and r.pars is not null and s > 1 and s = p - 1),
+    'eagles', (select count(*) from rounds r, unnest(r.holes, r.pars) as h(s, p) where r.player_id = p_id and r.pars is not null and s > 1 and s <= p - 2),
+    'aces', (select count(*) from rounds r, unnest(r.holes) as h(s) where r.player_id = p_id and s = 1),
+    'daily', (select count(distinct day) from daily_shots where player_id = p_id),
+    'practice', (select count(*) from practice_sessions where player_id = p_id),
+    'bar', (select count(*) from bar_scores where player_id = p_id),
+    'designs', (select count(*) from designs where player_id = p_id and status in ('submitted', 'approved'))
+  );
+end $$;
+

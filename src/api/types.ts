@@ -28,7 +28,11 @@ export type Player = {
   feats: string[];
   joined: string; // ISO date, for the member number
   career?: { rounds: number; best: number | null; avg: number | null }; // every round they've played, to par
+  stats?: PlayerStats; // all-time counts for their rank (src/rank.ts); missing until the server's SQL has them
 };
+
+// What a member has done, all time, counted by the server for their rank and XP (see src/rank.ts)
+export type PlayerStats = { rounds: number; weeks: number; underPar: number; birdies: number; eagles: number; aces: number; daily: number; practice: number; bar: number; designs: number };
 
 // Where a tee shot came to rest, in course feet. Null if it found the water or went out.
 export type Spot = { x: number; y: number } | null;

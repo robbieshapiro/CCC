@@ -3,6 +3,7 @@
 // fair, and you play it. Ask for changes, then send it to the Committee; approved holes go on the Members' Course
 // at the bar.
 import { api } from '../api';
+import { canUse, FEATURES, levelName, rankOfPlayer } from '../rank';
 import type { Design, Snapshot } from '../api/types';
 import { askArchitect, isHole, tryHole } from '../designer/desk';
 import { buildHole, tidy } from '../designer/hole';
@@ -43,7 +44,8 @@ export async function designDesk(snap: Snapshot, id?: number) {
         <h1>Design a hole</h1>
         ${hostChip('Describe the hole you’ve always wanted to play. The architect lays it out, you play it, the Committee has the final say. It usually does.')}
       </section>
-      <section class="desk-new" id="desk-new">
+      <section class="lock-card" id="desk-lock" hidden></section>
+      <section class="desk-new" id="desk-new" hidden>
         <textarea id="desk-prompt" maxlength="600" rows="3" placeholder="${esc(IDEAS[Math.floor(Math.random() * IDEAS.length)])}" aria-label="Describe your hole"></textarea>
         <div class="desk-looks" role="radiogroup" aria-label="Look">${LOOKS.map(([v, l], i) => `<button type="button" role="radio" data-look="${v}" aria-checked="${i === 0}">${l}</button>`).join('')}</div>
         <div class="desk-looks" role="radiogroup" aria-label="Par">${PARS.map(([v, l], i) => `<button type="button" role="radio" data-par="${v}" aria-checked="${i === 0}">${l}</button>`).join('')}</div>
@@ -74,6 +76,16 @@ export async function designDesk(snap: Snapshot, id?: number) {
   };
   const list = (await api.myDesigns(requireSession()).catch(() => [] as Design[])).filter(isHole);
   drawList(list);
+  // the desk opens at Junior Member; anyone who designed a hole before ranks came in keeps it, and so does the Committee
+  const me = snap.players.find((p) => p.id === snap.me);
+  const rank = me ? rankOfPlayer(me) : null;
+  if (snap.admin || list.length || !rank || canUse('design', rank.level)) document.getElementById('desk-new')!.hidden = false;
+  else {
+    const at = FEATURES.find((f) => f.id === 'design')!.level;
+    const lock = document.getElementById('desk-lock')!;
+    lock.hidden = false;
+    lock.innerHTML = `<p class="eyebrow">🔒 Opens at ${esc(levelName(at))}</p><p>You’re ${esc(rank.name)}. Play rounds, find a birdie and try the Daily Shot to get there.</p>${rank.next?.reqs.length ? `<ul class="rw-reqs">${rank.next.reqs.map((q) => `<li class="${q.met ? 'met' : ''}"><i>${q.met ? '✓' : '○'}</i>${esc(q.label)}<small>${q.have}</small></li>`).join('')}</ul>` : ''}<a class="btn" href="#/locker">See your rank</a>`;
+  }
   const open = id ? list.find((d) => d.id === id) : undefined;
   if (open) show(snap, open);
 }

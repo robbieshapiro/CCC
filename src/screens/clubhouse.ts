@@ -2,6 +2,7 @@
 // games), Reginald's weekly Chronicle, every club this month, how the game works, and a note to the Committee. Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
 import { periodName, span } from '../day';
+import { badgeFor } from '../rank';
 import { api } from '../api';
 import type { Chronicle, ClubRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
@@ -54,7 +55,7 @@ function members(snap: Snapshot) {
       const c = career(p.id);
       return `<tr class="${me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</span></a></td>
+        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span>${esc(p.name)}${badgeFor(p, 18)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</span></a></td>
         <td class="num topar">${r.best ? topar(r.toPar) : '–'}</td>
         <td class="num">${r.rounds}</td>
         <td class="num all">${c.rounds}</td>

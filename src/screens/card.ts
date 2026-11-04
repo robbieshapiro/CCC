@@ -9,6 +9,7 @@ import { board, myBest, toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { GolferStage, lockerPanel } from './locker';
 import { esc, header, navigate, render } from '../ui';
+import { badgeSvg, bagOf, FEATURES, GEAR, LEVELS, levelName, rankOf, statsOf, XP, type Rank } from '../rank';
 
 let closeCard: () => void = () => {};
 export const leaveCard = () => {
@@ -34,7 +35,7 @@ export function card(snap: Snapshot) {
       <section class="lk-hero">
         <div class="stage" id="stage"></div>
         <div class="lk-who">
-          <h1>${esc(me.name)}</h1>
+          <h1>${esc(me.name)}${me.host ? '' : badgeSvg(rankOf(statsOf(me)), 28)}</h1>
           <p class="muted">${me.host ? `Runs ${esc(snap.groupName)} · plays for ${esc(snap.homeName ?? 'their club')}` : esc(snap.groupName)}${me.wins ? ` · 🏆 ${me.wins}` : ''}</p>
           ${
             me.host
@@ -49,6 +50,7 @@ export function card(snap: Snapshot) {
         </div>
       </section>
       <section class="lk-edit" id="lk-edit" hidden><div id="panel"></div></section>
+      ${me.host ? '' : rankSection(rankOf(statsOf(me)), me.wins)}
       <section class="lk-section">
         <h2>Trophies</h2>
         ${got.length ? `<div class="lk-trophies">${got.map((f) => `<span title="${esc(f.how)}"><i>${f.icon}</i>${esc(f.name)}</span>`).join('')}</div>` : '<p class="muted">None yet. Your first one is out there.</p>'}
@@ -88,3 +90,31 @@ export function card(snap: Snapshot) {
     navigate('#/');
   });
 }
+
+// Your rank: the badge, the XP bar, what the next rank asks for, your bag, and the whole ladder with what each step opens
+function rankSection(r: Rank, wins: number) {
+  const from = LEVELS[r.level].xp;
+  const pct = r.next ? Math.max(0, Math.min(100, ((r.xp - from) / Math.max(1, r.next.xp - from)) * 100)) : 100;
+  const bag = bagOf(r.level, wins);
+  const opens = (l: number) =>
+    [...GEAR.filter((g) => g.level === l && g.level > 0).map((g) => g.name), ...FEATURES.filter((f) => f.level === l).map((f) => `${f.name}${f.soon ? ' (soon)' : ''}`)].join(' · ');
+  const how: [string, number][] = [
+    ['Finish a round', XP.round], ['First round of a week', XP.week], ['Break par', XP.underPar], ['Birdie', XP.birdie], ['Eagle', XP.eagle], ['Hole in one', XP.ace],
+    ['Find a secret route', XP.secret], ['Daily Shot (a day)', XP.daily], ['Practice session', XP.practice], ['Bar game', XP.bar], ['Hole sent to the Committee', XP.design], ['Win a week', XP.win],
+  ];
+  return `<section class="lk-section lk-rank">
+      <h2>Your rank</h2>
+      <div class="lk-rank-head">${badgeSvg(r, 64)}<div><b>${esc(r.name)}${r.prestige ? ` · Prestige ${r.prestige}` : ''}</b><span>${r.xp.toLocaleString()} XP${r.next ? (r.blocked ? ` · XP banked for ${esc(r.next.name)}: finish the list` : ` · ${Math.max(0, r.next.xp - r.xp).toLocaleString()} to ${esc(r.next.name)}`) : ''}</span></div></div>
+      <div class="rw-bar"><i style="width:${pct}%"></i></div>
+      ${r.next?.reqs.length ? `<ul class="rw-reqs">${r.next.reqs.map((q) => `<li class="${q.met ? 'met' : ''}"><i>${q.met ? '✓' : '○'}</i>${esc(q.label)}<small>${q.have}</small></li>`).join('')}</ul>` : ''}
+      <p class="rw-bag">In your bag: ${[bag.putter, bag.ball, bag.irons, bag.driver].map((g) => `<b title="${esc(g.what)}">${esc(g.name)}</b>`).join(' · ')}</p>
+      <details class="lk-more"><summary>The ladder and what it unlocks</summary>
+        <ol class="ladder">${LEVELS.map((l, i) => {
+          const o = opens(i);
+          return `<li class="${i < r.level ? 'done' : i === r.level ? 'now' : 'locked'}">${badgeSvg({ family: l.family, tier: l.tier, prestige: 0, name: levelName(i) }, 28)}<b>${esc(levelName(i))}</b><small>${l.xp.toLocaleString()} XP</small>${o ? `<em>${esc(o)}</em>` : ''}</li>`;
+        }).join('')}</ol>
+      </details>
+      <details class="lk-more"><summary>How to earn XP</summary><ul class="xp-how">${how.map(([k, v]) => `<li><span>${k}</span><b>+${v}</b></li>`).join('')}</ul></details>
+    </section>`;
+}
+
