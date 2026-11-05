@@ -17,8 +17,8 @@ const CREEK = [{ x: -130, y: 296 }, { x: 0, y: 290 }, { x: 130, y: 298 }];
 
 // woods tight down both sides and behind: past them is out of bounds
 const maples: Post[] = [
-  ...treeLine([{ x: -112, y: -90 }, { x: -112, y: 300 }], 22, 'ml-left'),
-  ...treeLine([{ x: 112, y: -90 }, { x: 112, y: 300 }], 22, 'ml-right'),
+  ...treeLine([{ x: -104, y: -90 }, { x: -104, y: 300 }], 20, 'ml-left', 5, 2, 1, 10),
+  ...treeLine([{ x: 104, y: -90 }, { x: 104, y: 300 }], 20, 'ml-right', 5, 2, -1, 10),
   ...treeLine([{ x: -96, y: 276 }, { x: 96, y: 276 }], 22, 'ml-back', 4),
   // along the far shore, either side of the green
   tree(-58, 222, 4, 26),
@@ -79,7 +79,8 @@ export const maplelake: Hole = {
     { kind: 'disc', x: LAKE.x, y: LAKE.y, r: LAKE.rx + 4, h: -4, edge: 14, op: 'add' },
     { kind: 'box', x0: LAKE.x - LAKE.rx, y0: LAKE.y - LAKE.ry - 6, x1: LAKE.x + LAKE.rx, y1: LAKE.y + LAKE.ry + 6, h: -4, edge: 12, op: 'add' },
     // the green, a step up off the shore, in two tiers: the back half higher, and the front falling to the lake
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 7, h: GROUND + 1.2, edge: 6, op: 'set' },
+    // a cupcake green: up on a mound, its sides falling away just past the fringe, toward the lake in front
+    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 3, h: GROUND + 3, edge: 4, op: 'set' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 4, x1: GREEN.x + 30, y1: GREEN.y + 2, axis: 'y', h0: 0, h1: 0.6, op: 'add' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y + 2, x1: GREEN.x + 30, y1: GREEN.y + 20, axis: 'y', h0: 0.6, h1: 0.8, op: 'add' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 20, x1: GREEN.x + 30, y1: GREEN.y + 20, axis: 'x', h0: 0.25, h1: -0.25, op: 'add' },

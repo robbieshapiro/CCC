@@ -30,8 +30,12 @@ const OAK = { x: -58, y: 352 };
 
 // woods on both sides, tight: past them is out of bounds
 const maples: Post[] = [
-  ...treeLine([{ x: 74, y: 30 }, { x: 76, y: 300 }, { x: 82, y: 430 }], 24, 'cb-right'),
-  ...treeLine([{ x: -130, y: 0 }, { x: -130, y: 380 }], 26, 'cb-left'),
+  // two rows hard by the right edge of the fairway, crowns hanging over it
+  ...treeLine([{ x: 48, y: 30 }, { x: 50, y: 300 }, { x: 58, y: 430 }], 20, 'cb-right', 5, 2, -1, 13),
+  // a broken line between the fairway and the creek
+  ...treeLine([{ x: -58, y: 70 }, { x: -60, y: 290 }], 30, 'cb-creekside', 4),
+  // and the woods beyond the creek
+  ...treeLine([{ x: -122, y: 0 }, { x: -122, y: 380 }], 22, 'cb-left', 5, 2, 1, 13),
   ...treeLine([{ x: -204, y: 578 }, { x: -60, y: 578 }], 22, 'cb-back'),
   ...treeLine([{ x: -202, y: 440 }, { x: -202, y: 560 }], 24, 'cb-greenleft'),
   // two in the elbow of the dogleg, inside the oak
@@ -61,8 +65,8 @@ export const creekbend: Hole = {
   // out of bounds just past the woods on both sides
   border: [
     { x: -150, y: -36 },
-    { x: 96, y: -36 },
-    { x: 96, y: 596 },
+    { x: 84, y: -36 },
+    { x: 84, y: 596 },
     { x: -214, y: 596 },
     { x: -214, y: 420 },
     { x: -150, y: 390 },
@@ -86,6 +90,9 @@ export const creekbend: Hole = {
     { poly: circle(-166, 536, 6), surface: 'sand' },
     // a fairway bunker on the inside of the turn
     { poly: blob(-26, 250, 9, 8, 5, 0.12), surface: 'sand' },
+    // and two more in the drive's way: a carry bunker right of centre, one where the fairway turns
+    { poly: blob(14, 196, 9, 8, 6, 0.12), surface: 'sand' },
+    { poly: blob(18, 368, 8, 7, 7, 0.12), surface: 'sand' },
   ],
   water: [{ poly: band(CREEK, 12), level: LEVEL }, { poly: circle(POND.x, POND.y, POND.r), level: LEVEL }],
   terrain: [
@@ -101,7 +108,8 @@ export const creekbend: Hole = {
     { kind: 'channel', pts: CREEK, width: 15, depth: 5 },
     { kind: 'embankment', pts: [{ x: BRIDGE.x, y: BRIDGE.y0 - 4 }, { x: BRIDGE.x, y: BRIDGE.y1 + 4 }], h: [DECK, DECK], width: BRIDGE.half, edge: 3 },
     // the green, raised a step off the creek, leaning back toward it
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 8, h: GROUND + 0.8, edge: 8, op: 'set' },
+    // a cupcake green: up on a mound, its sides falling away just past the fringe, so a miss rolls off
+    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 3, h: GROUND + 3, edge: 4, op: 'set' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'y', h0: -0.5, h1: 0.5, op: 'add' },
     // two humps in the green: read the putt
     { kind: 'hill', x: -150, y: 520, r: 8, h: 0.5 },
@@ -113,6 +121,8 @@ export const creekbend: Hole = {
     // deep bunkers: steep-faced, a good way down
     { kind: 'disc', x: 38, y: 318, r: 12, h: -4, edge: 3, op: 'add' },
     { kind: 'disc', x: -26, y: 250, r: 9, h: -3.6, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: 14, y: 196, r: 9, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: 18, y: 368, r: 8, h: -4, edge: 2.5, op: 'add' },
     { kind: 'disc', x: -166, y: 536, r: 6, h: -3.6, edge: 2, op: 'add' },
     { kind: 'disc', x: -112, y: 532, r: 7, h: -3.6, edge: 2.5, op: 'add' },
     { kind: 'disc', x: -170, y: 498, r: 6, h: -3.6, edge: 2, op: 'add' },

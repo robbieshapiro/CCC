@@ -24,7 +24,8 @@ const SPINE = { x0: -16, y0: 170, x1: 18, y1: 420 };
 const LEDGE = { x0: -46, y0: 486, x1: 6, y1: 520 };
 
 const woods: Post[] = [
-  ...treeLine([{ x: -112, y: 0 }, { x: -112, y: 640 }], 22, 'ledges-left'),
+  // two rows hard by the left fairway, crowns over its edge
+  ...treeLine([{ x: -98, y: 0 }, { x: -100, y: 640 }], 20, 'ledges-left', 5, 2, 1, 12),
   ...treeLine([{ x: 130, y: 40 }, { x: 128, y: 640 }], 22, 'ledges-right', 4),
   ...treeLine([{ x: -100, y: 628 }, { x: 110, y: 628 }], 22, 'ledges-back', 4),
   // a maple standing in each fairway, where a driver wants to finish
@@ -76,10 +77,18 @@ export const theledges: Hole = {
     { poly: rect(52, 548, 78, 580), surface: 'rock' },
     // deep bunkers: one where the right fairway pinches, two at the green
     { poly: blob(84, 270, 9, 8, 6, 0.12), surface: 'sand' },
+    // fairway bunkers: two down the left fairway, one at the end of the right
+    { poly: blob(-70, 240, 9, 8, 7, 0.12), surface: 'sand' },
+    { poly: blob(-38, 404, 8, 7, 8, 0.12), surface: 'sand' },
+    { poly: blob(50, 420, 8, 7, 9, 0.12), surface: 'sand' },
     { poly: circle(30, 590, 6), surface: 'sand' },
     { poly: circle(-2, 572, 6), surface: 'sand' },
   ],
-  water: [{ poly: band(CREEK, 10), level: LEVEL }],
+  water: [
+    { poly: band(CREEK, 10), level: LEVEL },
+    // a pond short and right of the green, eating into the fairway where the two halves meet
+    { poly: circle(68, 498, 12), level: LEVEL },
+  ],
   terrain: [
     // the tee up on a rock outcrop, the valley falling gently away
     { kind: 'ramp', x0: -130, y0: -40, x1: 150, y1: 20, axis: 'y', h0: 12, h1: 12, op: 'set' },
@@ -95,7 +104,8 @@ export const theledges: Hole = {
     // the creek
     { kind: 'channel', pts: CREEK, width: 12, depth: 4 },
     // the green, up a step, with a spine through it and a hollow at the back left
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 8, h: GROUND + 2.2, edge: 8, op: 'set' },
+    // a cupcake green: up on a mound, its sides falling away just past the fringe
+    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 3, h: GROUND + 3.5, edge: 4, op: 'set' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'x', h0: 0.5, h1: -0.5, op: 'add' },
     { kind: 'hill', x: 30, y: 558, r: 8, h: 0.5 },
     { kind: 'hill', x: 14, y: 570, r: 6, h: -0.35 },
@@ -103,6 +113,10 @@ export const theledges: Hole = {
     { kind: 'ramp', x0: 50, y0: 546, x1: 80, y1: 582, axis: 'x', h0: 0, h1: 2.6, op: 'add' },
     // deep bunkers
     { kind: 'disc', x: 84, y: 270, r: 9, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: -70, y: 240, r: 9, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: -38, y: 404, r: 8, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: 50, y: 420, r: 8, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: 68, y: 498, r: 15, h: -4, edge: 5, op: 'add' },
     { kind: 'disc', x: 30, y: 590, r: 6, h: -3.8, edge: 2, op: 'add' },
     { kind: 'disc', x: -2, y: 572, r: 6, h: -3.8, edge: 2, op: 'add' },
   ],

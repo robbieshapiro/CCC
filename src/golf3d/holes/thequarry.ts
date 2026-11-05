@@ -15,7 +15,8 @@ const GROUND = 6;
 const LEVEL = GROUND - 7;
 
 const woods: Post[] = [
-  ...treeLine([{ x: 98, y: 230 }, { x: 98, y: 570 }], 22, 'quarry-right'),
+  // two rows hard by the right of the fairway
+  ...treeLine([{ x: 80, y: 230 }, { x: 80, y: 570 }], 20, 'quarry-right', 5, 2, -1, 11),
   ...treeLine([{ x: -100, y: 560 }, { x: 80, y: 568 }], 22, 'quarry-back', 4),
   // the far side of the quarry arm, beyond the water on the left
   ...treeLine([{ x: -150, y: 220 }, { x: -150, y: 560 }], 26, 'quarry-left'),
@@ -46,8 +47,8 @@ export const thequarry: Hole = {
   // out of bounds past the woods on the right and behind; on the left, the quarry
   border: [
     { x: -166, y: -36 },
-    { x: 116, y: -36 },
-    { x: 116, y: 596 },
+    { x: 106, y: -36 },
+    { x: 106, y: 596 },
     { x: -166, y: 596 },
   ],
   base: 'rough',
@@ -65,6 +66,9 @@ export const thequarry: Hole = {
     { poly: circle(2, 482, 6), surface: 'sand' },
     { poly: circle(-18, 524, 6), surface: 'sand' },
     { poly: blob(64, 420, 9, 8, 4, 0.12), surface: 'sand' },
+    // two more in the landing, either side of the maple
+    { poly: blob(-6, 304, 8, 7, 6, 0.12), surface: 'sand' },
+    { poly: blob(56, 296, 8, 7, 7, 0.12), surface: 'sand' },
   ],
   water: [
     // the drowned pit across the front, and its arm up the left of the hole and round under the green
@@ -85,7 +89,8 @@ export const thequarry: Hole = {
     { kind: 'box', x0: -150, y0: 214, x1: -60, y1: 474, h: GROUND - 12, edge: 4, op: 'set' },
     { kind: 'disc', x: -90, y: 500, r: 46, h: GROUND - 12, edge: 6, op: 'set' },
     // the green on a shelf, up above the water, leaning back toward it
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 8, h: GROUND + 3, edge: 6, op: 'set' },
+    // a cupcake green on the shelf: up on a mound, falling away on every side, and to the water on the left
+    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 3, h: GROUND + 4.5, edge: 4, op: 'set' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'x', h0: -0.5, h1: 0.5, op: 'add' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'y', h0: -0.3, h1: 0.3, op: 'add' },
     { kind: 'hill', x: -30, y: 494, r: 7, h: 0.45 },
@@ -95,6 +100,8 @@ export const thequarry: Hole = {
     { kind: 'disc', x: 2, y: 482, r: 6, h: -3.8, edge: 2, op: 'add' },
     { kind: 'disc', x: -18, y: 524, r: 6, h: -3.8, edge: 2, op: 'add' },
     { kind: 'disc', x: 64, y: 420, r: 9, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: -6, y: 304, r: 8, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: 56, y: 296, r: 8, h: -4, edge: 2.5, op: 'add' },
   ],
   walls: [],
   posts: woods,
