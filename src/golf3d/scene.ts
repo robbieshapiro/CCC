@@ -1,5 +1,6 @@
 // Builds the 3D world for one hole from its data: terrain mesh, water, walls, props and moving parts.
 import * as THREE from 'three';
+import { tempestOn } from './conditions';
 import { makeRng } from '../seed';
 import { cupR, curbs } from './physics';
 import * as props from './props';
@@ -937,6 +938,17 @@ export function buildWorld(h: Hole, number: number): World {
       st.position.set(cx + Math.cos(a) * r, floor, -(cy + Math.sin(a) * r));
       root.add(st);
     }
+    // in the tempest the far haze goes dark: the volcano, its smoke and the stacks loom out of the storm
+    if (tempestOn(h))
+      [v, plume, ...root.children.slice(-9)].forEach((o) =>
+        o.traverse((m) => {
+          const mm = m as THREE.Mesh;
+          if (!mm.material) return;
+          const c = (mm.material as THREE.MeshBasicMaterial).clone();
+          c.color?.multiplyScalar(0.06); // (colours are linear: this is about a quarter as bright to the eye)
+          mm.material = c;
+        }),
+      );
   }
   for (let i = 0; i < (volcanic || haunted || lands || autumn || coastal ? 0 : 26); i++) {
     const a = (i / 26) * Math.PI * 2 + rng.next() * 0.2;
