@@ -6,8 +6,10 @@
 import { band, blob, circle, rect } from '../terrain';
 import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
+import { treeLine } from './woods';
 
-const GREEN = { x: -20, y: 716, rx: 15, ry: 12 };
+const GREEN = { x: -20, y: 716, rx: 18, ry: 15 };
+const POND = { x: -62, y: 392, r: 14 };
 const GROUND = 5;
 const LEVEL = GROUND - 3;
 // the river: across the ravine in front of the tee, down the right of the hole, then across the front of the green
@@ -24,18 +26,13 @@ const RIVER: V2[] = [
   { x: -220, y: 676 },
 ];
 
+// (the woods down both sides are added once the hole is lengthened, below)
 const maples: Post[] = [
-  // the left of the fairway, all the way up
-  ...[250, 330, 410].map((y, i) => ({ x: -78 - (i % 2) * 8, y, r: 4, h: 26, e: 0.25, look: 'maple' as const })),
   // the chute: closing in for the second shot
   { x: -40, y: 500, r: 4.5, h: 28, e: 0.2, look: 'maple' },
   { x: -34, y: 560, r: 4.5, h: 28, e: 0.2, look: 'maple' },
   { x: 42, y: 520, r: 4.5, h: 28, e: 0.2, look: 'maple' },
   { x: 36, y: 580, r: 4.5, h: 28, e: 0.2, look: 'maple' },
-  // across the river on the right
-  ...[260, 360, 460, 560].map((y, i) => ({ x: 138 + (i % 2) * 10, y, r: 4, h: 26, e: 0.25, look: 'maple' as const })),
-  // behind the green
-  ...[-74, -46, 8, 36].map((x, i) => ({ x, y: 760 + (i % 2) * 10, r: 4, h: 28, e: 0.25, look: 'maple' as const })),
   // round the tee
   { x: -40, y: -16, r: 4, h: 24, e: 0.25, look: 'maple' },
   { x: 44, y: -20, r: 4, h: 24, e: 0.25, look: 'maple' },
@@ -53,7 +50,7 @@ const base: Hole = {
   blurb: 'Over the ravine, along the river through the maples, then up to a green above the falls.',
   tee: { x: 0, y: 0 },
   cup: { x: -20, y: 718 },
-  pins: [{ x: -20, y: 718 }, { x: -31, y: 711 }, { x: -9, y: 721 }, { x: -22, y: 725 }],
+  pins: [{ x: -20, y: 718 }, { x: -34, y: 710 }, { x: -6, y: 721 }, { x: -22, y: 728 }],
   aim: 0,
   bounds: { x0: -220, y0: -40, x1: 200, y1: 820 },
   border: [
@@ -78,11 +75,19 @@ const base: Hole = {
     { poly: blob(-30, 456, 10, 8, 5, 0.12), surface: 'sand' },
     { poly: circle(16, 708, 7), surface: 'sand' },
     { poly: circle(-52, 734, 6), surface: 'sand' },
+    { poly: circle(-4, 742, 6), surface: 'sand' },
+    // a fairway bunker right of the drive's landing
+    { poly: blob(34, 372, 10, 8, 7, 0.12), surface: 'sand' },
     // a footpath down to the river and the falls
     { poly: band([{ x: 60, y: 40 }, { x: 66, y: 140 }], 2), surface: 'path' },
   ],
   // the river, and the pool it opens into below the green: a long second that comes up short is wet
-  water: [{ poly: band(RIVER, 14), level: LEVEL }, { poly: blob(-4, 650, 78, 20, 6, 0.08), level: LEVEL }],
+  water: [
+    { poly: band(RIVER, 14), level: LEVEL },
+    { poly: blob(-4, 650, 78, 20, 6, 0.08), level: LEVEL },
+    // a pond eating into the left of the landing
+    { poly: circle(POND.x, POND.y, POND.r), level: LEVEL },
+  ],
   terrain: [
     // the tee high on the valley side
     { kind: 'ramp', x0: -220, y0: -40, x1: 200, y1: 30, axis: 'y', h0: 18, h1: 18, op: 'set' },
@@ -99,13 +104,20 @@ const base: Hole = {
     { kind: 'box', x0: -84, y0: 628, x1: 76, y1: 672, h: -5, edge: 10, op: 'add' },
     // the green, raised above the river, leaning toward it
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 10, h: GROUND + 3.5, edge: 10, op: 'set' },
-    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'y', h0: -0.35, h1: 0.35, op: 'add' },
+    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'y', h0: -0.5, h1: 0.5, op: 'add' },
+    // a tier through the middle of the green, and a hump at the back
+    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'x', h0: 0.3, h1: -0.3, op: 'add' },
+    { kind: 'hill', x: -14, y: 726, r: 7, h: 0.45 },
+    // the pond
+    { kind: 'disc', x: POND.x, y: POND.y, r: POND.r + 3, h: -5, edge: 6, op: 'add' },
     // the secret: a bank on the left that kicks a ball right, toward the flag
     { kind: 'hill', x: -50, y: 712, r: 16, h: 2.4 },
     // deep bunkers
-    { kind: 'disc', x: -30, y: 456, r: 10, h: -2.8, edge: 3, op: 'add' },
-    { kind: 'disc', x: 16, y: 708, r: 7, h: -2.8, edge: 2.5, op: 'add' },
-    { kind: 'disc', x: -52, y: 734, r: 6, h: -2.6, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: -30, y: 456, r: 10, h: -4, edge: 3, op: 'add' },
+    { kind: 'disc', x: 34, y: 372, r: 10, h: -4, edge: 3, op: 'add' },
+    { kind: 'disc', x: 16, y: 708, r: 7, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: -52, y: 734, r: 6, h: -3.6, edge: 2, op: 'add' },
+    { kind: 'disc', x: -4, y: 742, r: 6, h: -3.6, edge: 2, op: 'add' },
   ],
   walls: [],
   posts: [...maples, ...[[110, 610, 3], [70, 642, 2.6], [-80, 172, 2.4]].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }))],
@@ -132,4 +144,21 @@ const base: Hole = {
 };
 
 // a true three-shotter: everything past the chute sits 110 ft further on, so the green isn't there in two
-export const thegorge = extend(base, 470, 110);
+const long = extend(base, 470, 110);
+
+// then the woods, tight down both sides and behind the green, with out of bounds just past them
+export const thegorge: Hole = {
+  ...long,
+  border: [
+    { x: -112, y: -36 },
+    { x: 132, y: -36 },
+    { x: 132, y: 926 },
+    { x: -112, y: 926 },
+  ],
+  posts: [
+    ...long.posts,
+    ...treeLine([{ x: -92, y: 200 }, { x: -92, y: 910 }], 22, 'gorge-left'),
+    ...treeLine([{ x: 122, y: 220 }, { x: 122, y: 760 }], 24, 'gorge-right', 4),
+    ...treeLine([{ x: -100, y: 880 }, { x: 70, y: 880 }], 22, 'gorge-back', 4),
+  ],
+};
