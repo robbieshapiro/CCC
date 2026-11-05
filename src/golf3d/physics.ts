@@ -426,6 +426,11 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       const dy = y - p.y;
       const d = Math.hypot(dx, dy);
       if (p.soft) {
+        // nowhere near it: nothing to do (the cheap test first; the ground height under a tree costs far more)
+        if (d >= p.r) {
+          if (inCrown.size) inCrown.delete(i);
+          continue;
+        }
         const up = z - heightAt(h, p.x, p.y);
         // the crown: through it, slowed and knocked off line, or now and then caught and dropped
         if (up > TRUNK_H && up < p.h && d < p.r) {

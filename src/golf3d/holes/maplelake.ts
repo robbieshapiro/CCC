@@ -10,14 +10,14 @@ import { band, blob, rect } from '../terrain';
 import type { Hole, Post } from '../types';
 import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
 
-const GREEN = { x: 8, y: 228, rx: 28, ry: 13 };
+const GREEN = { x: 8, y: 232, rx: 32, ry: 16 };
 const LAKE = { x: -4, y: 120, rx: 98, ry: 88 };
 const GROUND = 2;
 const TEE = { x: 0, y: -88 };
 const traps = [
-  bunker(40, 214, 12, 6, 1, 3.8, -0.3), // front right, waiting for the bail-out
-  bunker(-6, 256, 13, 5, 2), // behind the green
-  bunker(30, 254, 10, 5, 3), // behind the green, right
+  bunker(50, 214, 14, 7, 1, 3.8, -0.3), // front right, waiting for the bail-out
+  bunker(-8, 264, 16, 6, 2), // behind the green
+  bunker(30, 262, 12, 6, 3), // behind the green, right
 ];
 const CREEK = [{ x: -130, y: 296 }, { x: 0, y: 290 }, { x: 130, y: 298 }];
 
@@ -44,8 +44,8 @@ export const maplelake: Hole = {
   yards: 230,
   blurb: 'A wood over the lake to a small two-tier green. Short is wet, long is sand, and the wind is never still.',
   tee: TEE,
-  cup: { x: 8, y: 233 },
-  pins: [{ x: 8, y: 233 }, { x: -14, y: 230 }, { x: 28, y: 232 }, { x: 4, y: 221 }],
+  cup: { x: 8, y: 239 },
+  pins: [{ x: 8, y: 239 }, { x: -18, y: 236 }, { x: 30, y: 238 }, { x: 4, y: 224 }],
   aim: 0.02,
   bounds: { x0: -128, y0: -110, x1: 128, y1: 320 },
   // out of bounds just past the woods, either side and behind
@@ -85,7 +85,8 @@ export const maplelake: Hole = {
     // the green, a step up off the shore, in two tiers: the back half higher, and the front falling to the lake
     // a cupcake green: up on a mound, its sides falling away just past the fringe, toward the lake in front
     // the green: wide and shallow, just up off the shore, falling right to left and toward the lake, the back tier up
-    ...greenComplex(GREEN, GROUND, { lift: 1.6, edge: 7, tilt: [-0.7, 0.5], tier: { axis: 'y', at: GREEN.y + 1, rise: 0.6 } }),
+    // low, wide and shallow, a bank behind it, a hump on the right, falling hard toward the lake
+    ...greenComplex(GREEN, GROUND, { lift: 1.2, edge: 8, tilt: [-1, 0.8], tier: { axis: 'y', at: GREEN.y + 1, rise: 0.8 }, rolls: [[14, -4, 7, 0.45]], back: 2.2 }),
     // the secret: a ridge on the left that brings a ball round to the middle
     { kind: 'ramp', x0: -62, y0: 214, x1: -26, y1: 246, axis: 'x', h0: 1.8, h1: 0, op: 'add' },
     // the creek behind
