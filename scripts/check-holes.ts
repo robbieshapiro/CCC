@@ -202,10 +202,10 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   sealion: { from: { x: -34, y: 348 }, clubs: ['putter'], angles: [-6, 6] },
   thecarry: { from: { x: 0, y: 0 }, clubs: ['iron', 'wedge'], angles: [-12, 0] },
   lighthouse: { from: { x: 96, y: 632 }, clubs: ['putter'], angles: [-14, -4] },
-  // the Western Reserve: putt through the covered bridge, go long and right off the bank, roll through the barn
-  coveredbridge: { from: { x: -30, y: 226 }, clubs: ['putter'], angles: [-3, 3] },
-  sugarmaple: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [6, 18] },
-  redbarn: { from: { x: 176, y: 330 }, clubs: ['putter'], angles: [86, 94] },
+  // the Western Reserve: off the bank behind the green, round the ridge, the kick off the left bank
+  creekbend: { from: { x: -24, y: 370 }, clubs: ['wedge', 'iron'], angles: [-40, -12] },
+  maplelake: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-12, 4] },
+  thegorge: { from: { x: -4, y: 690 }, clubs: ['wedge', 'iron'], angles: [-35, -5] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.

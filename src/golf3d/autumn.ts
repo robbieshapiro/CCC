@@ -1,5 +1,6 @@
-// The Western Reserve: northeast Ohio in October. Maples in red, orange and gold over tawny rough, split-rail fences,
-// a red barn and silo, a covered bridge over the creek, hay bales and pumpkins, and corn stubble beyond the course.
+// The Western Reserve: northeast Ohio in October. Maples in red, orange and gold over tawny rough, creeks and a river
+// through wooded valleys, a red covered bridge and a little waterfall. (The barn, silo, hay bales and corn are from the
+// course's first version; a hole can still place them.)
 // The sky and light are in engine.ts; scene.ts calls in here for the props, the barn and bridge roofs, and for what
 // lies beyond the course.
 import * as THREE from 'three';
@@ -156,8 +157,26 @@ function farmhouse() {
   return g;
 }
 
+// a little waterfall: a ledge of grey sandstone with white water spilling over it into a pool of foam. rot turns it
+// to face the way the river runs.
+function falls(scale = 1) {
+  const g = new THREE.Group();
+  const stone = mat('#7d776c');
+  for (const [x, w, h] of [[-9, 7, 7], [0, 8, 5.5], [9, 7, 7.5]] as const) g.add(mesh(new THREE.BoxGeometry(w * scale, h * scale, 6 * scale), stone).translateX(x * scale).translateY((h / 2 - 2) * scale));
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(9 * scale, 6 * scale), new THREE.MeshStandardMaterial({ color: '#e8f2f4', roughness: 0.3, transparent: true, opacity: 0.8 }));
+  water.position.set(0, 0.8 * scale, 3.2 * scale);
+  water.rotation.x = -0.18;
+  g.add(water);
+  const foam = new THREE.Mesh(new THREE.CircleGeometry(6 * scale, 16), new THREE.MeshStandardMaterial({ color: '#f4f8f8', roughness: 0.6, transparent: true, opacity: 0.7, depthWrite: false }));
+  foam.rotation.x = -Math.PI / 2;
+  foam.position.set(0, -1.6 * scale, 6 * scale);
+  g.add(foam);
+  return g;
+}
+
 // the decor a hole can place: d.scale sizes it (for corn, the side of a square patch in ft)
 export function autumnDecor(d: Decor): THREE.Object3D | null {
+  if (d.kind === 'falls') return falls(d.scale ?? 1);
   if (d.kind === 'silo') return silo(d.scale ?? 1);
   if (d.kind === 'haybale') return haybale(d.scale ?? 1);
   if (d.kind === 'pumpkins') return pumpkins(Math.round(d.x + d.y));
@@ -166,14 +185,13 @@ export function autumnDecor(d: Decor): THREE.Object3D | null {
   return null;
 }
 
-// Beyond the course: a wood of maples (and the odd pine) all round, low rolling farm hills under the fog, and a farm
-// or two on the skyline.
+// Beyond the course: a deep wood of maples (and the odd pine) all round, and low wooded hills under the fog.
 export function autumnFrame(h: Hole, root: THREE.Group, floor: number) {
   const rng = makeRng(`autumn:${h.id}`);
   const { x0, y0, x1, y1 } = h.bounds;
   const cx = (x0 + x1) / 2;
   const cy = (y0 + y1) / 2;
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 130; i++) {
     const side = Math.floor(rng.next() * 4);
     const t = rng.next();
     const off = 10 + rng.next() * 70;
@@ -190,16 +208,5 @@ export function autumnFrame(h: Hole, root: THREE.Group, floor: number) {
     hill.scale.y = 0.18 + rng.next() * 0.12;
     hill.position.set(cx + Math.cos(a) * r, floor - 6, -(cy + Math.sin(a) * r));
     root.add(hill);
-  }
-  for (const [a, r] of [[0.6, 520], [2.6, 620]]) {
-    const x = cx + Math.cos(a) * r;
-    const y = cy + Math.sin(a) * r;
-    const house = farmhouse();
-    house.position.set(x, floor, -y);
-    house.rotation.y = a;
-    root.add(house);
-    const s = silo(1.2);
-    s.position.set(x + 34, floor, -y);
-    root.add(s);
   }
 }

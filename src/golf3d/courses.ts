@@ -4,18 +4,18 @@
 // from the preview.
 import { blowhole } from './holes/blowhole';
 import { caldera } from './holes/caldera';
-import { coveredbridge } from './holes/coveredbridge';
+import { creekbend } from './holes/creekbend';
 import { geyseralley } from './holes/geyseralley';
 import { island } from './holes/island';
 import { lavafield } from './holes/lavafield';
 import { lavalift } from './holes/lavalift';
 import { lavatube } from './holes/lavatube';
 import { lighthouse } from './holes/lighthouse';
-import { redbarn } from './holes/redbarn';
+import { maplelake } from './holes/maplelake';
 import { ridge } from './holes/ridge';
 import { sealion } from './holes/sealion';
-import { sugarmaple } from './holes/sugarmaple';
 import { summit } from './holes/summit';
+import { thegorge } from './holes/thegorge';
 import { thecarry } from './holes/thecarry';
 import type { Hole, V2 } from './types';
 
@@ -74,10 +74,10 @@ const COURSES: Course[] = [
     opens: '2026-11-15',
     draft: true,
     name: 'The Western Reserve',
-    tagline: 'Three holes of Ohio in the fall. Maples, a covered bridge and a red barn.',
-    holes: [coveredbridge, sugarmaple, redbarn],
-    par: par([coveredbridge, sugarmaple, redbarn]),
-    playoff: { hole: redbarn, from: { x: 330, y: 330 }, label: 'Down the farm' },
+    tagline: 'Three holes through the Ohio woods in October. Creeks, a lake, a river gorge and deep bunkers.',
+    holes: [creekbend, maplelake, thegorge],
+    par: par([creekbend, maplelake, thegorge]),
+    playoff: { hole: thegorge, from: { x: -4, y: 690 }, label: 'Up from the river' },
   },
 ];
 
