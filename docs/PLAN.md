@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 5, 2026 (handoff notes for the next session).
+Last updated Nov 5, 2026 (the Architect and Steward agents).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -9,7 +9,7 @@ Last updated Nov 5, 2026 (handoff notes for the next session).
 - **Caldera storm** (#144, toned down in #145): looks and sounds only, ends by itself when the Caldera closes Sat Nov 7 at midnight ET (`tempestOn` in `src/golf3d/conditions.ts`). Nothing to do.
 - **Pacific Bluffs** is the Nov 15 draft. It needs Robbie's play-through and approval (see Setup status).
 - **Vercel was slow to pick up merges on Nov 5** (one waited about 30 minutes, another sat 11 minutes before building). After merging, confirm the production deployment for the merge SHA is READY (Vercel `list_deployments` with `sha`) before telling Robbie something is live.
-- **Offered, not built:** split the admin's unfinished-rounds stat into restarts (quit in the first ~20 s on hole 1) and real abandons. Also still open from #135: branch protection, the Anthropic spend limit, the Architect and Steward agents.
+- **Offered, not built:** split the admin's unfinished-rounds stat into restarts (quit in the first ~20 s on hole 1) and real abandons. Also still open from #135: branch protection and the Anthropic spend limit. The Architect and Steward are written up in #148 (see Agents below); their scheduled tasks are created once it merges.
 
 ## Shipped (all live on Vercel)
 
@@ -22,6 +22,7 @@ Last updated Nov 5, 2026 (handoff notes for the next session).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #148 | Two agents for a more hands-off club. The Architect (`.claude/skills/build-course/`) builds the course two weeks out every Sunday, runs the hole checks and opens it as a draft PR for Robbie to play. The Steward (`.claude/skills/steward/`) reads the club every morning (activity, quits split into hole-1 restarts and later abandons, feedback, AI calls, site errors, the week's close) and pings Robbie only when something's worth knowing, with a weekly digest on Sundays. Both run report-only: neither merges or touches live data. |
 | #146 | The Western Reserve is the Nov 8 course, out of draft; the Pacific Bluffs moves to Nov 15 (still a draft). Until it opens, every member can practise its first hole, Creek Bend, from a 🍁 preview tile on home with a countdown: practice only, never on the board or in the purse, and logged in the admin practice log (the "Caldera" column is now "Preview"). The Western Reserve's test switches (the wind fix and calmer chip meter, #143) go live with it. |
 | #145 | The Caldera storm toned down after a look: a slate-grey sky you can see the course under, light rain at a third of the strength, softer lightning every 15 to 35 seconds, the volcano dimmed rather than black. |
 | #144 | A storm rolls over the Caldera for the challenge's last days, until it closes Saturday midnight: a near-black sky with the lava's red glow on the horizon, heavy slanting rain, lightning that flashes the whole scene every 8 to 20 seconds, then thunder (a new synthesized crack and rumble), and the volcano and sea stacks dark against it. Looks and sounds only: the wind and turf play exactly as before, so the week's board stays fair. Clears by itself when the period changes (`tempestOn` in conditions.ts). |
@@ -105,9 +106,25 @@ Last updated Nov 5, 2026 (handoff notes for the next session).
 - [x] The #125 purse SQL, run Nov 4 (checked: October's closed purses unchanged, $9,998 Kellogg and $4,000 The Clergy).
 - [x] The #129 lockout SQL, run Nov 4 (checked: `sign_in` gone, both sign-in paths check the lock, the public role can't reach `pin_failures` or its helpers).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
+- [ ] Turn on branch protection for `main` (GitHub → Settings → Branches → Add rule): require a pull request (0 approvals), require the `checks` status to pass, and don't allow bypassing. Agents can't set this, and none may merge anything until it's on.
+- [ ] After #148 merges: create the Architect and Steward scheduled tasks (an agent does this) and note their ids under Agents.
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
 - [x] Stale branches deleted. Only `main` is left.
+
+## Agents
+
+Each one is a scheduled task that starts a fresh cloud session on `main` and follows its skill in `.claude/skills/`. Robbie's rules (from #135): agents may merge low-risk fixes only (no SQL, money logic or new features), and only after two clean weeks. Live data changes, purse or wallet logic, a course going live, and anything new in kind from Reginald are always his call.
+
+| Agent | When | Does | Status |
+|---|---|---|---|
+| Architect | Sundays, 1:37 pm ET | Builds the course for two Sundays out, passes the hole checks, opens a draft PR. Skips the week if one is already lined up. | Skill in #148. First run Sun Nov 8 builds Nov 22. |
+| Steward | Daily, 8:17 am ET | Read-only check of the last 24 hours; push to Robbie only when something's worth knowing; weekly digest on Sundays. | Skill in #148. Report-only for its first week, then decide what to do about restarts. |
+| Reviewer | Every PR | Independent check: runs the test scripts, tests SQL on scratch Postgres. | Not started. |
+| Fixer | On demand | Small PRs from bugs and feedback. | Not started. Waits for branch protection and two clean Steward weeks. |
+| Secretary | Weekly | Confirms the week closed, checks purses and playoffs, drafts the Chronicle. | Not started. Needs its own secured Chronicle route first. |
+
+The old "CCC activity check" scheduled task (off since Oct 31) is replaced by the Steward.
 
 ## To try tomorrow
 
@@ -145,7 +162,7 @@ The problem with the new members: once your best round is in, there's no reason 
 **Build steps (one PR each, in order):**
 1. ~~Weeks instead of months.~~ Built in #78. The period still lives in the `month` column (since #80: `2026-10-30` for the Caldera challenge, then each week's Sunday), so no data moves. Boards, the Open, the plaque, the countdown, gear thresholds (now 1, 3, 5, 8, 12, 20 titles), and Reginald's and the Chronicle's prompts all follow it. The Chronicle now gets last week's final standings.
 2. ~~The Nov 9 course.~~ The Western Reserve, #79. New kit for later courses: the `autumn` theme (`src/golf3d/autumn.ts`), `maple` trees, `barn` walls, and roofs with a `top` so a high ball sails over a building.
-3. The scheduled course agent.
+3. ~~The scheduled course agent.~~ The Architect, #148 (see Agents).
 
 ### Later
 

@@ -1,0 +1,58 @@
+---
+name: build-course
+description: The Architect's playbook for building the weekly 3-hole course for Claude Country Club two weeks out, checking it plays fair, and opening it as a draft PR for Robbie. Use when a scheduled Architect run starts, or when asked to build a new weekly course.
+---
+
+# The Architect
+
+Each Sunday you build the course for the week that starts two Sundays from now, as code like the Pacific Bluffs and the Western Reserve, and open it as a draft PR. Robbie plays the preview and decides. You never merge, never remove `draft: true`, never touch `supabase/schema.sql` or the live database.
+
+## 0. Should you build at all?
+
+- Work out the target Sunday: today's date if it's a Sunday, plus 14 days (`YYYY-MM-DD`). Weeks run Sunday to Saturday (see `src/day.ts`).
+- Look in `COURSES` in `src/golf3d/courses.ts`. If a course already has `opens` set to that Sunday, draft or not, stop. Reply "A course is already lined up for the week of <date>: <name>." and do nothing else.
+- Look at open PRs. If one already adds a course for that Sunday, stop the same way and name the PR.
+
+## 1. Pick the place
+
+- Somewhere real and recognisable that the club hasn't been: not the Scottish highlands, a volcanic island, Ohio in the fall, or the California coast. Vary it week to week (desert, links, mountains, lakes, a city, snow). Read `docs/PLAN.md` "Shipped" for what's been done.
+- Don't recreate a real, named golf course or its famous holes. Original holes, inspired by the place.
+- Reuse an existing look where it fits (`theme` in `src/golf3d/types.ts`: `highland`, `volcanic`, `links`, `desert`, `autumn`, `coastal`) and its kit (trees, rocks, walls, water). A small addition, like a new tree or a building on an existing look, is fine. A whole new look (like `src/golf3d/coastal.ts`) is a big job: only do it if you can keep it tidy, and say so in the PR.
+
+## 2. Build three holes
+
+Read two finished holes first as models: `src/golf3d/holes/thecarry.ts` and `src/golf3d/holes/creekbend.ts`. Then, for each hole, make a new file in `src/golf3d/holes/`:
+
+- a header comment in the same style: the play, the bail-out and the secret;
+- par 3 to 5, a mix across the three. Par about 11 to 12 for the course;
+- `name`, `blurb` (one plain line on how to play it), `yards`, `theme`, `tour: true`;
+- 4 `pins`, every one on dry green;
+- a `secret`: a clever route a curious player can find. Add where it starts to `SECRET_FROM` in `scripts/check-holes.ts`.
+
+Then register the course:
+- an entry in `COURSES` in `src/golf3d/courses.ts` with `id`, `opens` (the target Sunday), `draft: true`, `name`, `tagline`, `holes`, `par`, and a `playoff` (usually the last hole, with a fairway spot for the shot at the pin and a short label);
+- its name in the `COURSES` map in `api/chronicle.ts`, so Reginald can write about it;
+- the calendar check near line 380 of `scripts/check-holes.ts`, if adding the course changes what it expects. A draft course shouldn't change which course members get.
+
+## 3. Check it plays fair
+
+Run each of these and fix the holes until they pass. Paste the summary lines into the PR.
+
+- `npm run build`
+- `COURSE=<id> npm run check-holes -- quick`: every line PASS. The greens sweep putts every green from all round every pin. Never ship a course that fails it.
+- `COURSE=<id> SKILL=0.15 SEEDS=12 npm run check-holes -- member <hole id>`: the steady bot. It takes about a minute per round per hole, so run the three holes as three background commands at once (about 15 minutes) and use `SEEDS=3` while you're still tuning. The target is the course averaging about even par for regular members. Real members have beaten the bot on most holes, so aim for the bot between even and +1 per hole, and no hole under -0.5.
+- `npm run check-holes` (all courses) once at the end, so nothing else broke.
+
+Members have found cheap scoring on holes with big, soft greens and easy chip-ins (the Summit, the Lava Field and the Blowhole gave up eagles 37 to 47% of the time). Smaller, firmer greens (`greenFirm`) and `chipDrop: 0.7` help.
+
+## 4. Open the PR
+
+- Work on the branch the session gives you; otherwise use `architect/<course id>`. Merge the latest `main` in first.
+- Update `docs/PLAN.md` in the same PR: a row in "Shipped" marked "(draft)", an unchecked box under "Setup status" ("Play <course> (Admin → Preview <course> (draft)) and approve or ask for changes"), the schedule line under "Weekly play", and "Last updated".
+- Title: a plain sentence about what members get, e.g. "The Desert Mesa: three holes in the Arizona canyons, the draft for Nov 22".
+- Description, short and plain:
+  - the three holes, one line each (par, the play, the secret);
+  - the check results (quick, member averages per hole);
+  - anything you weren't sure about;
+  - "Robbie to do": open the Vercel preview for this PR, go to Admin → "Preview <course> (draft)", play it (about 10 minutes), then tell an agent "approve <course>" or what to change. Approving means a follow-up removes `draft: true`.
+- End your run with a two-line note for Robbie: the course name, the week, and the PR link. If you stopped early or a check wouldn't pass, say exactly what and why instead. Don't open a PR with failing checks.
