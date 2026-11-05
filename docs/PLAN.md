@@ -1,6 +1,15 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 5, 2026 (the Western Reserve takes Nov 8, hole 1 open for practice).
+Last updated Nov 5, 2026 (handoff notes for the next session).
+
+## Handoff (Nov 5, evening): open threads for the next session
+
+- **Western Reserve opens Sun Nov 8** (#146). Members practise Creek Bend until then. Its test switches (`windByHeight`, `calmChip` from #143) now count for real scores from Sunday. Robbie hasn't said whether to keep them on; ask if unsure.
+- **Open PRs #132, #134, #138** (wind by height and the calmer chip meter for every course). On hold: Robbie is testing them on the Western Reserve first. #132 is superseded by #134. The scheduled task that would have merged #134 and #138 at the Caldera close (`trig_015uuqQVpZMv6sq8sDGzVKMM`) is **paused**. Re-enable or delete it once Robbie decides. Don't merge without his say.
+- **Caldera storm** (#144, toned down in #145): looks and sounds only, ends by itself when the Caldera closes Sat Nov 7 at midnight ET (`tempestOn` in `src/golf3d/conditions.ts`). Nothing to do.
+- **Pacific Bluffs** is the Nov 15 draft. It needs Robbie's play-through and approval (see Setup status).
+- **Vercel was slow to pick up merges on Nov 5** (one waited about 30 minutes, another sat 11 minutes before building). After merging, confirm the production deployment for the merge SHA is READY (Vercel `list_deployments` with `sha`) before telling Robbie something is live.
+- **Offered, not built:** split the admin's unfinished-rounds stat into restarts (quit in the first ~20 s on hole 1) and real abandons. Also still open from #135: branch protection, the Anthropic spend limit, the Architect and Steward agents.
 
 ## Shipped (all live on Vercel)
 
