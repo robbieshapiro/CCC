@@ -7,7 +7,7 @@ import { band, blob, circle, rect } from '../terrain';
 import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 
-const GREEN = { x: -22, y: 420, rx: 20, ry: 22 };
+const GREEN = { x: -22, y: 420, rx: 16, ry: 17 };
 const GROUND = 2;
 const LEVEL = GROUND - 2;
 // the creek, winding right to left across the hole
@@ -41,9 +41,11 @@ const base: Hole = {
   par: 4,
   theme: 'autumn',
   tour: true,
+  chipDrop: 0.7,
+  greenFirm: 0.04,
   tee: { x: 0, y: 0 },
   cup: { x: -22, y: 424 },
-  pins: [{ x: -22, y: 424 }, { x: -14, y: 410 }, { x: -32, y: 412 }, { x: -18, y: 434 }],
+  pins: [{ x: -22, y: 424 }, { x: -12, y: 411 }, { x: -33, y: 413 }, { x: -18, y: 432 }],
   aim: 0,
   bounds: { x0: -170, y0: -40, x1: 170, y1: 500 },
   border: [

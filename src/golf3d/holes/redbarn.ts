@@ -7,7 +7,7 @@
 import { band, blob, circle, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
 
-const GREEN = { x: 404, y: 330, rx: 22, ry: 20 };
+const GREEN = { x: 404, y: 330, rx: 17, ry: 15 };
 // the barn: long side along the hole, doors in the middle of each end
 const BARN = { x0: 220, x1: 280, y0: 310, y1: 350, door: 6, eave: 14, ridge: 24 };
 const MID = (BARN.y0 + BARN.y1) / 2;
@@ -43,9 +43,13 @@ export const redbarn: Hole = {
   par: 5,
   theme: 'autumn',
   tour: true,
+  // round the corner, not over the corn: the straight line would read 383
+  yards: 520,
+  chipDrop: 0.7,
+  greenFirm: 0.05,
   tee: { x: 0, y: 0 },
   cup: { x: 408, y: 332 },
-  pins: [{ x: 408, y: 332 }, { x: 396, y: 322 }, { x: 414, y: 342 }, { x: 398, y: 340 }],
+  pins: [{ x: 408, y: 332 }, { x: 395, y: 322 }, { x: 414, y: 340 }, { x: 398, y: 339 }],
   aim: 0,
   bounds: { x0: -110, y0: -40, x1: 460, y1: 420 },
   // the corn takes a bite out of the inside corner

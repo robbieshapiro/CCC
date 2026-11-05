@@ -4,14 +4,17 @@
 // from the preview.
 import { blowhole } from './holes/blowhole';
 import { caldera } from './holes/caldera';
+import { coveredbridge } from './holes/coveredbridge';
 import { geyseralley } from './holes/geyseralley';
 import { island } from './holes/island';
 import { lavafield } from './holes/lavafield';
 import { lavalift } from './holes/lavalift';
 import { lavatube } from './holes/lavatube';
 import { lighthouse } from './holes/lighthouse';
+import { redbarn } from './holes/redbarn';
 import { ridge } from './holes/ridge';
 import { sealion } from './holes/sealion';
+import { sugarmaple } from './holes/sugarmaple';
 import { summit } from './holes/summit';
 import { thecarry } from './holes/thecarry';
 import type { Hole, V2 } from './types';
@@ -64,6 +67,17 @@ const COURSES: Course[] = [
     holes: [sealion, lighthouse, thecarry],
     par: par([sealion, lighthouse, thecarry]),
     playoff: { hole: thecarry, from: { x: -80, y: 120 }, label: 'Off the cliff top' },
+  },
+  {
+    id: 'westernreserve',
+    // northeast Ohio in the fall, the week of Nov 15. A draft until Robbie has played it: then drop `draft`.
+    opens: '2026-11-15',
+    draft: true,
+    name: 'The Western Reserve',
+    tagline: 'Three holes of Ohio in the fall. Maples, a covered bridge and a red barn.',
+    holes: [coveredbridge, sugarmaple, redbarn],
+    par: par([coveredbridge, sugarmaple, redbarn]),
+    playoff: { hole: redbarn, from: { x: 330, y: 330 }, label: 'Down the farm' },
   },
 ];
 

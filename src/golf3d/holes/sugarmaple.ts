@@ -6,7 +6,7 @@
 import { blob, circle, rect } from '../terrain';
 import type { Hole, Post } from '../types';
 
-const GREEN = { x: 6, y: 196, rx: 18, ry: 15 };
+const GREEN = { x: 6, y: 196, rx: 15, ry: 12 };
 const POND = { x: -14, y: 150, r: 32 };
 const BANK = { x: 46, y: 224, r: 30 };
 const GROUND = 2;
@@ -31,8 +31,9 @@ export const sugarmaple: Hole = {
   tour: true,
   tee: { x: 0, y: 0 },
   cup: { x: 6, y: 198 },
-  pins: [{ x: 6, y: 198 }, { x: -4, y: 190 }, { x: 14, y: 202 }, { x: 2, y: 205 }],
-  greenFirm: 0.03,
+  pins: [{ x: 6, y: 198 }, { x: -3, y: 190 }, { x: 14, y: 201 }, { x: 3, y: 204 }],
+  chipDrop: 0.7,
+  greenFirm: 0.045,
   aim: 0.02,
   bounds: { x0: -130, y0: -40, x1: 130, y1: 290 },
   border: [
