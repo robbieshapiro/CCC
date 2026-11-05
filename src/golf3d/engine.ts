@@ -80,8 +80,8 @@ const LOOKS: Record<Look, { sky: string; ground: string; hemi: number; sunColor:
   desert: { sky: '#d9ecf8', ground: '#a07a4a', hemi: 1.2, sunColor: '#ffe2b0', sun: 3.0, fog: '#efe0c4', near: 450, far: 1500, env: 1 },
   autumn: { sky: '#d3e1ee', ground: '#6b5a2e', hemi: 1.2, sunColor: '#ffd59a', sun: 2.5, fog: '#e7dcc8', near: 400, far: 1300, env: 0.9 },
   // an autumn storm: a low grey sky, flat light, and the rain closing the far woods in
-  // a volcanic tempest: a near-black sky, the lava's red glow on the low cloud, rain closing everything in
-  tempest: { sky: '#4a4f5c', ground: '#2a1a14', hemi: 0.75, sunColor: '#b7c0d6', sun: 0.45, fog: '#1d1e25', near: 90, far: 620, env: 0.35 },
+  // a volcanic storm: a heavy slate sky, a faint red glow low down, the far haze closing in (dim, but the course reads)
+  tempest: { sky: '#9298a4', ground: '#4a3a30', hemi: 1.2, sunColor: '#d3d8e2', sun: 1.2, fog: '#757a85', near: 240, far: 1000, env: 0.65 },
   storm: { sky: '#b4bcc2', ground: '#5a5236', hemi: 1.15, sunColor: '#d9dde0', sun: 1.1, fog: '#a9b0b3', near: 160, far: 820, env: 0.6 },
   // the California coast at golden hour: warm low light, a soft sea haze, and you can see a long way out
   coastal: { sky: '#d9eaf4', ground: '#7a7444', hemi: 1.4, sunColor: '#ffd6a0', sun: 3.0, fog: '#f3e2c8', near: 650, far: 2100, env: 1.15 },
@@ -479,7 +479,7 @@ export class Course3D {
     // storm: heavy grey overhead, a little paler at the horizon, no sun
     const storm = this.skyMesh(1, ['#6c7378', '#9aa2a6', '#c3c7c4']);
     // tempest: black overhead, bruised grey lower down, the volcano's red glow along the horizon
-    const tempest = this.skyMesh(1, ['#08090d', '#23252e', '#4a2620']);
+    const tempest = this.skyMesh(1, ['#474c57', '#6c717d', '#86685f']);
     this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot], autumn: [autumn, low], coastal: [coastal, evening], storm: [storm], tempest: [tempest] };
     for (const o of Object.values(this.skies).flat()) this.scene.add(o);
     this.setLook('day');
@@ -570,9 +570,9 @@ export class Course3D {
     }
     this.rainHeavy = tempest;
     if (!h.wet && !tempest) return;
-    // a tempest: twice the rain, driven in at a slant
-    const n = tempest ? 1800 : 900;
-    const slant = tempest ? 1.4 : 0.25;
+    // a tempest: light rain at a slant, there without getting in the way
+    const n = tempest ? 600 : 900;
+    const slant = tempest ? 0.6 : 0.25;
     const arr = new Float32Array(n * 6);
     for (let i = 0; i < n; i++) {
       const x = (Math.random() - 0.5) * 120;
@@ -582,12 +582,12 @@ export class Course3D {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
-    this.rain = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: tempest ? '#c6ccd8' : '#dfe7ec', transparent: true, opacity: tempest ? 0.5 : 0.45 }));
+    this.rain = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: tempest ? '#c6ccd8' : '#dfe7ec', transparent: true, opacity: tempest ? 0.2 : 0.45 }));
     this.rain.frustumCulled = false;
     this.scene.add(this.rain);
   }
 
-  // Lightning in a tempest: every 8 to 20 seconds the whole sky flashes white, once or twice, and the thunder follows a
+  // Lightning in a tempest: every 15 to 35 seconds the sky brightens in a soft flicker, and the thunder follows a
   // moment later. Only the light changes; it's for looking at.
   private nextBolt = 6;
   private bolt = -1;
@@ -595,19 +595,19 @@ export class Course3D {
     if (this.look !== 'tempest') return;
     this.nextBolt -= dt;
     if (this.nextBolt <= 0) {
-      this.nextBolt = 8 + Math.random() * 12;
+      this.nextBolt = 15 + Math.random() * 20;
       this.bolt = 0;
       window.setTimeout(() => sfx('thunder'), 300 + Math.random() * 1400);
     }
     const L = LOOKS.tempest;
     if (this.bolt < 0) return;
     this.bolt += dt;
-    // a double flash: bright, a flicker off, bright again, then gone
+    // a soft flicker: brighter, a dip, brighter again, then gone
     const t = this.bolt;
     const on = t < 0.08 || (t > 0.16 && t < 0.3);
-    this.hemi.intensity = on ? 3.6 : L.hemi;
-    this.sun.intensity = on ? 2.4 : L.sun;
-    (this.scene.fog as THREE.Fog).color.set(on ? '#5d6377' : L.fog);
+    this.hemi.intensity = on ? 2 : L.hemi;
+    this.sun.intensity = on ? 1.8 : L.sun;
+    (this.scene.fog as THREE.Fog).color.set(on ? '#8d93a0' : L.fog);
     if (t > 0.35) {
       this.bolt = -1;
       this.hemi.intensity = L.hemi;
@@ -2092,7 +2092,7 @@ export class Course3D {
       this.rain.position.set(this.camera.position.x, this.camera.position.y - 30, this.camera.position.z);
       const a = this.rain.geometry.attributes.position as THREE.BufferAttribute;
       const arr = a.array as Float32Array;
-      const fall = this.rainHeavy ? 75 : 55;
+      const fall = this.rainHeavy ? 60 : 55;
       for (let i = 0; i < arr.length; i += 6) {
         arr[i + 1] -= dt * fall;
         arr[i + 4] -= dt * fall;
