@@ -477,7 +477,7 @@ function memberTable(all: Members) {
 const PRACTICE: Record<string, string> = {
   range: 'hit the range',
   shortgame: 'worked the short game',
-  caldera: 'practised the Caldera',
+  caldera: 'practised the course preview',
 };
 
 function feed(d: AdminOverview, many: boolean) {
