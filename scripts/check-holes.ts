@@ -377,7 +377,7 @@ if (mode === 'all' || mode === 'basic') {
   ok(periodClosesAt('2026-10').toISOString() === '2026-10-30T04:00:00.000Z' && periodClosesAt('2026-10-30').toISOString() === '2026-11-08T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
   ok(periodOf('2026-10-29') === '2026-10' && periodOf('2026-10-30') === '2026-10-30' && periodOf('2026-11-07') === '2026-10-30' && periodOf('2026-11-08') === '2026-11-08' && periodOf('2026-11-14') === '2026-11-08' && periodOf('2026-11-15') === '2026-11-15', 'weeks start on Sunday from November 8');
   ok(periodClosesAt('2026-11-08').toISOString() === '2026-11-15T05:00:00.000Z', 'a week closes at midnight Eastern going into Sunday');
-  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 6 && courseFor('2026-11-08').id === (courseById('pacificbluffs')!.draft ? 'caldera' : 'pacificbluffs'), 'October is the Highlands, the Caldera challenge is all six holes, then the Pacific Bluffs once it is out of draft');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 6 && courseFor('2026-11-08').id === 'westernreserve' && courseFor('2026-11-15').id === (courseById('pacificbluffs')!.draft ? 'westernreserve' : 'pacificbluffs'), 'October is the Highlands, the Caldera challenge is all six holes, the Western Reserve from Nov 8, then the Pacific Bluffs once it is out of draft');
   // the Lava Field: a good drive carries the second flow onto the big island
   const lava = course.holes.find((h) => h.id === 'lavafield');
   if (lava)
