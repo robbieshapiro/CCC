@@ -1,48 +1,62 @@
-// Hole 1, Creek Bend (par 4, about 550 ft, 400 yd as shown): a tree-lined dogleg left through the Ohio woods in
-// October. A creek runs down the whole left side, then bends across in front of the green.
-// The play: a drive down the right-centre, short of the deep bunker, then a short iron over the creek.
-// The danger: the big oak on the corner knocks down anything that tries to cut it, and the creek takes the rest.
-// The secret: the bank behind and right of the green feeds a ball back down toward the flag.
+// Hole 1, Creek Bend (par 4, 460 yd as shown): a long dogleg left down a narrow, tree-lined fairway, in the parkland
+// style of a championship course in central Ohio. A creek runs the whole left side, then turns and crosses in front
+// of a big two-tier green.
+// The play: a drive down the right half, short of the long bunker, then a long iron over the creek to the right tier.
+// The danger: the oak on the corner, the creek on the left and in front, a pond right of the green, and a green that
+// throws a weak approach back down its front tier.
+// The secret: the bank right of the green tips a ball back onto it.
 // Scenery: a red covered bridge carries the cart path over the creek. It's for looking at; it doesn't play.
 import { band, blob, circle, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
-import { RESERVE_TURF, tree, treeLine } from './woods';
+import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
 
-const GREEN = { x: -140, y: 512, rx: 18, ry: 15 };
-const POND = { x: -88, y: 498, r: 12 };
 const GROUND = 3;
 const LEVEL = GROUND - 2.2;
-// the creek: down the left of the fairway, then bending right across the front of the green
+const GREEN = { x: -150, y: 604, rx: 24, ry: 18 };
+const POND = { x: -80, y: 618, r: 14 };
+// the creek down the left, and where it turns to cross in front of the green
 const CREEK: V2[] = [
-  { x: -96, y: -40 },
-  { x: -92, y: 80 },
-  { x: -98, y: 200 },
-  { x: -92, y: 320 },
-  { x: -72, y: 410 },
-  { x: -20, y: 452 },
-  { x: 60, y: 470 },
-  { x: 180, y: 478 },
+  { x: -70, y: -40 },
+  { x: -68, y: 160 },
+  { x: -72, y: 330 },
+  { x: -66, y: 450 },
+  { x: -58, y: 532 },
 ];
-// the covered bridge, where the cart path crosses the creek right of the green
-const BRIDGE = { x: 56, y0: 448, y1: 494, half: 5 };
+const CROSS: V2[] = [
+  { x: -260, y: 552 },
+  { x: -150, y: 547 },
+  { x: -58, y: 534 },
+  { x: 40, y: 545 },
+  { x: 96, y: 550 },
+];
+const BRIDGE = { x: 40, y0: 527, y1: 565, half: 5 };
 const DECK = GROUND + 0.4;
-const OAK = { x: -58, y: 352 };
 
-// woods on both sides, tight: past them is out of bounds
-const maples: Post[] = [
-  // two rows hard by the right edge of the fairway, crowns hanging over it
-  ...treeLine([{ x: 48, y: 30 }, { x: 50, y: 300 }, { x: 58, y: 430 }], 20, 'cb-right', 5, 2, -1, 13),
+const traps = [
+  bunker(36, 380, 18, 9, 1, 4, 0.2), // the long one right of the landing
+  bunker(-38, 318, 13, 7, 2, 4, 0.6), // inside the turn
+  bunker(-2, 474, 16, 6, 3, 4, -0.3), // across the end of the turn
+  bunker(-122, 648, 12, 6, 4, 4, 0.5), // behind the green, right
+  bunker(-188, 618, 8, 13, 5), // left of the green
+  bunker(-142, 574, 15, 5, 6, 3.6), // the front, between the creek and the green
+];
+
+const woods: Post[] = [
+  // two rows hard by the right of the fairway, crowns over its edge
+  ...treeLine([{ x: 34, y: 20 }, { x: 36, y: 330 }, { x: 62, y: 430 }, { x: 72, y: 520 }], 18, 'cb-right', 4, 2, -1, 12),
   // a broken line between the fairway and the creek
-  ...treeLine([{ x: -58, y: 70 }, { x: -60, y: 290 }], 30, 'cb-creekside', 4),
-  // and the woods beyond the creek
-  ...treeLine([{ x: -122, y: 0 }, { x: -122, y: 380 }], 22, 'cb-left', 5, 2, 1, 13),
-  ...treeLine([{ x: -204, y: 578 }, { x: -60, y: 578 }], 22, 'cb-back'),
-  ...treeLine([{ x: -202, y: 440 }, { x: -202, y: 560 }], 24, 'cb-greenleft'),
-  // two in the elbow of the dogleg, inside the oak
-  tree(-40, 300, 4, 24),
-  tree(-30, 392, 4, 24),
-  // and one standing in the right half of the landing: drive it left of the maple or over it
-  tree(16, 292, 5, 30),
+  ...treeLine([{ x: -46, y: 80 }, { x: -48, y: 290 }], 32, 'cb-creekside', 3),
+  // the woods beyond the creek
+  ...treeLine([{ x: -98, y: 0 }, { x: -100, y: 420 }], 18, 'cb-left', 5, 2, 1, 12),
+  // round the green
+  ...treeLine([{ x: -232, y: 664 }, { x: -60, y: 666 }], 18, 'cb-back', 4),
+  ...treeLine([{ x: -226, y: 470 }, { x: -228, y: 650 }], 20, 'cb-greenleft', 4),
+  // the oak on the corner
+  { x: -54, y: 392, r: 9, h: 38, soft: true, look: 'oak' },
+  tree(-30, 404, 4, 22),
+  // round the tee
+  tree(-30, -16, 4, 24),
+  tree(30, -20, 4, 24),
 ];
 
 export const creekbend: Hole = {
@@ -55,97 +69,77 @@ export const creekbend: Hole = {
   weather: 'storm',
   chipDrop: 0.7,
   greenFirm: 0.05,
-  yards: 400,
-  blurb: 'Down the right, short of the deep bunker. The oak guards the corner and the creek guards the green.',
+  yards: 460,
+  blurb: 'A long dogleg left. The oak guards the corner, the creek runs the left and crosses in front of a two-tier green.',
   tee: { x: 0, y: 0 },
-  cup: { x: -140, y: 514 },
-  pins: [{ x: -140, y: 514 }, { x: -154, y: 507 }, { x: -126, y: 517 }, { x: -142, y: 524 }],
+  cup: { x: -150, y: 612 },
+  pins: [{ x: -150, y: 612 }, { x: -166, y: 598 }, { x: -134, y: 615 }, { x: -146, y: 592 }],
   aim: -0.02,
-  bounds: { x0: -220, y0: -40, x1: 200, y1: 600 },
-  // out of bounds just past the woods on both sides
+  bounds: { x0: -255, y0: -40, x1: 100, y1: 700 },
+  // out of bounds just past the woods
   border: [
-    { x: -150, y: -36 },
-    { x: 84, y: -36 },
-    { x: 84, y: 596 },
-    { x: -214, y: 596 },
-    { x: -214, y: 420 },
-    { x: -150, y: 390 },
+    { x: -120, y: -36 },
+    { x: 92, y: -36 },
+    { x: 92, y: 690 },
+    { x: -246, y: 690 },
+    { x: -246, y: 460 },
+    { x: -120, y: 430 },
   ],
   base: 'rough',
   regions: [
-    { poly: rect(-14, -12, 14, 12), surface: 'fairway' },
-    // the drive: a corridor up the right side of the creek
-    { poly: blob(-4, 210, 36, 150, 1, 0.05), surface: 'fairway' },
-    // the turn and the landing short of the creek
-    { poly: blob(-24, 362, 38, 34, 2, 0.08), surface: 'fairway' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
+    { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
+    // a narrow fairway up the right of the creek, the turn, and a short collar on the far side of the creek
+    { poly: blob(-6, 250, 24, 150, 1, 0.05), surface: 'fairway' },
+    { poly: blob(-30, 430, 26, 26, 2, 0.08), surface: 'fairway' },
+    { poly: blob(-150, 576, 30, 8, 3, 0.08), surface: 'fairway' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 4, 0.06), surface: 'fringe' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 4, 0.06), surface: 'green' },
     // the cart path up the right, over the bridge to the green
-    { poly: band([{ x: 90, y: 20 }, { x: 92, y: 300 }, { x: BRIDGE.x, y: 430 }, { x: BRIDGE.x, y: 510 }, { x: -60, y: 546 }], 2.5), surface: 'path' },
+    { poly: band([{ x: 60, y: 20 }, { x: 62, y: 300 }, { x: 50, y: 470 }, { x: BRIDGE.x, y: 515 }, { x: BRIDGE.x, y: 578 }, { x: -60, y: 596 }], 2.5), surface: 'path' },
     { poly: rect(BRIDGE.x - BRIDGE.half, BRIDGE.y0, BRIDGE.x + BRIDGE.half, BRIDGE.y1), surface: 'wood' },
-    // the deep bunker right of the landing, and two by the green
-    { poly: blob(38, 318, 12, 9, 4, 0.12), surface: 'sand' },
-    { poly: circle(-112, 532, 7), surface: 'sand' },
-    { poly: circle(-170, 498, 6), surface: 'sand' },
-    { poly: circle(-166, 536, 6), surface: 'sand' },
-    // a fairway bunker on the inside of the turn
-    { poly: blob(-26, 250, 9, 8, 5, 0.12), surface: 'sand' },
-    // and two more in the drive's way: a carry bunker right of centre, one where the fairway turns
-    { poly: blob(14, 196, 9, 8, 6, 0.12), surface: 'sand' },
-    { poly: blob(18, 368, 8, 7, 7, 0.12), surface: 'sand' },
+    ...traps.map((t) => t.region),
   ],
-  water: [{ poly: band(CREEK, 12), level: LEVEL }, { poly: circle(POND.x, POND.y, POND.r), level: LEVEL }],
+  water: [
+    { poly: band(CREEK, 10), level: LEVEL },
+    { poly: band(CROSS, 9), level: LEVEL },
+    { poly: circle(POND.x, POND.y, POND.r), level: LEVEL },
+  ],
   terrain: [
     // the tee on a rise, falling to the creek valley
-    { kind: 'ramp', x0: -220, y0: -40, x1: 200, y1: 20, axis: 'y', h0: 11, h1: 11, op: 'set' },
-    { kind: 'ramp', x0: -220, y0: 20, x1: 200, y1: 140, axis: 'y', h0: 11, h1: GROUND + 1, op: 'set' },
-    { kind: 'ramp', x0: -220, y0: 140, x1: 200, y1: 600, axis: 'y', h0: GROUND + 1, h1: GROUND, op: 'set' },
-    // wooded hillsides beyond the trees
-    ...[0, 200, 400, 600].map((y, i) => ({ kind: 'hill' as const, x: -330, y, r: 140, h: 22 + (i % 2) * 6 })),
-    ...[0, 200, 400, 600].map((y, i) => ({ kind: 'hill' as const, x: 300, y, r: 130, h: 20 + (i % 2) * 6 })),
-    { kind: 'hill', x: -120, y: 700, r: 140, h: 20 },
-    // the creek in its cut
-    { kind: 'channel', pts: CREEK, width: 15, depth: 5 },
+    { kind: 'ramp', x0: -255, y0: -40, x1: 100, y1: 20, axis: 'y', h0: 11, h1: 11, op: 'set' },
+    { kind: 'ramp', x0: -255, y0: 20, x1: 100, y1: 150, axis: 'y', h0: 11, h1: GROUND + 1, op: 'set' },
+    { kind: 'ramp', x0: -255, y0: 150, x1: 100, y1: 700, axis: 'y', h0: GROUND + 1, h1: GROUND, op: 'set' },
+    // wooded hillsides
+    ...[0, 240, 480, 720].map((y, i) => ({ kind: 'hill' as const, x: -360, y, r: 150, h: 22 + (i % 2) * 6 })),
+    ...[0, 240, 480, 720].map((y, i) => ({ kind: 'hill' as const, x: 230, y, r: 130, h: 20 + (i % 2) * 6 })),
+    { kind: 'hill', x: -140, y: 820, r: 150, h: 20 },
+    // the creek in its cut, and the bridge
+    { kind: 'channel', pts: CREEK, width: 13, depth: 5 },
+    { kind: 'channel', pts: CROSS, width: 12, depth: 5 },
     { kind: 'embankment', pts: [{ x: BRIDGE.x, y: BRIDGE.y0 - 4 }, { x: BRIDGE.x, y: BRIDGE.y1 + 4 }], h: [DECK, DECK], width: BRIDGE.half, edge: 3 },
-    // the green, raised a step off the creek, leaning back toward it
-    // a cupcake green: up on a mound, its sides falling away just past the fringe, so a miss rolls off
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 3, h: GROUND + 3, edge: 4, op: 'set' },
-    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'y', h0: -0.5, h1: 0.5, op: 'add' },
-    // two humps in the green: read the putt
-    { kind: 'hill', x: -150, y: 520, r: 8, h: 0.5 },
-    { kind: 'hill', x: -129, y: 505, r: 7, h: 0.4 },
-    // the pond right of the green
+    // the green: a broad plateau just up off the creek, rising to the right and away, a tier across its middle
+    ...greenComplex(GREEN, GROUND, { lift: 2, edge: 9, tilt: [0.6, 0.6], tier: { axis: 'y', at: GREEN.y + 1, rise: 0.7 } }),
+    // the secret: the bank right of the green, tipping down toward it
+    { kind: 'ramp', x0: -128, y0: 594, x1: -104, y1: 632, axis: 'x', h0: 0, h1: 2.6, op: 'add' },
+    // the pond
     { kind: 'disc', x: POND.x, y: POND.y, r: POND.r + 3, h: -4, edge: 6, op: 'add' },
-    // the secret: a bank behind and right of the green that feeds back down
-    { kind: 'hill', x: -110, y: 538, r: 20, h: 2.6 },
-    // deep bunkers: steep-faced, a good way down
-    { kind: 'disc', x: 38, y: 318, r: 12, h: -4, edge: 3, op: 'add' },
-    { kind: 'disc', x: -26, y: 250, r: 9, h: -3.6, edge: 2.5, op: 'add' },
-    { kind: 'disc', x: 14, y: 196, r: 9, h: -4, edge: 2.5, op: 'add' },
-    { kind: 'disc', x: 18, y: 368, r: 8, h: -4, edge: 2.5, op: 'add' },
-    { kind: 'disc', x: -166, y: 536, r: 6, h: -3.6, edge: 2, op: 'add' },
-    { kind: 'disc', x: -112, y: 532, r: 7, h: -3.6, edge: 2.5, op: 'add' },
-    { kind: 'disc', x: -170, y: 498, r: 6, h: -3.6, edge: 2, op: 'add' },
+    ...traps.flatMap((t) => t.pieces),
   ],
   walls: [
     { a: { x: BRIDGE.x - BRIDGE.half - 1, y: BRIDGE.y0 }, b: { x: BRIDGE.x - BRIDGE.half - 1, y: BRIDGE.y1 }, h: 9, look: 'barn' },
     { a: { x: BRIDGE.x + BRIDGE.half + 1, y: BRIDGE.y0 }, b: { x: BRIDGE.x + BRIDGE.half + 1, y: BRIDGE.y1 }, h: 9, look: 'barn' },
   ],
   roofs: [{ poly: rect(BRIDGE.x - BRIDGE.half - 1, BRIDGE.y0, BRIDGE.x + BRIDGE.half + 1, BRIDGE.y1), h: 9, top: 14 }],
-  posts: [
-    // the oak on the corner: a big spread, and it stops what it catches
-    { x: OAK.x, y: OAK.y, r: 8, h: 36, soft: true, look: 'oak' },
-    ...maples,
-  ],
+  posts: woods,
   movers: [],
   pushes: [],
-  zones: [{ id: 'backbank', poly: circle(-108, 540, 14) }],
-  secret: { name: 'The Back Bank', zone: 'backbank', hint: 'Long and right is not lost. The bank behind the green feeds it back toward the flag.' },
+  zones: [{ id: 'backbank', poly: rect(-126, 598, -106, 628) }],
+  secret: { name: 'The Back Bank', zone: 'backbank', hint: 'Right of the green, the bank tips a ball back onto it. Use it.' },
   flyover: [
     { x: 0, y: -20 },
-    { x: 10, y: 220 },
-    { x: -40, y: 380 },
-    { x: -140, y: 514 },
+    { x: 0, y: 260 },
+    { x: -40, y: 440 },
+    { x: -150, y: 612 },
   ],
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
@@ -153,6 +147,6 @@ export const creekbend: Hole = {
     { kind: 'bench', x: -24, y: -12, rot: 0 },
     { kind: 'pumpkins', x: -36, y: -8 },
     { kind: 'rock', x: -80, y: 140, scale: 1.2 },
-    { kind: 'rock', x: -86, y: 430, scale: 1 },
+    { kind: 'rock', x: -76, y: 460, scale: 1 },
   ],
 };

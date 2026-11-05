@@ -238,28 +238,40 @@ export function autumnFrame(h: Hole, root: THREE.Group, floor: number) {
   }
 }
 
-// Long rough (holes with thick turf): tall tawny grass standing up all over the rough, so you can see what you're in.
+// Long rough (holes with thick turf): soft, dark green long grass all over the rough, so you can see what you're in.
 // One instanced mesh of grass tufts on a grid through the rough, inside the hole's border, a little denser near the
 // short grass where it's mown less often. One draw call.
 export function longRough(h: Hole, root: THREE.Group) {
   if (!h.turf) return;
   const rng = makeRng(`rough:${h.id}`);
-  const blade = new THREE.ConeGeometry(0.5, 2.2, 3).translate(0, 1.1, 0);
+  // a tuft: seven thin blades of grass fanning out and leaning over, so it reads as soft long grass, not spikes
+  const blades: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + rng.next() * 0.6;
+    const tall = 1.8 + rng.next() * 1.4;
+    const lean = 0.35 + rng.next() * 0.35;
+    const b = new THREE.BufferGeometry();
+    b.setAttribute('position', new THREE.Float32BufferAttribute([-0.09, 0, 0, 0.09, 0, 0, 0, tall, lean * tall], 3));
+    b.computeVertexNormals();
+    blades.push(b.rotateY(a).translate(Math.cos(a) * 0.25, 0, Math.sin(a) * 0.25));
+  }
+  const blade = mergeGeometries(blades, false);
+  blades.forEach((b) => b.dispose());
   const spots: [number, number][] = [];
   const { x0, y0, x1, y1 } = h.bounds;
-  for (let x = x0; x <= x1; x += 4.2)
-    for (let y = y0; y <= y1; y += 4.2) {
+  for (let x = x0; x <= x1; x += 3.4)
+    for (let y = y0; y <= y1; y += 3.4) {
       const p = { x: x + (rng.next() - 0.5) * 3.5, y: y + (rng.next() - 0.5) * 3.5 };
       if (surfaceAt(h, p) === 'rough' && inPoly(p, h.border) && !isWater(h, p)) spots.push([p.x, p.y]);
     }
-  const grass = new THREE.InstancedMesh(blade, new THREE.MeshStandardMaterial({ roughness: 1 }), spots.length);
+  const grass = new THREE.InstancedMesh(blade, new THREE.MeshStandardMaterial({ roughness: 1, side: THREE.DoubleSide }), spots.length);
   const m = new THREE.Matrix4();
   const c = new THREE.Color();
   spots.forEach(([x, y], i) => {
     const s = 0.8 + rng.next() * 0.7;
     m.compose(new THREE.Vector3(x, heightAt(h, x, y) - 0.1, -y), new THREE.Quaternion().setFromEuler(new THREE.Euler((rng.next() - 0.5) * 0.4, rng.next() * 6.3, (rng.next() - 0.5) * 0.4)), new THREE.Vector3(s, s * (0.8 + rng.next() * 0.6), s));
     grass.setMatrixAt(i, m);
-    grass.setColorAt(i, c.set(['#8a7d3c', '#9b8a45', '#6f7434', '#a39250'][Math.floor(rng.next() * 4)]));
+    grass.setColorAt(i, c.set(['#3f5a2a', '#4a6630', '#36502a', '#52693a', '#5a6b34'][Math.floor(rng.next() * 5)]));
   });
   grass.receiveShadow = true;
   root.add(grass);

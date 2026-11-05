@@ -79,7 +79,7 @@ const COURSES: Course[] = [
     tagline: 'Five holes through the Ohio woods in a November storm. Creeks, ledges, a lake, a flooded quarry and a river gorge.',
     holes: [creekbend, theledges, maplelake, thequarry, thegorge],
     par: par([creekbend, theledges, maplelake, thequarry, thegorge]),
-    playoff: { hole: thegorge, from: { x: -4, y: 690 }, label: 'Up from the river' },
+    playoff: { hole: thegorge, from: { x: -4, y: 720 }, label: 'Up from the river' },
   },
 ];
 
