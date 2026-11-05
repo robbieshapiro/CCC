@@ -309,7 +309,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         // how far off dead centre its line runs: a centred putt can be firmer than one that catches the edge
         const v = Math.hypot(vx, vy) || 1;
         const off = Math.min(R, Math.abs(vx * (h.cup.y - y) - vy * (h.cup.x - x)) / v);
-        const cap = h.tour ? DROP_SPEED * Math.sqrt(1 - (off / R) ** 2) : Infinity;
+        const cap = h.tour ? DROP_SPEED * (shot.club === 'putter' ? 1 : (h.chipDrop ?? 1)) * Math.sqrt(1 - (off / R) ** 2) : Infinity;
         if (Math.hypot(vx, vy) <= cap) {
           x = h.cup.x;
           y = h.cup.y;

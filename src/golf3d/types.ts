@@ -46,6 +46,7 @@ export type Hole = {
   tee: V2;
   cup: V2;
   pins?: V2[]; // where the pin can be cut; one is picked each day
+  chipDrop?: number; // tour holes: share of the usual speed a shot from off the green can drop at, so a chip must die at the hole
   greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop

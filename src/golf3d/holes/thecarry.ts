@@ -33,6 +33,7 @@ export const thecarry: Hole = {
   par: 3,
   theme: 'coastal',
   tour: true,
+  chipDrop: 0.7,
   noCart: true, // the tee is out on its own bluff: nowhere for the cart to come from
   yards: 135,
   blurb: 'Cliff top to cliff top, over the cove. Short is the sea. The cliff swings round the left if you need it.',

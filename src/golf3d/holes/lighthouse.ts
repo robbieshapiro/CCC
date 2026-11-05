@@ -7,7 +7,7 @@ import { band, blob, circle, rect } from '../terrain';
 import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 
-const GREEN = { x: 20, y: 676, rx: 19, ry: 15 };
+const GREEN = { x: 20, y: 676, rx: 16, ry: 13 };
 const LIGHT = { x: -34, y: 728 };
 // the keeper's road, down from the rise to the front of the green
 const ROAD: V2[] = [
@@ -48,13 +48,14 @@ const base: Hole = {
   par: 5,
   theme: 'coastal',
   tour: true,
+  chipDrop: 0.7,
   yards: 585,
   maxTime: 30,
   greenFirm: 0.04,
   blurb: 'Carry the barranca, then thread the pines. Sea on the left. Carry the cove with your second if you dare.',
   tee: { x: 0, y: 0 },
   cup: { x: 22, y: 678 },
-  pins: [{ x: 22, y: 678 }, { x: 10, y: 670 }, { x: 32, y: 684 }, { x: 16, y: 688 }],
+  pins: [{ x: 22, y: 678 }, { x: 10, y: 671 }, { x: 31, y: 682 }, { x: 16, y: 686 }],
   aim: 0.02,
   bounds: { x0: -150, y0: -50, x1: 220, y1: 770 },
   border: [
@@ -73,7 +74,7 @@ const base: Hole = {
     { poly: blob(110, 430, 28, 40, 2, 0.1), surface: 'fairway' },
     { poly: blob(78, 346, 9, 7, 9, 0.15), surface: 'sand' },
     // over the cove: the landing short of the green
-    { poly: blob(6, 580, 34, 34, 3, 0.1), surface: 'fairway' },
+    { poly: blob(6, 580, 22, 26, 3, 0.1), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 4, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 4, 0.06), surface: 'green' },
     { poly: band(ROAD, 3.2), surface: 'path' },
