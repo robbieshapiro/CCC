@@ -17,6 +17,7 @@ export const AUTUMN_SURFACE: Partial<Record<Surface, string>> = {
   path: '#a3845c', // a dirt farm track
   wood: '#7c5236',
   sand: '#e0cc9b',
+  rock: '#a48a63', // weathered Berea sandstone, mossy in the cracks
 };
 export const AUTUMN_FLOOR = '#64703a';
 

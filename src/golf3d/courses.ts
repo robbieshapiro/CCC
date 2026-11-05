@@ -16,6 +16,8 @@ import { ridge } from './holes/ridge';
 import { sealion } from './holes/sealion';
 import { summit } from './holes/summit';
 import { thegorge } from './holes/thegorge';
+import { theledges } from './holes/theledges';
+import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
 import type { Hole, V2 } from './types';
 
@@ -74,9 +76,9 @@ const COURSES: Course[] = [
     opens: '2026-11-15',
     draft: true,
     name: 'The Western Reserve',
-    tagline: 'Three holes through the Ohio woods in October. Creeks, a lake, a river gorge and deep bunkers.',
-    holes: [creekbend, maplelake, thegorge],
-    par: par([creekbend, maplelake, thegorge]),
+    tagline: 'Five holes through the Ohio woods in a November storm. Creeks, ledges, a lake, a flooded quarry and a river gorge.',
+    holes: [creekbend, theledges, maplelake, thequarry, thegorge],
+    par: par([creekbend, theledges, maplelake, thequarry, thegorge]),
     playoff: { hole: thegorge, from: { x: -4, y: 690 }, label: 'Up from the river' },
   },
 ];

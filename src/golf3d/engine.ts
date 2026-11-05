@@ -7,10 +7,10 @@ import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
 import { todayInGameTz } from '../day';
 import { CartGirl } from './cartgirl';
-import { conditionsFor, withPin, type Conditions } from './conditions';
+import { conditionsFor, gusted, withPin, type Conditions } from './conditions';
 import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
 import { Golfer } from './golfer';
-import { BALL_R, dropPoint, G, launch, lieFactor, simulate, TOUR_GREEN, type Result } from './physics';
+import { BALL_R, dropPoint, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Result } from './physics';
 import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
@@ -72,13 +72,15 @@ function nameTag(name: string, score: string) {
   return s;
 }
 
-type Look = 'day' | 'night' | 'links' | 'desert' | 'autumn' | 'coastal';
+type Look = 'day' | 'night' | 'links' | 'desert' | 'autumn' | 'coastal' | 'storm';
 const LOOKS: Record<Look, { sky: string; ground: string; hemi: number; sunColor: string; sun: number; fog: string; near: number; far: number; env: number }> = {
   day: { sky: '#d6e8f5', ground: '#46612f', hemi: 1.25, sunColor: '#ffeccc', sun: 2.6, fog: '#e3ebe2', near: 420, far: 1300, env: 1 },
   night: { sky: '#6f63a8', ground: '#231a33', hemi: 1.1, sunColor: '#aebcff', sun: 1.5, fog: '#24163a', near: 90, far: 620, env: 0.35 },
   links: { sky: '#c9d3d8', ground: '#7a7350', hemi: 1.45, sunColor: '#f1ede2', sun: 1.7, fog: '#cfd5d3', near: 300, far: 1150, env: 0.8 },
   desert: { sky: '#d9ecf8', ground: '#a07a4a', hemi: 1.2, sunColor: '#ffe2b0', sun: 3.0, fog: '#efe0c4', near: 450, far: 1500, env: 1 },
   autumn: { sky: '#d3e1ee', ground: '#6b5a2e', hemi: 1.2, sunColor: '#ffd59a', sun: 2.5, fog: '#e7dcc8', near: 400, far: 1300, env: 0.9 },
+  // an autumn storm: a low grey sky, flat light, and the rain closing the far woods in
+  storm: { sky: '#b4bcc2', ground: '#5a5236', hemi: 1.15, sunColor: '#d9dde0', sun: 1.1, fog: '#a9b0b3', near: 160, far: 820, env: 0.6 },
   // the California coast at golden hour: warm low light, a soft sea haze, and you can see a long way out
   coastal: { sky: '#d9eaf4', ground: '#7a7444', hemi: 1.4, sunColor: '#ffd6a0', sun: 3.0, fog: '#f3e2c8', near: 650, far: 2100, env: 1.15 },
 };
@@ -163,7 +165,7 @@ export class Course3D {
   private hemi = new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25);
   // the sky for each kind of country: day (the courses), night (the haunted mini golf), an overcast links and a hot
   // desert: sky, sun or moon, light and fog
-  private skies: Record<Look, THREE.Object3D[]> = { day: [], night: [], links: [], desert: [], autumn: [], coastal: [] };
+  private skies: Record<Look, THREE.Object3D[]> = { day: [], night: [], links: [], desert: [], autumn: [], coastal: [], storm: [] };
   private look: Look | null = null;
   private night = false;
   private world: World | null = null;
@@ -209,7 +211,8 @@ export class Course3D {
   private club: ClubId = 'driver';
   // the swing in progress: the power bar fills, then the needle comes back for the accuracy tap
   private meter = { phase: 'power' as 'power' | 'accuracy', p: 0, x: 0, speed: 0, half: 0 };
-  private wind: Conditions | null = null;
+  private wind: Conditions | null = null; // the wind for this shot
+  private dayWind: Conditions | null = null; // the day's wind on this hole (a gusting day swings either side of it)
   private spin = 0; // -1 topspin .. 1 backspin, from where you strike the ball
   private shape = 0; // -1 draw .. 1 fade
   private strokes = 0;
@@ -368,6 +371,7 @@ export class Course3D {
     const calm = { pin: hole.cup, mph: 0, toward: 0, accel: { x: 0, y: 0 } };
     // no wind on the felt: mini golf putts never leave the ground
     this.wind = this.drill ? (this.drill.wind ?? calm) : hole.putterOnly ? calm : conditionsFor(hole, todayInGameTz());
+    this.dayWind = this.wind;
     hole = withPin(hole, this.wind);
     this.hole = hole;
     this.number = number;
@@ -393,10 +397,11 @@ export class Course3D {
     this.drawTrail();
     this.placeBall();
     this.sharpen(!!hole.tour);
-    const look: Look = hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? 'autumn' : hole.theme === 'coastal' ? 'coastal' : 'day';
+    const look: Look = hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? (hole.wet ? 'storm' : 'autumn') : hole.theme === 'coastal' ? 'coastal' : 'day';
     if (this.look !== look) this.setLook(look);
     this.fitShadows();
     this.petalsFor(hole);
+    this.rainFor(hole);
     this.hud(total);
     this.miniBase = null;
     this.placeGhosts();
@@ -467,7 +472,9 @@ export class Course3D {
     glow.scale.setScalar(620);
     evening.add(glow);
     evening.position.set(1250, 230, -900);
-    this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot], autumn: [autumn, low], coastal: [coastal, evening] };
+    // storm: heavy grey overhead, a little paler at the horizon, no sun
+    const storm = this.skyMesh(1, ['#6c7378', '#9aa2a6', '#c3c7c4']);
+    this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot], autumn: [autumn, low], coastal: [coastal, evening], storm: [storm] };
     for (const o of Object.values(this.skies).flat()) this.scene.add(o);
     this.setLook('day');
   }
@@ -478,7 +485,7 @@ export class Course3D {
     this.look = look;
     this.night = look === 'night';
     for (const [k, objs] of Object.entries(this.skies)) objs.forEach((o) => (o.visible = k === look));
-    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links' || look === 'autumn' || look === 'coastal'));
+    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links' || look === 'autumn' || look === 'coastal' || look === 'storm'));
     const L = LOOKS[look];
     this.hemi.color.set(L.sky);
     this.hemi.groundColor.set(L.ground);
@@ -544,6 +551,30 @@ export class Course3D {
     geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
     this.petals = new THREE.Points(geo, new THREE.PointsMaterial({ color: blooms.length ? '#f4a7c3' : '#fff6d8', size: blooms.length ? 0.5 : 0.3, transparent: true, opacity: 0.85 }));
     this.scene.add(this.petals);
+  }
+
+  // Rain on a wet day: streaks falling in a box that travels with the camera, so it's always raining where you look
+  private rain: THREE.LineSegments | null = null;
+  private rainFor(h: Hole) {
+    if (this.rain) {
+      this.scene.remove(this.rain);
+      this.rain.geometry.dispose();
+      this.rain = null;
+    }
+    if (!h.wet) return;
+    const n = 900;
+    const arr = new Float32Array(n * 6);
+    for (let i = 0; i < n; i++) {
+      const x = (Math.random() - 0.5) * 120;
+      const y = Math.random() * 60;
+      const z = (Math.random() - 0.5) * 120;
+      arr.set([x, y, z, x + 0.25, y - 2.2, z], i * 6);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    this.rain = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: '#dfe7ec', transparent: true, opacity: 0.45 }));
+    this.rain.frustumCulled = false;
+    this.scene.add(this.rain);
   }
 
   private resize() {
@@ -1032,6 +1063,12 @@ export class Course3D {
     if (practice) practice.hidden = !!this.drill || !(this.number === 1 && this.strokes === 0);
     this.mode = 'aim';
     this.power = 0;
+    // a gusting day: the wind picks up or drops off between shots, and the flag shows it
+    if (this.dayWind?.gust) {
+      this.wind = gusted(this.dayWind, Math.random());
+      const speed = this.overlay.querySelector('[data-wind-speed]');
+      if (speed) speed.textContent = `${this.wind.mph} mph`;
+    }
     // after the tee shot, every shot starts lined up on the pin
     if (this.strokes > 0) this.aim = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
     const { allowed, want, d } = this.lie();
@@ -1243,6 +1280,8 @@ export class Course3D {
 
   private hit(club: ClubId, power: number, error: number) {
     const full = club !== 'putter';
+    // out of thick rough it can come off the face anywhere
+    error += lieScatter(this.hole, this.pos, club, Math.random());
     const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind?.accel };
     const r = simulate(this.hole, this.pos, shot);
     // every shot starts from a stock strike
@@ -2000,6 +2039,20 @@ export class Course3D {
       (b.getObjectByName('l') as THREE.Object3D).rotation.z = flap;
       (b.getObjectByName('r') as THREE.Object3D).rotation.z = -flap;
     });
+    if (this.rain) {
+      this.rain.position.set(this.camera.position.x, this.camera.position.y - 30, this.camera.position.z);
+      const a = this.rain.geometry.attributes.position as THREE.BufferAttribute;
+      const arr = a.array as Float32Array;
+      for (let i = 0; i < arr.length; i += 6) {
+        arr[i + 1] -= dt * 55;
+        arr[i + 4] -= dt * 55;
+        if (arr[i + 4] < 0) {
+          arr[i + 1] += 60;
+          arr[i + 4] += 60;
+        }
+      }
+      a.needsUpdate = true;
+    }
     if (this.petals) {
       const a = this.petals.geometry.attributes.position as THREE.BufferAttribute;
       const arr = a.array as Float32Array;

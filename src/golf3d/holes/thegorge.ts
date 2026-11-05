@@ -6,7 +6,7 @@
 import { band, blob, circle, rect } from '../terrain';
 import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
-import { treeLine } from './woods';
+import { RESERVE_TURF, tree, treeLine } from './woods';
 
 const GREEN = { x: -20, y: 716, rx: 18, ry: 15 };
 const POND = { x: -62, y: 392, r: 14 };
@@ -29,13 +29,15 @@ const RIVER: V2[] = [
 // (the woods down both sides are added once the hole is lengthened, below)
 const maples: Post[] = [
   // the chute: closing in for the second shot
-  { x: -40, y: 500, r: 4.5, h: 28, e: 0.2, look: 'maple' },
-  { x: -34, y: 560, r: 4.5, h: 28, e: 0.2, look: 'maple' },
-  { x: 42, y: 520, r: 4.5, h: 28, e: 0.2, look: 'maple' },
-  { x: 36, y: 580, r: 4.5, h: 28, e: 0.2, look: 'maple' },
+  tree(-40, 500, 4.5, 28),
+  tree(-34, 560, 4.5, 28),
+  tree(42, 520, 4.5, 28),
+  tree(36, 580, 4.5, 28),
+  // one in the middle of the second-shot fairway: pick a side
+  tree(4, 545, 5, 30),
   // round the tee
-  { x: -40, y: -16, r: 4, h: 24, e: 0.25, look: 'maple' },
-  { x: 44, y: -20, r: 4, h: 24, e: 0.25, look: 'maple' },
+  tree(-40, -16, 4, 24),
+  tree(44, -20, 4, 24),
 ];
 
 const base: Hole = {
@@ -44,6 +46,8 @@ const base: Hole = {
   par: 5,
   theme: 'autumn',
   tour: true,
+  turf: RESERVE_TURF,
+  weather: 'storm',
   chipDrop: 0.7,
   greenFirm: 0.06,
   yards: 620,

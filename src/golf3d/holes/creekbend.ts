@@ -6,7 +6,7 @@
 // Scenery: a red covered bridge carries the cart path over the creek. It's for looking at; it doesn't play.
 import { band, blob, circle, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
-import { treeLine } from './woods';
+import { RESERVE_TURF, tree, treeLine } from './woods';
 
 const GREEN = { x: -140, y: 512, rx: 18, ry: 15 };
 const POND = { x: -88, y: 498, r: 12 };
@@ -35,8 +35,10 @@ const maples: Post[] = [
   ...treeLine([{ x: -204, y: 578 }, { x: -60, y: 578 }], 22, 'cb-back'),
   ...treeLine([{ x: -202, y: 440 }, { x: -202, y: 560 }], 24, 'cb-greenleft'),
   // two in the elbow of the dogleg, inside the oak
-  { x: -40, y: 300, r: 4, h: 24, e: 0.25, look: 'maple' },
-  { x: -30, y: 392, r: 4, h: 24, e: 0.25, look: 'maple' },
+  tree(-40, 300, 4, 24),
+  tree(-30, 392, 4, 24),
+  // and one standing in the right half of the landing: drive it left of the maple or over it
+  tree(16, 292, 5, 30),
 ];
 
 export const creekbend: Hole = {
@@ -45,6 +47,8 @@ export const creekbend: Hole = {
   par: 4,
   theme: 'autumn',
   tour: true,
+  turf: RESERVE_TURF,
+  weather: 'storm',
   chipDrop: 0.7,
   greenFirm: 0.05,
   yards: 400,
@@ -120,7 +124,7 @@ export const creekbend: Hole = {
   roofs: [{ poly: rect(BRIDGE.x - BRIDGE.half - 1, BRIDGE.y0, BRIDGE.x + BRIDGE.half + 1, BRIDGE.y1), h: 9, top: 14 }],
   posts: [
     // the oak on the corner: a big spread, and it stops what it catches
-    { x: OAK.x, y: OAK.y, r: 7, h: 34, e: 0.2, look: 'oak' },
+    { x: OAK.x, y: OAK.y, r: 8, h: 36, soft: true, look: 'oak' },
     ...maples,
   ],
   movers: [],
