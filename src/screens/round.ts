@@ -163,6 +163,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     const sum = (firstToday ? BONUS.round : 0) + [...kinds.values()].reduce((a, x) => a + x.v, 0);
     return sum ? `<p class="purse-line bonus-line"><b>+${money(sum)}</b><span>Club bonus · ${parts.join(' · ')}</span></p>` : '';
   })();
+  // a counted round ends on Reginald's one question; the answer goes in with the rest of the feedback
+  const asking = !opts.practice && !preview && posted;
   const sheet = document.createElement('div');
   sheet.className = 'summary';
   sheet.innerHTML = `
@@ -185,7 +187,16 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       ${bonusLine}
       <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
       <div class="summary-actions"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the club</button></div>
-      <button class="link" data-feedback>Leave feedback</button>
+      ${
+        asking
+          ? `<form class="reg-ask" id="reg-ask">
+        <label for="reg-ask-body"><b>Reginald</b> How did that one play? What would you change?</label>
+        <textarea id="reg-ask-body" maxlength="2000" rows="3" required placeholder="Say what you like."></textarea>
+        <p class="error" id="reg-ask-err" role="alert"></p>
+        <button class="btn" type="submit">Send</button>
+      </form>`
+          : '<button class="link" data-feedback>Leave feedback</button>'
+      }
     </div>`;
   el.appendChild(sheet);
   // where this leaves you on the board, and what the purse would pay you if the week ended now
@@ -227,7 +238,23 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     });
   }
   sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => round(await refresh(), opts);
-  sheet.querySelector<HTMLButtonElement>('[data-feedback]')!.onclick = () => openFeedback(`After a ${total} (${toParLabel(toPar)}) on ${course.name}`, el);
+  const context = `After a ${total} (${toParLabel(toPar)}) on ${course.name}`;
+  const fb = sheet.querySelector<HTMLButtonElement>('[data-feedback]');
+  if (fb) fb.onclick = () => openFeedback(context, el);
+  const ask = sheet.querySelector<HTMLFormElement>('#reg-ask');
+  if (ask)
+    ask.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = ask.querySelector('button')!;
+      btn.disabled = true;
+      try {
+        await api.submitFeedback(requireSession(), sheet.querySelector<HTMLTextAreaElement>('#reg-ask-body')!.value, `Reginald asked. ${context}`);
+        ask.innerHTML = '<p class="reg-ask-done">Noted, with thanks. I shall see the Committee reads it.</p>';
+      } catch (err) {
+        sheet.querySelector('#reg-ask-err')!.textContent = (err as Error).message;
+        btn.disabled = false;
+      }
+    };
   sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {
     closeRound();
     navigate('#/');
