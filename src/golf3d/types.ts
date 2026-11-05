@@ -55,7 +55,8 @@ export type Hole = {
   // out of it. roughScatter: how far a shot from it can come off the face, either way (as swing error). fairwayRoll:
   // fairway friction against the usual tour fairway's (under 1 runs further). sandLie: share of the distance a wedge
   // gets out of a bunker (an iron gets less still); sandScatter: how far off the face a bunker shot can come.
-  turf?: { roughKeep: number; roughDrag: number; roughLie: number; roughScatter: number; fairwayRoll: number; sandLie: number; sandScatter: number };
+  // greenRoll: green friction against the usual tour green's (under 1 is quicker).
+  turf?: { roughKeep: number; roughDrag: number; roughLie: number; roughScatter: number; fairwayRoll: number; greenRoll?: number; sandLie: number; sandScatter: number };
   weather?: 'storm'; // autumn storms: a stronger, gusting wind, and rain on some days (see conditions.ts)
   wet?: boolean; // raining today: greens and fairways run a little slower
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer

@@ -181,7 +181,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
   const wet = h.wet ? 1.15 : 1;
   const friction = (s: Surface) =>
     s === 'green'
-      ? greenF * (h.wet ? 1.08 : 1)
+      ? greenF * (h.turf?.greenRoll ?? 1) * (h.wet ? 1.08 : 1)
       : s === 'fairway' && h.tour
         ? TOUR_FAIRWAY * (h.turf?.fairwayRoll ?? 1) * wet
         : s === 'rough' && h.turf

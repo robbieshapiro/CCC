@@ -203,11 +203,11 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   thecarry: { from: { x: 0, y: 0 }, clubs: ['iron', 'wedge'], angles: [-12, 0] },
   lighthouse: { from: { x: 96, y: 632 }, clubs: ['putter'], angles: [-14, -4] },
   // the Western Reserve: off the bank behind the green, round the ridge, the kick off the left bank
-  creekbend: { from: { x: -24, y: 370 }, clubs: ['wedge', 'iron'], angles: [-40, -12] },
-  maplelake: { from: { x: 0, y: -72 }, clubs: ['wood', 'driver'], angles: [-10, 4] },
-  theledges: { from: { x: 40, y: 450 }, clubs: ['wedge', 'iron'], angles: [10, 40] },
-  thequarry: { from: { x: 20, y: 380 }, clubs: ['wedge', 'iron'], angles: [-25, 10] },
-  thegorge: { from: { x: -4, y: 690 }, clubs: ['wedge', 'iron'], angles: [-35, -5] },
+  creekbend: { from: { x: -30, y: 440 }, clubs: ['wedge', 'iron'], angles: [-36, -12] },
+  maplelake: { from: { x: 0, y: -88 }, clubs: ['wood', 'driver'], angles: [-14, 0] },
+  theledges: { from: { x: 40, y: 520 }, clubs: ['wedge', 'iron'], angles: [2, 26] },
+  thequarry: { from: { x: 110, y: 604 }, clubs: ['wedge', 'chip'], angles: [-32, 0] },
+  thegorge: { from: { x: -4, y: 720 }, clubs: ['wedge', 'iron'], angles: [-40, -5] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.

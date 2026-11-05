@@ -1,27 +1,55 @@
-// Hole 4, The Quarry (par 4, about 520 ft, 380 yd as shown): an old sandstone quarry, long since flooded. From a tee on
-// the rim, carry the drowned pit to a fairway on the far side, then play up to a green on a shelf above the water.
-// The play: a drive that clears the quarry and holds the fairway, which has water down its left. Then a short iron
-// up to the shelf.
-// The danger: the quarry runs on up the left of the hole and under the green, the woods close in on the right, and a
-// maple stands in the middle of the landing.
-// The secret: the spillway bank right of the green. Run it down that bank and it feeds onto the green.
-import { blob, circle, rect } from '../terrain';
-import type { Hole, Post } from '../types';
-import { RESERVE_TURF, tree, treeLine } from './woods';
+// Hole 4, The Quarry (par 4, 475 yd as shown): a Cape hole over an old flooded sandstone quarry. The drowned pit runs
+// diagonally across the drive, from short on the left to long on the right; the fairway runs along its far side.
+// The play: bite off as much of the quarry as you dare. Carry it on the right and you have a long iron in; play safe
+// to the left and it's a wood. Either way the second has to carry the quarry's other arm, which crosses in front of
+// a green on a shelf above the water.
+// The danger: the quarry twice, a narrow fairway with bunkers along its far edge and the woods behind them, and a
+// two-tier green that falls toward the water.
+// The secret: the spillway bank behind the green on the left. Run it down that and it feeds onto the green.
+import { band, blob, rect } from '../terrain';
+import type { Hole, Post, V2 } from '../types';
+import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
 
-const GREEN = { x: -24, y: 500, rx: 16, ry: 13 };
 const GROUND = 6;
 // the water in the pit sits well below the rim
 const LEVEL = GROUND - 7;
+const GREEN = { x: 120, y: 640, rx: 24, ry: 18 };
+// the quarry: the diagonal pit across the drive, and its arm across the front of the green
+const PIT: V2[] = [
+  { x: -190, y: 92 },
+  { x: -40, y: 197 },
+  { x: 110, y: 302 },
+  { x: 200, y: 365 },
+];
+const ARM: V2[] = [
+  { x: -60, y: 574 },
+  { x: 60, y: 572 },
+  { x: 200, y: 580 },
+];
+// the fairway runs along the far side of the pit, at the same angle
+const TURN = Math.atan2(210, 300);
+const rblob = (x: number, y: number, rx: number, ry: number, seed: number): V2[] => {
+  const c = Math.cos(TURN);
+  const s = Math.sin(TURN);
+  return blob(0, 0, rx, ry, seed, 0.06).map((p) => ({ x: x + p.x * c - p.y * s, y: y + p.x * s + p.y * c }));
+};
+
+const traps = [
+  bunker(-30, 348, 18, 6, 1, 4, TURN), // along the far edge of the fairway, left
+  bunker(58, 410, 14, 6, 2, 4, TURN), // along the far edge, right
+  bunker(70, 360, 9, 5, 3, 3.6, TURN), // on the water side, where the carry is longest
+  bunker(126, 678, 16, 6, 4), // behind the green
+  bunker(158, 636, 7, 13, 5), // right of the green
+  bunker(88, 612, 9, 6, 6, 3.6), // front left, above the water
+];
 
 const woods: Post[] = [
-  // two rows hard by the right of the fairway
-  ...treeLine([{ x: 80, y: 230 }, { x: 80, y: 570 }], 20, 'quarry-right', 5, 2, -1, 11),
-  ...treeLine([{ x: -100, y: 560 }, { x: 80, y: 568 }], 22, 'quarry-back', 4),
-  // the far side of the quarry arm, beyond the water on the left
-  ...treeLine([{ x: -150, y: 220 }, { x: -150, y: 560 }], 26, 'quarry-left'),
-  // one standing in the landing
-  tree(30, 330, 5, 30),
+  // two rows along the far side of the fairway, crowns over the bunkers
+  ...treeLine([{ x: -150, y: 300 }, { x: 70, y: 452 }], 18, 'quarry-far', 4, 2, 1, 12),
+  // the woods down both sides and behind the green
+  ...treeLine([{ x: 160, y: 380 }, { x: 160, y: 700 }], 18, 'quarry-right', 4, 2, -1, 11),
+  ...treeLine([{ x: -150, y: 330 }, { x: -150, y: 700 }], 20, 'quarry-left', 4),
+  ...treeLine([{ x: -140, y: 704 }, { x: 170, y: 708 }], 18, 'quarry-back', 4),
   // the rim round the tee
   tree(-40, -16, 4, 24),
   tree(44, -20, 4, 24),
@@ -37,90 +65,72 @@ export const thequarry: Hole = {
   weather: 'storm',
   chipDrop: 0.7,
   greenFirm: 0.05,
-  yards: 380,
-  blurb: 'Carry the flooded quarry, hold the fairway with water down its left, then up to a green on the shelf.',
+  yards: 475,
+  blurb: 'Bite off as much of the quarry as you dare. Then carry its other arm to a green on a shelf above the water.',
   tee: { x: 0, y: 0 },
-  cup: { x: -24, y: 502 },
-  pins: [{ x: -24, y: 502 }, { x: -36, y: 495 }, { x: -15, y: 505 }, { x: -28, y: 510 }],
-  aim: 0.03,
-  bounds: { x0: -170, y0: -40, x1: 120, y1: 600 },
-  // out of bounds past the woods on the right and behind; on the left, the quarry
+  cup: { x: 128, y: 646 },
+  pins: [{ x: 128, y: 646 }, { x: 104, y: 634 }, { x: 134, y: 632 }, { x: 112, y: 652 }],
+  aim: 0.22,
+  bounds: { x0: -175, y0: -40, x1: 190, y1: 730 },
+  // out of bounds just past the woods
   border: [
     { x: -166, y: -36 },
-    { x: 106, y: -36 },
-    { x: 106, y: 596 },
-    { x: -166, y: 596 },
+    { x: 180, y: -36 },
+    { x: 180, y: 722 },
+    { x: -166, y: 722 },
   ],
   base: 'rough',
   regions: [
     { poly: rect(-14, -12, 14, 12), surface: 'fairway' },
-    // the far side of the pit: a fairway with the water down its left
-    { poly: blob(26, 350, 46, 86, 1, 0.06), surface: 'fairway' },
-    { poly: blob(-4, 448, 34, 26, 2, 0.08), surface: 'fairway' },
+    // the narrow fairway along the far side of the pit
+    { poly: rblob(-12, 332, 132, 22, 1), surface: 'fairway' },
+    // a short collar above the arm, in front of the green
+    { poly: blob(110, 604, 34, 8, 2, 0.08), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
-    // the quarry's sandstone faces
-    { poly: rect(-160, 58, 116, 66), surface: 'rock' },
-    { poly: rect(-160, 226, -60, 234), surface: 'rock' },
-    // deep bunkers: front right of the green, behind it, and where the fairway narrows
-    { poly: circle(2, 482, 6), surface: 'sand' },
-    { poly: circle(-18, 524, 6), surface: 'sand' },
-    { poly: blob(64, 420, 9, 8, 4, 0.12), surface: 'sand' },
-    // two more in the landing, either side of the maple
-    { poly: blob(-6, 304, 8, 7, 6, 0.12), surface: 'sand' },
-    { poly: blob(56, 296, 8, 7, 7, 0.12), surface: 'sand' },
+    // the quarry's sandstone faces, down to the water
+    { poly: band(PIT, 44), surface: 'rock' },
+    { poly: band(ARM, 22), surface: 'rock' },
+    ...traps.map((t) => t.region),
   ],
   water: [
-    // the drowned pit across the front, and its arm up the left of the hole and round under the green
-    { poly: rect(-156, 74, 112, 218), level: LEVEL },
-    { poly: rect(-146, 218, -64, 470), level: LEVEL },
-    { poly: blob(-90, 500, 34, 46, 5, 0.08), level: LEVEL },
+    { poly: band(PIT, 34), level: LEVEL },
+    { poly: band(ARM, 15), level: LEVEL },
   ],
   terrain: [
-    // the rim, level all round
-    { kind: 'ramp', x0: -170, y0: -40, x1: 120, y1: 600, axis: 'y', h0: GROUND, h1: GROUND + 1, op: 'set' },
-    // the tee up a little higher on the rim
+    // the rim, level all round, and the tee a little higher on it
+    { kind: 'ramp', x0: -175, y0: -40, x1: 190, y1: 730, axis: 'y', h0: GROUND, h1: GROUND + 1, op: 'set' },
     { kind: 'disc', x: 0, y: 0, r: 24, h: GROUND + 4, edge: 14, op: 'set' },
     // wooded hills all round
-    ...[0, 240, 480].map((y, i) => ({ kind: 'hill' as const, x: -300, y, r: 140, h: 22 + (i % 2) * 6 })),
-    ...[0, 240, 480].map((y, i) => ({ kind: 'hill' as const, x: 260, y, r: 130, h: 22 + (i % 2) * 6 })),
-    // the pit: sheer sandstone walls down to the water
-    { kind: 'box', x0: -160, y0: 66, x1: 116, y1: 226, h: GROUND - 12, edge: 4, op: 'set' },
-    { kind: 'box', x0: -150, y0: 214, x1: -60, y1: 474, h: GROUND - 12, edge: 4, op: 'set' },
-    { kind: 'disc', x: -90, y: 500, r: 46, h: GROUND - 12, edge: 6, op: 'set' },
-    // the green on a shelf, up above the water, leaning back toward it
-    // a cupcake green on the shelf: up on a mound, falling away on every side, and to the water on the left
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 3, h: GROUND + 4.5, edge: 4, op: 'set' },
-    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'x', h0: -0.5, h1: 0.5, op: 'add' },
-    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'y', h0: -0.3, h1: 0.3, op: 'add' },
-    { kind: 'hill', x: -30, y: 494, r: 7, h: 0.45 },
-    // the secret: the spillway bank right of the green, running down onto it
-    { kind: 'ramp', x0: 4, y0: 492, x1: 40, y1: 520, axis: 'x', h0: 0, h1: 3, op: 'add' },
-    // deep bunkers
-    { kind: 'disc', x: 2, y: 482, r: 6, h: -3.8, edge: 2, op: 'add' },
-    { kind: 'disc', x: -18, y: 524, r: 6, h: -3.8, edge: 2, op: 'add' },
-    { kind: 'disc', x: 64, y: 420, r: 9, h: -4, edge: 2.5, op: 'add' },
-    { kind: 'disc', x: -6, y: 304, r: 8, h: -4, edge: 2.5, op: 'add' },
-    { kind: 'disc', x: 56, y: 296, r: 8, h: -4, edge: 2.5, op: 'add' },
+    ...[0, 260, 520].map((y, i) => ({ kind: 'hill' as const, x: -310, y, r: 140, h: 22 + (i % 2) * 6 })),
+    ...[0, 260, 520].map((y, i) => ({ kind: 'hill' as const, x: 330, y, r: 140, h: 22 + (i % 2) * 6 })),
+    // the pit and the arm: sheer sandstone walls down to the water
+    { kind: 'channel', pts: PIT, width: 46, depth: 12 },
+    { kind: 'channel', pts: ARM, width: 24, depth: 11 },
+    // the green on its shelf: falling from right to left and toward the water, the right side a tier up
+    ...greenComplex(GREEN, GROUND, { lift: 3, edge: 8, tilt: [0.7, 0.6], tier: { axis: 'x', at: GREEN.x + 4, rise: 0.6 } }),
+    // the secret: the spillway bank behind the green on the left, running down onto it
+    { kind: 'ramp', x0: 78, y0: 650, x1: 104, y1: 692, axis: 'x', h0: 2.6, h1: 0, op: 'add' },
+    ...traps.flatMap((t) => t.pieces),
   ],
   walls: [],
   posts: woods,
   movers: [],
   pushes: [],
-  zones: [{ id: 'spillway', poly: rect(10, 494, 36, 518) }],
-  secret: { name: 'The Spillway', zone: 'spillway', hint: 'The bank right of the green feeds down onto it. Run it in off the spillway.' },
+  zones: [{ id: 'spillway', poly: rect(82, 654, 102, 688) }],
+  secret: { name: 'The Spillway', zone: 'spillway', hint: 'Behind the green on the left, the bank feeds down onto it. Run it in off the spillway.' },
   flyover: [
     { x: 0, y: -20 },
-    { x: -20, y: 150 },
-    { x: 20, y: 360 },
-    { x: -24, y: 502 },
+    { x: -20, y: 200 },
+    { x: 40, y: 380 },
+    { x: 128, y: 646 },
   ],
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: -22, y: -10, rot: 0 },
     { kind: 'bench', x: 22, y: -14, rot: 0 },
-    { kind: 'rock', x: -40, y: 236, scale: 2.2 },
-    { kind: 'rock', x: 80, y: 240, scale: 1.8 },
-    { kind: 'rock', x: -60, y: 470, scale: 1.6 },
+    { kind: 'rock', x: -60, y: 150, scale: 2.2 },
+    { kind: 'rock', x: 140, y: 290, scale: 1.8 },
+    { kind: 'rock', x: 20, y: 560, scale: 1.6 },
   ],
 };
