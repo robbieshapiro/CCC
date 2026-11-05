@@ -20,6 +20,9 @@ const DT = 1 / 240;
 const MAX_T = 24;
 const CURB_H = 0.9;
 const ROLL = 5 / 7; // a rolling ball feels 5/7 of the slope's pull
+// a soft tree (see Post.soft): its trunk is solid this high and this wide; above it is the crown
+const TRUNK_H = 5;
+const TRUNK_R = 1.1;
 // (rock is broken and jagged: a ball that lands on it hops about, then soon dies)
 const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40, rock: 16, cinder: 4.5 };
 // how much of a landing ball's speed each surface lets it keep
@@ -71,7 +74,28 @@ function entryDrop(h: Hole, frames: Frame[], from: V2): V2 | null {
 
 // An iron out of a bunker is possible, but the sand takes a fifth of the distance.
 export function lieFactor(h: Hole, from: V2, club: Shot['club']) {
-  return club === 'iron' && surfaceAt(h, from) === 'sand' ? 0.8 : 1;
+  const s = surfaceAt(h, from);
+  // heavy, wet bunker sand: everything comes out short, and an iron shorter still
+  if (h.turf && s === 'sand') return club === 'iron' ? h.turf.sandLie * 0.75 : h.turf.sandLie;
+  if (club === 'iron' && s === 'sand') return 0.8;
+  // thick rough smothers a full club; a chip or a putt is played the same
+  if (h.turf && s === 'rough' && club !== 'chip' && club !== 'putter') return h.turf.roughLie;
+  return 1;
+}
+
+// Out of thick rough a shot can come off the face anywhere: r is a random number in [0, 1), and this is the extra swing
+// error it adds (the game draws r per shot; the checks draw it from their seed).
+export function lieScatter(h: Hole, from: V2, club: Shot['club'], r: number) {
+  if (!h.turf || club === 'putter') return 0;
+  const s = surfaceAt(h, from);
+  if (s === 'sand') return (r * 2 - 1) * h.turf.sandScatter;
+  return s === 'rough' ? (r * 2 - 1) * h.turf.roughScatter : 0;
+}
+
+// A tree crown: the same spot of the same tree always does the same thing to a ball, so the game and its checks agree
+function leafy(x: number, y: number, i: number) {
+  const n = Math.sin(x * 12.9898 + y * 78.233 + i * 37.719) * 43758.5453;
+  return n - Math.floor(n);
 }
 
 export function curbs(h: Hole): Wall[] {
@@ -154,7 +178,17 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
   const R = cupR(h);
   const greenF = h.tour ? TOUR_GREEN : FRICTION.green;
   // tour fairways are firm and fast: a ball that lands on one runs out
-  const friction = (s: Surface) => (s === 'green' ? greenF : s === 'fairway' && h.tour ? TOUR_FAIRWAY : FRICTION[s]);
+  const wet = h.wet ? 1.15 : 1;
+  const friction = (s: Surface) =>
+    s === 'green'
+      ? greenF * (h.wet ? 1.08 : 1)
+      : s === 'fairway' && h.tour
+        ? TOUR_FAIRWAY * (h.turf?.fairwayRoll ?? 1) * wet
+        : s === 'rough' && h.turf
+          ? FRICTION.rough * h.turf.roughDrag
+          : FRICTION[s];
+  const landing = (s: Surface) => (s === 'rough' && h.turf ? h.turf.roughKeep : LANDING[s]);
+  const inCrown = new Set<number>(); // tree crowns the ball is passing through
   let lipped = false; // it has just caught the cup and spun out; it can't drop again on the same pass
   const vented = new Map<string, number>();
 
@@ -230,7 +264,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         // a firm green lets a plain shot skip on; backspin is what holds it
         const firm = surf === 'green' ? (h.greenFirm ?? 0) : 0;
         const bite = club.keep + (1 - club.keep) * (1 - hard) + club.release * Math.max(0, -spin) + firm;
-        const keep = (flying ? Math.min(1, bite) : 1 - Math.min(0.4, -vzRel * 0.02)) * LANDING[surf];
+        const keep = (flying ? Math.min(1, bite) : 1 - Math.min(0.4, -vzRel * 0.02)) * landing(surf);
         vx *= keep;
         vy *= keep;
         // backspin grabs on the first landing: it checks up, or zips back if there's enough of it
@@ -391,6 +425,44 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       const dx = x - p.x;
       const dy = y - p.y;
       const d = Math.hypot(dx, dy);
+      if (p.soft) {
+        const up = z - heightAt(h, p.x, p.y);
+        // the crown: through it, slowed and knocked off line, or now and then caught and dropped
+        if (up > TRUNK_H && up < p.h && d < p.r) {
+          if (!inCrown.has(i)) {
+            inCrown.add(i);
+            const k = leafy(x, y, i);
+            sound(`p${i}`, 'post');
+            flying = false;
+            if (k < 0.22) {
+              vx *= 0.08;
+              vy *= 0.08;
+              vz = Math.min(vz, 0) * 0.3;
+            } else {
+              const turn = (leafy(y, x, i) - 0.5) * 0.7;
+              const c = Math.cos(turn);
+              const s2 = Math.sin(turn);
+              [vx, vy] = [(vx * c - vy * s2) * 0.62, (vx * s2 + vy * c) * 0.62];
+              vz *= 0.7;
+            }
+          }
+          continue;
+        }
+        if (d >= p.r || up >= p.h) inCrown.delete(i);
+        // below the crown, only the trunk is in the way
+        if (up > TRUNK_H || d >= BALL_R + TRUNK_R || d <= 1e-6) continue;
+        const nx = dx / d;
+        const ny = dy / d;
+        x = p.x + nx * (BALL_R + TRUNK_R);
+        y = p.y + ny * (BALL_R + TRUNK_R);
+        const vn = vx * nx + vy * ny;
+        if (vn < 0) {
+          vx -= 1.4 * vn * nx;
+          vy -= 1.4 * vn * ny;
+          sound(`p${i}`, 'post');
+        }
+        continue;
+      }
       if (d < BALL_R + p.r && d > 1e-6 && z - heightAt(h, p.x, p.y) < p.h) {
         const nx = dx / d;
         const ny = dy / d;

@@ -3,8 +3,8 @@
 import { bagFor, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor } from '../src/golf3d/courses';
 import { periodClosesAt, periodOf } from '../src/day';
-import { conditionsFor, withPin } from '../src/golf3d/conditions';
-import { CUP_R, cupR, curbs, DROP_SPEED, dropPoint, simulate } from '../src/golf3d/physics';
+import { conditionsFor, gusted, withPin } from '../src/golf3d/conditions';
+import { CUP_R, cupR, curbs, DROP_SPEED, dropPoint, lieScatter, simulate } from '../src/golf3d/physics';
 import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type MeterStyle } from '../src/golf3d/swing';
 import { bake, gradAt, heightAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
@@ -204,7 +204,9 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   lighthouse: { from: { x: 96, y: 632 }, clubs: ['putter'], angles: [-14, -4] },
   // the Western Reserve: off the bank behind the green, round the ridge, the kick off the left bank
   creekbend: { from: { x: -24, y: 370 }, clubs: ['wedge', 'iron'], angles: [-40, -12] },
-  maplelake: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-12, 4] },
+  maplelake: { from: { x: 0, y: -72 }, clubs: ['wood', 'driver'], angles: [-10, 4] },
+  theledges: { from: { x: 40, y: 450 }, clubs: ['wedge', 'iron'], angles: [10, 40] },
+  thequarry: { from: { x: 20, y: 380 }, clubs: ['wedge', 'iron'], angles: [-25, 10] },
   thegorge: { from: { x: -4, y: 690 }, clubs: ['wedge', 'iron'], angles: [-35, -5] },
 };
 
@@ -274,11 +276,15 @@ function novice(base: Hole, seed: string) {
     s++;
     const clock = rng.next() * 30;
     const b = safeShot(h, pos, nav, clock);
+    const sw = swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic');
+    // storm courses gust from shot to shot, and thick rough scatters a shot (only drawn where they apply, so other
+    // courses' runs are unchanged)
     const shot = {
       ...b.shot,
       angle: b.shot.angle + (gauss() * 3.5 * Math.PI) / 180,
-      ...swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic'),
-      wind: today.accel,
+      ...sw,
+      error: sw.error + (h.turf ? lieScatter(h, pos, b.shot.club, rng.next()) : 0),
+      wind: today.gust ? gusted(today, rng.next()).accel : today.accel,
     };
     const r = simulate(h, pos, shot, false);
     log.push(`${shot.club[0]}${r.holed ? '!' : r.penalty ? 'x' : ''}`);
