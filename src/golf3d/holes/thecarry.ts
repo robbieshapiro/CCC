@@ -6,7 +6,7 @@
 import { band, blob, circle, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
 
-const GREEN = { x: 10, y: 182, rx: 20, ry: 16 };
+const GREEN = { x: 10, y: 182, rx: 16, ry: 13 };
 const ROCK = { x: -12, y: 136, r: 9 };
 // the cliff top round the left of the cove
 const BAIL: V2[] = [
@@ -40,7 +40,7 @@ export const thecarry: Hole = {
   tee: { x: 0, y: 0 },
   cup: { x: 10, y: 184 },
   pins: [{ x: 10, y: 184 }, { x: 0, y: 176 }, { x: 20, y: 188 }, { x: 6, y: 192 }],
-  greenFirm: 0.03,
+  greenFirm: 0.06,
   aim: 0.05,
   bounds: { x0: -150, y0: -50, x1: 120, y1: 270 },
   border: [

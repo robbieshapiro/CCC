@@ -49,7 +49,7 @@ const base: Hole = {
   theme: 'coastal',
   tour: true,
   chipDrop: 0.7,
-  yards: 585,
+  yards: 630,
   maxTime: 30,
   greenFirm: 0.04,
   blurb: 'Carry the barranca, then thread the pines. Sea on the left. Carry the cove with your second if you dare.',
@@ -140,5 +140,5 @@ const base: Hole = {
   ],
 };
 
-// 110 ft longer than it was drawn, from the cove on: two big hits can't get home, so it plays as a true three-shotter
-export const lighthouse = extend(base, 300, 110);
+// 170 ft longer than it was drawn, from the cove on: a true three-shotter, and birdie has to be earned
+export const lighthouse = extend(base, 300, 170);

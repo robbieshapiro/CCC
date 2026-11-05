@@ -201,7 +201,7 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   // the Pacific Bluffs: roll round the cliff walk, land on Sea Lion Rock, roll down the keeper's road
   sealion: { from: { x: -34, y: 348 }, clubs: ['putter'], angles: [-6, 6] },
   thecarry: { from: { x: 0, y: 0 }, clubs: ['iron', 'wedge'], angles: [-12, 0] },
-  lighthouse: { from: { x: 96, y: 572 }, clubs: ['putter'], angles: [-14, -4] },
+  lighthouse: { from: { x: 96, y: 632 }, clubs: ['putter'], angles: [-14, -4] },
   // the Western Reserve: putt through the covered bridge, go long and right off the bank, roll through the barn
   coveredbridge: { from: { x: -30, y: 226 }, clubs: ['putter'], angles: [-3, 3] },
   sugarmaple: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [6, 18] },
