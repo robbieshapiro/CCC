@@ -58,6 +58,8 @@ export const theledges: Hole = {
   tour: true,
   turf: RESERVE_TURF,
   weather: 'storm',
+  windByHeight: true,
+  calmChip: true,
   chipDrop: 0.7,
   greenFirm: 0.05,
   yards: 470,

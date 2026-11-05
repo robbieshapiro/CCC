@@ -57,6 +57,8 @@ export type Hole = {
   // gets out of a bunker (an iron gets less still); sandScatter: how far off the face a bunker shot can come.
   // greenRoll: green friction against the usual tour green's (under 1 is quicker).
   turf?: { roughKeep: number; roughDrag: number; roughLie: number; roughScatter: number; fairwayRoll: number; greenRoll?: number; sandLie: number; sandScatter: number };
+  windByHeight?: boolean; // wind scales with how high a shot climbs (none below 3 ft of apex, all of it from 23 ft), on its first flight only
+  calmChip?: boolean; // the chipper's meter is drawn on a stretched scale, its line a third to half way up, filling steadily
   weather?: 'storm'; // autumn storms: a stronger, gusting wind, and rain on some days (see conditions.ts)
   wet?: boolean; // raining today: greens and fairways run a little slower
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer

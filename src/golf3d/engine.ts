@@ -15,7 +15,7 @@ import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
-import { accuracyError, goldHalf, OVERSWING, PURE, powerSpeed, returnSpeed, type MeterStyle } from './swing';
+import { accuracyError, CHIP_RATE, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, type MeterStyle } from './swing';
 import type { Hole, Shot, V2 } from './types';
 
 export const MAX_OVER = 3; // pick up at par + 3
@@ -210,7 +210,7 @@ export class Course3D {
   private power = 0;
   private club: ClubId = 'driver';
   // the swing in progress: the power bar fills, then the needle comes back for the accuracy tap
-  private meter = { phase: 'power' as 'power' | 'accuracy', p: 0, x: 0, speed: 0, half: 0 };
+  private meter = { phase: 'power' as 'power' | 'accuracy', p: 0, d: 0, x: 0, speed: 0, half: 0 };
   private wind: Conditions | null = null; // the wind for this shot
   private dayWind: Conditions | null = null; // the day's wind on this hole (a gusting day swings either side of it)
   private spin = 0; // -1 topspin .. 1 backspin, from where you strike the ball
@@ -1200,12 +1200,17 @@ export class Course3D {
     el.style.cssText = this.style() === 'vertical' ? `bottom:${at * 100}%` : `left:${at * 100}%`;
   }
 
+  // Where a power sits on the meter: the chipper's stretched scale on a course with calmChip, straight otherwise
+  private meterAt(p: number) {
+    return this.hole.calmChip ? meterPos(this.club, p) : p;
+  }
+
   // Tap 1: the power bar starts to fill. Your plan is the gold line on it.
   private startSwing() {
     if (this.mode !== 'aim' || this.club === 'putter') return;
     const drink = this.drink ? DRINKS[this.drink.kind] : null;
     this.mode = 'meter';
-    this.meter = { phase: 'power', p: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0 };
+    this.meter = { phase: 'power', p: 0, d: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0 };
     const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
     m.hidden = false;
     m.classList.remove('accuracy');
@@ -1220,7 +1225,7 @@ export class Course3D {
     if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · a touch slower' : kind === 'lager' ? 'Lager · +10% · swing into the fire' : kind === 'fireball' ? 'Fireball · +15% · swing into the fire' : kind === 'espresso' ? 'Espresso · quick needle, wide gold' : kind === 'transfusion' ? 'Transfusion · steady hands, a touch shorter' : '';
     // righties have the meter on the left, out of the way of the golfer; lefties on the right
     m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
-    this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.power));
+    this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.meterAt(this.power)));
     (this.overlay.querySelector('[data-gold]') as HTMLElement).style.cssText = 'display:none';
     (this.overlay.querySelector('[data-pure]') as HTMLElement).style.cssText = 'display:none';
     (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = 'Tap on the gold line';
@@ -1937,8 +1942,12 @@ export class Course3D {
         // fills faster toward the top; at the end of the overswing it stops on its own. With a lager or a fireball in
         // you the overswing is the fire, and the bar slows right down in it so you can stop it there
         const fire = !!this.drink && DRINKS[this.drink.kind].boost > 1 && m.p > 1;
-        m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * dt);
-        m.x = barX(m.p);
+        // the chipper climbs its stretched scale at a steady pace (see meterPos); the rest fill by power
+        if (this.club === 'chip' && this.hole.calmChip) {
+          m.d = Math.min(OVERSWING, m.d + CHIP_RATE * m.speed * (fire ? 0.45 : 1) * dt);
+          m.p = m.d >= OVERSWING ? OVERSWING : fromMeter(this.club, m.d);
+        } else m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * dt);
+        m.x = barX(this.meterAt(m.p));
         if (m.p >= OVERSWING) this.tapSwing();
       } else {
         m.x -= m.speed * dt;
@@ -1951,12 +1960,12 @@ export class Course3D {
       const needle = this.overlay.querySelector('[data-needle]') as HTMLElement | null;
       if (needle) this.mark(needle, Math.max(0, m.x));
       const fill = this.overlay.querySelector('[data-fill]') as HTMLElement | null;
-      if (fill) this.span(fill, barX(0), barX(m.p) - barX(0));
+      if (fill) this.span(fill, barX(0), barX(this.meterAt(m.p)) - barX(0));
       // the club rides the vertical meter: back as the power fills, down as the needle drops
       if (this.style() === 'vertical' && this.mode === 'meter') {
         const p = Math.min(1, m.p);
         if (m.phase === 'power') this.golfer.takeBack(this.club, p, Math.min(1, m.p * 1.6));
-        else this.golfer.takeBack(this.club, p, (m.x - IMPACT) / Math.max(0.01, barX(m.p) - IMPACT));
+        else this.golfer.takeBack(this.club, p, (m.x - IMPACT) / Math.max(0.01, barX(this.meterAt(m.p)) - IMPACT));
       }
     }
 
