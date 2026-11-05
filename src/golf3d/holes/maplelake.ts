@@ -3,25 +3,22 @@
 // The play: a high iron that holds. Short is wet; long finds two deep pot bunkers.
 // The danger: the big maple on the right of the shore pinches the line in from that side.
 // The secret: the ridge on the left of the green. Land it there and the slope brings it round to the flag.
-import { blob, circle, rect } from '../terrain';
+import { band, blob, circle, rect } from '../terrain';
 import type { Hole, Post } from '../types';
+import { treeLine } from './woods';
 
-const GREEN = { x: 8, y: 226, rx: 18, ry: 11 };
-const LAKE = { x: -4, y: 128, rx: 104, ry: 66 };
+const GREEN = { x: 8, y: 226, rx: 20, ry: 13 };
+const LAKE = { x: -4, y: 128, rx: 96, ry: 66 };
 const GROUND = 2;
 
+// woods tight down both sides and behind: past them is out of bounds
 const maples: Post[] = [
-  // round the back of the green
-  ...[-70, -44, 30, 56, 82].map((x, i) => ({ x, y: 272 + (i % 2) * 10, r: 4, h: 28, e: 0.25, look: 'maple' as const })),
+  ...treeLine([{ x: -112, y: -10 }, { x: -112, y: 300 }], 22, 'ml-left'),
+  ...treeLine([{ x: 112, y: -10 }, { x: 112, y: 300 }], 22, 'ml-right'),
+  ...treeLine([{ x: -96, y: 276 }, { x: 96, y: 276 }], 22, 'ml-back', 4),
   // along the far shore, either side of the green
   { x: -62, y: 222, r: 4, h: 26, e: 0.25, look: 'maple' },
   { x: 58, y: 206, r: 5, h: 30, e: 0.2, look: 'maple' }, // the one that pinches the line from the right
-  // down both sides of the lake
-  ...[50, 120, 190].map((y, i) => ({ x: 128 + (i % 2) * 10, y, r: 4, h: 26, e: 0.25, look: 'maple' as const })),
-  ...[50, 120, 190].map((y, i) => ({ x: -132 - (i % 2) * 10, y, r: 4, h: 26, e: 0.25, look: 'maple' as const })),
-  // framing the tee
-  { x: -34, y: -16, r: 4, h: 24, e: 0.25, look: 'maple' },
-  { x: 36, y: -20, r: 4, h: 24, e: 0.25, look: 'maple' },
 ];
 
 export const maplelake: Hole = {
@@ -35,14 +32,15 @@ export const maplelake: Hole = {
   blurb: 'All carry over the lake to a shallow green. Short is wet, long is sand.',
   tee: { x: 0, y: 0 },
   cup: { x: 8, y: 227 },
-  pins: [{ x: 8, y: 227 }, { x: -6, y: 223 }, { x: 21, y: 229 }, { x: 4, y: 232 }],
+  pins: [{ x: 8, y: 227 }, { x: -8, y: 222 }, { x: 24, y: 229 }, { x: 4, y: 234 }],
   aim: 0.02,
   bounds: { x0: -170, y0: -40, x1: 170, y1: 320 },
+  // out of bounds just past the woods, either side and behind
   border: [
-    { x: -166, y: -36 },
-    { x: 166, y: -36 },
-    { x: 166, y: 316 },
-    { x: -166, y: 316 },
+    { x: -124, y: -36 },
+    { x: 124, y: -36 },
+    { x: 124, y: 312 },
+    { x: -124, y: 312 },
   ],
   base: 'rough',
   regions: [
@@ -52,10 +50,16 @@ export const maplelake: Hole = {
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 2, 0.05), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 2, 0.05), surface: 'green' },
     // the pot bunkers behind
-    { poly: circle(-4, 250, 5), surface: 'sand' },
-    { poly: circle(22, 250, 4.5), surface: 'sand' },
+    { poly: circle(-4, 252, 5), surface: 'sand' },
+    { poly: circle(24, 252, 4.5), surface: 'sand' },
+    // and one front right, for the bail-out
+    { poly: circle(38, 210, 5), surface: 'sand' },
   ],
-  water: [{ poly: blob(LAKE.x, LAKE.y, LAKE.rx, LAKE.ry, 3, 0.08), level: GROUND - 1 }],
+  // the lake in front, and a creek running behind the trees: long is wet too
+  water: [
+    { poly: blob(LAKE.x, LAKE.y, LAKE.rx, LAKE.ry, 3, 0.08), level: GROUND - 1 },
+    { poly: band([{ x: -130, y: 296 }, { x: 0, y: 290 }, { x: 130, y: 298 }], 7), level: GROUND - 1.5 },
+  ],
   terrain: [
     // the tee up in the trees, then down to the water
     { kind: 'ramp', x0: -170, y0: -40, x1: 170, y1: 16, axis: 'y', h0: 16, h1: 16, op: 'set' },
@@ -70,12 +74,17 @@ export const maplelake: Hole = {
     { kind: 'box', x0: LAKE.x - LAKE.rx, y0: LAKE.y - LAKE.ry - 6, x1: LAKE.x + LAKE.rx, y1: LAKE.y + LAKE.ry + 6, h: -4, edge: 12, op: 'add' },
     // the green, a step up off the shore, leaning back toward the water
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 8, h: GROUND + 1.2, edge: 7, op: 'set' },
-    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 20, x1: GREEN.x + 30, y1: GREEN.y + 20, axis: 'y', h0: -0.3, h1: 0.3, op: 'add' },
+    { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 20, x1: GREEN.x + 30, y1: GREEN.y + 20, axis: 'y', h0: -0.45, h1: 0.45, op: 'add' },
+    // a spine across the middle of the green
+    { kind: 'hill', x: 14, y: 225, r: 8, h: 0.5 },
+    // the creek behind
+    { kind: 'channel', pts: [{ x: -130, y: 296 }, { x: 0, y: 290 }, { x: 130, y: 298 }], width: 9, depth: 3.5 },
     // the secret: a ridge on the left that brings a ball round to the middle
     { kind: 'ramp', x0: -46, y0: 214, x1: -12, y1: 246, axis: 'x', h0: 1.8, h1: 0, op: 'add' },
     // deep pot bunkers
-    { kind: 'disc', x: -4, y: 250, r: 5, h: -2.8, edge: 2, op: 'add' },
-    { kind: 'disc', x: 22, y: 250, r: 4.5, h: -2.8, edge: 2, op: 'add' },
+    { kind: 'disc', x: -4, y: 252, r: 5, h: -4, edge: 2, op: 'add' },
+    { kind: 'disc', x: 24, y: 252, r: 4.5, h: -4, edge: 2, op: 'add' },
+    { kind: 'disc', x: 38, y: 210, r: 5, h: -3.6, edge: 2, op: 'add' },
   ],
   walls: [],
   posts: maples,

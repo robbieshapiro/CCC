@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 5, 2026 (the Western Reserve rebuilt as a parkland course).
+Last updated Nov 5, 2026 (the Western Reserve plays harder).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 5, 2026 (the Western Reserve rebuilt as a parkland course).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #137 | The Western Reserve plays harder (still a draft). Woods packed down both sides of every hole with out of bounds just past them, so a shank is a penalty rather than a free walk in the rough. More water (a pond right of Creek Bend's green, a creek behind Maple Lake's, a pond left of The Gorge's landing), bunkers 3.5 to 4 ft deep and more of them, and bigger greens with tiers and humps. Member bot about +0.9 for the course (was about even). |
 | #136 | The Western Reserve, rebuilt for Nov 15 (a draft until Robbie plays it): a real parkland course through the Ohio woods in October, no farm. Creek Bend (par 4, 400 yd): a tree-lined dogleg left with a creek down the left and across the front of the green, an oak on the corner and a red covered bridge for the cart path. Maple Lake (par 3, 167 yd): all carry over a lake, deep pot bunkers behind. The Gorge (par 5, 620 yd, the playoff hole): over a ravine, along a river through a chute of maples, a pool below a raised green and a little waterfall. Deep bunkers throughout, trees that block shots, chips must die at the hole. Member bot about even for the course. Also ships the tougher Pacific Bluffs from #134 (smaller, firmer greens, tighter pins, the longer Lighthouse) and the `member` mode in `check-holes`; both courses are drafts, so only the admin sees them until they open. #134 keeps the wind change for Saturday. |
 | #133 | An away player's board row says "Guest" instead of "Paid at Kellogg". The end-of-round line still says where they're paid. |
 | #131 | Reginald's question: a counted round now ends with "How did that one play? What would you change?" and a box at the foot of the card. Answers land in Feedback with the round's score. |

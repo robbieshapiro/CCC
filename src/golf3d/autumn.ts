@@ -191,7 +191,7 @@ export function autumnFrame(h: Hole, root: THREE.Group, floor: number) {
   const { x0, y0, x1, y1 } = h.bounds;
   const cx = (x0 + x1) / 2;
   const cy = (y0 + y1) / 2;
-  for (let i = 0; i < 130; i++) {
+  for (let i = 0; i < 90; i++) {
     const side = Math.floor(rng.next() * 4);
     const t = rng.next();
     const off = 10 + rng.next() * 70;
