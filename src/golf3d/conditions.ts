@@ -10,7 +10,7 @@ export type Conditions = {
   accel: V2; // ft/s² it pushes a ball in flight
 };
 
-// a 10 mph wind moves a full iron about 13 ft over its flight; lower shots feel less of it (windExposure in physics.ts)
+// a 10 mph wind moves a mid-iron about 13 ft over its flight
 export const WIND_PER_MPH = 0.42;
 
 export function conditionsFor(h: Hole, day: string): Conditions {
