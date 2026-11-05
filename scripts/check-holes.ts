@@ -335,7 +335,9 @@ if (mode === 'all' || mode === 'basic') {
   const a = simulate(first, first.tee, s);
   const b = simulate(first, first.tee, s);
   ok(a.end.x === b.end.x && a.end.y === b.end.y && a.frames.length === b.frames.length, 'deterministic');
-  const flat: Hole = { ...first, tour: false, terrain: [], water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], base: 'fairway', cup: { x: 0, y: 2000 } };
+  // plain ground: no hazards, the plain turf, and bounds wide enough that nothing goes out (a course's first hole can
+  // have out of bounds hard by the fairway)
+  const flat: Hole = { ...first, tour: false, turf: undefined, wet: false, terrain: [], water: [], movers: [], pushes: [], walls: [], posts: [], regions: [], base: 'fairway', cup: { x: 0, y: 2000 }, border: [{ x: -3000, y: -3000 }, { x: 3000, y: -3000 }, { x: 3000, y: 3000 }, { x: -3000, y: 3000 }] };
   for (const club of ['driver', 'iron', 'wedge'] as ClubId[]) {
     const r = simulate(flat, { x: 0, y: 0 }, { angle: 0, power: 1, club, error: 0, clock: 0 });
     const land = r.frames.find((f, i) => i > 2 && f.z <= 0.01)!;

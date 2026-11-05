@@ -80,8 +80,11 @@ const base: Hole = {
     { poly: circle(16, 708, 7), surface: 'sand' },
     { poly: circle(-52, 734, 6), surface: 'sand' },
     { poly: circle(-4, 742, 6), surface: 'sand' },
-    // a fairway bunker right of the drive's landing
+    // fairway bunkers: right of the drive's landing, left of it, short of the chute, and in the second-shot fairway
     { poly: blob(34, 372, 10, 8, 7, 0.12), surface: 'sand' },
+    { poly: blob(-38, 300, 8, 7, 8, 0.12), surface: 'sand' },
+    { poly: blob(22, 432, 8, 7, 9, 0.12), surface: 'sand' },
+    { poly: blob(-24, 536, 8, 7, 10, 0.12), surface: 'sand' },
     // a footpath down to the river and the falls
     { poly: band([{ x: 60, y: 40 }, { x: 66, y: 140 }], 2), surface: 'path' },
   ],
@@ -107,7 +110,8 @@ const base: Hole = {
     { kind: 'channel', pts: RIVER, width: 18, depth: 7 },
     { kind: 'box', x0: -84, y0: 628, x1: 76, y1: 672, h: -5, edge: 10, op: 'add' },
     // the green, raised above the river, leaning toward it
-    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 10, h: GROUND + 3.5, edge: 10, op: 'set' },
+    // a cupcake green, raised high above the river, its sides falling away just past the fringe
+    { kind: 'disc', x: GREEN.x, y: GREEN.y, r: GREEN.rx + 3, h: GROUND + 4.5, edge: 4, op: 'set' },
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'y', h0: -0.5, h1: 0.5, op: 'add' },
     // a tier through the middle of the green, and a hump at the back
     { kind: 'ramp', x0: GREEN.x - 30, y0: GREEN.y - 30, x1: GREEN.x + 30, y1: GREEN.y + 30, axis: 'x', h0: 0.3, h1: -0.3, op: 'add' },
@@ -119,6 +123,9 @@ const base: Hole = {
     // deep bunkers
     { kind: 'disc', x: -30, y: 456, r: 10, h: -4, edge: 3, op: 'add' },
     { kind: 'disc', x: 34, y: 372, r: 10, h: -4, edge: 3, op: 'add' },
+    { kind: 'disc', x: -38, y: 300, r: 8, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: 22, y: 432, r: 8, h: -4, edge: 2.5, op: 'add' },
+    { kind: 'disc', x: -24, y: 536, r: 8, h: -4, edge: 2.5, op: 'add' },
     { kind: 'disc', x: 16, y: 708, r: 7, h: -4, edge: 2.5, op: 'add' },
     { kind: 'disc', x: -52, y: 734, r: 6, h: -3.6, edge: 2, op: 'add' },
     { kind: 'disc', x: -4, y: 742, r: 6, h: -3.6, edge: 2, op: 'add' },
@@ -154,14 +161,15 @@ const long = extend(base, 470, 110);
 export const thegorge: Hole = {
   ...long,
   border: [
-    { x: -112, y: -36 },
+    { x: -102, y: -36 },
     { x: 132, y: -36 },
     { x: 132, y: 926 },
-    { x: -112, y: 926 },
+    { x: -102, y: 926 },
   ],
   posts: [
     ...long.posts,
-    ...treeLine([{ x: -92, y: 200 }, { x: -92, y: 910 }], 22, 'gorge-left'),
+    // two rows hard by the left of the fairway, all the way up
+    ...treeLine([{ x: -72, y: 200 }, { x: -72, y: 910 }], 20, 'gorge-left', 5, 2, 1, 12),
     ...treeLine([{ x: 122, y: 220 }, { x: 122, y: 760 }], 24, 'gorge-right', 4),
     ...treeLine([{ x: -100, y: 880 }, { x: 70, y: 880 }], 22, 'gorge-back', 4),
   ],
