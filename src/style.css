@@ -300,7 +300,7 @@ tr.me td { background: rgba(184, 149, 90, 0.12); }
 .g3-callout span { font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #f0dcae; }
 
 .summary { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 16px; background: rgba(15, 42, 31, 0.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); overflow-y: auto; }
-.summary-card { width: min(460px, 100%); display: grid; justify-items: center; gap: 12px; text-align: center; background: var(--paper); color: var(--ink); border-radius: 8px; padding: 24px 20px; border-top: 4px solid var(--gold); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+.summary-card { margin-block: auto; width: min(460px, 100%); display: grid; justify-items: center; gap: 12px; text-align: center; background: var(--paper); color: var(--ink); border-radius: 8px; padding: 24px 20px; border-top: 4px solid var(--gold); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
 .summary-card h1 { font-size: 56px; }
 .summary-card h1 small { font-size: 26px; color: var(--gold); }
 .summary-card .scorecard th { color: var(--muted); }
@@ -499,6 +499,14 @@ main.invite { max-width: none; min-height: 100svh; padding-block: 32px; place-it
 .feedback-card textarea { font: 500 16px/1.45 var(--font); padding: 11px 13px; border-radius: 4px; border: 1px solid var(--line); background: #fff; color: var(--ink); resize: vertical; letter-spacing: normal; text-transform: none; }
 .feedback-card .error:empty { display: none; }
 .summary-card [data-feedback] { font-size: 14px; }
+.summary { align-items: start; }
+.reg-ask { width: 100%; display: grid; gap: 8px; text-align: left; padding-top: 12px; border-top: 1px solid var(--line); }
+.reg-ask label { display: block; font: 500 15px/1.4 var(--font); color: var(--ink); text-transform: none; letter-spacing: normal; }
+.reg-ask label b { font-family: var(--serif); color: var(--green); margin-right: 4px; }
+.reg-ask textarea { width: 100%; box-sizing: border-box; font: 500 16px/1.45 var(--font); padding: 11px 13px; border-radius: 4px; border: 1px solid var(--line); background: #fff; color: var(--ink); resize: vertical; letter-spacing: normal; text-transform: none; }
+.reg-ask .btn { justify-self: end; }
+.reg-ask-done { margin: 0; font-size: 15px; text-align: center; color: var(--muted); }
+.reg-ask .error:empty { display: none; }
 .feedback-link { text-align: center; }
 .feedback-panel { display: grid; gap: 10px; }
 .feedback-list { list-style: none; margin: 0; padding: 0; display: grid; }

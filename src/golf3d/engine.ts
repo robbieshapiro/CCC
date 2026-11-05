@@ -1110,6 +1110,8 @@ export class Course3D {
   }
 
   private key(e: KeyboardEvent) {
+    // typing in a box on top of the course isn't playing it
+    if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
     if (this.mode === 'fly' && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) return this.endFlyover();
     if (this.mode === 'meter' && (e.key === ' ' || e.key === 'Enter')) {
       e.preventDefault();
