@@ -232,9 +232,9 @@ const TIMING = 0.06;
 
 // The three-tap swing as a person plays it: the power stop lands near the plan, the strike near the gold.
 // Tour courses use the vertical meter: a slower needle and wider gold.
-function swing(club: ClubId, plan: number, gauss: () => number, style: MeterStyle = 'classic') {
+function swing(club: ClubId, plan: number, gauss: () => number, style: MeterStyle = 'classic', calm = false) {
   if (club === 'putter') return { power: Math.max(0.03, Math.min(1, plan * (1 + gauss() * 0.12))), error: 0 };
-  const power = Math.max(0.05, Math.min(OVERSWING, plan + gauss() * TIMING * powerSpeed(club, plan)));
+  const power = Math.max(0.05, Math.min(OVERSWING, plan + gauss() * TIMING * powerSpeed(club, plan, calm)));
   const miss = gauss() * TIMING * returnSpeed(club, power, 1, style);
   return { power, error: accuracyError(miss, goldHalf(club, power, 1, style)) };
 }
@@ -276,7 +276,7 @@ function novice(base: Hole, seed: string) {
     s++;
     const clock = rng.next() * 30;
     const b = safeShot(h, pos, nav, clock);
-    const sw = swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic');
+    const sw = swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic', !!h.calmChip);
     // storm courses gust from shot to shot, and thick rough scatters a shot (only drawn where they apply, so other
     // courses' runs are unchanged)
     const shot = {
