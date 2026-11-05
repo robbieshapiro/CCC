@@ -5,8 +5,9 @@
 import { makeRng } from '../../seed';
 import type { Hole, Post, V2 } from '../types';
 
-// thick autumn rough that grabs a landing ball and smothers the next swing, and firm fairways that run
-export const RESERVE_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.2, roughDrag: 1.6, roughLie: 0.78, roughScatter: 0.22, fairwayRoll: 0.6 };
+// thick autumn rough that grabs a landing ball and smothers the next swing, firm fairways that run, and heavy wet
+// bunker sand that a wedge only gets 70% out of (an iron about half) and that can send it anywhere
+export const RESERVE_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.2, roughDrag: 1.6, roughLie: 0.78, roughScatter: 0.22, fairwayRoll: 0.6, sandLie: 0.7, sandScatter: 0.35 };
 
 // a single tree standing in play
 export const tree = (x: number, y: number, r = 5, h = 30): Post => ({ x, y, r, h, soft: true, look: 'maple' });

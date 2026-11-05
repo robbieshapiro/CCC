@@ -75,6 +75,8 @@ function entryDrop(h: Hole, frames: Frame[], from: V2): V2 | null {
 // An iron out of a bunker is possible, but the sand takes a fifth of the distance.
 export function lieFactor(h: Hole, from: V2, club: Shot['club']) {
   const s = surfaceAt(h, from);
+  // heavy, wet bunker sand: everything comes out short, and an iron shorter still
+  if (h.turf && s === 'sand') return club === 'iron' ? h.turf.sandLie * 0.75 : h.turf.sandLie;
   if (club === 'iron' && s === 'sand') return 0.8;
   // thick rough smothers a full club; a chip or a putt is played the same
   if (h.turf && s === 'rough' && club !== 'chip' && club !== 'putter') return h.turf.roughLie;
@@ -84,8 +86,10 @@ export function lieFactor(h: Hole, from: V2, club: Shot['club']) {
 // Out of thick rough a shot can come off the face anywhere: r is a random number in [0, 1), and this is the extra swing
 // error it adds (the game draws r per shot; the checks draw it from their seed).
 export function lieScatter(h: Hole, from: V2, club: Shot['club'], r: number) {
-  if (!h.turf || club === 'putter' || surfaceAt(h, from) !== 'rough') return 0;
-  return (r * 2 - 1) * h.turf.roughScatter;
+  if (!h.turf || club === 'putter') return 0;
+  const s = surfaceAt(h, from);
+  if (s === 'sand') return (r * 2 - 1) * h.turf.sandScatter;
+  return s === 'rough' ? (r * 2 - 1) * h.turf.roughScatter : 0;
 }
 
 // A tree crown: the same spot of the same tree always does the same thing to a ball, so the game and its checks agree
