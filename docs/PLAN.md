@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 5, 2026 (the Caldera storm, toned down).
+Last updated Nov 5, 2026 (the Western Reserve takes Nov 8, hole 1 open for practice).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 5, 2026 (the Caldera storm, toned down).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #146 | The Western Reserve is the Nov 8 course, out of draft; the Pacific Bluffs moves to Nov 15 (still a draft). Until it opens, every member can practise its first hole, Creek Bend, from a 🍁 preview tile on home with a countdown: practice only, never on the board or in the purse, and logged in the admin practice log (the "Caldera" column is now "Preview"). The Western Reserve's test switches (the wind fix and calmer chip meter, #143) go live with it. |
 | #145 | The Caldera storm toned down after a look: a slate-grey sky you can see the course under, light rain at a third of the strength, softer lightning every 15 to 35 seconds, the volcano dimmed rather than black. |
 | #144 | A storm rolls over the Caldera for the challenge's last days, until it closes Saturday midnight: a near-black sky with the lava's red glow on the horizon, heavy slanting rain, lightning that flashes the whole scene every 8 to 20 seconds, then thunder (a new synthesized crack and rumble), and the volcano and sea stacks dark against it. Looks and sounds only: the wind and turf play exactly as before, so the week's board stays fair. Clears by itself when the period changes (`tempestOn` in conditions.ts). |
 | #143 | The wind fix (#134) and the calmer chip meter (#138), switched on for the Western Reserve only so Robbie can test them there: wind scales with how high a shot climbs, and the chipper's gold line sits a third to half way up its meter. Each is a per-course switch (`windByHeight`, `calmChip`); the Caldera and the Bluffs play exactly as before. The Saturday task that would have merged them everywhere is paused; #134 and #138 stay open until Robbie decides. |
@@ -78,8 +79,8 @@ Last updated Nov 5, 2026 (the Caldera storm, toned down).
 - [x] The #98 SQL (`round_starts`), run Nov 2.
 - [x] The #100 SQL (`admin_overview` with unfinished rounds), run Nov 2.
 - [x] The #102 SQL (`round_abandoned`), run Nov 2.
-- [ ] Before Nov 8: play The Pacific Bluffs (Admin → "Preview The Pacific Bluffs (draft)") and tell an agent to take it out of draft, or what to change. If it's still a draft on Nov 8, the Caldera carries over.
-- [ ] Before Nov 15: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change. If it's still a draft on Nov 15, the Bluffs carries over.
+- [x] The Western Reserve opens Nov 8 (#146): out of draft, Creek Bend open to members for practice until then.
+- [ ] Before Nov 15: play The Pacific Bluffs (Admin → "Preview The Pacific Bluffs (draft)") and tell an agent to take it out of draft, or what to change. If it's still a draft on Nov 15, the Western Reserve carries over.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
@@ -122,8 +123,8 @@ The problem with the new members: once your best round is in, there's no reason 
 
 **Schedule:**
 - **Fri Oct 30 to Sat Nov 7: the Caldera challenge,** all six holes (par 25). Every member's first open of the app lands on a card naming October's champion with the Caldera's Play button (#80).
-- **Week of Sun Nov 8:** The Pacific Bluffs, the California coast (#105). It's a draft: only Robbie can play it (Admin → upcoming course). Once he approves, an agent removes `draft: true` in `src/golf3d/courses.ts` and it opens Nov 8. If it's still a draft then, the Caldera carries over.
-- **The Western Reserve** (#79) is back as the Nov 15 draft (#136).
+- **Week of Sun Nov 8:** The Western Reserve, five storm holes in the Ohio woods (#136 to #143, moved up in #146). Members can practise Creek Bend until it opens.
+- **Week of Sun Nov 15:** The Pacific Bluffs, the California coast (#105). Still a draft: once Robbie approves, an agent removes `draft: true` in `src/golf3d/courses.ts`. If it's still a draft then, the Western Reserve carries over.
 - **From Nov 15:** agent-built courses every week.
 - **A tie at the top** goes to a sudden-death playoff on the Sunday (#87).
 

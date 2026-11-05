@@ -99,6 +99,7 @@ export type Feedback = { id: number; from: string | null; body: string; context:
 // Club news from the admin, signed as Reginald or as themselves.
 export type Notice = { id: number; body: string; asReginald: boolean; author: string | null; createdAt: string };
 // Practice on the range, the short game area, or a practice round of the next course. Never on the board.
+// 'caldera' is a practice round on the next course's preview holes (the name is from the first one)
 export type PracticeKind = 'caldera' | 'range' | 'shortgame';
 export type PracticeReport = {
   kinds: { kind: PracticeKind; sessions: number; members: number; minutes: number }[];

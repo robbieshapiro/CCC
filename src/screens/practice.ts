@@ -47,7 +47,7 @@ export function facility() {
 }
 
 
-const KIND: Record<PracticeKind, string> = { caldera: 'Caldera practice', range: 'Range', shortgame: 'Short game' };
+const KIND: Record<PracticeKind, string> = { caldera: 'Course preview', range: 'Range', shortgame: 'Short game' };
 const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
 
 // For the admin: who has been practising this month. Their own sessions are left out.
@@ -74,7 +74,7 @@ export async function bindPracticeLog() {
     ${
       r.members.length
         ? `<details><summary>By member</summary>
-            <table class="practice-table"><thead><tr><th>Member</th><th class="num">Caldera</th><th class="num">Range</th><th class="num">Short</th><th>Last</th></tr></thead>
+            <table class="practice-table"><thead><tr><th>Member</th><th class="num">Preview</th><th class="num">Range</th><th class="num">Short</th><th>Last</th></tr></thead>
             <tbody>${r.members.map((m) => `<tr><td>${esc(m.name)}</td><td class="num">${m.caldera}</td><td class="num">${m.range}</td><td class="num">${m.shortgame}</td><td><small>${when(m.lastAt)}</small></td></tr>`).join('')}</tbody></table>
           </details>
           <details><summary>Recent sessions</summary>

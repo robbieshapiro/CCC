@@ -59,10 +59,9 @@ const COURSES: Course[] = [
   },
   {
     id: 'pacificbluffs',
-    // the first weekly course: the California coast at golden hour. A draft until Robbie has played it: then drop
-    // `draft` and it opens on the Sunday below. (The Western Reserve, the autumn course it replaced, is still in
-    // src/golf3d/holes for a later week.)
-    opens: '2026-11-08',
+    // the California coast at golden hour, now the week of Nov 15 (the Western Reserve took Nov 8). A draft until
+    // Robbie has played it: then drop `draft` and it opens on the Sunday below.
+    opens: '2026-11-15',
     draft: true,
     name: 'The Pacific Bluffs',
     tagline: 'Three holes on the California cliffs. Cypress, surf and a lighthouse.',
@@ -72,9 +71,10 @@ const COURSES: Course[] = [
   },
   {
     id: 'westernreserve',
-    // northeast Ohio in the fall, the week of Nov 15. A draft until Robbie has played it: then drop `draft`.
-    opens: '2026-11-15',
-    draft: true,
+    // northeast Ohio in the fall, the first weekly course: the week of Nov 8. Members can practise its first hole
+    // (Creek Bend) until then; it never counts.
+    opens: '2026-11-08',
+    previewHoles: 1,
     name: 'The Western Reserve',
     tagline: 'Five holes through the Ohio woods in a November storm. Creeks, ledges, a lake, a flooded quarry and a river gorge.',
     holes: [creekbend, theledges, maplelake, thequarry, thegorge],
