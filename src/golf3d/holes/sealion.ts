@@ -6,7 +6,7 @@
 import { band, blob, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
 
-const GREEN = { x: 46, y: 440, rx: 21, ry: 17 };
+const GREEN = { x: 46, y: 440, rx: 17, ry: 14 };
 // the cliff walk: round the rim of the cove, falling gently to the front of the green
 const WALK: V2[] = [
   { x: -34, y: 352 },
@@ -50,11 +50,13 @@ export const sealion: Hole = {
   par: 4,
   theme: 'coastal',
   tour: true,
+  chipDrop: 0.7,
+  greenFirm: 0.03,
   yards: 335,
   blurb: 'A narrow drive between the pines and the cliff, short of the barranca. Then across the corner of the cove.',
   tee: { x: 0, y: 0 },
   cup: { x: 48, y: 442 },
-  pins: [{ x: 48, y: 442 }, { x: 36, y: 434 }, { x: 58, y: 446 }, { x: 44, y: 452 }],
+  pins: [{ x: 48, y: 442 }, { x: 35, y: 433 }, { x: 59, y: 446 }, { x: 44, y: 451 }],
   aim: -0.03,
   bounds: { x0: -170, y0: -50, x1: 150, y1: 520 },
   border: [

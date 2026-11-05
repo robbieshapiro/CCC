@@ -201,11 +201,11 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   // the Pacific Bluffs: roll round the cliff walk, land on Sea Lion Rock, roll down the keeper's road
   sealion: { from: { x: -34, y: 348 }, clubs: ['putter'], angles: [-6, 6] },
   thecarry: { from: { x: 0, y: 0 }, clubs: ['iron', 'wedge'], angles: [-12, 0] },
-  lighthouse: { from: { x: 96, y: 572 }, clubs: ['putter'], angles: [-14, -4] },
-  // the Western Reserve: putt through the covered bridge, go long and right off the bank, roll through the barn
-  coveredbridge: { from: { x: -30, y: 226 }, clubs: ['putter'], angles: [-3, 3] },
-  sugarmaple: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [6, 18] },
-  redbarn: { from: { x: 176, y: 330 }, clubs: ['putter'], angles: [86, 94] },
+  lighthouse: { from: { x: 96, y: 632 }, clubs: ['putter'], angles: [-14, -4] },
+  // the Western Reserve: off the bank behind the green, round the ridge, the kick off the left bank
+  creekbend: { from: { x: -24, y: 370 }, clubs: ['wedge', 'iron'], angles: [-40, -12] },
+  maplelake: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-12, 4] },
+  thegorge: { from: { x: -4, y: 690 }, clubs: ['wedge', 'iron'], angles: [-35, -5] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
@@ -258,13 +258,15 @@ function safeShot(h: Hole, pos: V2, nav: (p: V2) => number, clock: number) {
   return best;
 }
 
+const SKILL = Number(process.env.SKILL ?? 1);
 function novice(base: Hole, seed: string) {
   // a random day: its pin and its wind, which a novice doesn't allow for
   const today = conditionsFor(base, `sim:${seed}`);
   const h = withPin(base, today);
   const nav = navField(h);
   const rng = makeRng(seed);
-  const gauss = () => Math.sqrt(-2 * Math.log(rng.next() || 1e-9)) * Math.cos(2 * Math.PI * rng.next());
+  // SKILL scales every miss: 1 is the novice, lower is a steadier player (the member mode)
+  const gauss = () => SKILL * Math.sqrt(-2 * Math.log(rng.next() || 1e-9)) * Math.cos(2 * Math.PI * rng.next());
   let pos = h.tee;
   let s = 0;
   const log: string[] = [];
@@ -493,6 +495,15 @@ if (mode === 'all' || mode === 'greens') {
   }
 }
 
+// Scores for a steadier player: SKILL=0.5 SEEDS=12 COURSE=caldera npm run check-holes -- member [hole]
+if (mode === 'member') {
+  const seeds = Number(process.env.SEEDS ?? 12);
+  for (const h of holes) {
+    const scores = Array.from({ length: seeds }, (_, i) => novice(h, `${h.id}:m${i}`));
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    console.log(`MEMBER ${course.id} ${h.id} par ${h.par} skill ${SKILL} n ${seeds} avg ${avg.toFixed(2)} to-par ${(avg - h.par).toFixed(2)} scores ${scores.join(',')}`);
+  }
+}
 if (mode === 'all' || mode === 'novice') {
   let over = 0;
   for (const h of holes) {

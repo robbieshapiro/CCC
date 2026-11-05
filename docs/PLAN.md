@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 4, 2026 (Reginald's post-round question).
+Last updated Nov 5, 2026 (the Western Reserve rebuilt as a parkland course).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 4, 2026 (Reginald's post-round question).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #136 | The Western Reserve, rebuilt for Nov 15 (a draft until Robbie plays it): a real parkland course through the Ohio woods in October, no farm. Creek Bend (par 4, 400 yd): a tree-lined dogleg left with a creek down the left and across the front of the green, an oak on the corner and a red covered bridge for the cart path. Maple Lake (par 3, 167 yd): all carry over a lake, deep pot bunkers behind. The Gorge (par 5, 620 yd, the playoff hole): over a ravine, along a river through a chute of maples, a pool below a raised green and a little waterfall. Deep bunkers throughout, trees that block shots, chips must die at the hole. Member bot about even for the course. Also ships the tougher Pacific Bluffs from #134 (smaller, firmer greens, tighter pins, the longer Lighthouse) and the `member` mode in `check-holes`; both courses are drafts, so only the admin sees them until they open. #134 keeps the wind change for Saturday. |
 | #133 | An away player's board row says "Guest" instead of "Paid at Kellogg". The end-of-round line still says where they're paid. |
 | #131 | Reginald's question: a counted round now ends with "How did that one play? What would you change?" and a box at the foot of the card. Answers land in Feedback with the round's score. |
 | #130 | Behind the scenes: a Checks workflow runs the build and API check on every PR, plus the hole, mini golf and SQL checks when those files change. `main` only takes changes through a passing PR. The old root `PLAN.md` is gone; this file is the plan. |
@@ -70,6 +71,7 @@ Last updated Nov 4, 2026 (Reginald's post-round question).
 - [x] The #100 SQL (`admin_overview` with unfinished rounds), run Nov 2.
 - [x] The #102 SQL (`round_abandoned`), run Nov 2.
 - [ ] Before Nov 8: play The Pacific Bluffs (Admin → "Preview The Pacific Bluffs (draft)") and tell an agent to take it out of draft, or what to change. If it's still a draft on Nov 8, the Caldera carries over.
+- [ ] Before Nov 15: play The Western Reserve (Admin → "Preview The Western Reserve (draft)") and tell an agent to take it out of draft, or what to change. If it's still a draft on Nov 15, the Bluffs carries over.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
@@ -113,7 +115,7 @@ The problem with the new members: once your best round is in, there's no reason 
 **Schedule:**
 - **Fri Oct 30 to Sat Nov 7: the Caldera challenge,** all six holes (par 25). Every member's first open of the app lands on a card naming October's champion with the Caldera's Play button (#80).
 - **Week of Sun Nov 8:** The Pacific Bluffs, the California coast (#105). It's a draft: only Robbie can play it (Admin → upcoming course). Once he approves, an agent removes `draft: true` in `src/golf3d/courses.ts` and it opens Nov 8. If it's still a draft then, the Caldera carries over.
-- **The Western Reserve** (#79) is off the schedule. Its holes and the `autumn` look are still in the code, ready for a later week: add it back to `COURSES` with a new `opens`.
+- **The Western Reserve** (#79) is back as the Nov 15 draft (#136).
 - **From Nov 15:** agent-built courses every week.
 - **A tie at the top** goes to a sudden-death playoff on the Sunday (#87).
 

@@ -4,15 +4,18 @@
 // from the preview.
 import { blowhole } from './holes/blowhole';
 import { caldera } from './holes/caldera';
+import { creekbend } from './holes/creekbend';
 import { geyseralley } from './holes/geyseralley';
 import { island } from './holes/island';
 import { lavafield } from './holes/lavafield';
 import { lavalift } from './holes/lavalift';
 import { lavatube } from './holes/lavatube';
 import { lighthouse } from './holes/lighthouse';
+import { maplelake } from './holes/maplelake';
 import { ridge } from './holes/ridge';
 import { sealion } from './holes/sealion';
 import { summit } from './holes/summit';
+import { thegorge } from './holes/thegorge';
 import { thecarry } from './holes/thecarry';
 import type { Hole, V2 } from './types';
 
@@ -64,6 +67,17 @@ const COURSES: Course[] = [
     holes: [sealion, lighthouse, thecarry],
     par: par([sealion, lighthouse, thecarry]),
     playoff: { hole: thecarry, from: { x: -80, y: 120 }, label: 'Off the cliff top' },
+  },
+  {
+    id: 'westernreserve',
+    // northeast Ohio in the fall, the week of Nov 15. A draft until Robbie has played it: then drop `draft`.
+    opens: '2026-11-15',
+    draft: true,
+    name: 'The Western Reserve',
+    tagline: 'Three holes through the Ohio woods in October. Creeks, a lake, a river gorge and deep bunkers.',
+    holes: [creekbend, maplelake, thegorge],
+    par: par([creekbend, maplelake, thegorge]),
+    playoff: { hole: thegorge, from: { x: -4, y: 690 }, label: 'Up from the river' },
   },
 ];
 
