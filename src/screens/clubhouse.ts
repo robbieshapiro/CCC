@@ -1,7 +1,7 @@
 // The Clubhouse: everything off the course, as tabs. Your club's members and standings (the default), the Pro Shop, the bar (its
 // games), Reginald's weekly Chronicle, every club this month, how the game works, and a note to the Committee. Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
-import { periodName, span } from '../day';
+import { cardsOn, periodName, span } from '../day';
 import { money } from '../purse';
 import { api } from '../api';
 import type { Chronicle, ClubRow, Snapshot } from '../api/types';
@@ -164,7 +164,7 @@ function how(snap: Snapshot) {
   const course = courseFor(snap.month);
   const per = span(snap.month);
   const rows: [string, string, string][] = [
-    ['⛳', `One course a ${per}`, `${esc(course.name)} this ${per}. Play as often as you like. Your best round counts.`],
+    ['⛳', `One course a ${per}`, cardsOn(snap.month) ? `${esc(course.name)} this ${per}. One card a day counts, and your best card is your score. It locks at your first swing; if you're cut off, it picks up where you left off. Practise as much as you like.` : `${esc(course.name)} this ${per}. Play as often as you like. Your best round counts.`],
     ['🏆', `Win the ${per}`, `Lowest round in your club when the ${per} closes goes on the plaque. Midnight ET, ${per === 'week' ? 'Saturday night' : 'last day'}.`],
     ['🌍', 'The Open', 'Every club on one board. Same round, bigger field.'],
     ['🎯', 'Closest to the Pin', 'One shot, three tries, new every day.'],

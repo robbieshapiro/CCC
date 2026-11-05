@@ -1235,3 +1235,7 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 
 /* the live standings under Reginald's line for the day (home) */
 .reg-board { display: block; margin-top: 6px; font-size: 0.86em; opacity: 0.85; }
+/* daily cards: the line under the Play button */
+.play-main .card-line { margin: 8px 0 0; color: #cbbf9f; }
+.play-main .card-line a { color: var(--cream); }
+.card-in { text-align: center; padding-top: 48px; }

@@ -99,11 +99,12 @@ export type Feedback = { id: number; from: string | null; body: string; context:
 // Club news from the admin, signed as Reginald or as themselves.
 export type Notice = { id: number; body: string; asReginald: boolean; author: string | null; createdAt: string };
 // Practice on the range, the short game area, or a practice round of the next course. Never on the board.
-// 'caldera' is a practice round on the next course's preview holes (the name is from the first one)
-export type PracticeKind = 'caldera' | 'range' | 'shortgame';
+// 'caldera' is a practice round on the next course's preview holes (the name is from the first one); 'course' is a
+// practice round of the week's own course, once daily cards start
+export type PracticeKind = 'caldera' | 'range' | 'shortgame' | 'course';
 export type PracticeReport = {
   kinds: { kind: PracticeKind; sessions: number; members: number; minutes: number }[];
-  members: { name: string; caldera: number; range: number; shortgame: number; lastAt: string }[];
+  members: { name: string; caldera: number; range: number; shortgame: number; course?: number; lastAt: string }[];
   recent: { name: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number }[];
 };
 // Member activity this month, for the admin only. Counts, never a trail.
@@ -137,6 +138,9 @@ export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 // a member's golf hole from the Design Desk (spec: src/designer/hole.ts HoleSpec)
 export type Design = { id: number; prompt: string; spec: import('../designer/hole').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string };
 export type MembersHole = { id: number; spec: import('../designer/hole').HoleSpec; par: number; by: string };
+// Today's card: whether it's in, and where one in progress stands (holes done, strokes on the hole being played)
+export type CardProgress = { scores: number[]; shots: number; spots: (Spot | null)[]; feats: string[] };
+export type CardToday = CardProgress & { done: boolean; id: number | null; course: string | null };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -145,7 +149,7 @@ export interface Api {
   myClubs(name: string, pin: string): Promise<Session[]>; // returning members: every club that name and PIN belong to
   createClub(session: Session, name: string): Promise<Session>; // the admin starts another club
   snapshot(session: Session): Promise<Snapshot>;
-  submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[]; spots?: Spot[] }): Promise<void>;
+  submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[]; spots?: Spot[]; card?: boolean }): Promise<void>;
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;
   buyItem(session: Session, item: string): Promise<void>; // the Pro Shop: checks rank and balance, then it's yours
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
@@ -183,8 +187,12 @@ export interface Api {
   periodHonors(session: Session, period: string): Promise<Honors>;
   adminTrend(session: Session): Promise<TrendDay[]>;
   // a counted round's start, how far it got, and whether it finished
-  startRound(session: Session, course: string): Promise<number | null>;
+  // card: today's card (the same one all day, so a card cut short picks up where it left off)
+  startRound(session: Session, course: string, card?: boolean): Promise<number | null>;
   roundProgress(session: Session, id: number, hole: number, finished: boolean): Promise<void>;
+  // daily cards (from Nov 8): null before they start
+  cardToday(session: Session): Promise<CardToday | null>;
+  cardProgress(session: Session, id: number, c: CardProgress): Promise<void>;
   // the playoff: one hole, once, then one shot at the pin
   playoffState(session: Session): Promise<PlayoffState | null>;
   playoffStart(session: Session): Promise<void>;

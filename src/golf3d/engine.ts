@@ -254,6 +254,10 @@ export class Course3D {
   starter = '';
   // told after every swing, for the practice log
   onShot: (() => void) | null = null;
+  // after every counted stroke, with the hole's count so far (a daily card saves itself on each one)
+  onStroke: ((strokes: number) => void) | null = null;
+  // what Leave asks before it lets you go (a counted round's default when empty)
+  quitAsk = '';
   private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
   private miniBase: HTMLCanvasElement | null = null;
   private faded = new Map<THREE.Object3D, number>();
@@ -360,7 +364,8 @@ export class Course3D {
   }
 
   // Plays one hole to completion. The beverage cart may stop by on the tee.
-  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: 'drinks' | 'shots'; of?: number } = {}): Promise<HoleResult> {
+  // opts.strokes: a card picked up mid-hole starts again from the tee, keeping the strokes already played on it
+  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: 'drinks' | 'shots'; of?: number; strokes?: number } = {}): Promise<HoleResult> {
     this.holesInRound = opts.of ?? this.holesInRound;
     this.clearRead();
     if (this.world) {
@@ -384,7 +389,7 @@ export class Course3D {
     if (pin && this.wind.mph) pin.rotation.y = Math.PI / 2 - this.wind.toward;
     this.faded.clear();
     this.clock = 0;
-    this.strokes = 0;
+    this.strokes = opts.strokes ?? 0;
     this.spot = undefined;
     this.practice = !!this.drill;
     this.zones = new Set();
@@ -407,6 +412,7 @@ export class Course3D {
     this.petalsFor(hole);
     this.rainFor(hole, tempest);
     this.hud(total);
+    this.setStrokes();
     this.miniBase = null;
     this.placeGhosts();
     if (opts.cart && !hole.noCart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k), opts.cart === 'shots');
@@ -689,7 +695,7 @@ export class Course3D {
       <button class="g3-skip" data-skip>Skip flyover</button>`;
     const q = (s: string) => this.overlay.querySelector(s) as HTMLElement;
     q('[data-quit]').onclick = () => {
-      if (this.leaveText || confirm('Leave the round? An unfinished round does not count.')) this.onQuit();
+      if (this.leaveText || confirm(this.quitAsk || 'Leave the round? An unfinished round does not count.')) this.onQuit();
     };
     if (this.drill && this.drill.stations.length > 1) q('[data-station]').onclick = () => this.nextStation();
     if (this.menu) q('[data-holes]').onclick = () => this.holeMenu();
@@ -1345,6 +1351,7 @@ export class Course3D {
       this.strokes++;
       this.setStrokes();
       r.zones.forEach((z) => this.zones.add(z));
+      this.onStroke?.(this.strokes);
     }
     this.mode = 'roll';
     // on tour courses, an approach that might go in gets the slow-motion treatment as it tracks toward the hole:
@@ -1501,6 +1508,7 @@ export class Course3D {
     if (r.penalty) {
       this.strokes++;
       this.setStrokes();
+      this.onStroke?.(this.strokes);
       const last = r.frames[r.frames.length - 1];
       const roof = this.hole.roofs?.some((rf) => inPoly(last, rf.poly));
       // tour courses: drop beside where it went in, as the real game does; classic courses play it again

@@ -1,9 +1,10 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 5, 2026 (the Architect and Steward agents).
+Last updated Nov 5, 2026 (daily cards from Nov 8).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
+- **Daily cards start Sun Nov 8** (#149): one round a day counts. The SQL has to be live before midnight ET going into Sunday (see Setup status).
 - **Western Reserve opens Sun Nov 8** (#146). Members practise Creek Bend until then. Its test switches (`windByHeight`, `calmChip` from #143) now count for real scores from Sunday. Robbie hasn't said whether to keep them on; ask if unsure.
 - **Open PRs #132, #134, #138** (wind by height and the calmer chip meter for every course). On hold: Robbie is testing them on the Western Reserve first. #132 is superseded by #134. The scheduled task that would have merged #134 and #138 at the Caldera close (`trig_015uuqQVpZMv6sq8sDGzVKMM`) is **paused**. Re-enable or delete it once Robbie decides. Don't merge without his say.
 - **Caldera storm** (#144, toned down in #145): looks and sounds only, ends by itself when the Caldera closes Sat Nov 7 at midnight ET (`tempestOn` in `src/golf3d/conditions.ts`). Nothing to do.
@@ -22,6 +23,7 @@ Last updated Nov 5, 2026 (the Architect and Steward agents).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #149 | Daily cards from the week of Nov 8: one round a day counts. "Play today's card" on home; the card locks at the first swing, saves itself after every stroke, and if it's cut short (the app closes, a call) it picks up at the hole they were on, back on the tee with the strokes already played there. Once today's card is in, home offers a practice round of the week's course: unlimited, logged as practice (a new "Rounds" column in the admin's practice log), never on the board, the purse or the bonuses, and no Reginald note. Before Nov 8 nothing changes. The board says "best card counts", How to play and Reginald's and the Chronicle's prompts explain it. The server enforces one round a day per seat. Built because members were restarting hole 1 hundreds of times a day hunting for a perfect opening (541 starts, 6 finishes in a day on Nov 5). |
 | #148 | Two agents for a more hands-off club. The Architect (`.claude/skills/build-course/`) builds the course two weeks out every Sunday, runs the hole checks and opens it as a draft PR for Robbie to play. The Steward (`.claude/skills/steward/`) reads the club every morning (activity, quits split into hole-1 restarts and later abandons, feedback, AI calls, site errors, the week's close) and pings Robbie only when something's worth knowing, with a weekly digest on Sundays. Both run report-only: neither merges or touches live data. |
 | #146 | The Western Reserve is the Nov 8 course, out of draft; the Pacific Bluffs moves to Nov 15 (still a draft). Until it opens, every member can practise its first hole, Creek Bend, from a 🍁 preview tile on home with a countdown: practice only, never on the board or in the purse, and logged in the admin practice log (the "Caldera" column is now "Preview"). The Western Reserve's test switches (the wind fix and calmer chip meter, #143) go live with it. |
 | #145 | The Caldera storm toned down after a look: a slate-grey sky you can see the course under, light rain at a third of the strength, softer lightning every 15 to 35 seconds, the volcano dimmed rather than black. |
@@ -108,6 +110,7 @@ Last updated Nov 5, 2026 (the Architect and Steward agents).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [ ] Turn on branch protection for `main` (GitHub → Settings → Branches → Add rule): require a pull request (0 approvals), require the `checks` status to pass, and don't allow bypassing. Agents can't set this, and none may merge anything until it's on.
 - [ ] After #148 merges: create the Architect and Steward scheduled tasks (an agent does this) and note their ids under Agents.
+- [ ] The #149 daily cards SQL, applied after it merges and before midnight ET going into Sun Nov 8: `cards_on`, the `card` columns on `rounds` and `round_starts` (with `scores`, `shots`, `spots`, `feats`), `card_of`, `card_in`, `card_today`, `card_progress`, the new `start_round` and `submit_round`, the `course` practice kind and `practice_report`.
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
 - [x] Stale branches deleted. Only `main` is left.
@@ -142,6 +145,7 @@ The problem with the new members: once your best round is in, there's no reason 
 - **A week runs Sunday to Saturday** and closes at midnight ET going into Sunday. The best round of the week wins, and the winner goes on the plaque.
 - **No monthly title.** Weekly wins are the titles. October closed early, at midnight going into Fri Oct 30 (Marc leads Kellogg and the Open at -6).
 - **Courses are 3 holes,** like the Highlands. A round takes about 5 minutes.
+- **One card a day counts** (from Nov 8, #149). Practice rounds of the week's course are unlimited and never count.
 - **Stroke play only for now.** Skins (each hole goes to the outright lowest score on it that week) may come later. No handicaps.
 - **Gear unlocks count weekly wins** at higher thresholds (something like 1, 3, 5, 10, 20), since there'll be about four titles a month.
 - **The Open goes weekly too:** one board across every club for the week's course.
