@@ -8,16 +8,19 @@ import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
 import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
 
-const GREEN = { x: -20, y: 716, rx: 26, ry: 18 };
+const GREEN = { x: -20, y: 716, rx: 30, ry: 22 };
 const traps = [
   bunker(30, 372, 16, 7, 7, 4, 0.4), // right of the drive's landing
   bunker(-36, 296, 13, 6, 8, 4, -0.4), // left of it
   bunker(-28, 456, 14, 7, 5, 4, 0.3), // short of the chute, left
   bunker(22, 432, 10, 6, 9), // short of the chute, right
   bunker(-22, 536, 13, 6, 10, 4, -0.3), // in the second-shot fairway
-  bunker(18, 704, 8, 13, 11), // right of the green
-  bunker(-62, 752, 8, 11, 12, 3.6), // left of the green, behind the bank
-  bunker(-8, 746, 16, 6, 13, 3.6), // behind the green
+  bunker(-40, 380, 12, 6, 14, 4, -0.2), // left of the drive's landing, further on
+  bunker(28, 300, 12, 6, 15, 4, 0.2), // right, short of the landing
+  bunker(20, 560, 10, 5, 16, 4, 0.2), // the second-shot fairway, right
+  bunker(26, 712, 9, 16, 11), // right of the green
+  bunker(-70, 762, 9, 12, 12, 3.6), // left of the green, behind the bank
+  bunker(-14, 758, 20, 7, 13, 3.6), // behind the green
 ];
 const POND = { x: -62, y: 392, r: 14 };
 const GROUND = 5;
@@ -63,8 +66,8 @@ const base: Hole = {
   yards: 640,
   blurb: 'Over the ravine, along the river through the maples, then up to a green above the falls.',
   tee: { x: 0, y: 0 },
-  cup: { x: -20, y: 724 },
-  pins: [{ x: -20, y: 724 }, { x: -38, y: 708 }, { x: 0, y: 726 }, { x: -24, y: 704 }],
+  cup: { x: -18, y: 728 },
+  pins: [{ x: -18, y: 728 }, { x: -40, y: 706 }, { x: 0, y: 727 }, { x: -22, y: 702 }],
   aim: 0,
   bounds: { x0: -220, y0: -40, x1: 200, y1: 820 },
   border: [
@@ -112,18 +115,19 @@ const base: Hole = {
     { kind: 'channel', pts: RIVER, width: 18, depth: 7 },
     { kind: 'box', x0: -84, y0: 628, x1: 76, y1: 672, h: -5, edge: 10, op: 'add' },
     // the green, raised high above the river: falling toward the water and to the right, the back a tier up
-    ...greenComplex(GREEN, GROUND, { lift: 4.5, edge: 8, tilt: [-0.6, 0.7], tier: { axis: 'y', at: GREEN.y + 2, rise: 0.7 } }),
+    // the one up on a mound: raised high above the river, falling toward the water and to the right, the back a tier up
+    ...greenComplex(GREEN, GROUND, { lift: 4.5, edge: 8, tilt: [-1, 1], tier: { axis: 'y', at: GREEN.y + 2, rise: 0.9 }, rolls: [[-14, 6, 7, 0.5], [12, -6, 6, -0.45]] }),
     // the pond
     { kind: 'disc', x: POND.x, y: POND.y, r: POND.r + 3, h: -5, edge: 6, op: 'add' },
     // the secret: a bank on the left that kicks a ball right, toward the flag
-    { kind: 'ramp', x0: -78, y0: 700, x1: -50, y1: 726, axis: 'x', h0: 3, h1: 0, op: 'add' },
+    { kind: 'ramp', x0: -86, y0: 700, x1: -56, y1: 728, axis: 'x', h0: 3, h1: 0, op: 'add' },
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: [],
   posts: [...maples, ...[[110, 610, 3], [70, 642, 2.6], [-80, 172, 2.4]].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }))],
   movers: [],
   pushes: [],
-  zones: [{ id: 'kick', poly: rect(-74, 702, -54, 724) }],
+  zones: [{ id: 'kick', poly: rect(-82, 702, -60, 726) }],
   secret: { name: 'The Kick', zone: 'kick', hint: 'The bank left of the green kicks things right. Use it.' },
   flyover: [
     { x: 0, y: -20 },

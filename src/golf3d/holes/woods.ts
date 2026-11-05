@@ -17,7 +17,13 @@ export const RESERVE_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.15, roughD
 // rise from left to right and from front to back), and optionally a tier: a step of `rise` ft across the line
 // `axis` = `at`, so the far side is a level up.
 export type GreenSpec = { x: number; y: number; rx: number; ry: number };
-export function greenComplex(g: GreenSpec, base: number, o: { lift: number; edge: number; tilt: [number, number]; tier?: { axis: 'x' | 'y'; at: number; rise: number } }): Piece[] {
+// rolls: humps (h > 0) and hollows (h < 0) on the putting surface, at offsets from the green's centre, for the kind of
+// movement tour greens have. back: a bank behind the green, this high, that holds a long approach and feeds it back.
+export function greenComplex(
+  g: GreenSpec,
+  base: number,
+  o: { lift: number; edge: number; tilt: [number, number]; tier?: { axis: 'x' | 'y'; at: number; rise: number }; rolls?: [number, number, number, number][]; back?: number },
+): Piece[] {
   const r = Math.max(g.rx, g.ry) + 6;
   const box = { x0: g.x - r - o.edge, y0: g.y - r - o.edge, x1: g.x + r + o.edge, y1: g.y + r + o.edge };
   const out: Piece[] = [
@@ -25,6 +31,8 @@ export function greenComplex(g: GreenSpec, base: number, o: { lift: number; edge
     { kind: 'ramp', ...box, axis: 'x', h0: -o.tilt[0] / 2, h1: o.tilt[0] / 2, op: 'add' },
     { kind: 'ramp', ...box, axis: 'y', h0: -o.tilt[1] / 2, h1: o.tilt[1] / 2, op: 'add' },
   ];
+  for (const [dx, dy, rr, hh] of o.rolls ?? []) out.push({ kind: 'hill', x: g.x + dx, y: g.y + dy, r: rr, h: hh });
+  if (o.back) out.push({ kind: 'hill', x: g.x, y: g.y + g.ry + 16, r: g.rx + 6, h: o.back });
   const t = o.tier;
   if (t) {
     if (t.axis === 'y') {

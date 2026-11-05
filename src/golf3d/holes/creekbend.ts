@@ -12,8 +12,8 @@ import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
 
 const GROUND = 3;
 const LEVEL = GROUND - 2.2;
-const GREEN = { x: -150, y: 604, rx: 24, ry: 18 };
-const POND = { x: -80, y: 618, r: 14 };
+const GREEN = { x: -154, y: 604, rx: 28, ry: 24 };
+const POND = { x: -76, y: 620, r: 14 };
 // the creek down the left, and where it turns to cross in front of the green
 const CREEK: V2[] = [
   { x: -70, y: -40 },
@@ -33,12 +33,14 @@ const BRIDGE = { x: 40, y0: 527, y1: 565, half: 5 };
 const DECK = GROUND + 0.4;
 
 const traps = [
-  bunker(36, 380, 18, 9, 1, 4, 0.2), // the long one right of the landing
-  bunker(-38, 318, 13, 7, 2, 4, 0.6), // inside the turn
-  bunker(-2, 474, 16, 6, 3, 4, -0.3), // across the end of the turn
-  bunker(-122, 648, 12, 6, 4, 4, 0.5), // behind the green, right
-  bunker(-188, 618, 8, 13, 5), // left of the green
-  bunker(-142, 574, 15, 5, 6, 3.6), // the front, between the creek and the green
+  bunker(-28, 190, 14, 6, 7, 4, 0.2), // short of the landing, left
+  bunker(20, 236, 14, 6, 8, 4, -0.2), // short of the landing, right
+  bunker(36, 380, 22, 10, 1, 4, 0.2), // the long one right of the landing
+  bunker(-38, 318, 15, 8, 2, 4, 0.6), // inside the turn
+  bunker(-2, 474, 20, 7, 3, 4, -0.3), // across the end of the turn
+  bunker(-108, 648, 14, 8, 4, 4, 0.5), // behind the green, right
+  bunker(-198, 606, 10, 18, 5), // left of the green
+  bunker(-152, 566, 24, 6, 6, 3.6), // the front, between the creek and the green
 ];
 
 const woods: Post[] = [
@@ -72,8 +74,8 @@ export const creekbend: Hole = {
   yards: 460,
   blurb: 'A long dogleg left. The oak guards the corner, the creek runs the left and crosses in front of a two-tier green.',
   tee: { x: 0, y: 0 },
-  cup: { x: -150, y: 612 },
-  pins: [{ x: -150, y: 612 }, { x: -166, y: 598 }, { x: -134, y: 615 }, { x: -146, y: 592 }],
+  cup: { x: -154, y: 614 },
+  pins: [{ x: -154, y: 614 }, { x: -172, y: 596 }, { x: -136, y: 616 }, { x: -150, y: 590 }],
   aim: -0.02,
   bounds: { x0: -255, y0: -40, x1: 100, y1: 700 },
   // out of bounds just past the woods
@@ -118,9 +120,10 @@ export const creekbend: Hole = {
     { kind: 'channel', pts: CROSS, width: 12, depth: 5 },
     { kind: 'embankment', pts: [{ x: BRIDGE.x, y: BRIDGE.y0 - 4 }, { x: BRIDGE.x, y: BRIDGE.y1 + 4 }], h: [DECK, DECK], width: BRIDGE.half, edge: 3 },
     // the green: a broad plateau just up off the creek, rising to the right and away, a tier across its middle
-    ...greenComplex(GREEN, GROUND, { lift: 2, edge: 9, tilt: [0.6, 0.6], tier: { axis: 'y', at: GREEN.y + 1, rise: 0.7 } }),
+    // a big green set just up off the creek, with a bank behind it that holds a long approach
+    ...greenComplex(GREEN, GROUND, { lift: 1.8, edge: 10, tilt: [1, 1], tier: { axis: 'y', at: GREEN.y + 2, rise: 0.9 }, rolls: [[-12, -8, 7, 0.5], [10, 10, 6, -0.4]], back: 2.5 }),
     // the secret: the bank right of the green, tipping down toward it
-    { kind: 'ramp', x0: -128, y0: 594, x1: -104, y1: 632, axis: 'x', h0: 0, h1: 2.6, op: 'add' },
+    { kind: 'ramp', x0: -124, y0: 594, x1: -100, y1: 632, axis: 'x', h0: 0, h1: 2.6, op: 'add' },
     // the pond
     { kind: 'disc', x: POND.x, y: POND.y, r: POND.r + 3, h: -4, edge: 6, op: 'add' },
     ...traps.flatMap((t) => t.pieces),
@@ -133,7 +136,7 @@ export const creekbend: Hole = {
   posts: woods,
   movers: [],
   pushes: [],
-  zones: [{ id: 'backbank', poly: rect(-126, 598, -106, 628) }],
+  zones: [{ id: 'backbank', poly: rect(-120, 598, -102, 628) }],
   secret: { name: 'The Back Bank', zone: 'backbank', hint: 'Right of the green, the bank tips a ball back onto it. Use it.' },
   flyover: [
     { x: 0, y: -20 },

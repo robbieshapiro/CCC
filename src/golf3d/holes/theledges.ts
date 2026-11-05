@@ -9,7 +9,7 @@ import { band, blob, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
 import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
 
-const GREEN = { x: 30, y: 640, rx: 24, ry: 18 };
+const GREEN = { x: 30, y: 640, rx: 28, ry: 22 };
 const GROUND = 4;
 const LEVEL = GROUND - 2.5;
 const POND = { x: 66, y: 580, r: 13 };
@@ -26,12 +26,15 @@ const SPINE = { x0: -16, y0: 170, x1: 18, y1: 470 };
 const LEDGE = { x0: -42, y0: 572, x1: 10, y1: 602 };
 
 const traps = [
-  bunker(-62, 250, 14, 8, 1, 4, 0.3), // down the left fairway
-  bunker(-40, 424, 12, 7, 2, 4, -0.4), // where the left fairway ends
-  bunker(62, 466, 12, 6, 3, 4, 0.5), // where the right fairway ends
-  bunker(24, 678, 15, 6, 4), // behind the green
-  bunker(-10, 652, 7, 11, 5), // left of the green
-  bunker(60, 616, 9, 6, 6, 3.6), // between the pond and the green
+  bunker(-64, 250, 16, 8, 1, 4, 0.3), // down the left fairway, left side
+  bunker(-30, 304, 10, 5, 7, 4, 0.1), // the left fairway's right side, against the spine
+  bunker(-78, 384, 12, 6, 8, 4, -0.2), // further down the left side
+  bunker(-40, 428, 14, 7, 2, 4, -0.4), // where the left fairway ends
+  bunker(80, 300, 12, 5, 9, 4, 0.1), // the right fairway's right side, above the creek
+  bunker(62, 466, 14, 6, 3, 4, 0.5), // where the right fairway ends
+  bunker(26, 684, 20, 7, 4), // behind the green
+  bunker(-14, 642, 9, 16, 5), // left of the green
+  bunker(64, 604, 10, 6, 6, 3.6), // between the pond and the green
 ];
 
 const woods: Post[] = [
@@ -60,8 +63,8 @@ export const theledges: Hole = {
   yards: 470,
   blurb: 'A spine of sandstone splits a long fairway. Left is safer but blind over the ledge; right is tight by the creek.',
   tee: { x: 0, y: 0 },
-  cup: { x: 40, y: 646 },
-  pins: [{ x: 40, y: 646 }, { x: 16, y: 634 }, { x: 46, y: 628 }, { x: 22, y: 652 }],
+  cup: { x: 42, y: 650 },
+  pins: [{ x: 42, y: 650 }, { x: 12, y: 632 }, { x: 48, y: 626 }, { x: 20, y: 656 }],
   aim: 0,
   bounds: { x0: -130, y0: -40, x1: 160, y1: 750 },
   // out of bounds just past the woods on both sides
@@ -85,7 +88,7 @@ export const theledges: Hole = {
     // the sandstone
     { poly: rect(SPINE.x0, SPINE.y0, SPINE.x1, SPINE.y1), surface: 'rock' },
     { poly: rect(LEDGE.x0, LEDGE.y0, LEDGE.x1, LEDGE.y1), surface: 'rock' },
-    { poly: rect(60, 662, 86, 690), surface: 'rock' },
+    { poly: rect(66, 664, 94, 692), surface: 'rock' },
     ...traps.map((t) => t.region),
   ],
   water: [
@@ -107,16 +110,17 @@ export const theledges: Hole = {
     { kind: 'channel', pts: CREEK, width: 12, depth: 4 },
     { kind: 'disc', x: POND.x, y: POND.y, r: POND.r + 3, h: -4, edge: 5, op: 'add' },
     // the green: up a step, falling from right to left toward the ledge, a tier up the right-hand side
-    ...greenComplex(GREEN, GROUND, { lift: 2.5, edge: 7, tilt: [0.8, 0.4], tier: { axis: 'x', at: GREEN.x + 6, rise: 0.6 } }),
+    // a big green sitting into the ground, not up on a mound: hard right-to-left fall, a tier up the right side
+    ...greenComplex(GREEN, GROUND, { lift: 1.6, edge: 10, tilt: [1.1, 0.7], tier: { axis: 'x', at: GREEN.x + 6, rise: 0.9 }, rolls: [[-10, 6, 7, 0.5], [12, -8, 6, -0.4]] }),
     // the secret: the rock shelf behind the green on the right, tipping down toward it
-    { kind: 'ramp', x0: 58, y0: 660, x1: 88, y1: 692, axis: 'x', h0: 0, h1: 2.6, op: 'add' },
+    { kind: 'ramp', x0: 64, y0: 660, x1: 94, y1: 694, axis: 'x', h0: 0, h1: 2.6, op: 'add' },
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: [],
   posts: [...woods, ...[[-8, 220, 3], [10, 330, 3.4], [-4, 430, 3], [-30, 590, 2.8]].map(([x, y, r]) => ({ x, y, r, h: r, e: 0.5, look: 'rock' as const }))],
   movers: [],
   pushes: [],
-  zones: [{ id: 'shelf', poly: rect(62, 664, 84, 688) }],
+  zones: [{ id: 'shelf', poly: rect(68, 666, 90, 690) }],
   secret: { name: 'The Shelf', zone: 'shelf', hint: 'Behind the green on the right, the rock tips down toward the flag. Land it on the shelf.' },
   flyover: [
     { x: 0, y: -20 },
