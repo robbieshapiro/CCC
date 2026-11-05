@@ -134,10 +134,18 @@ function capped(g: V2): V2 {
   return m > 1.5 ? { x: (g.x * 1.5) / m, y: (g.y * 1.5) / m } : g;
 }
 
+// How much of the wind a shot feels, by how high it climbs: nothing below 3 ft, all of it from 23 ft. So a chip barely
+// moves, a half wedge moves a little, and a full wedge, iron or driver takes the lot. A low topspin shot keeps it down.
+export function windExposure(vz: number) {
+  const apex = (vz * vz) / (2 * G);
+  return Math.max(0, Math.min(1, (apex - 3) / 20));
+}
+
 export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Result {
   let { x, y } = from;
   const shotLaunch = launch({ ...shot, boost: (shot.boost ?? 1) * lieFactor(h, from, shot.club) });
   let { vx, vy, vz } = shotLaunch;
+  const exposure = windExposure(vz);
   const club = CLUBS[shot.club];
   let z = heightAt(h, x, y);
   let air = shot.club !== 'putter';
@@ -182,9 +190,10 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         vx += shotLaunch.ax * DT;
         vy += shotLaunch.ay * DT;
       }
-      if (shot.wind) {
-        vx += shot.wind.x * DT;
-        vy += shot.wind.y * DT;
+      // on the first flight only: a ball hopping along the ground is below the wind
+      if (shot.wind && flying) {
+        vx += shot.wind.x * exposure * DT;
+        vy += shot.wind.y * exposure * DT;
       }
       z += vz * DT;
       x += vx * DT;
