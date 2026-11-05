@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 5, 2026 (a storm over the Caldera for its last days).
+Last updated Nov 5, 2026 (the Caldera storm, toned down).
 
 ## Shipped (all live on Vercel)
 
@@ -13,6 +13,7 @@ Last updated Nov 5, 2026 (a storm over the Caldera for its last days).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #145 | The Caldera storm toned down after a look: a slate-grey sky you can see the course under, light rain at a third of the strength, softer lightning every 15 to 35 seconds, the volcano dimmed rather than black. |
 | #144 | A storm rolls over the Caldera for the challenge's last days, until it closes Saturday midnight: a near-black sky with the lava's red glow on the horizon, heavy slanting rain, lightning that flashes the whole scene every 8 to 20 seconds, then thunder (a new synthesized crack and rumble), and the volcano and sea stacks dark against it. Looks and sounds only: the wind and turf play exactly as before, so the week's board stays fair. Clears by itself when the period changes (`tempestOn` in conditions.ts). |
 | #143 | The wind fix (#134) and the calmer chip meter (#138), switched on for the Western Reserve only so Robbie can test them there: wind scales with how high a shot climbs, and the chipper's gold line sits a third to half way up its meter. Each is a per-course switch (`windByHeight`, `calmChip`); the Caldera and the Bluffs play exactly as before. The Saturday task that would have merged them everywhere is paused; #134 and #138 stay open until Robbie decides. |
 | #142 | No pause on the strike: a shot through a wood of soft trees now calculates in about 36 ms, not 460 (each step checked every tree's ground height before checking whether the ball was near it). The Western Reserve (still a draft): eight more fairway bunkers on both sides of the fairways, bigger greenside bunkers, and bigger greens (up to 60x48 ft) with tour-level movement: steeper tilt, 0.8 to 0.9 ft tiers, humps and hollows. Each green is different: Creek Bend's has a backstop bank, Maple Lake's sits low with a bank behind, The Ledges' sits into the ground, The Quarry's on its shelf, The Gorge's up high. |
