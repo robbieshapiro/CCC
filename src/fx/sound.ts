@@ -133,6 +133,12 @@ const SFX = {
     for (let i = 0; i < 4; i++) tone('sawtooth', 760 - i * 70, 520 - i * 60, { at: i * 0.16, dur: 0.13, attack: 0.01, peak: 0.12 });
     tone('sine', 1400, 300, { at: 0.66, dur: 0.5, attack: 0.02, peak: 0.08 });
   },
+  // thunder: a sharp crack overhead, then a long low rumble rolling away
+  thunder: () => {
+    hiss('highpass', 1800, 0.6, { dur: 0.35, attack: 0.005, peak: 0.35 }, 600);
+    hiss('lowpass', 260, 0.8, { at: 0.08, dur: 3.2, attack: 0.3, peak: 0.6 }, 60);
+    tone('sine', 55, 32, { at: 0.1, dur: 2.6, attack: 0.25, peak: 0.25 });
+  },
   sad: () => {
     tone('triangle', 392, 370, { dur: 0.25, peak: 0.12 });
     tone('triangle', 370, 349, { at: 0.25, dur: 0.25, peak: 0.12 });

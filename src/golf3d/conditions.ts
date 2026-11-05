@@ -1,5 +1,6 @@
 // Today's conditions on each hole: the wind and where the pin is cut. Seeded by the date, so every member
 // plays the same course on the same day and the board stays fair.
+import { CALDERA_START, periodOf, todayInGameTz } from '../day';
 import { makeRng } from '../seed';
 import type { Hole, V2 } from './types';
 
@@ -38,3 +39,8 @@ export function gusted(c: Conditions, r: number): Conditions {
 
 // The hole as played today: the pin moved to today's spot, and wet if it's raining.
 export const withPin = (h: Hole, c: Conditions): Hole => ({ ...h, cup: c.pin, ...(c.rain ? { wet: true } : {}) });
+
+// The Caldera challenge's last days: a storm rolls over the volcano. Looks and sounds only (the sky, rain, lightning,
+// thunder); the wind and turf play as they always have, so the week's board stays fair. It clears when the challenge
+// closes and the next week begins.
+export const tempestOn = (h: Hole, day = todayInGameTz()) => h.theme === 'volcanic' && periodOf(day) === CALDERA_START;
