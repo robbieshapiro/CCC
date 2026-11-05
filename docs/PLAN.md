@@ -13,7 +13,7 @@ Last updated Nov 5, 2026 (the Western Reserve back as the Nov 15 draft).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
-| #PR | The Western Reserve returns as the Nov 15 course (a draft until Robbie plays it): The Covered Bridge (par 4), Sugar Maple (par 3) and The Red Barn (par 5, the playoff hole). Toughened like the Bluffs: smaller, firmer greens, pins nearer the edges, and chips must die at the hole. The member bot went from -0.5 to about +0.3 for the course (Covered Bridge -0.06, Sugar Maple +0.19, Red Barn +0.13), aiming for about even for regulars. The Red Barn's card shows its real length round the dogleg (520 yd, not the 383 straight over the corn). Merges after #134. |
+| #136 | The Western Reserve returns as the Nov 15 course (a draft until Robbie plays it): The Covered Bridge (par 4), Sugar Maple (par 3) and The Red Barn (par 5, the playoff hole). Toughened like the Bluffs: smaller, firmer greens, pins nearer the edges, and chips must die at the hole. The member bot went from -0.5 to about +0.3 for the course (Covered Bridge -0.06, Sugar Maple +0.19, Red Barn +0.13), aiming for about even for regulars. The Red Barn's card shows its real length round the dogleg (520 yd, not the 383 straight over the corn). Merges after #134. |
 | #132 | Wind follows the ball's height. Nothing under 3 ft of climb, all of it from 23 ft, and only on the first flight. In 10 mph a full chip now moves 0.2 ft (was 2.4), a 33 ft wedge 2 ft (was 5.5), a full iron or driver the same as before. A low topspin shot feels less. Merge at the Saturday close, so the Caldera finishes under one set of rules. |
 | #131 | Reginald's question: a counted round now ends with "How did that one play? What would you change?" and a box at the foot of the card. Answers land in Feedback with the round's score. |
 | #130 | Behind the scenes: a Checks workflow runs the build and API check on every PR, plus the hole, mini golf and SQL checks when those files change. `main` only takes changes through a passing PR. The old root `PLAN.md` is gone; this file is the plan. |
@@ -115,7 +115,7 @@ The problem with the new members: once your best round is in, there's no reason 
 **Schedule:**
 - **Fri Oct 30 to Sat Nov 7: the Caldera challenge,** all six holes (par 25). Every member's first open of the app lands on a card naming October's champion with the Caldera's Play button (#80).
 - **Week of Sun Nov 8:** The Pacific Bluffs, the California coast (#105). It's a draft: only Robbie can play it (Admin → upcoming course). Once he approves, an agent removes `draft: true` in `src/golf3d/courses.ts` and it opens Nov 8. If it's still a draft then, the Caldera carries over.
-- **The Western Reserve** (#79) is back as the Nov 15 draft (#PR).
+- **The Western Reserve** (#79) is back as the Nov 15 draft (#136).
 - **From Nov 15:** agent-built courses every week.
 - **A tie at the top** goes to a sudden-death playoff on the Sunday (#87).
 
