@@ -265,6 +265,8 @@ export class GolferStage {
     this.golfer.holdClub('driver');
     this.golfer.setPose('idle');
     this.golfer.group.position.y = 0;
+    // the driver's head rests on the plinth instead of sinking through it
+    this.golfer.restClub();
     // a wider plinth when there's a caddie to stand on it too, with the pair centred on it
     const wide = spec.caddie ? 1.75 : 1;
     this.plinth?.scale.set(wide, 1, wide);

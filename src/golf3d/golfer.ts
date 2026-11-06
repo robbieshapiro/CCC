@@ -901,8 +901,8 @@ export class Golfer {
       }
     }
     if (s.earring) {
-      const stud = mesh(new THREE.IcosahedronGeometry(0.03, 0), DIAMOND());
-      stud.position.set(0.37, HEAD_Y - 0.06, -0.01);
+      const stud = mesh(new THREE.IcosahedronGeometry(0.036, 0), DIAMOND());
+      stud.position.set(0.392, HEAD_Y - 0.075, -0.02);
       this.head.add(stud);
     }
     if (s.monocle) {
@@ -1013,6 +1013,10 @@ export class Golfer {
 
   private addHair(s: GolferSpec) {
     if (s.hair === 'bald') return;
+    // under a hat, hair only shows below the hat's line (head units): nothing pokes through the crown
+    const HAT_LINE: Partial<Record<Hat, number>> = { cap: 0.1, tourcap: 0.1, beanie: 0.28, flatcap: 0.2, bucket: 0.36, printbucket: 0.36, cowboy: 0.38, straw: 0.52, fedora: 0.52, tophat: 0.5 };
+    const hatLine = HAT_LINE[s.hat];
+    const under = (p: THREE.Vector3) => (hatLine === undefined ? 1 : 1 - smoothT(hatLine - 0.06, hatLine, p.y + 0.12 * Math.max(0, -p.z)));
     const hm = hairMat(s.hairColor);
     // the hairline: high at the forehead, above the ears at the sides, low at the nape (longer hair, lower still)
     const nape = s.hair === 'long' ? -0.75 : -0.42;
@@ -1025,8 +1029,8 @@ export class Golfer {
       return smoothT(hl - 0.04, hl + 0.04, p.y);
     };
     const full = s.hair === 'curly' ? 1.05 : s.hair === 'short' ? 1.055 : 1.07;
-    this.head.add(mesh(headLayer(`hair|${s.hair}`, full, line), hm));
-    if (s.hair === 'side') {
+    this.head.add(mesh(headLayer(`hair|${s.hair}|${hatLine ?? 'none'}`, full, (p) => line(p) * under(p)), hm));
+    if (s.hair === 'side' && hatLine === undefined) {
       // a side parting: the hair swept up and over from one side
       this.head.add(mesh(headLayer('sweep', 1.12, (p) => line(p) * smoothT(0.3, 0.55, p.y) * smoothT(-0.3, 0.3, p.z) * smoothT(-0.5, 0.2, p.x)), hm));
     } else if (s.hair === 'curly') {
@@ -1040,7 +1044,7 @@ export class Golfer {
         const dir = V(Math.cos(a) * rr, yy, Math.sin(a) * rr);
         const p = new THREE.Vector3();
         const sp = shapeOf(dir);
-        if (line(sp) < 0.5) continue;
+        if (line(sp) < 0.5 || under(sp) < 0.5) continue;
         p.copy(sp).multiplyScalar(HEAD_R * 1.05).add(V(0, HEAD_Y, 0));
         const c = mesh(curl, hm);
         c.position.copy(p);
@@ -1051,7 +1055,7 @@ export class Golfer {
       // falling behind the shoulders
       const back = mesh(lathe(V(0, HEAD_Y + 0.05, -0.12), V(0, -0.55, -0.3), [[0, 0.33], [0.4, 0.34], [0.85, 0.3], [1, 0.2]], 18, 0.55), hm);
       this.head.add(back);
-    } else if (s.hair === 'bun') {
+    } else if (s.hair === 'bun' && hatLine === undefined) {
       this.head.add(mesh(new THREE.SphereGeometry(0.15, 14, 10), hm).translateY(HEAD_Y + 0.36).translateZ(-0.3));
     }
   }
@@ -1113,7 +1117,7 @@ export class Golfer {
       // a tall pinched crown and a wide brim curling up at the sides
       const crown = mesh(new THREE.CylinderGeometry(0.34, 0.42, 0.55, 16), hm);
       crown.position.y = 0.95;
-      crown.scale.z = 0.85;
+      crown.scale.z = 1.04;
       this.head.add(crown);
       this.head.add(mesh(new THREE.TorusGeometry(0.42, 0.04, 6, 18), m('#3a2a1c', 0.5)).translateY(0.74).rotateX(Math.PI / 2));
       // the brim: flat by the crown, curling up at the edges
@@ -1138,7 +1142,7 @@ export class Golfer {
       const tall = s.hat === 'tophat';
       const crown = mesh(new THREE.CylinderGeometry(tall ? 0.37 : 0.31, 0.41, tall ? 0.78 : 0.3, 20), mat);
       crown.position.y = HEAD_Y + (tall ? 0.62 : 0.4);
-      crown.scale.z = 0.88;
+      crown.scale.z = 1.04;
       this.head.add(crown);
       if (!tall) {
         const dent = mesh(new THREE.SphereGeometry(0.2, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat);
@@ -1148,11 +1152,11 @@ export class Golfer {
       }
       const band = mesh(new THREE.CylinderGeometry(0.412, 0.412, 0.09, 20), s.hat === 'tophat' ? GOLD() : m(s.hat === 'straw' ? '#141414' : '#7a1f2b', 0.5));
       band.position.y = HEAD_Y + 0.3;
-      band.scale.z = 0.88;
+      band.scale.z = 1.04;
       this.head.add(band);
       const brim = mesh(new THREE.CylinderGeometry(s.hat === 'straw' ? 0.66 : 0.6, s.hat === 'straw' ? 0.66 : 0.6, 0.03, 26), mat);
       brim.position.y = HEAD_Y + 0.25;
-      brim.scale.z = 0.9;
+      brim.scale.z = 1.02;
       this.head.add(brim);
     } else {
       const mat = s.hat === 'printbucket' ? patternTex('hawaiian', s.hatColor, '#e2543d') : hm;
@@ -1176,6 +1180,30 @@ export class Golfer {
   shiftClub(dy: number) {
     if (this.club) this.club.position.y += dy;
   }
+
+  // On a plinth or a stage, a held club would sink below the floor (on the course it sits in the grass): settle the
+  // pose, then slide the club up so its head rests at the soles of the shoes. Returns where the head is (world).
+  restClub(): THREE.Vector3 | null {
+    const club = this.club;
+    if (!club) return null;
+    for (let i = 0; i < 80; i++) this.update(0.05);
+    this.group.updateMatrixWorld(true);
+    this.plane.remove(club);
+    const soles = new THREE.Box3().setFromObject(this.group).min.y;
+    this.plane.add(club);
+    club.updateMatrixWorld(true);
+    const lowest = new THREE.Box3().setFromObject(club).min.y;
+    const gap = soles - lowest;
+    if (gap > 0) {
+      // how far up the world one step along the club's own shaft goes (the swing tilts it)
+      const q = club.getWorldQuaternion(new THREE.Quaternion());
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(q).y * this.group.scale.y;
+      if (up > 0.2) club.position.y += gap / up;
+      club.updateMatrixWorld(true);
+    }
+    return club.localToWorld(new THREE.Vector3(0.15, -(club.userData.len as number), 0));
+  }
+
 
   setPose(p: PoseName) {
     this.state = { pose: p };

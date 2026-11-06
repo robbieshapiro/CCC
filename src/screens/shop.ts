@@ -132,7 +132,7 @@ export function bindShop(snap: Snapshot) {
     room?.focus(v);
     document.querySelectorAll<HTMLButtonElement>('.fit-views [data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === v || (v === 'chest' && b.dataset.view === 'full')));
   };
-  const show = () => room?.set(trying ? tryOn(spec, trying) : spec, trying?.kind === 'putter' ? 'putter' : 'driver');
+  const show = () => room?.set(trying ? tryOn(spec, trying) : spec, trying?.kind === 'putter' ? 'putter' : trying?.kind === 'shoes' ? null : 'driver');
   const state = (i: Item) => {
     if (owned.has(i.id)) return i.worn(spec) ? 'Wearing' : 'Owned';
     if (!canShop(i.rack, earned)) return `🔒 ${money(i.price)}`;
