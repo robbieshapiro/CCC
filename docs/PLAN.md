@@ -4,9 +4,9 @@ Last updated Nov 5, 2026 (daily cards from Nov 8).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
-- **Daily cards start Sun Nov 8** (#149): one round a day counts. The SQL has to be live before midnight ET going into Sunday (see Setup status).
+- **Daily cards start Sun Nov 8** (#149): one round a day counts. The SQL is live; nothing changes until Sunday. Play a real card Sunday morning to check it end to end.
 - **Western Reserve opens Sun Nov 8** (#146). Members practise Creek Bend until then. Its test switches (`windByHeight`, `calmChip` from #143) now count for real scores from Sunday. Robbie hasn't said whether to keep them on; ask if unsure.
-- **Open PRs #132, #134, #138** (wind by height and the calmer chip meter for every course). On hold: Robbie is testing them on the Western Reserve first. #132 is superseded by #134. The scheduled task that would have merged #134 and #138 at the Caldera close (`trig_015uuqQVpZMv6sq8sDGzVKMM`) is **paused**. Re-enable or delete it once Robbie decides. Don't merge without his say.
+- **Open PRs #132, #134, #138** (wind by height and the calmer chip meter for every course). On hold: Robbie is testing them on the Western Reserve first. #132 was closed as superseded by #134. The scheduled task that would have merged them at the Caldera close was deleted; Robbie decides after playing the Western Reserve. Don't merge without his say.
 - **Caldera storm** (#144, toned down in #145): looks and sounds only, ends by itself when the Caldera closes Sat Nov 7 at midnight ET (`tempestOn` in `src/golf3d/conditions.ts`). Nothing to do.
 - **Pacific Bluffs** is the Nov 15 draft. It needs Robbie's play-through and approval (see Setup status).
 - **Vercel was slow to pick up merges on Nov 5** (one waited about 30 minutes, another sat 11 minutes before building). After merging, confirm the production deployment for the merge SHA is READY (Vercel `list_deployments` with `sha`) before telling Robbie something is live.
@@ -109,8 +109,8 @@ Last updated Nov 5, 2026 (daily cards from Nov 8).
 - [x] The #129 lockout SQL, run Nov 4 (checked: `sign_in` gone, both sign-in paths check the lock, the public role can't reach `pin_failures` or its helpers).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [ ] Turn on branch protection for `main` (GitHub → Settings → Branches → Add rule): require a pull request (0 approvals), require the `checks` status to pass, and don't allow bypassing. Agents can't set this, and none may merge anything until it's on.
-- [ ] After #148 merges: create the Architect and Steward scheduled tasks (an agent does this) and note their ids under Agents.
-- [ ] The #149 daily cards SQL, applied after it merges and before midnight ET going into Sun Nov 8: `cards_on`, the `card` columns on `rounds` and `round_starts` (with `scores`, `shots`, `spots`, `feats`), `card_of`, `card_in`, `card_today`, `card_progress`, the new `start_round` and `submit_round`, the `course` practice kind and `practice_report`.
+- [ ] Create the Architect and Steward as routines in claude.ai (Robbie, from the claude.ai/code routines page: the repo `robbieshapiro/CCC`, plus Supabase and Vercel for the Steward). An agent couldn't attach the repo or connectors. Then delete the paused copies `trig_01VL4jyxguewx9BmYHhEGcgn` and `trig_01JTEuR8TDGCEgBV7ze79J8i`.
+- [x] The #149 daily cards SQL, run Nov 5 (pasted by Robbie; checked: the five card functions, the new `start_round` and `submit_round` with the old signatures gone, the new columns, the `course` practice kind, member access to the card functions with the helpers hidden, and cards still off until Sunday): `cards_on`, the `card` columns on `rounds` and `round_starts` (with `scores`, `shots`, `spots`, `feats`), `card_of`, `card_in`, `card_today`, `card_progress`, the new `start_round` and `submit_round`, the `course` practice kind and `practice_report`.
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
 - [x] Stale branches deleted. Only `main` is left.
