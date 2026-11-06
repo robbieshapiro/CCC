@@ -62,6 +62,7 @@ const palms: Post[] = [-126, -98, -30, 2, 34, 60].map((x, i) => ({ x, y: 384 + (
 const base: Hole = {
   id: 'blowhole',
   name: 'The Blowhole',
+  gusts: true,
   par: 4,
   theme: 'volcanic',
   tour: true,

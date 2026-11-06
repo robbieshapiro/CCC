@@ -34,6 +34,7 @@ const palms: Post[] = [60, 140, 220, 300, 380].map((y, i) => ({ x: -74 + (i % 2)
 export const caldera: Hole = {
   id: 'caldera',
   name: 'The Caldera',
+  gusts: true,
   par: 5,
   theme: 'volcanic',
   tour: true,

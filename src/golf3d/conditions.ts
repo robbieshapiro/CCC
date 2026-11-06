@@ -22,6 +22,12 @@ export function conditionsFor(h: Hole, day: string): Conditions {
   const pin = pins[Math.floor(rng.next() * pins.length)];
   // mostly light, sometimes properly breezy; in storm country never calm, and often blowing hard
   const storm = h.weather === 'storm';
+  // exposed holes on the island: a steady 11 to 14 mph that gusts between 10 and 15 from shot to shot
+  if (h.gusts && !storm) {
+    const mph = 11 + Math.floor(rng.next() * 4);
+    const toward = rng.next() * Math.PI * 2;
+    return { pin, mph, toward, accel: { x: Math.sin(toward) * mph * WIND_PER_MPH, y: Math.cos(toward) * mph * WIND_PER_MPH }, gust: 0.08 };
+  }
   const mph = storm ? Math.round(8 + rng.next() ** 0.9 * 18) : Math.round(rng.next() ** 1.4 * 16);
   const toward = rng.next() * Math.PI * 2;
   const accel = { x: Math.sin(toward) * mph * WIND_PER_MPH, y: Math.cos(toward) * mph * WIND_PER_MPH };
@@ -41,6 +47,6 @@ export function gusted(c: Conditions, r: number): Conditions {
 export const withPin = (h: Hole, c: Conditions): Hole => ({ ...h, cup: c.pin, ...(c.rain ? { wet: true } : {}) });
 
 // The Caldera challenge's last days: a storm rolls over the volcano. Looks and sounds only (the sky, rain, lightning,
-// thunder); the wind and turf play as they always have, so the week's board stays fair. It clears when the challenge
-// closes and the next week begins.
-export const tempestOn = (h: Hole, day = todayInGameTz()) => h.theme === 'volcanic' && periodOf(day) === CALDERA_START;
+// thunder). It cleared on Nov 6, two days early: sunny daylight for the finish.
+const TEMPEST_ENDS = '2026-11-06';
+export const tempestOn = (h: Hole, day = todayInGameTz()) => h.theme === 'volcanic' && periodOf(day) === CALDERA_START && day < TEMPEST_ENDS;
