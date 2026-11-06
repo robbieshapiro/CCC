@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminOverview, Api, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
+import type { AdminKpis, AdminOverview, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -43,15 +43,16 @@ export const supabaseApi: Api = {
   createClub: (s, name) => rpc<Session>('create_club', { p_token: s.token, p_name: name }),
   snapshot: (s) => rpc<Snapshot>('get_snapshot', { p_token: s.token }),
   submitRound: async (s, r) => {
-    const args = { p_token: s.token, p_course: r.course, p_holes: r.holes, p_pars: r.pars, p_feats: r.feats, p_spots: r.spots ?? null };
+    const args = { p_token: s.token, p_course: r.course, p_holes: r.holes, p_pars: r.pars, p_feats: r.feats, p_spots: r.spots ?? null, ...(r.card ? { p_card: true } : {}) };
     try {
-      await rpc('submit_round', r.card ? { ...args, p_card: true } : args);
+      await rpc('submit_round', r.shots?.length ? { ...args, p_shots: r.shots } : args);
     } catch (err) {
-      // a database without daily cards yet: the score still counts
-      if (!r.card || !/submit_round|function|schema cache/i.test((err as Error).message)) throw err;
+      // a database without shot data (or daily cards) yet: the score still counts
+      if (!r.shots?.length || !/submit_round|function|schema cache/i.test((err as Error).message)) throw err;
       await rpc('submit_round', args);
     }
   },
+  adminHoles: (s) => rpc<HoleReport[]>('admin_holes', { p_token: s.token }),
   buyItem: async (s, item) => {
     try {
       await rpc('buy_item', { p_token: s.token, p_item: item });

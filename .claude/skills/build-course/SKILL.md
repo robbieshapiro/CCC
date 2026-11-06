@@ -40,6 +40,7 @@ Run each of these and fix the holes until they pass. Paste the summary lines int
 
 - `npm run build`
 - `COURSE=<id> npm run check-holes -- quick`: every line PASS. The greens sweep putts every green from all round every pin. Never ship a course that fails it.
+- First, tune the bot to the members when you can: with the Supabase connector, run `select shot_export()` (read-only) on project `xixfekrwgyknbzttyrtp`, save the JSON to a file, and run `npm run check-holes -- calibrate <file>`. It prints the SKILL that swings most like the members; use it below instead of 0.15. With no connector, or fewer than about 200 full swings in the export, keep 0.15.
 - `COURSE=<id> SKILL=0.15 SEEDS=12 npm run check-holes -- member <hole id>`: the steady bot. It takes about a minute per round per hole, so run the three holes as three background commands at once (about 15 minutes) and use `SEEDS=3` while you're still tuning. The target is the course averaging about even par for regular members. Real members have beaten the bot on most holes, so aim for the bot between even and +1 per hole, and no hole under -0.5.
 - `npm run check-holes` (all courses) once at the end, so nothing else broke.
 

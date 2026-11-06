@@ -16,7 +16,7 @@ import { esc, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
-import { chartSections, kpiSections, loadBrief, loadKpis } from './adminKpis';
+import { chartSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -85,7 +85,7 @@ export function admin(snap: Snapshot) {
   void load();
   void loadHoles(snap);
   void loadTrend();
-  void loadKpis();
+  void loadKpis().then(loadHoleReport);
   void loadBrief();
 }
 

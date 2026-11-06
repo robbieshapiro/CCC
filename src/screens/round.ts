@@ -9,7 +9,7 @@ import { sfx } from '../fx/sound';
 import { Course3D, scoreName, type Ghost } from '../golf3d/engine';
 import { cardsOn, openPurseOn, todayInGameTz } from '../day';
 import { BONUS, shotBonus } from '../bonus';
-import type { CardToday, Spot } from '../api/types';
+import type { CardToday, RoundShot, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
 import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
@@ -145,6 +145,10 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const progress = (hole: number, finished = false) =>
     void started.then((id) => (id === null ? undefined : api.roundProgress(requireSession(), id, hole, finished).catch(() => {})));
   const feats = new Set<string>(resume?.feats ?? []);
+  // every counted stroke, by hole, posted with the card (a card picked up mid-round only has the holes played since)
+  const shotLog: RoundShot[] = [];
+  let holeAt = 0;
+  if (!preview) game.onShotLog = (s) => shotLog.length < 150 && shotLog.push({ ...s, h: holeAt });
   // a card saves itself after every stroke, so a swing can't be taken back by leaving
   const save = (shots: number) => {
     if (cardId !== null)
@@ -157,6 +161,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   if (preview && !opts.practice) game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
   for (let i = scores.length; i < course.holes.length; ) {
     const h = course.holes[i];
+    holeAt = i;
     const par = course.holes.reduce((a, x, j) => a + (scores[j] === undefined ? 0 : x.par), 0);
     const jumped = new Promise<number>((res) => (jump = res));
     // picking a card up mid-hole: back to the tee, with the strokes already played on it
@@ -182,7 +187,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   let posted = true;
   if (!preview)
     try {
-      await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots, card });
+      await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots, card, shots: shotLog });
       progress(course.holes.length, true);
     } catch {
       posted = false;

@@ -620,7 +620,11 @@ language sql stable as $$ select game_month() >= '2026-11-08' $$;
 alter table rounds add column if not exists card boolean not null default false;
 drop function if exists submit_round(uuid, text, int[], int[], text[]);
 drop function if exists submit_round(uuid, text, int[], int[], text[], jsonb);
-create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[], p_spots jsonb default null, p_card boolean default false) returns void
+drop function if exists submit_round(uuid, text, int[], int[], text[], jsonb, boolean);
+-- p_shots: every counted stroke (see RoundShot in src/api/types.ts), for the Committee's hole report and tuning the
+-- hole checks. Kept as it comes, within limits: an array of at most 150 shots and 24 KB.
+alter table rounds add column if not exists shots jsonb;
+create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[], p_spots jsonb default null, p_card boolean default false, p_shots jsonb default null) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := play_seat(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
 begin
@@ -640,8 +644,9 @@ begin
         then jsonb_build_object('x', round(greatest(-2000, least(2000, (e->>'x')::numeric)), 1), 'y', round(greatest(-2000, least(2000, (e->>'y')::numeric)), 1))
         else 'null'::jsonb end order by k) from jsonb_array_elements(p_spots) with ordinality as t(e, k));
   end if;
-  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots, pars, card)
-  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp, p_pars, cards_on());
+  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots, pars, card, shots)
+  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp, p_pars, cards_on(),
+    case when jsonb_typeof(p_shots) = 'array' and jsonb_array_length(p_shots) <= 150 and pg_column_size(p_shots) < 24000 then p_shots end);
   if cards_on() then
     update round_starts set finished = true, finished_at = now(), hole = n, scores = clean, shots = 0 where id = (card_of(me)).id;
   end if;
@@ -913,7 +918,7 @@ revoke all on function player_for(uuid) from public, anon, authenticated;
 revoke all on function month_bests(uuid) from public, anon, authenticated;
 grant execute on function join_group(text, text, text) to anon;
 grant execute on function get_snapshot(uuid) to anon;
-grant execute on function submit_round(uuid, text, int[], int[], text[], jsonb, boolean) to anon;
+grant execute on function submit_round(uuid, text, int[], int[], text[], jsonb, boolean, jsonb) to anon;
 grant execute on function save_avatar(uuid, jsonb) to anon;
 revoke all on function rand_code(int) from public, anon, authenticated;
 grant execute on function create_invite(uuid, text) to anon;
@@ -1175,6 +1180,51 @@ begin
   );
 end $$;
 grant execute on function admin_kpis(uuid) to anon;
+
+-- The Committee's hole report for this week's course, from the shots members post with their cards (admin and
+-- host-only seats left out): per hole, putts and three-putts, penalties, the club off the tee, the lies shots were
+-- hit from, and where tee shots and penalties finished (for the plan in Admin).
+create or replace function admin_holes(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
+  return (
+    with rd as (
+      select r.id, r.shots from rounds r join players p on p.id = r.player_id
+      where r.month = game_month() and r.group_id in (select admin_clubs(me)) and p.role <> 'admin' and not p.host_only and jsonb_typeof(r.shots) = 'array'
+    ), sh as (
+      select rd.id, (e->>'h')::int as h, k, e->>'c' as c, e->>'l' as l, (e->>'x')::int as x, e->'t' as t
+      from rd cross join lateral jsonb_array_elements(rd.shots) with ordinality as a(e, k)
+      where e ? 'h'
+    ), per as (
+      select id, h, count(*) filter (where c = 'putter') as putts, count(*) filter (where x = 1) as pens, min(k) as first from sh group by id, h
+    ), holes as (select distinct h from sh)
+    select coalesce(json_agg(json_build_object(
+        'hole', ho.h + 1,
+        'rounds', (select count(*) from per where per.h = ho.h),
+        'putts', (select round(avg(putts), 2) from per where per.h = ho.h),
+        'threePutts', (select round(avg(case when putts >= 3 then 1 else 0 end), 2) from per where per.h = ho.h),
+        'penalties', (select round(avg(pens), 2) from per where per.h = ho.h),
+        'teeClubs', (select coalesce(json_object_agg(c, n), '{}') from (select sh.c, count(*) n from sh join per on per.id = sh.id and per.h = sh.h and per.first = sh.k where sh.h = ho.h group by sh.c) t),
+        'lies', (select coalesce(json_object_agg(l, n), '{}') from (select l, count(*) n from sh where sh.h = ho.h group by l) t),
+        'tee', (select coalesce(json_agg(sh.t), '[]') from (select sh.t from sh join per on per.id = sh.id and per.h = sh.h and per.first = sh.k where sh.h = ho.h limit 200) sh),
+        'wet', (select coalesce(json_agg(t), '[]') from (select t from sh where sh.h = ho.h and x = 1 limit 200) w)
+      ) order by ho.h), '[]')
+    from holes ho
+  );
+end $$;
+grant execute on function admin_holes(uuid) to anon;
+
+-- Every posted shot of the last four weeks, for tuning the hole checks' steady bot to how members really swing
+-- (npm run check-holes -- calibrate <file>). Not for the app: only the database's own roles can call it.
+create or replace function shot_export() returns json
+language sql stable security definer set search_path = public, extensions as $$
+  select coalesce(json_agg(json_build_object('course', r.course, 'period', r.month, 'shot', e)), '[]')
+  from rounds r join players p on p.id = r.player_id, jsonb_array_elements(r.shots) e
+  where jsonb_typeof(r.shots) = 'array' and r.created_at > now() - interval '28 days' and p.role <> 'admin'
+$$;
+revoke all on function shot_export() from public, anon, authenticated;
 
 -- Reginald's morning read of those numbers for the Committee (api/insights.ts writes it, once a day): a few plain
 -- takeaways. Only the server reads and writes it.
