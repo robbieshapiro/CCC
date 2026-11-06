@@ -8,7 +8,7 @@ import { crest } from '../brand';
 import { sfx } from '../fx/sound';
 import { Course3D, scoreName, type Ghost } from '../golf3d/engine';
 import { cardsOn, openPurseOn, todayInGameTz } from '../day';
-import { BONUS, shotBonus } from '../bonus';
+import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus } from '../bonus';
 import type { CardToday, RoundShot, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
 import { hostChip, REGINALD } from '../host';
@@ -30,7 +30,7 @@ import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
 import { board } from '../standings';
-import { clubPurse, money, openPurse, placeLabel, purseOf } from '../purse';
+import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
 import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
@@ -148,7 +148,19 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   // every counted stroke, by hole, posted with the card (a card picked up mid-round only has the holes played since)
   const shotLog: RoundShot[] = [];
   let holeAt = 0;
-  if (!preview) game.onShotLog = (s) => shotLog.length < 150 && shotLog.push({ ...s, h: holeAt });
+  if (!preview)
+    game.onShotLog = (s) => {
+      // the moments worth a cheer, on a daily card only (practice and replays earn nothing)
+      if (card && s.i) {
+        const ft = Math.round(Math.hypot(s.t[0] - s.f[0], s.t[1] - s.f[1]));
+        const first = !shotLog.some((x) => x.h === holeAt);
+        if (s.c === 'putter' && puttBonus(ft)) coinPop(el, puttBonus(ft), ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', `${ft} ft`);
+        else if (s.c !== 'putter' && s.l !== 'green' && !first) coinPop(el, BONUS.chipin, 'Chip-in', 'from off the green');
+      }
+      if (shotLog.length < 150) shotLog.push({ ...s, h: holeAt });
+    };
+  // secrets this member has found before (on any card), so only a first find pays
+  const foundBefore = new Set(me.feats ?? []);
   // a card saves itself after every stroke, so a swing can't be taken back by leaving
   const save = (shots: number) => {
     if (cardId !== null)
@@ -175,6 +187,11 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     }
     scores[i] = r.strokes;
     spots[i] = r.spot;
+    // a hole's secret, found for the first time on a card
+    if (card && h.secret && r.feats.includes(h.secret.zone) && SECRET_FEATS.includes(h.secret.zone) && !foundBefore.has(h.secret.zone)) {
+      foundBefore.add(h.secret.zone);
+      coinPop(el, BONUS.secret, 'Secret found', h.secret.name);
+    }
     r.feats.forEach((f) => feats.add(f));
     i++;
     if (card) save(0);
@@ -259,8 +276,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
           const mine = meRow && purse.pay.get(meRow.playerId);
           if (!line || !mine) return;
           line.innerHTML = mine.payout
-            ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${open.length} on the Open if the week ended now · Open purse ${money(purseOf(purse.field))}</span>`
-            : `<b>${placeLabel(mine.place, mine.tied)} of ${open.length} on the Open</b><span>Top 10 get paid. Open purse ${money(purseOf(purse.field))}</span>`;
+            ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${open.length} on the Open if the week ended now · Open purse ${money(openPurseOf(purse.field))}</span>`
+            : `<b>${placeLabel(mine.place, mine.tied)} of ${open.length} on the Open</b><span>Top 10 get paid. Open purse ${money(openPurseOf(purse.field))}</span>`;
           line.hidden = false;
           return;
         }
@@ -401,6 +418,17 @@ export async function dailyRound(snap: Snapshot) {
 }
 
 // The Members' Course: the approved holes from the Design Desk, each flying its designer's name on the flag
+// A coin burst over the course: the money, what it was for, a sound. It floats up and goes.
+export function coinPop(host: HTMLElement, amount: number, title: string, sub = '') {
+  const el = document.createElement('div');
+  el.className = 'coin-pop';
+  el.innerHTML = `<span class="coins" aria-hidden="true">${'<i>🪙</i>'.repeat(5)}</span><b>+${money(amount)}</b><span>${esc(title)}${sub ? ` · ${esc(sub)}` : ''}</span>`;
+  host.appendChild(el);
+  sfx('board');
+  window.setTimeout(() => sfx('cheer'), 180);
+  window.setTimeout(() => el.remove(), 3200);
+}
+
 async function membersHoles(): Promise<Hole[]> {
   const list = (await api.membersCourse(requireSession()).catch(() => [])).filter(isHole);
   return list.map((m) => buildHole(m.spec, `members-${m.id}`, m.by.slice(0, 9)).hole);
@@ -489,6 +517,9 @@ export function barRound(snap: Snapshot, kind: BarGame) {
         if (game !== g) return; // they left
         scores.push(r.strokes);
         if (r.strokes === 1) sfx('cackle');
+        // a member's own hole, finished by someone else: its designer is paid (once each a week)
+        const design = kind === 'members' ? Number(/^members-(\d+)$/.exec(holes[i].id)?.[1]) : NaN;
+        if (design) void api.recordDesignPlay(requireSession(), design).then((paid) => paid && coinPop(el, BONUS.designPlay, `To the designer of ${holes[i].name}`, 'for playing their hole'));
       }
       const score = minigolfScore(sum());
       await api.submitBar(requireSession(), kind, score).catch(() => {});

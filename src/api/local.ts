@@ -2,12 +2,12 @@
 import { STOCK_BUDDIES } from '../buddies';
 import { cardsOn, GAME_TZ, openPurseOn, periodOf, todayInGameTz } from '../day';
 import { courseById, courseFor } from '../golf3d/courses';
-import { bonusOf } from '../bonus';
+import { BONUS, bonusOf, puttBonus, SECRET_FEATS } from '../bonus';
 import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
-import { payouts } from '../purse';
+import { OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
 import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
@@ -17,7 +17,7 @@ type DbRound = Round & { groupId: string; shots?: RoundShot[] };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[] };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[] };
 
 const KEY = 'ccc-local-db';
 
@@ -62,7 +62,7 @@ function openPaid(db: Db, month: string): Payout[] {
     }
     const sorted = [...best.entries()].sort((a, b) => a[1].tp - b[1].tp);
     const rows = sorted.map(([id, b]) => ({ id, rank: sorted.findIndex((x) => x[1].tp === b.tp) + 1 }));
-    for (const [id, p] of payouts(rows)) if (p.payout > 0) out.push({ month: m, playerId: id, name: best.get(id)!.name, ...p });
+    for (const [id, p] of payouts(rows, null, rows.length, OPEN_PER_PLAYER)) if (p.payout > 0) out.push({ month: m, playerId: id, name: best.get(id)!.name, ...p });
   }
   return out;
 }
@@ -210,6 +210,19 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           const pars = courseById(r.course)?.holes.map((h) => h.par);
           return pars?.length === r.holes.length ? r.holes.map((s, i): [number, number] => [s, pars[i]]) : [];
         }),
+        // as person_bonus does: the moments on daily cards (from Nov 8), secrets found, and plays of their holes
+        ...(() => {
+          const cards = rs.filter((r) => cardsOn(r.month));
+          const strokes = cards.flatMap((r) => (r.shots ?? []).map((x, k, all) => ({ ...x, first: !all.slice(0, k).some((y) => y.h === x.h) })));
+          const putts = strokes.filter((x) => x.c === 'putter' && x.i).reduce((a, x) => a + puttBonus(Math.hypot(x.t[0] - x.f[0], x.t[1] - x.f[1])), 0);
+          const chipins = strokes.filter((x) => x.c !== 'putter' && x.i && x.l !== 'green' && !x.first).length * BONUS.chipin;
+          const secrets = new Set(cards.flatMap((r) => r.feats.filter((f) => SECRET_FEATS.includes(f)))).size * BONUS.secret;
+          const mine = new Set((db.designs ?? []).filter((d) => ids.has(d.playerId)).map((d) => d.id));
+          const weeks = new Map<string, number>();
+          for (const x of db.designPlays ?? []) if (mine.has(x.design)) weeks.set(x.week, (weeks.get(x.week) ?? 0) + 1);
+          const designs = [...weeks.values()].reduce((a, n) => a + Math.min(BONUS.designWeek, n * BONUS.designPlay), 0);
+          return { putts, chipins, secrets, designs };
+        })(),
       });
       return { earnings: got.reduce((a, x) => a + x.payout, 0), top10s: got.length, spent: bought.reduce((a, x) => a + x.price, 0), owned: [...new Set(bought.map((x) => x.item))], bonus };
     };
@@ -271,7 +284,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const item = itemById(id);
     if (!item || !p) throw new Error('That isn’t in the shop.');
     if (p.owned?.includes(id)) return;
-    if (!canShop(item.rack, earningsOf(p))) throw new Error('That rack is for higher ranks.');
+    if (item.rack === 'legend' && !(p.wins ?? 0)) throw new Error('The Club Legend rack opens with a weekly title.');
+    if (!canShop(item.rack, earningsOf(p), p.wins ?? 0)) throw new Error('That rack is for higher ranks.');
     if (balanceOf(p) < item.price) throw new Error('Not enough in the bank for that.');
     (db.purchases ??= []).push({ playerId: me.id, item: id, price: item.price });
     save(db);
@@ -690,6 +704,20 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       }),
       holes,
     };
+  },
+
+  // as record_design_play does: once per member per hole a week, never your own hole
+  async recordDesignPlay(session, id) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const d = (db.designs ?? []).find((x) => x.id === id && x.status === 'approved');
+    if (!d || d.playerId === me.id) return false;
+    const week = periodOf(todayInGameTz());
+    const plays = (db.designPlays ??= []);
+    if (plays.some((p) => p.design === id && p.playerId === me.id && p.week === week)) return false;
+    plays.push({ design: id, playerId: me.id, week });
+    save(db);
+    return true;
   },
 
   // as admin_holes does on the server: this period's shots, hole by hole

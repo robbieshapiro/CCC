@@ -15,10 +15,11 @@ export const RANKS: { id: Rack; name: string; from: number }[] = [
   { id: 'pro', name: 'Club Pro', from: 5000 },
   { id: 'legend', name: 'Club Legend', from: 25000 },
 ];
-export const rankOf = (earnings: number) => [...RANKS].reverse().find((r) => earnings >= r.from)!;
+// Club Legend needs a weekly title as well as the earnings; without one, the best you are is Club Pro
+export const rankOf = (earnings: number, titles = 0) => [...RANKS].reverse().find((r) => earnings >= r.from && (r.id !== 'legend' || titles > 0))!;
 export const nextRank = (earnings: number) => RANKS.find((r) => r.from > earnings) ?? null;
 const ORDER: Record<Rack, number> = { member: 0, pro: 1, legend: 2 };
-export const canShop = (rack: Rack, earnings: number) => ORDER[rankOf(earnings).id] >= ORDER[rack];
+export const canShop = (rack: Rack, earnings: number, titles = 0) => ORDER[rankOf(earnings, titles).id] >= ORDER[rack];
 
 // career earnings: the purses (p.earnings, the board's money column) and the club bonuses
 export const earningsOf = (p: Player) => (p.earnings ?? 0) + (p.bonus?.total ?? 0);
@@ -36,7 +37,7 @@ export function badgeSvg(rack: Rack, size = 18) {
   const laurel = rack === 'legend' ? `<path d="M8.5 25 q-3.5 -6 0 -13 M23.5 25 q3.5 -6 0 -13" fill="none" stroke="${rim}" stroke-width="1.6"/>` : '';
   return `<svg class="rank-badge rb-${rack}" width="${size}" height="${size}" viewBox="0 0 32 32" role="img" aria-label="${r.name}"><title>${r.name}</title><path d="M16 2.5 L27.5 6.5 V15.5 C27.5 23 22.5 27.5 16 30 C9.5 27.5 4.5 23 4.5 15.5 V6.5 Z" fill="${fill}" stroke="${rim}" stroke-width="1.6"/>${mark}${laurel}</svg>`;
 }
-export const badgeFor = (p: Player, size = 18) => (p.host ? '' : badgeSvg(rankOf(earningsOf(p)).id, size));
+export const badgeFor = (p: Player, size = 18) => (p.host ? '' : badgeSvg(rankOf(earningsOf(p), p.wins ?? 0).id, size));
 
 // ---------- the catalogue ----------
 
@@ -64,7 +65,7 @@ const caddieItem: Item = {
   id: 'caddie',
   name: 'Personal caddie',
   kind: 'caddie',
-  price: 15000,
+  price: 50000,
   rack: 'legend',
   what: 'Your own caddie, in a white bib with your name across it, standing by with your bag. On the course, beside your ghost and on your member card.',
   wear: (s) => (s.caddie = true),

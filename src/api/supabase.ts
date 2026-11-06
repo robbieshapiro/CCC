@@ -53,6 +53,7 @@ export const supabaseApi: Api = {
     }
   },
   adminHoles: (s) => rpc<HoleReport[]>('admin_holes', { p_token: s.token }),
+  recordDesignPlay: (s, id) => rpc<boolean>('record_design_play', { p_token: s.token, p_design: id }).catch(() => false),
   buyItem: async (s, item) => {
     try {
       await rpc('buy_item', { p_token: s.token, p_item: item });

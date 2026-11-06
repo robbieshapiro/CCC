@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (gear try-on checked piece by piece).
+Last updated Nov 6, 2026 (the earnings rework).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (gear try-on checked piece by piece).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #161 | Earnings reworked before the club grows. The Open purse is $250 a player (was $1,000): a 25-player week pays the winner about $1,900, not $7,600. New ways to earn on a daily card, each with a coin burst and a cheer in the round: a holed putt from 30 ft ($75) or 60 ft ($200), a chip-in from off the green ($100), the first time you find each hole's secret ($150); and $100 to a designer each time another member finishes their Members' Course hole (once each a week, up to $500 a week). The Club Legend rack (and the Legend badge) now also needs a weekly title; the caddie costs $50,000 (was $15,000). The secrets on the Pacific Bluffs and the Western Reserve are recorded on cards now (seven were missing). Earnings already banked stay as they are. |
 | #160 | Every Pro Shop piece and hat checked on the golfer in its own view, and fixed where it didn't show: clubs rest on the plinth (in the fitting room and the Locker) instead of sinking through it, and the club view aims at the head, so all five putters and three drivers can be seen; shoes get their own view, with no club in the way; hair tucks under hats (no curls or bun through the crown), and the brimmed hats are round enough to cover the back of the head; the diamond stud sits out on the earlobe. |
 | #159 | The Pro Shop's fitting room lit like a cosy shop instead of a showroom: a dimmer, warm amber room, three brass wall lamps glowing on darker panelling, a lamp over Reginald's counter, and a warm pool of light over the plinth. The even room reflections that made it glare are turned well down (just enough for metal to read). |
 | #158 | The Members' Course at the bar, and trying a hole at the Design Desk, now swing on the weekly course's vertical meter instead of the old sideways one (`Course3D.meterStyle`). The holes themselves are unchanged: their greens and putting play as before. |
@@ -119,7 +120,7 @@ Last updated Nov 6, 2026 (gear try-on checked piece by piece).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [ ] Turn on branch protection for `main` (GitHub → Settings → Branches → Add rule): require a pull request (0 approvals), require the `checks` status to pass, and don't allow bypassing. Agents can't set this, and none may merge anything until it's on.
 - [ ] Create the Architect and Steward as routines in claude.ai (Robbie, from the claude.ai/code routines page: the repo `robbieshapiro/CCC`, plus Supabase and Vercel for the Steward). An agent couldn't attach the repo or connectors. Then delete the paused copies `trig_01VL4jyxguewx9BmYHhEGcgn` and `trig_01JTEuR8TDGCEgBV7ze79J8i`.
-- [ ] The #157 SQL: `rounds.shots`, the new `submit_round` (with `p_shots`), `admin_holes`, `shot_export`.
+- [ ] The #157 and #161 SQL, applied together: `rounds.shots`, `secret_feats`, the new `submit_round`, `admin_holes`, `shot_export`, `open_per_player`, `open_payouts`, `admin_kpis`, `design_plays`, `record_design_play`, `person_bonus`, `buy_item`, and the caddie's price.
 - [x] The #156 SQL, run Nov 5 as `pr_156_catalogue` (checked: 61 pieces, 32 member, 17 pro, 12 legend, $150 to $30,000; all 7 earlier purchases still match a piece).
 - [x] The #154 SQL, run Nov 5 as `pr_154_admin_kpis` (checked: `admin_kpis` returns live numbers for Robbie, 5 in today and 5 of 13 back; `admin_insights` has row security on).
 - [x] The #151 Open purse SQL, run Nov 5 as `pr_151_open_purse` (checked: the four purse functions are live and hidden from the public role, the snapshot loads for both clubs, October's purses still read $9,998 at Kellogg and $4,000 at The Clergy, and the Open pays nothing until the Nov 8 week closes): `club_payouts` (the old club purse, renamed), `open_purse_from`, `open_payouts`, the new `period_payouts`, and `get_snapshot` (the last purse paid lists the whole Open, with names).
@@ -213,6 +214,18 @@ Every counted stroke saved: club, power and accuracy, where it started and finis
 - **Polish:**
   - an unread dot on the Clubhouse tab when a new Chronicle is out;
   - a Members' Course board on the Play page.
+
+## The economy (from #161)
+
+What a week is worth, roughly, with 25 players on the Open:
+
+| Member | Purse | Daily bonuses and moments | A week |
+|---|---|---|---|
+| Wins the week | about $1,900 | $700 to $1,000 | about $2,800 |
+| Regular, top 10 now and then | about $350 | $500 to $700 | about $950 |
+| Casual, three cards a week | rarely | $200 to $300 | about $250 |
+
+So Club Pro ($5,000) takes a winner about 2 weeks, a regular about 5, a casual member most of a season; Club Legend ($25,000 and a title) takes the best player about 9 weeks; the caddie ($50,000) is a season-long chase. Shop floor pieces ($150 to $1,500) are a week or two for anyone; the Pro rack ($1,500 to $6,000) one every few weeks for a regular; the Legend rack ($10,000 to $30,000) one every month or two for the best. Only the daily card earns, so playing more rounds doesn't. If the club passes about 60 players, look again at the $250.
 
 ## Costs to watch
 

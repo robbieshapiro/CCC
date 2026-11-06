@@ -195,6 +195,8 @@ export interface Api {
   snapshot(session: Session): Promise<Snapshot>;
   submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[]; spots?: Spot[]; card?: boolean; shots?: RoundShot[] }): Promise<void>;
   adminHoles(session: Session): Promise<HoleReport[]>;
+  // a member finished a hole on the Members' Course: true when it paid its designer (once per member per hole a week)
+  recordDesignPlay(session: Session, design: number): Promise<boolean>;
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;
   buyItem(session: Session, item: string): Promise<void>; // the Pro Shop: checks rank and balance, then it's yours
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
