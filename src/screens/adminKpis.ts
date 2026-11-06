@@ -11,9 +11,9 @@ import { requireSession } from '../state';
 import { esc } from '../ui';
 import { setNeeds } from './admin';
 
-export const kpiSections = () => `
-  <section class="adm-card adm-brief" id="adm-brief" hidden></section>
-  <section class="adm-kpis" id="adm-kpis"><p class="muted">Loading…</p></section>`;
+export const kpiSections = () => `<section class="adm-kpis" id="adm-kpis"><p class="muted">Loading…</p></section>`;
+// Reginald's read, in a tab of its own
+export const briefSection = () => `<section class="adm-card adm-brief" id="adm-brief"><h2>Reginald's morning read</h2><p class="muted">Loading…</p></section>`;
 export const chartSections = () => `<section class="adm-kpis adm-kpis-more" id="adm-kpis-more"></section>
   <section class="adm-card adm-charts" id="adm-charts" hidden></section>`;
 // the Course tab: how this week's course is scoring, then the hole report from members' shots
@@ -70,8 +70,11 @@ export async function loadKpis() {
 // Reginald's read: once a day, kept on the server, so this is cheap to ask whenever Admin opens
 export async function loadBrief() {
   const el = document.getElementById('adm-brief');
-  if (!el || !useSupabase) return;
-  el.hidden = false;
+  if (!el) return;
+  if (!useSupabase) {
+    el.innerHTML = `<h2>Reginald's morning read</h2><p class="muted">Reginald reads the live club's numbers, so there's nothing here in local mode.</p>`;
+    return;
+  }
   el.innerHTML = `<h2>Reginald's morning read</h2><p class="muted reg-thinking">Reading the numbers…</p>`;
   try {
     const res = await fetch('/api/insights', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: requireSession().token }) });
@@ -83,7 +86,7 @@ export async function loadBrief() {
     }
     el.innerHTML = `<h2>Reginald's morning read</h2><ul class="adm-brief-list">${r.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>`;
   } catch {
-    el.hidden = true;
+    el.innerHTML = `<h2>Reginald's morning read</h2><p class="muted">Nothing from Reginald just now. He tries again next time you open Admin.</p>`;
   }
 }
 
