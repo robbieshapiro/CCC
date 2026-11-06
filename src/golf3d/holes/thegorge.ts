@@ -60,7 +60,6 @@ const base: Hole = {
   theme: 'autumn',
   tour: true,
   turf: RESERVE_TURF,
-  weather: 'storm',
   windByHeight: true,
   calmChip: true,
   chipDrop: 0.7,

@@ -7,7 +7,8 @@ import * as props from './props';
 import { DESERT_SURFACE, LANDS_FLOOR, LINKS_SURFACE, landsFrame, landsPost } from './lands';
 import { brewFx, HAUNTED_FLOOR, HAUNTED_SURFACE, hauntedDecor, hauntedGrounds, hauntedMover, hauntedPortal, hauntedPost, hauntedWall, slimeBubbles, slimeMaterial } from './haunted';
 import * as stands from './stands';
-import { AUTUMN_FLOOR, AUTUMN_SURFACE, autumnDecor, autumnFrame, BARN_RED, gableRoof, longRough, maple } from './autumn';
+import { AUTUMN_FLOOR, AUTUMN_SURFACE, autumnDecor, autumnFrame, BARN_RED, gableRoof, maple } from './autumn';
+import { wildlife } from './wildlife';
 import { COASTAL_SURFACE, coastalDecor, coastalFrame, lighthouse, montereyCypress, torreyPine, PACIFIC, PACIFIC_BED, SANDSTONE, surf } from './coastal';
 import { mat, mesh, P } from './props';
 import { gradAt, heightAt, inPoly, levelOf, surfaceAt, wetIn } from './terrain';
@@ -890,7 +891,7 @@ export function buildWorld(h: Hole, number: number): World {
   if (haunted) hauntedGrounds(h, root, anim, floor);
   if (lands) landsFrame(h, root, floor);
   if (autumn) autumnFrame(h, root, floor);
-  if (autumn) longRough(h, root);
+  if (autumn && !h.putterOnly) wildlife(h, root, floor, anim);
   if (coastal) {
     // which side the sea is on: the lower of the two long edges
     const edge = (x: number) => {
