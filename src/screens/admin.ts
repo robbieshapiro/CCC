@@ -16,6 +16,7 @@ import { esc, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
+import { adminShoutSection, loadAdminShouts } from './shoutouts';
 import { briefSection, chartSections, courseSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
@@ -77,6 +78,7 @@ export function admin(snap: Snapshot) {
           <h2>Feedback</h2>
           <div id="adm-todo"><p class="muted">Loading…</p></div>
         </section>
+        ${adminShoutSection()}
       </div>
       <div class="adm-pane" data-pane="tools" hidden>
         <section class="adm-card adm-do">
@@ -123,6 +125,7 @@ export function admin(snap: Snapshot) {
   bindNoticeTool();
   bindInviteTool();
   void load();
+  void loadAdminShouts();
   void loadHoles(snap);
   void loadTrend();
   void loadKpis().then(loadHoleReport);

@@ -42,7 +42,8 @@ export type Drill = {
 export type ShotLog = { c: ClubId; p: number; e: number; f: [number, number]; t: [number, number]; l: string; x: 0 | 1; i: 0 | 1 };
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
 // A member who played today, standing where their tee shot finished on each hole.
-export type Ghost = { name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
+// id: their player id, to send them a kudos or a chirp (a made-up member in the Committee's rehearsal has none)
+export type Ghost = { id?: string; name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
 // someone in the stands on a hole that has them: a member who has played it, with their score on it
 export type Spectator = { name: string; avatar: Avatar; label: string };
 type Mode = 'fly' | 'aim' | 'meter' | 'swing' | 'roll' | 'done' | 'cart';
@@ -224,7 +225,7 @@ export class Course3D {
   private puffs: { m: THREE.Mesh; t: number }[] = [];
   private cart: Visitor | null = null;
   private ghosts: Ghost[] = [];
-  private onCourse: { golfer: Golfer; objs: THREE.Object3D[]; at: THREE.Vector3; keep?: boolean }[] = [];
+  private onCourse: { golfer: Golfer; objs: THREE.Object3D[]; at: THREE.Vector3; keep?: boolean; ghost?: Ghost }[] = [];
   // the rest of a full stadium: simple figures, two instanced meshes for the lot
   private crowd: THREE.InstancedMesh[] = [];
   private spot: V2 | null | undefined; // the tee shot's resting place, once it has one
@@ -281,6 +282,8 @@ export class Course3D {
   onStroke: ((strokes: number) => void) | null = null;
   // every counted stroke, for the Committee's hole report and tuning the hole checks (see ShotLog)
   onShotLog: ((s: ShotLog) => void) | null = null;
+  // a tap on another member out on the course (their figure or their name card), instead of a swing
+  onGhostTap: ((g: Ghost) => void) | null = null;
   // what Leave asks before it lets you go (a counted round's default when empty)
   quitAsk = '';
   private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
@@ -1205,10 +1208,18 @@ export class Course3D {
         if (this.club === 'putter') this.golfer.takeBack('putter', this.power);
       }
     });
-    const up = () => {
+    const up = (e: PointerEvent) => {
       const d = this.drag;
       this.drag = null;
       if (!d || this.mode !== 'aim') return;
+      // a tap on another member: their card, not a swing
+      if (!d.kind && this.onGhostTap) {
+        const g = this.ghostAt(e.clientX, e.clientY);
+        if (g) {
+          if (this.club === 'putter') this.golfer.setPose('address');
+          return this.onGhostTap(g);
+        }
+      }
       // putts go on release; full swings keep the plan and start with a tap
       if (this.club === 'putter') {
         if (d.kind === 'power' && this.power > 0.03) this.putt();
@@ -1745,8 +1756,24 @@ export class Course3D {
       const k = this.onCourse.filter((o) => o.at.distanceTo(golfer.group.position) < 30).length;
       tag.center.set(0.5, -k * 1.1);
       this.scene.add(ball, golfer.group, tag);
-      this.onCourse.push({ golfer, objs: [ball, golfer.group, tag], at: golfer.group.position.clone() });
+      this.onCourse.push({ golfer, objs: [ball, golfer.group, tag], at: golfer.group.position.clone(), ghost: g });
     }
+  }
+
+  // Which member (if any) is under a tap: their figure or the name card over them
+  private ghostAt(cx: number, cy: number): Ghost | null {
+    const r = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, this.camera);
+    let best: { g: Ghost; d: number } | null = null;
+    for (const o of this.onCourse) {
+      if (!o.ghost) continue;
+      const shown = o.objs.filter((x) => x.visible);
+      const hit = ray.intersectObjects(shown, true)[0];
+      if (hit && (!best || hit.distance < best.d)) best = { g: o.ghost, d: hit.distance };
+    }
+    return best?.g ?? null;
   }
 
   // Step aside when your own ball comes to rest beside theirs.

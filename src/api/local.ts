@@ -10,14 +10,14 @@ import { weekOf } from '../bar';
 import { OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[] };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[] };
 
 const KEY = 'ccc-local-db';
 
@@ -392,6 +392,68 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     if (!me.admin) throw new Error('Only the committee can take notices down.');
     const n = (db.notices ?? []).find((x) => x.id === id && x.groupId === me.groupId);
     if (n) n.live = false;
+    save(db);
+  },
+
+  async sendShoutout(session, to, kind, body) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const clean = body.replace(/\s+/g, ' ').trim();
+    if (kind !== 'kudos' && kind !== 'chirp') throw new Error('Kudos or a chirp, nothing else.');
+    if (!clean || clean.length > 80) throw new Error('Keep it to 80 characters.');
+    const them = db.players.find((p) => p.id === to);
+    if (!them || them.groupId !== me.groupId) throw new Error('They are not in your club.');
+    if (them.id === me.id) throw new Error('You cannot chirp yourself. Well, you can, but not here.');
+    const list = (db.shoutouts ??= []);
+    const today = list.filter((x) => x.fromId === me.id && todayInGameTz(new Date(x.createdAt)) === todayInGameTz());
+    if (today.length >= 20) throw new Error('That is twenty for today. Save some for tomorrow.');
+    if (today.filter((x) => x.toId === them.id).length >= 3) throw new Error('Three to one member is plenty for one day.');
+    list.push({ id: list.length + 1, groupId: me.groupId, fromId: me.id, toId: them.id, kind, body: clean, seen: false, removed: false, createdAt: new Date().toISOString() });
+    save(db);
+  },
+
+  async myShoutouts(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const mine = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
+    const since = Date.now() - 14 * 86400000;
+    return (db.shoutouts ?? [])
+      .filter((x) => mine.has(x.toId) && !x.seen && !x.removed && Date.parse(x.createdAt) > since)
+      .reverse()
+      .slice(0, 12)
+      .map((x) => {
+        const f = db.players.find((p) => p.id === x.fromId);
+        return { id: x.id, kind: x.kind, body: x.body, from: f?.name ?? 'A member', fromAvatar: f?.avatar, createdAt: x.createdAt };
+      });
+  },
+
+  async seenShoutouts(session, ids) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const mine = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
+    for (const x of db.shoutouts ?? []) if (ids.includes(x.id) && mine.has(x.toId)) x.seen = true;
+    save(db);
+  },
+
+  async adminShoutouts(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see the admin tab.');
+    const since = Date.now() - 14 * 86400000;
+    const name = (id: string) => db.players.find((p) => p.id === id)?.name ?? '?';
+    return (db.shoutouts ?? [])
+      .filter((x) => x.groupId === me.groupId && Date.parse(x.createdAt) > since)
+      .reverse()
+      .slice(0, 60)
+      .map((x) => ({ id: x.id, kind: x.kind, body: x.body, from: name(x.fromId), to: name(x.toId), seen: x.seen, removed: x.removed, createdAt: x.createdAt }));
+  },
+
+  async removeShoutout(session, id) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can take these down.');
+    const x = (db.shoutouts ?? []).find((y) => y.id === id && y.groupId === me.groupId);
+    if (x) x.removed = true;
     save(db);
   },
 

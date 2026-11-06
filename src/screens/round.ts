@@ -12,6 +12,8 @@ import { inPoly, isWater, surfaceAt } from '../golf3d/terrain';
 import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus } from '../bonus';
 import type { CardToday, RoundShot, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
+import { shoutSheet } from './shoutouts';
+import { store } from '../storage';
 import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
@@ -56,7 +58,7 @@ function todaysField(snap: Snapshot): Ghost[] {
   }
   return [...best.values()].flatMap((r) => {
     const p = snap.players.find((x) => x.id === r.playerId);
-    return p ? [{ name: p.name, avatar: p.avatar, spots: r.spots!, holes: r.holes }] : [];
+    return p ? [{ id: p.id, name: p.name, avatar: p.avatar, spots: r.spots!, holes: r.holes }] : [];
   });
 }
 
@@ -144,6 +146,16 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   if (!preview) game.setGhosts(todaysField(snap));
   // the rehearsal puts a few of the club's members out on the course, as Sunday's field would look
   else if (!opts.practice) game.setGhosts(sampleField(snap, course));
+  // tap another member out on the course: their card, and a kudos or a chirp to send them
+  game.onGhostTap = (g) => shoutSheet(el, g, course);
+  if (!store.get('ccc-shout-tip') && (preview ? !opts.practice : todaysField(snap).length)) {
+    store.set('ccc-shout-tip', '1');
+    const tip = document.createElement('p');
+    tip.className = 'shout-tip';
+    tip.textContent = 'Tap a member out on the course to see their card and send them kudos, or a chirp.';
+    el.appendChild(tip);
+    window.setTimeout(() => tip.remove(), 7000);
+  }
   // a hole with a stadium fills its stands with everyone in the Open who has played it this period
   const standsAt = course.holes.findIndex((h) => h.decor.some((d) => d.kind === 'stands'));
   if (standsAt >= 0 && !preview) {
