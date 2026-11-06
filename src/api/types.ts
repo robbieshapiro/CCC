@@ -168,6 +168,20 @@ export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 // a member's golf hole from the Design Desk (spec: src/designer/hole.ts HoleSpec)
 export type Design = { id: number; prompt: string; spec: import('../designer/hole').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string };
 export type MembersHole = { id: number; spec: import('../designer/hole').HoleSpec; par: number; by: string };
+// One counted stroke of a round (h: the hole's index); see ShotLog in golf3d/engine.ts
+export type RoundShot = { h: number; c: string; p: number; e: number; f: [number, number]; t: [number, number]; l: string; x: 0 | 1; i: 0 | 1 };
+// The Committee's hole report for this week's course (admin_holes): how each hole is really being played
+export type HoleReport = {
+  hole: number;
+  rounds: number; // rounds with shot data
+  putts: number; // per hole, on average
+  threePutts: number; // share of holes with three putts or more
+  penalties: number; // per hole, on average
+  teeClubs: Record<string, number>;
+  lies: Record<string, number>; // where shots were hit from
+  tee: [number, number][]; // where tee shots finished
+  wet: [number, number][]; // where shots cost a penalty
+};
 // Today's card: whether it's in, and where one in progress stands (holes done, strokes on the hole being played)
 export type CardProgress = { scores: number[]; shots: number; spots: (Spot | null)[]; feats: string[] };
 export type CardToday = CardProgress & { done: boolean; id: number | null; course: string | null };
@@ -179,7 +193,8 @@ export interface Api {
   myClubs(name: string, pin: string): Promise<Session[]>; // returning members: every club that name and PIN belong to
   createClub(session: Session, name: string): Promise<Session>; // the admin starts another club
   snapshot(session: Session): Promise<Snapshot>;
-  submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[]; spots?: Spot[]; card?: boolean }): Promise<void>;
+  submitRound(session: Session, r: { course: string; holes: number[]; pars: number[]; feats: string[]; spots?: Spot[]; card?: boolean; shots?: RoundShot[] }): Promise<void>;
+  adminHoles(session: Session): Promise<HoleReport[]>;
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;
   buyItem(session: Session, item: string): Promise<void>; // the Pro Shop: checks rank and balance, then it's yours
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;

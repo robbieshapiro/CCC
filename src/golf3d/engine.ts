@@ -36,6 +36,9 @@ export type Drill = {
   advance?: boolean;
   report?: (r: { holed: boolean; lost: boolean; from: V2; end: V2 }) => string;
 };
+// One counted stroke: the club, the power and the swing's error off the meter, where it was hit from and where it came to
+// rest (hole feet, rounded), the lie it was hit from, and whether it cost a penalty (x) or went in (i)
+export type ShotLog = { c: ClubId; p: number; e: number; f: [number, number]; t: [number, number]; l: string; x: 0 | 1; i: 0 | 1 };
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
 // A member who played today, standing where their tee shot finished on each hole.
 export type Ghost = { name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
@@ -256,6 +259,8 @@ export class Course3D {
   onShot: (() => void) | null = null;
   // after every counted stroke, with the hole's count so far (a daily card saves itself on each one)
   onStroke: ((strokes: number) => void) | null = null;
+  // every counted stroke, for the Committee's hole report and tuning the hole checks (see ShotLog)
+  onShotLog: ((s: ShotLog) => void) | null = null;
   // what Leave asks before it lets you go (a counted round's default when empty)
   quitAsk = '';
   private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
@@ -1330,10 +1335,14 @@ export class Course3D {
 
   private hit(club: ClubId, power: number, error: number) {
     const full = club !== 'putter';
+    // the swing's own error, before the lie adds any (the shot log keeps this one)
+    const swingError = error;
     // out of thick rough it can come off the face anywhere
     error += lieScatter(this.hole, this.pos, club, Math.random());
     const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind?.accel };
     const r = simulate(this.hole, this.pos, shot);
+    if (!this.practice && !this.drill)
+      this.onShotLog?.({ c: club, p: Math.round(power * 100) / 100, e: Math.round(swingError * 100) / 100, f: [Math.round(this.pos.x), Math.round(this.pos.y)], t: [Math.round(r.end.x), Math.round(r.end.y)], l: surfaceAt(this.hole, this.pos), x: r.penalty ? 1 : 0, i: r.holed ? 1 : 0 });
     // every shot starts from a stock strike
     this.setStrike(0, 0);
     const practice = this.practice;

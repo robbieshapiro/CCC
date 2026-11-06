@@ -10,10 +10,10 @@ import { weekOf } from '../bar';
 import { payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type Api, type CardProgress, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
-type DbRound = Round & { groupId: string };
+type DbRound = Round & { groupId: string; shots?: RoundShot[] };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
@@ -257,7 +257,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     // daily cards: one round a day counts
     if (cardsOn(month) && db.rounds.some((x) => x.playerId === me.id && x.month === month && todayInGameTz(new Date(x.createdAt)) === today))
       throw new Error('Your card for today is already in. Practise as much as you like.');
-    db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, createdAt: new Date().toISOString() });
+    db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, shots: r.shots?.slice(0, 150), createdAt: new Date().toISOString() });
     const card = (db.cards ?? []).find((c) => c.playerId === me.id && c.day === today);
     if (card) card.done = true;
     save(db);
@@ -690,6 +690,32 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       }),
       holes,
     };
+  },
+
+  // as admin_holes does on the server: this period's shots, hole by hole
+  async adminHoles(session): Promise<HoleReport[]> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see the admin tab.');
+    const per = periodOf(todayInGameTz());
+    const rounds = db.rounds.filter((r) => r.month === per && r.shots?.length && !db.players.find((p) => p.id === r.playerId)?.admin);
+    return courseFor(per).holes.map((_, i) => {
+      const per = rounds.map((r) => r.shots!.filter((x) => x.h === i)).filter((x) => x.length);
+      const count = (f: (x: RoundShot) => boolean) => per.flat().filter(f).length;
+      const tally = (xs: string[]) => xs.reduce<Record<string, number>>((a, k) => ((a[k] = (a[k] ?? 0) + 1), a), {});
+      const putts = per.map((x) => x.filter((y) => y.c === 'putter').length);
+      return {
+        hole: i + 1,
+        rounds: per.length,
+        putts: per.length ? Math.round((putts.reduce((a, b) => a + b, 0) / per.length) * 100) / 100 : 0,
+        threePutts: per.length ? Math.round((putts.filter((n) => n >= 3).length / per.length) * 100) / 100 : 0,
+        penalties: per.length ? Math.round((count((x) => x.x === 1) / per.length) * 100) / 100 : 0,
+        teeClubs: tally(per.map((x) => x[0].c)),
+        lies: tally(per.flat().map((x) => x.l)),
+        tee: per.map((x) => x[0].t).slice(0, 200),
+        wet: per.flat().filter((x) => x.x === 1).map((x) => x.t).slice(0, 200),
+      };
+    });
   },
 
   // local mode keeps one period at a time, so there's never a playoff to play

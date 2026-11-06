@@ -3,7 +3,8 @@
 // then three charts: players per day, week over week, and how this week's course is scoring hole by hole.
 import { api, useSupabase } from '../api';
 import type { AdminInsights, AdminKpis } from '../api/types';
-import { periodName } from '../day';
+import { periodName, periodOf, todayInGameTz } from '../day';
+import { planCanvas } from '../designer/plan';
 import { courseFor } from '../golf3d/courses';
 import { money } from '../purse';
 import { requireSession } from '../state';
@@ -12,7 +13,48 @@ import { esc } from '../ui';
 export const kpiSections = () => `
   <section class="adm-card adm-brief" id="adm-brief" hidden></section>
   <section class="adm-kpis" id="adm-kpis"><p class="muted">Loading…</p></section>`;
-export const chartSections = () => `<section class="adm-card adm-charts" id="adm-charts" hidden></section>`;
+export const chartSections = () => `<section class="adm-card adm-charts" id="adm-charts" hidden></section>
+  <section class="adm-card adm-report" id="adm-report" hidden></section>`;
+
+// The hole report: from the shots members post with their cards, how each hole is really being played, with where tee
+// shots (cream) and penalties (red) finished drawn on the hole
+export async function loadHoleReport() {
+  const el = document.getElementById('adm-report');
+  if (!el) return;
+  const rows = await api.adminHoles(requireSession()).catch(() => null);
+  if (!rows || !document.getElementById('adm-report')) return;
+  el.hidden = false;
+  const course = courseFor(kpis?.period ?? periodOf(todayInGameTz()));
+  if (!rows.some((r) => r.rounds)) {
+    el.innerHTML = `<h2>Hole report</h2><p class="muted">Fills in as members post cards on ${esc(course.name)}: putts, penalties, the club off the tee, and where shots finish on each hole.</p>`;
+    return;
+  }
+  el.innerHTML = `<h2>Hole report <small>${esc(course.name)} · from members' shots</small></h2><div class="hole-report" id="hole-report"></div>`;
+  const grid = document.getElementById('hole-report')!;
+  for (const r of rows) {
+    const hole = course.holes[r.hole - 1];
+    if (!hole) continue;
+    const card = document.createElement('div');
+    card.className = 'hr-card';
+    const dots = [...r.tee.map((t) => ({ p: { x: t[0], y: t[1] }, color: '#f3ecdc' })), ...r.wet.map((t) => ({ p: { x: t[0], y: t[1] }, color: '#e2543d' }))];
+    const top = (o: Record<string, number>, n = 3) =>
+      Object.entries(o)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, n)
+        .map(([k, v]) => `${esc(k)} ${v}`)
+        .join(' · ');
+    card.innerHTML = `<h3>${r.hole}. ${esc(hole.name)} <small>par ${hole.par}</small></h3>
+      <p class="hr-stats"><span><b>${r.putts}</b> putts</span><span><b>${Math.round(r.threePutts * 100)}%</b> three-putts</span><span><b>${r.penalties}</b> penalties</span><span><b>${r.rounds}</b> rounds</span></p>
+      <p class="muted hr-line">Off the tee: ${top(r.teeClubs) || 'n/a'}</p>
+      <p class="muted hr-line">Hit from: ${top(r.lies, 4) || 'n/a'}</p>`;
+    try {
+      card.prepend(planCanvas(hole, 150, dots));
+    } catch {
+      /* no canvas: the numbers still show */
+    }
+    grid.appendChild(card);
+  }
+}
 
 let kpis: AdminKpis | null = null;
 

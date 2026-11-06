@@ -324,6 +324,48 @@ if (mode === 'quick') {
   console.log(`\nquick check done in ${Math.round((Date.now() - started) / 1000)}s`);
   process.exit();
 }
+// Calibrate the steady bot to real members: npm run check-holes -- calibrate shots.json, where the file is the output of
+// `select shot_export()` in Supabase (every posted shot of the last four weeks). Compares members' swing error with the
+// bot's, club by club, and prints the SKILL that plays most like them (use it for the member mode's even-par target).
+if (mode === 'calibrate') {
+  const { readFileSync } = await import('node:fs');
+  const file = process.argv[3];
+  if (!file) {
+    console.log('Usage: npm run check-holes -- calibrate shots.json (the output of select shot_export() in Supabase)');
+    process.exit(1);
+  }
+  const rows = JSON.parse(readFileSync(file, 'utf8')) as { course: string; shot: { c: ClubId; p: number; e: number } }[];
+  const full = rows.filter((r) => r.shot && r.shot.c !== 'putter' && Number.isFinite(r.shot.e) && Number.isFinite(r.shot.p));
+  if (!full.length) {
+    console.log('No full swings in that file yet.');
+    process.exit(0);
+  }
+  const rms = (xs: number[]) => Math.sqrt(xs.reduce((a, x) => a + x * x, 0) / Math.max(1, xs.length));
+  // the bot's error for the same club and power, on that course's meter, at a given SKILL
+  const botRms = (skill: number, list: typeof full) => {
+    const rng = makeRng(`calibrate:${skill}`);
+    const gauss = () => skill * Math.sqrt(-2 * Math.log(rng.next() || 1e-9)) * Math.cos(2 * Math.PI * rng.next());
+    const errs: number[] = [];
+    for (const r of list) {
+      const tour = !!courseById(r.course)?.holes[0]?.tour;
+      for (let k = 0; k < 4; k++) errs.push(swing(r.shot.c, r.shot.p, gauss, tour ? 'vertical' : 'classic').error);
+    }
+    return rms(errs);
+  };
+  const members = rms(full.map((r) => r.shot.e));
+  let best = { skill: 1, gap: Infinity };
+  for (let k = 0.05; k <= 1.5; k += 0.05) {
+    const gap = Math.abs(botRms(k, full) - members);
+    if (gap < best.gap) best = { skill: Math.round(k * 100) / 100, gap };
+  }
+  console.log(`${full.length} full swings from ${new Set(rows.map((r) => r.course)).size} course(s). Members' error ${members.toFixed(3)} (rms), pure strikes ${Math.round((full.filter((r) => r.shot.e === 0).length / full.length) * 100)}%.`);
+  for (const c of [...new Set(full.map((r) => r.shot.c))]) {
+    const list = full.filter((r) => r.shot.c === c);
+    console.log(`  ${c.padEnd(7)} n ${String(list.length).padStart(4)}  members ${rms(list.map((r) => r.shot.e)).toFixed(3)}  bot at SKILL ${best.skill} ${botRms(best.skill, list).toFixed(3)}`);
+  }
+  console.log(`SKILL=${best.skill} plays most like the members. Try: COURSE=<id> SKILL=${best.skill} SEEDS=12 npm run check-holes -- member <hole>`);
+  process.exit(0);
+}
 const only = process.argv[3];
 const holes = course.holes.filter((h) => !only || h.id === only);
 // quick mode plays on a baked copy of the ground: near enough for the sims, and far quicker

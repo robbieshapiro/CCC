@@ -14,7 +14,8 @@ const LOOKS: Record<string, Partial<Record<Surface, string>> & { out: string }> 
 const WATER: Record<string, string> = { lava: '#ff6a1c', lake: '#3a8fb0', sea: '#2b6d84', slime: '#6fdc3a' };
 const TREE: Record<string, string> = { pine: '#24452c', oak: '#2f5a2c', palm: '#3f7a3a', gorse: '#55702f', cactus: '#4f7a3a', rock: '#7a756b' };
 
-export function planCanvas(hole: Hole, width = 260): HTMLCanvasElement {
+// dots: points to mark on the plan (the Committee's hole report plots where members' shots finish)
+export function planCanvas(hole: Hole, width = 260, dots: { p: V2; color: string }[] = []): HTMLCanvasElement {
   const xs = hole.border.map((p) => p.x);
   const ys = hole.border.map((p) => p.y);
   const x0 = Math.min(...xs);
@@ -92,5 +93,17 @@ export function planCanvas(hole: Hole, width = 260): HTMLCanvasElement {
   g.lineTo(fx + 8, fy - 9);
   g.lineTo(fx, fy - 6);
   g.fill();
+  for (const d of dots) {
+    const [x, y] = P(d.p);
+    g.beginPath();
+    g.arc(x, y, 2.6, 0, Math.PI * 2);
+    g.fillStyle = d.color;
+    g.globalAlpha = 0.8;
+    g.fill();
+    g.globalAlpha = 1;
+    g.strokeStyle = 'rgba(0,0,0,0.45)';
+    g.lineWidth = 0.6;
+    g.stroke();
+  }
   return c;
 }
