@@ -1,16 +1,16 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (Western Reserve eased, chip meter, the harvest hillside).
+Last updated Nov 6, 2026 (end of day: handoff for Sunday).
 
-## Handoff (Nov 5, evening): open threads for the next session
+## Handoff (Nov 6, evening): open threads for the next session
 
-- **Daily cards start Sun Nov 8** (#149): one round a day counts. The SQL is live; nothing changes until Sunday. Play a real card Sunday morning to check it end to end.
-- **Western Reserve opens Sun Nov 8** (#146). Members practise all five holes until then (#174). Its wind test (`windByHeight`, #143) counts for real from Sunday; the calmer chip meter is now on every course (#180), so #138 is superseded.
-- **Open PRs #132, #134, #138** (wind by height and the calmer chip meter for every course). On hold: Robbie is testing them on the Western Reserve first. #132 was closed as superseded by #134. The scheduled task that would have merged them at the Caldera close was deleted; Robbie decides after playing the Western Reserve. Don't merge without his say.
-- **Caldera storm** (#144, #145): cleared early on Nov 6 (#166); the Blowhole and the Caldera now gust 10 to 15 mph. Nothing to do.
-- **Pacific Bluffs** is the Nov 15 draft. It needs Robbie's play-through and approval (see Setup status).
-- **Vercel was slow to pick up merges on Nov 5** (one waited about 30 minutes, another sat 11 minutes before building). After merging, confirm the production deployment for the merge SHA is READY (Vercel `list_deployments` with `sha`) before telling Robbie something is live.
-- **Offered, not built:** split the admin's unfinished-rounds stat into restarts (quit in the first ~20 s on hole 1) and real abandons. Branch protection, the spend limit and the Architect and Steward are all done (see Setup status).
+- **Sun Nov 8 is the big day.** Daily cards start (#149: one card a day counts, locked at the first swing) and the Western Reserve opens (#146, reworked in #168, #176, #180). Robbie plays a real card Sunday morning to check it end to end: the card, the Open purse, coins on feats, the drinks visits, kudos and chirps, the reactions after each hole, and the Gorge's harvest hillside.
+- **The chip meter's new speed is a guess** (`CHIP_RATE` 0.48 in `src/golf3d/swing.ts`, on every course since #180). If Robbie finds a typical chip's line sits low on the bar, nudge it to about 0.55.
+- **Open PR #134** (the wind follows the ball's height, for every course). On hold: it's already on for the Western Reserve (`windByHeight`); Robbie decides after playing it whether every course gets it. Don't merge without his say. (#138, the chip meter, was closed on Nov 6: #180 replaced it. Its branch `claude/great-cannon-2kro9n` is still on GitHub; GitHub's auto-delete only runs on merge, so delete it by hand if wanted.)
+- **Pacific Bluffs** is the Nov 15 draft. It needs Robbie's play-through and approval (see Setup status). The Architect builds the Nov 22 course on its first scheduled run, Sun Nov 8 at 9:07am ET.
+- **The agents are on.** The Steward runs daily at 8:17am ET (a test run on Nov 6 worked). The Architect ran once on Nov 6 as a reviewer of #180 (fired with extra instructions) and posted its findings on the PR; it can post GitHub comments.
+- **Vercel can be slow to pick up merges.** After merging, confirm the production deployment for the merge SHA is READY (Vercel `list_deployments` with `sha`) before telling Robbie something is live.
+- **Offered, not built:** split the admin's unfinished-rounds stat into restarts (quit in the first ~20 s on hole 1) and real abandons. Marc restarted 264 rounds in a day before Nov 8; daily cards end that, so check the stat once cards are live.
 
 ## Shipped (all live on Vercel)
 
