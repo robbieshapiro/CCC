@@ -21,7 +21,8 @@ import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
 import type { Hole, V2 } from './types';
 
-// previewHoles: before it opens, members can practise this many of its holes; the admin can play them all.
+// previewHoles: before it opens, members can practise this many of its holes (all of them if unset); the admin can
+// play them all. whatsNew: a few short lines shown before that practice starts.
 // playoff: the hole a tie for the week's title is played off on, and where the closest-to-the-pin decider is hit from
 export type Course = {
   id: string;
@@ -32,6 +33,7 @@ export type Course = {
   par: number;
   draft?: boolean;
   previewHoles?: number;
+  whatsNew?: string[];
   playoff?: { hole: Hole; from: V2; label: string };
 };
 
@@ -71,10 +73,19 @@ const COURSES: Course[] = [
   },
   {
     id: 'westernreserve',
-    // northeast Ohio in the fall, the first weekly course: the week of Nov 8. Members can practise its first hole
-    // (Creek Bend) until then; it never counts.
+    // northeast Ohio in the fall, the first weekly course: the week of Nov 8. Members can practise all five holes until
+    // then; it never counts.
     opens: '2026-11-08',
-    previewHoles: 1,
+    whatsNew: [
+      'Five holes through the Ohio woods in full autumn colour',
+      'Light wind and dry all week: the storm has passed',
+      'Thick rough that grabs the ball, and quick, tiered tour greens',
+      'Wind bites high shots more than low ones, and a calmer chip meter',
+      'The cart, or Reginald, brings drinks to suit the hole',
+      'Tap a member out on the course to send kudos, or a chirp',
+      'Keep an eye out for deer in the rough',
+      'From Sunday, one card a day counts, locked at your first swing',
+    ],
     name: 'The Western Reserve',
     tagline: 'Five holes through the Ohio woods in autumn colour. Creeks, ledges, a lake, a flooded quarry and a river gorge.',
     holes: [creekbend, theledges, maplelake, thequarry, thegorge],

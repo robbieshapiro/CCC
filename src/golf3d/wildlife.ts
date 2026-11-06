@@ -1,10 +1,10 @@
 // Wildlife in the Ohio woods (the Western Reserve): white-tailed deer grazing, a few wild turkeys pecking about and
-// the odd cottontail, standing just off the course in the trees. Never in play: they are only ever placed outside the
-// hole's border, they have no part in the physics, and they don't stray from their spot. Which turn up, and where, is
+// the odd cottontail, out in the deep rough where you can see them. Never in play: they stand well off the line of
+// play, clear of any short grass, they have no part in the physics, and they don't stray from their spot. Which turn up, and where, is
 // different each time a hole is drawn, so it's a small surprise to spot them.
 import * as THREE from 'three';
 import { mat, mesh } from './props';
-import { heightAt, inPoly, isWater } from './terrain';
+import { heightAt, inPoly, isWater, surfaceAt } from './terrain';
 import type { Hole, V2 } from './types';
 
 type Anim = (clock: number, dt: number) => void;
@@ -155,61 +155,68 @@ export function rabbit() {
   return { g };
 }
 
-// a spot in the trees just past the edge of the hole, dry, and well clear of anywhere a ball could go
-function spot(h: Hole, floor: number, near = 14, far = 34): THREE.Vector3 | null {
-  const b = h.border;
-  const c = b.reduce((a, p) => ({ x: a.x + p.x / b.length, y: a.y + p.y / b.length }), { x: 0, y: 0 });
-  for (let tries = 0; tries < 24; tries++) {
-    const i = Math.floor(R() * b.length);
-    const p = b[i];
-    const q = b[(i + 1) % b.length];
-    const t = R();
-    const e: V2 = { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t };
-    // outward: away from the middle of the hole
-    let dx = e.x - c.x;
-    let dy = e.y - c.y;
-    const len = Math.hypot(dx, dy) || 1;
-    dx /= len;
-    dy /= len;
-    const off = near + R() * (far - near);
-    const s = { x: e.x + dx * off, y: e.y + dy * off };
-    if (inPoly(s, b) || isWater(h, s)) continue;
-    // and clear of the border all the way round, not just at the edge it came from
-    if (b.some((v) => Math.hypot(v.x - s.x, v.y - s.y) < near * 0.8)) continue;
-    const { x0, y0, x1, y1 } = h.bounds;
-    const inside = s.x > x0 && s.x < x1 && s.y > y0 && s.y < y1;
-    return new THREE.Vector3(s.x, inside ? heightAt(h, s.x, s.y) : floor, -s.y);
+// A spot out in the deep rough where you can see it from the tee and as the ball flies: inside the hole, well off the
+// line of play (clear of the tee-to-pin line and of any short grass, sand or water all round), and not under a tree.
+// The animals have no part in the physics: a ball rolls by them, never into them.
+function spot(h: Hole, from: number, to: number, off = 14, clear = 7): THREE.Vector3 | null {
+  const tx = h.tee.x;
+  const ty = h.tee.y;
+  const vx = h.cup.x - tx;
+  const vy = h.cup.y - ty;
+  const len = Math.hypot(vx, vy) || 1;
+  const ux = vx / len;
+  const uy = vy / len;
+  for (let tries = 0; tries < 120; tries++) {
+    // how far down the hole (from the tee, in world units), and how far off the line to one side
+    const d = Math.min(len * 0.95, from + R() * (to - from));
+    const side = (R() < 0.5 ? -1 : 1) * (off + R() * off * 2);
+    const s: V2 = { x: tx + ux * d - uy * side, y: ty + uy * d + ux * side };
+    if (!inPoly(s, h.border) || surfaceAt(h, s) !== 'rough' || isWater(h, s)) continue;
+    // a clear ring of rough round it: not on the edge of the fairway, a green, a bunker, the water or the boundary
+    let ok = true;
+    for (let k = 0; k < 10 && ok; k++) {
+      const a = (k / 10) * Math.PI * 2;
+      const q = { x: s.x + Math.cos(a) * clear, y: s.y + Math.sin(a) * clear };
+      ok = inPoly(q, h.border) && surfaceAt(h, q) === 'rough' && !isWater(h, q);
+    }
+    if (!ok) continue;
+    // not standing in a tree
+    if (h.posts.some((p) => Math.hypot(p.x - s.x, p.y - s.y) < p.r + 2)) continue;
+    return new THREE.Vector3(s.x, heightAt(h, s.x, s.y), -s.y);
   }
   return null;
 }
 
-export function wildlife(h: Hole, root: THREE.Group, floor: number, anim: Anim[]) {
+export function wildlife(h: Hole, root: THREE.Group, anim: Anim[]) {
   const group = new THREE.Group();
+  group.name = 'wildlife';
   root.add(group);
-  // deer: most holes, a doe or two and sometimes a buck, grazing and now and then looking up
-  if (R() < 0.85) {
-    const at = spot(h, floor);
-    if (at) {
-      const n = 1 + Math.floor(R() * 3);
-      for (let i = 0; i < n; i++) {
-        const { g, pose } = deer(i === 0 && R() < 0.4);
-        g.position.copy(at).add(new THREE.Vector3((R() - 0.5) * 9, 0, (R() - 0.5) * 9));
-        g.rotation.y = R() * Math.PI * 2;
-        g.scale.setScalar(1.15 + R() * 0.2);
-        group.add(g);
-        const phase = R() * 20;
-        anim.push((t) => {
-          // a 9 second cycle: head down grazing, then up and still for a couple of seconds
-          const k = (t + phase) % 9;
-          const up = k > 6.5 ? Math.min(1, (k - 6.5) * 2) * Math.min(1, (9 - k) * 2) : 0;
-          pose((1 - up) * (0.92 + Math.sin(t * 3 + phase) * 0.05));
-        });
-      }
+  // deer: on most holes a doe or two (sometimes a buck) within sight of the tee, and often another few further down
+  // for the next shot, grazing and now and then looking up
+  const herd = (at: THREE.Vector3 | null) => {
+    if (!at) return;
+    const n = 1 + Math.floor(R() * 3);
+    for (let i = 0; i < n; i++) {
+      const { g, pose } = deer(i === 0 && R() < 0.4);
+      g.position.copy(at).add(new THREE.Vector3((R() - 0.5) * 8, 0, (R() - 0.5) * 8));
+      g.position.y = heightAt(h, g.position.x, -g.position.z);
+      g.rotation.y = R() * Math.PI * 2;
+      g.scale.setScalar(1.15 + R() * 0.2);
+      group.add(g);
+      const phase = R() * 20;
+      anim.push((t) => {
+        // a 9 second cycle: head down grazing, then up and still for a couple of seconds
+        const k = (t + phase) % 9;
+        const up = k > 6.5 ? Math.min(1, (k - 6.5) * 2) * Math.min(1, (9 - k) * 2) : 0;
+        pose((1 - up) * (0.92 + Math.sin(t * 3 + phase) * 0.05));
+      });
     }
-  }
+  };
+  if (R() < 0.85) herd(spot(h, 50, 190));
+  if (R() < 0.6) herd(spot(h, 220, 420));
   // wild turkeys: a little flock pecking about
   if (R() < 0.45) {
-    const at = spot(h, floor);
+    const at = spot(h, 90, 360);
     if (at) {
       const n = 3 + Math.floor(R() * 3);
       for (let i = 0; i < n; i++) {
@@ -234,7 +241,7 @@ export function wildlife(h: Hole, root: THREE.Group, floor: number, anim: Anim[]
   if (R() < 0.55) {
     const n = 1 + Math.floor(R() * 2);
     for (let i = 0; i < n; i++) {
-      const at = spot(h, floor, 10, 24);
+      const at = spot(h, 30, 150, 12, 5);
       if (!at) continue;
       const { g } = rabbit();
       g.position.copy(at);

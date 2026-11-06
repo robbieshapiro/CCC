@@ -212,6 +212,7 @@ export function home(snap: Snapshot) {
           }
         </div>
       </section>
+      ${previewBand(snap.month)}
       <section class="board${look(course)}">
         ${countdown(snap.month, course, purse.field, openMoney)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
@@ -231,7 +232,6 @@ export function home(snap: Snapshot) {
         ${dailyCard()}
         <a class="tile" href="#/clubhouse/bar"><i>🍺</i><b>The bar</b><span>Long drive · Members' Course</span></a>
         <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
-        ${previewTile(snap.month)}
       </div>
       ${honoursPane(snap)}
       <section class="plaque">
@@ -347,12 +347,23 @@ const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 // sunset for the coast
 const look = (c: Course) => (c.holes[0]?.theme === 'volcanic' ? ' volcanic' : c.holes[0]?.theme === 'coastal' ? ' coastal' : '');
 
-// The headline at the top of the home page: the next course's Open, counting down to its first day, with its practice
-// preview as the main button. Volcanic courses get the red glow.
-function previewTile(month: string) {
+// Next week's course, between the Play card and the board: a warm band in the course's own colours (autumn leaves for
+// the Western Reserve), counting down to its first day, with its practice as the button
+const THEME_ICON: Record<string, string> = { autumn: '🍁', volcanic: '🌋', coastal: '🌊' };
+function previewBand(month: string) {
   const next = nextCourse(month);
   if (!next) return '';
+  const theme = next.holes[0]?.theme ?? '';
   const starts = periodClosesAt(month);
-  return `<a class="tile" href="#/practice/${next.id}"><i>${({ autumn: '🍁', volcanic: '🌋', coastal: '🌊' } as Record<string, string>)[next.holes[0]?.theme ?? ''] ?? '⛳'}</i><b>${esc(shortName(next))} preview</b><span data-countdown="${starts.getTime()}" data-done="Open now">Opens in <em data-left>…</em></span></a>`;
+  const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
+  return `<a class="preview-band ${esc(theme)}" href="#/practice/${next.id}">
+    <span class="pb-icon" aria-hidden="true">${THEME_ICON[theme] ?? '⛳'}</span>
+    <span class="pb-text">
+      <small>Coming up · <span data-countdown="${starts.getTime()}" data-done="Open now">opens in <em data-left>…</em></span></small>
+      <b>${esc(shortName(next))}</b>
+      <span>${n >= next.holes.length ? `Practise all ${n} holes` : `Practise ${n === 1 ? 'the first hole' : `the first ${n} holes`}`} before it counts</span>
+    </span>
+    <span class="pb-go">Practise</span>
+  </a>`;
 }
 

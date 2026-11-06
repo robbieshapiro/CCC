@@ -891,7 +891,7 @@ export function buildWorld(h: Hole, number: number): World {
   if (haunted) hauntedGrounds(h, root, anim, floor);
   if (lands) landsFrame(h, root, floor);
   if (autumn) autumnFrame(h, root, floor);
-  if (autumn && !h.putterOnly) wildlife(h, root, floor, anim);
+  if (autumn && !h.putterOnly) wildlife(h, root, anim);
   if (coastal) {
     // which side the sea is on: the lower of the two long edges
     const edge = (x: number) => {
