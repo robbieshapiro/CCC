@@ -276,7 +276,7 @@ function novice(base: Hole, seed: string) {
     s++;
     const clock = rng.next() * 30;
     const b = safeShot(h, pos, nav, clock);
-    const sw = swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic', !!h.calmChip);
+    const sw = swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic', true);
     // storm courses gust from shot to shot, and thick rough scatters a shot (only drawn where they apply, so other
     // courses' runs are unchanged)
     const shot = {

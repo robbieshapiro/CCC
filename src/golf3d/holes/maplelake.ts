@@ -8,16 +8,16 @@
 // The secret: the ridge on the left of the green. Land it there and the slope brings it round to the flag.
 import { band, blob, rect } from '../terrain';
 import type { Hole, Post } from '../types';
-import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
+import { greenside, greenComplex, RESERVE_TURF, tree, treeLine, teeUp } from './woods';
 
 const GREEN = { x: 8, y: 232, rx: 32, ry: 16 };
 const LAKE = { x: -4, y: 120, rx: 98, ry: 88 };
 const GROUND = 2;
 const TEE = { x: 0, y: -88 };
 const traps = [
-  bunker(50, 214, 14, 7, 1, 3.8, -0.3), // front right, waiting for the bail-out
-  bunker(-8, 264, 16, 6, 2), // behind the green
-  bunker(30, 262, 12, 6, 3), // behind the green, right
+  greenside(GREEN, 50, 214, 14, 7, 1, 3.4, -0.3), // front right, waiting for the bail-out
+  greenside(GREEN, -8, 264, 16, 6, 2, 3.4, 0), // behind the green
+  greenside(GREEN, 30, 262, 12, 6, 3, 3.4, 0), // behind the green, right
 ];
 const CREEK = [{ x: -130, y: 296 }, { x: 0, y: 290 }, { x: 130, y: 298 }];
 
@@ -31,7 +31,7 @@ const maples: Post[] = [
   tree(54, 208, 6, 32), // the one that pinches the line from the right
 ];
 
-export const maplelake: Hole = {
+const maplelakeBack: Hole = {
   id: 'maplelake',
   name: 'Maple Lake',
   par: 3,
@@ -39,7 +39,6 @@ export const maplelake: Hole = {
   tour: true,
   turf: RESERVE_TURF,
   windByHeight: true,
-  calmChip: true,
   chipDrop: 0.7,
   greenFirm: 0.05,
   yards: 230,
@@ -115,3 +114,6 @@ export const maplelake: Hole = {
     { kind: 'rock', x: 92, y: 196, scale: 1.1 },
   ],
 };
+
+// played from a tee about 10% up the hole (since Nov 6: the course was playing long everywhere); the old tee is the back tee
+export const maplelake = teeUp(maplelakeBack, { x: 1, y: -57 }, 18, 205);

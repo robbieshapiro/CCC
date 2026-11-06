@@ -1,11 +1,11 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (reactions after every hole).
+Last updated Nov 6, 2026 (Western Reserve eased, chip meter, the harvest hillside).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
 - **Daily cards start Sun Nov 8** (#149): one round a day counts. The SQL is live; nothing changes until Sunday. Play a real card Sunday morning to check it end to end.
-- **Western Reserve opens Sun Nov 8** (#146). Members practise all five holes until then (#174). Its test switches (`windByHeight`, `calmChip` from #143) now count for real scores from Sunday. Robbie hasn't said whether to keep them on; ask if unsure.
+- **Western Reserve opens Sun Nov 8** (#146). Members practise all five holes until then (#174). Its wind test (`windByHeight`, #143) counts for real from Sunday; the calmer chip meter is now on every course (#180), so #138 is superseded.
 - **Open PRs #132, #134, #138** (wind by height and the calmer chip meter for every course). On hold: Robbie is testing them on the Western Reserve first. #132 was closed as superseded by #134. The scheduled task that would have merged them at the Caldera close was deleted; Robbie decides after playing the Western Reserve. Don't merge without his say.
 - **Caldera storm** (#144, #145): cleared early on Nov 6 (#166); the Blowhole and the Caldera now gust 10 to 15 mph. Nothing to do.
 - **Pacific Bluffs** is the Nov 15 draft. It needs Robbie's play-through and approval (see Setup status).
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (reactions after every hole).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #180 | The chipper's calmer meter on every course (the stretched scale the Western Reserve tried, #143), filling about a third slower again, so chips stop running long. Elbows only bend the right way in the reactions. The Western Reserve, easier and shorter: tees about 10% up every hole (Creek Bend 415 yd, The Ledges 425, Maple Lake 205, The Quarry 430, The Gorge 575; the old tees stay as back tees); the rough costs about a sixth of the distance (was over a quarter), keeps more of a landing ball and scatters less, so a green is reachable from it; greenside bunkers moved in to hug the greens, 3 ft past the fringe; fairway bunkers 2.2 ft deep (were 4). The Gorge ends on a harvest hillside: three banks of straw bales up the rise behind the green with the members on them (the same gallery as the Caldera's stadium, a fall festival instead of stone), festoon lights, a red barn, a cider stand and pumpkins. |
 | #179 | A reaction to every hole, in place of the old arms-up sway. The golfer's arms are now each their own (upper arm and forearm; the swing is unchanged), so: a hole in one is replayed in slow motion from down by the cup, then a backflip and both arms up; an eagle or better a backflip; a birdie a fist pump; a par a nod and a wave to the crowd; a bogey a kick at the turf and a shake of the head; a double or worse the club over the head and into the ground. The camera cuts to a close-up of your golfer for it (about 2.5 seconds), then the flag as before; a tap skips. The card waits until the replay and the reaction are over, so a slow phone doesn't cut them off. |
 | #178 | Sending from a member's card is clearer: pick Kudos or Chirp at the top (Kudos to start with), then the optional line, then one Send button that says which. |
 | #177 | Tapping a member on the course now shows their card: headshot (as on the member card), club and status (Club Member, Club Legend and so on, with the badge; no money), today's low, and what they're wearing (the fall kit, then their best shop pieces). Below it one optional line and two buttons, Kudos and Chirp: no ready-made lines. Sent with no words, it's just the 👏 or the 🐦. |

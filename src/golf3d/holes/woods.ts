@@ -7,11 +7,12 @@
 import { makeRng } from '../../seed';
 import type { Hole, Piece, Post, V2 } from '../types';
 
-// thick, long autumn rough that grabs a landing ball and smothers the next swing, firm fairways that run, and heavy
+// autumn rough that grabs a landing ball and costs about a sixth of the next swing's distance (eased Nov 6: you can
+// still reach a green from it), firm fairways that run, and heavy
 // wet bunker sand that a wedge only gets 70% out of (an iron about half) and that can send it anywhere
 // (greens run about 10% quicker than the other tour courses, fairways about a quarter quicker: they were nearly
 // twice as quick, faster than the greens, until Nov 6)
-export const RESERVE_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.15, roughDrag: 1.9, roughLie: 0.72, roughScatter: 0.28, fairwayRoll: 0.75, greenRoll: 0.9, sandLie: 0.7, sandScatter: 0.35 };
+export const RESERVE_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.24, roughDrag: 1.6, roughLie: 0.84, roughScatter: 0.2, fairwayRoll: 0.75, greenRoll: 0.9, sandLie: 0.7, sandScatter: 0.35 };
 
 // A green complex in the parkland style: a broad plateau `lift` ft above `base`, its sides running down over `edge` ft
 // (wide for a green that sits into the ground, tight for a cupcake), tilted `tilt` ft across its width ([x, y]: the
@@ -69,6 +70,37 @@ export function bunker(x: number, y: number, rx: number, ry: number, seed: numbe
   });
   return { region: { poly, surface: 'sand' }, pieces };
 }
+// A greenside bunker hugging the green: placed in the direction of (x, y) from the green's middle, its near edge `gap`
+// ft past the fringe (the fringe runs 4 ft round the green). Shallower than a deep fairway trap's old 4 ft, deeper than
+// a fairway bunker's.
+export function greenside(g: GreenSpec, x: number, y: number, rx: number, ry: number, seed: number, depth = 3.4, turn = 0, gap = 3) {
+  const dx = x - g.x;
+  const dy = y - g.y;
+  const a = Math.atan2(dy, dx);
+  // the green's radius that way, then the bunker's own half-width along the same line (in its turned frame)
+  const edge = 1 / Math.sqrt((Math.cos(a) / g.rx) ** 2 + (Math.sin(a) / g.ry) ** 2);
+  const la = a - turn;
+  const half = 1 / Math.sqrt((Math.cos(la) / rx) ** 2 + (Math.sin(la) / ry) ** 2);
+  const d = edge + 4 + gap + half;
+  return bunker(g.x + Math.cos(a) * d, g.y + Math.sin(a) * d, rx, ry, seed, depth, turn);
+}
+
+// a fairway bunker: shallow enough to see out of and play a long club from
+export const FAIRWAY_DEPTH = 2.2;
+
+// Move a hole's tee up the line of its tee shot (the old tee stays as a back tee): a level tee box at the new spot,
+// the tee markers with it, and the length on the card to match.
+export function teeUp(h: Hole, at: V2, ground: number, yards: number): Hole {
+  return {
+    ...h,
+    tee: at,
+    yards,
+    regions: [...h.regions, { poly: [{ x: at.x - 12, y: at.y - 12 }, { x: at.x + 12, y: at.y - 12 }, { x: at.x + 12, y: at.y + 12 }, { x: at.x - 12, y: at.y + 12 }], surface: 'fairway' }],
+    terrain: [...h.terrain, { kind: 'disc', x: at.x, y: at.y, r: 14, h: ground, edge: 8, op: 'set' }],
+    decor: h.decor.map((d) => (d.kind === 'teebox' ? { ...d, x: at.x, y: at.y } : d)),
+  };
+}
+
 // a maple's crown is about this wide (radius) for its height: what the ball has to get through
 const crown = (h: number) => Math.max(4, Math.round(h * 0.26 * 10) / 10);
 
