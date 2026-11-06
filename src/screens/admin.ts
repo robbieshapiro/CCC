@@ -16,7 +16,7 @@ import { esc, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
-import { chartSections, courseSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
+import { briefSection, chartSections, courseSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -49,13 +49,14 @@ export function admin(snap: Snapshot) {
         <div><p class="eyebrow">Committee only</p><h1>The Committee Room</h1></div>
         <div class="seg" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
       </div>
-      ${kpiSections()}
-      <section class="adm-needs" id="adm-needs" aria-label="Needs you"></section>
       <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
       <div class="adm-pane" data-pane="overview">
+        <section class="adm-needs" id="adm-needs" aria-label="Needs you"></section>
+        ${kpiSections()}
         <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
         ${chartSections()}
       </div>
+      <div class="adm-pane" data-pane="reginald" hidden>${briefSection()}</div>
       <div class="adm-pane" data-pane="course" hidden>
         <section class="adm-card adm-do">
           <h2>Test what's coming</h2>
@@ -486,10 +487,11 @@ function draw() {
   drawNeeds();
 }
 
-// ---------- the layout: a summary on top, then tabs ----------
+// ---------- the layout: tabs, with Overview (what needs you, then the numbers) first ----------
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'reginald', label: "Reginald's read" },
   { id: 'course', label: 'Course' },
   { id: 'members', label: 'Members' },
   { id: 'activity', label: 'Activity' },
