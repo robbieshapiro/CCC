@@ -119,6 +119,35 @@ export type OpenChampion = { month: string; names: string[]; total: number; par:
 export type AdminWindow = 'week' | 'month' | 'all';
 // Weekly Players by day: members who posted a round in the 7 days to that day, out of the members there were then
 export type TrendDay = { day: string; players: number; members: number };
+// The Committee Room's headline numbers (admin_kpis in supabase/schema.sql)
+export type AdminKpis = {
+  period: string;
+  prevPeriod: string | null;
+  today: string;
+  members: number;
+  visitedToday: number;
+  playedToday: number;
+  visitedWeekAgo: number;
+  playedWeekAgo: number;
+  lastPlayers: number; // played last period
+  cameBack: number; // ...and have played this one
+  rounds: number;
+  players: number;
+  prevRounds: number;
+  prevPlayers: number;
+  joined14: number;
+  firstRound14: number;
+  neverPlayed14: string[];
+  purse: number;
+  shop7: number;
+  shopAll: number;
+  ai: { today: Record<string, number>; designsToday: number; month: number };
+  days: { day: string; played: number; visited: number }[];
+  weeks: { period: string; players: number; rounds: number; back: number; before: number }[];
+  holes: { hole: number; par: number; n: number; avg: number; eagle: number; birdie: number; pars: number; bogey: number; worse: number }[];
+};
+// Reginald's morning read of the numbers, for the Committee
+export type AdminInsights = { day: string; points: string[] };
 export type AdminOverview = {
   clubs: { id: string; name: string; members: number; active: number; rounds: number; practice: number; newMembers: number }[];
   members: { club: string; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; unfinished: number; best: number | null; practice: number; lockers: number }[];
@@ -187,6 +216,7 @@ export interface Api {
   dailyCrown(session: Session): Promise<DailyCrown | null>;
   periodHonors(session: Session, period: string): Promise<Honors>;
   adminTrend(session: Session): Promise<TrendDay[]>;
+  adminKpis(session: Session): Promise<AdminKpis>;
   // a counted round's start, how far it got, and whether it finished
   // card: today's card (the same one all day, so a card cut short picks up where it left off)
   startRound(session: Session, course: string, card?: boolean): Promise<number | null>;

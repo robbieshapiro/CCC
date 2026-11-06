@@ -1107,6 +1107,84 @@ begin
 end $$;
 grant execute on function admin_trend(uuid) to anon;
 
+-- The Committee Room's headline numbers, across the admin's clubs (the admin and host-only seats left out): who's in
+-- today, who came back from last week, rounds per player, new members' first rounds, the money in play, AI calls, the
+-- last 14 days, every week so far, and how this week's course is scoring hole by hole. One call, read-only.
+create or replace function admin_kpis(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); per text := game_month(); prev text; today date := game_today();
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
+  select max(r.month) into prev from rounds r where r.month < per;
+  return (
+    with mem as (select pl.* from players pl where pl.group_id in (select admin_clubs(me)) and pl.role <> 'admin' and not pl.host_only),
+    rd as (select r.* from rounds r join mem on mem.id = r.player_id),
+    -- any sign of life on a day: a visit, a round, practice or a Daily Shot
+    seen as (
+      select md.player_id, md.day from member_days md join mem on mem.id = md.player_id
+      union select r.player_id, (r.created_at at time zone 'America/New_York')::date from rd r
+      union select ps.player_id, (ps.started_at at time zone 'America/New_York')::date from practice_sessions ps join mem on mem.id = ps.player_id
+      union select d.player_id, d.day from daily_shots d join mem on mem.id = d.player_id
+    ),
+    played as (select distinct r.player_id, (r.created_at at time zone 'America/New_York')::date as day from rd r),
+    pp as (select distinct r.month, r.player_id from rd r),
+    pars as (select r.*, coalesce(r.pars, cp.pars) as hp from rd r left join course_pars cp on cp.course = r.course where r.month = per),
+    shots as (select i, p.holes[i] as s, p.hp[i] as par from pars p cross join lateral generate_subscripts(p.holes, 1) i where p.hp is not null and i <= array_length(p.hp, 1))
+    select json_build_object(
+      'period', per, 'prevPeriod', prev, 'today', today,
+      'members', (select count(*) from mem),
+      'visitedToday', (select count(distinct player_id) from seen where day = today),
+      'playedToday', (select count(*) from played where day = today),
+      'visitedWeekAgo', (select count(distinct player_id) from seen where day = today - 7),
+      'playedWeekAgo', (select count(*) from played where day = today - 7),
+      'lastPlayers', (select count(*) from pp where month = prev),
+      'cameBack', (select count(*) from pp a where a.month = prev and exists (select 1 from pp b where b.month = per and b.player_id = a.player_id)),
+      'rounds', (select count(*) from rd where month = per),
+      'players', (select count(*) from pp where month = per),
+      'prevRounds', (select count(*) from rd where month = prev),
+      'prevPlayers', (select count(*) from pp where month = prev),
+      'joined14', (select count(*) from mem where created_at > now() - interval '14 days'),
+      'firstRound14', (select count(*) from mem where created_at > now() - interval '14 days' and exists (select 1 from rd where rd.player_id = mem.id)),
+      'neverPlayed14', (select coalesce(json_agg(mem.name order by mem.created_at), '[]') from mem where created_at > now() - interval '14 days' and not exists (select 1 from rd where rd.player_id = mem.id)),
+      -- the purse a week is worth: from Nov 8 the Open's, every person in any club; before, every club's added up
+      'purse', 1000 * (case when per >= open_purse_from()
+        then (select count(distinct (lower(p.name), p.pin_hash)) from rounds r join players p on p.id = r.player_id where r.month = per)
+        else (select count(*) from pp where month = per) end),
+      'shop7', (select coalesce(sum(pu.price), 0) from purchases pu join mem on mem.id = pu.player_id where pu.created_at > now() - interval '7 days'),
+      'shopAll', (select coalesce(sum(pu.price), 0) from purchases pu join mem on mem.id = pu.player_id),
+      'ai', json_build_object(
+        'today', (select coalesce(json_object_agg(kind, n), '{}') from (select kind, count(*) n from reginald_notes where (created_at at time zone 'America/New_York')::date = today group by kind) k),
+        'designsToday', (select count(*) from design_calls where (created_at at time zone 'America/New_York')::date = today),
+        'month', (select count(*) from reginald_notes where created_at >= date_trunc('month', now()))
+          + (select count(*) from design_calls where created_at >= date_trunc('month', now()))
+          + (select count(*) from chronicles where created_at >= date_trunc('month', now()))),
+      'days', (select json_agg(json_build_object('day', d, 'played', (select count(*) from played where day = d),
+          'visited', (select count(distinct player_id) from seen where day = d)) order by d)
+        from generate_series(today - 13, today, interval '1 day') g(x), lateral (select x::date as d) dd),
+      'weeks', (select coalesce(json_agg(json_build_object('period', w.month, 'players', w.players, 'rounds', w.rounds,
+          'back', (select count(*) from pp a where a.month = w.before and exists (select 1 from pp b where b.month = w.month and b.player_id = a.player_id)),
+          'before', (select count(*) from pp a where a.month = w.before)) order by w.month), '[]')
+        from (select r.month, count(distinct r.player_id) as players, count(*) as rounds, lag(r.month) over (order by r.month) as before
+          from rd r group by r.month) w),
+      'holes', (select coalesce(json_agg(json_build_object('hole', i, 'par', par, 'n', n, 'avg', av, 'eagle', e, 'birdie', b, 'pars', pz, 'bogey', bo, 'worse', wo) order by i), '[]')
+        from (select i, min(par) as par, count(*) as n, round(avg(s - par), 2) as av,
+            count(*) filter (where s <= par - 2) as e, count(*) filter (where s = par - 1) as b, count(*) filter (where s = par) as pz,
+            count(*) filter (where s = par + 1) as bo, count(*) filter (where s >= par + 2) as wo
+          from shots group by i) h)
+    )
+  );
+end $$;
+grant execute on function admin_kpis(uuid) to anon;
+
+-- Reginald's morning read of those numbers for the Committee (api/insights.ts writes it, once a day): a few plain
+-- takeaways. Only the server reads and writes it.
+create table if not exists admin_insights (
+  day date primary key,
+  body jsonb not null,
+  created_at timestamptz not null default now()
+);
+alter table admin_insights enable row level security;
+
 -- Rounds started and not finished: every counted round logs its start and the furthest hole it reached, and is
 -- marked finished when the card goes in. The admin sees started vs finished, where people stop, and who.
 create table if not exists round_starts (

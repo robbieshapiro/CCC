@@ -1239,3 +1239,38 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .play-main .card-line { margin: 8px 0 0; color: #cbbf9f; }
 .play-main .card-line a { color: var(--cream); }
 .card-in { text-align: center; padding-top: 48px; }
+/* the Committee Room's headline numbers (adminKpis.ts) */
+.adm-brief h2 { margin-bottom: 8px; }
+.adm-brief-list { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.adm-brief-list li { line-height: 1.45; }
+.adm-kpis { margin: 0 0 16px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.kpi { background: var(--card, #fffdf7); border: 1px solid rgba(22, 59, 44, 0.12); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi b { font-family: var(--serif); font-size: 28px; line-height: 1.1; color: #163b2c; }
+.kpi span { font-weight: 600; font-size: 13px; }
+.kpi small { color: #6b6a64; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+.kpi em { font-style: normal; font-size: 12px; color: #6b6a64; }
+.kpi em.up { color: #2f7d4f; }
+.kpi em.down { color: #b2472f; }
+.adm-charts .bars { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; align-items: end; height: 120px; padding-top: 6px; }
+.adm-charts .bar { display: flex; flex-direction: column-reverse; height: 100%; position: relative; }
+.adm-charts .bar span { position: absolute; bottom: -18px; left: 0; right: 0; text-align: center; font-size: 10px; color: #6b6a64; }
+.adm-charts .bar i { display: block; width: 100%; border-radius: 3px 3px 0 0; }
+.adm-charts .b-played { background: #163b2c; }
+.adm-charts .b-in { background: #cbbf9f; border-radius: 3px 3px 0 0; }
+.adm-charts .bars + .trend-key { margin-top: 26px; }
+.trend-key .k-played, .trend-key .k-in { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: -1px; }
+.trend-key .k-played { background: #163b2c; }
+.trend-key .k-in { background: #cbbf9f; }
+.adm-holes td small { color: #6b6a64; margin-left: 4px; }
+.adm-holes .easy { color: #2f7d4f; font-weight: 600; }
+.adm-holes .hard { color: #b2472f; font-weight: 600; }
+.spread-cell { width: 45%; }
+.spread { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eee8d8; min-width: 110px; }
+.spread i { display: block; height: 100%; }
+.s-eagle { background: #d4af37; }
+.s-birdie { background: #c25b2a; }
+.s-par { background: #6e8b74; }
+.s-bogey { background: #4f6d8f; }
+.s-worse { background: #1f2d4a; }
+.spread-key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 3px 0 8px; vertical-align: -1px; }
