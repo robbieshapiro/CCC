@@ -1439,3 +1439,7 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .shout-card .shout-own { width: 100%; margin-top: 2px; }
 .shout-msg:empty { display: none; }
 .shout-own button:disabled { opacity: 0.45; cursor: default; }
+.shout-pick-kind { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: #efe8d6; }
+.shout-pick-kind button { font: inherit; font-size: 15px; font-weight: 800; padding: 9px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; }
+.shout-pick-kind button[aria-checked='true'] { background: var(--green); color: var(--cream); }
+.shout-own [data-send] { width: 100%; }
