@@ -1,6 +1,6 @@
 // Kudos and chirps. Tap another member out on the course and their card comes up: today's scores, hole by hole, and
 // a kudos or a chirp to send them (a ready-made line or your own, up to 80 characters). It waits on their home page
-// until they've seen it. The Committee sees them all in Admin and can take any down.
+// until they clear it, or for a day at most. The Committee sees them all in Admin and can take any down.
 import { api } from '../api';
 import type { AdminShoutout, ShoutKind, Shoutout } from '../api/types';
 import { sfx } from '../fx/sound';
@@ -104,22 +104,27 @@ export async function bindShoutouts() {
   const box = document.getElementById('shouts');
   if (!box || !list.length) return;
   let show = list;
+  const clear = (ids: number[]) => {
+    show = show.filter((x) => !ids.includes(x.id));
+    draw();
+    void api.seenShoutouts(requireSession(), ids).catch(() => {});
+  };
   const draw = () => {
     box.hidden = !show.length;
+    if (!show.length) {
+      box.innerHTML = '';
+      return;
+    }
     box.innerHTML = `
       <article class="notice shout-note">
         <div>
-          <p class="notice-from"><b>From the course</b><small>${show.length === 1 ? '1 new' : `${show.length} new`}</small></p>
-          <ul class="shout-list">${show.map((x) => `<li><span class="shout-kind">${ICON[x.kind]}</span><span><b>${esc(x.from)}</b> ${x.kind === 'kudos' ? 'gave you kudos' : 'chirped you'}: “${esc(x.body)}” <small>${when(x.createdAt)}</small></span></li>`).join('')}</ul>
+          <p class="notice-from"><b>From the course</b><small>${show.length === 1 ? '1 new' : `${show.length} new`}${show.length > 1 ? ' · <button class="link" data-clear-all>Clear all</button>' : ''}</small></p>
+          <ul class="shout-list">${show.map((x) => `<li><span class="shout-kind">${ICON[x.kind]}</span><span><b>${esc(x.from)}</b> ${x.kind === 'kudos' ? 'gave you kudos' : 'chirped you'}: “${esc(x.body)}” <small>${when(x.createdAt)}</small></span><button class="shout-one" data-clear="${x.id}" aria-label="Clear this one">×</button></li>`).join('')}</ul>
         </div>
-        <button class="notice-x" data-seen aria-label="Mark as seen">×</button>
       </article>`;
-    box.querySelector<HTMLButtonElement>('[data-seen]')!.onclick = () => {
-      const ids = show.map((x) => x.id);
-      show = [];
-      draw();
-      void api.seenShoutouts(requireSession(), ids).catch(() => {});
-    };
+    box.querySelectorAll<HTMLButtonElement>('[data-clear]').forEach((b) => (b.onclick = () => clear([Number(b.dataset.clear)])));
+    const all = box.querySelector<HTMLButtonElement>('[data-clear-all]');
+    if (all) all.onclick = () => clear(show.map((x) => x.id));
   };
   draw();
 }

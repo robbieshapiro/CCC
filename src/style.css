@@ -1396,5 +1396,9 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .shout-list li { display: flex; gap: 8px; align-items: baseline; line-height: 1.4; }
 .shout-list small { color: var(--muted); margin-left: 4px; }
 .shout-kind { flex: none; }
+.shout-list li > span:nth-child(2) { flex: 1; min-width: 0; }
+.shout-one { flex: none; border: 0; background: none; color: var(--muted); font-size: 20px; line-height: 1; padding: 0 4px; cursor: pointer; }
+.shout-note .notice-from .link { font-size: 12px; padding: 0; }
+.shout-note { padding-right: 14px; }
 .adm-list li.gone { opacity: 0.5; }
 .shout-card .eyebrow { padding: 0 30px; }
