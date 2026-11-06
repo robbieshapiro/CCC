@@ -1,8 +1,8 @@
 // Hole 3, Maple Lake (par 3, 230 yd as shown): the hardest one-shotter on the course. From a tee up in the maples, a
 // wood all the way over the lake to a wide, shallow green on the far shore, cut in two tiers, the lake right up to its
 // front edge.
-// The play: a high wood that holds the right tier. Short is wet, long is sand and then a creek, and the storm wind
-// gusts across the water.
+// The play: a high wood that holds the right tier. Short is wet, long is sand and then a creek, and any wind
+// carries across the water.
 // The danger: the big maple on the right of the shore pinches the line, and the green's front tier throws a weak shot
 // back toward the lake.
 // The secret: the ridge on the left of the green. Land it there and the slope brings it round to the flag.
@@ -38,7 +38,6 @@ export const maplelake: Hole = {
   theme: 'autumn',
   tour: true,
   turf: RESERVE_TURF,
-  weather: 'storm',
   windByHeight: true,
   calmChip: true,
   chipDrop: 0.7,

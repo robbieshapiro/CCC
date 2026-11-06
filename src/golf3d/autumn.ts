@@ -4,62 +4,115 @@
 // The sky and light are in engine.ts; scene.ts calls in here for the props, the barn and bridge roofs, and for what
 // lies beyond the course.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeRng } from '../seed';
 import { mat, mesh, pine } from './props';
-import { heightAt, inPoly, isWater, surfaceAt } from './terrain';
+import { heightAt } from './terrain';
 import type { Decor, Hole, Surface, V2 } from './types';
 
 export const AUTUMN_SURFACE: Partial<Record<Surface, string>> = {
   green: '#68a64e',
   fairway: '#78a24a',
-  fringe: '#6a9242',
-  rough: '#6f7d3a', // late-season grass, going over
+  fringe: '#5e8f3e',
+  rough: '#3f6630', // proper dark green rough, cut short enough to see the ball sit in it
   path: '#a3845c', // a dirt farm track
   wood: '#7c5236',
   sand: '#e0cc9b',
   rock: '#a48a63', // weathered Berea sandstone, mossy in the cracks
 };
-export const AUTUMN_FLOOR = '#64703a';
+export const AUTUMN_FLOOR = '#3b5c2c';
 
-const LEAVES = ['#c43c1c', '#d9581f', '#e8862a', '#e9b13a', '#b9301c', '#d39a34'];
+// an Ohio October: mostly sugar-maple oranges and reds, some still turning, a few gold, the odd one hanging on to green
+const LEAVES = ['#b8401f', '#cc5a22', '#d9792a', '#dca03a', '#a8321d', '#c98a32', '#8f8a34', '#6f8a3a'];
 export const BARN_RED = '#9a2e23';
 const TRIM = '#efe7d6';
 const ROOF = '#4b4542';
 const STRAW = '#d8b864';
 
-// a sugar maple: a short trunk and a broad round crown in one autumn colour, with its leaves fallen round the foot.
-// Drawn as one mesh with the colours painted on (one draw call a tree, where it was seven), from a handful of shapes
-// kept and shared, so a course can stand hundreds of them.
+// A sugar maple: a tall trunk forking into branches, under a crown of many small leaf clusters that are knobbly, not
+// round, darker underneath and catching the light on top, so it reads as a tree in leaf and not a balloon. Its leaves
+// lie fallen round the foot in a ragged patch. Drawn as one mesh with the colours painted on (one draw call a tree),
+// from a handful of shapes kept and shared, so a course can stand hundreds of them.
 const MAPLE_SHAPES = 16;
 const mapleShapes = new Map<number, THREE.BufferGeometry>();
-const MAPLE_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
-function paint(geo: THREE.BufferGeometry, color: string) {
+const MAPLE_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 });
+// paint: one colour, shaded by height (shade(y) gives the factor) with a little noise per face
+function paint(geo: THREE.BufferGeometry, color: string, shade?: (y: number) => number, rng?: { next(): number }, smooth = false) {
+  if (smooth) geo.computeVertexNormals();
   const g = geo.toNonIndexed();
   geo.dispose();
   g.deleteAttribute('uv');
-  const c = new THREE.Color(color);
-  const n = g.attributes.position.count;
+  const base = new THREE.Color(color);
+  const c = new THREE.Color();
+  const pos = g.attributes.position;
+  const n = pos.count;
   const col = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+  // smooth: shaded corner by corner, one tint for the whole cluster; otherwise face by face
+  const tint = rng ? 0.9 + rng.next() * 0.2 : 1;
+  for (let i = 0; i < n; i += 3) {
+    const y = (pos.getY(i) + pos.getY(i + 1) + pos.getY(i + 2)) / 3;
+    for (let j = 0; j < 3; j++) {
+      const k = (shade ? shade(smooth ? pos.getY(i + j) : y) : 1) * (smooth ? tint : rng ? 0.9 + rng.next() * 0.2 : 1);
+      c.copy(base).multiplyScalar(k);
+      col.set([c.r, c.g, c.b], (i + j) * 3);
+    }
+  }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  if (!smooth) g.computeVertexNormals();
   return g;
+}
+// a leaf cluster: a low ball with its surface pushed in and out, so the edge is broken
+function cluster(r: number, rng: { next(): number }) {
+  const ico = new THREE.IcosahedronGeometry(r, 1);
+  ico.deleteAttribute('uv');
+  ico.deleteAttribute('normal');
+  const geo = mergeVertices(ico); // shared corners, so it can be smooth shaded and pushed about without cracks
+  ico.dispose();
+  const p = geo.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).multiplyScalar(0.78 + rng.next() * 0.4);
+    p.setXYZ(i, v.x, v.y * 0.82, v.z);
+  }
+  return geo;
 }
 function mapleShape(v: number) {
   let geo = mapleShapes.get(v);
   if (geo) return geo;
   const rng = makeRng(`maple:${v}`);
   const leaf = LEAVES[Math.floor(rng.next() * LEAVES.length)];
-  const leaf2 = LEAVES[Math.floor(rng.next() * LEAVES.length)];
-  const parts = [paint(new THREE.CylinderGeometry(0.45, 0.7, 7, 6).translate(0, 3.5, 0), '#4a3426')];
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 + rng.next();
-    const r = 3.2 + rng.next() * 1.4;
-    parts.push(paint(new THREE.IcosahedronGeometry(r, 1).translate(Math.cos(a) * 2.2 * (i ? 1 : 0), 9.5 + rng.next() * 2.5, Math.sin(a) * 2.2 * (i ? 1 : 0)), i % 2 ? leaf : leaf2));
+  const leaf2 = rng.next() < 0.6 ? leaf : LEAVES[Math.floor(rng.next() * LEAVES.length)];
+  const tall = 0.9 + rng.next() * 0.25;
+  const bark = '#43342a';
+  const parts = [paint(new THREE.CylinderGeometry(0.32, 0.62, 8 * tall, 7).translate(0, 4 * tall, 0), bark, (y) => 0.8 + y * 0.02)];
+  // the fork: three or four limbs reaching up and out into the crown
+  const limbs = 3 + Math.floor(rng.next() * 2);
+  for (let i = 0; i < limbs; i++) {
+    const a = (i / limbs) * Math.PI * 2 + rng.next() * 0.8;
+    const len = 3.2 + rng.next() * 1.6;
+    const limb = new THREE.CylinderGeometry(0.12, 0.26, len, 5).translate(0, len / 2, 0);
+    limb.rotateZ(0.55 + rng.next() * 0.35).rotateY(a).translate(0, 6.2 * tall, 0);
+    parts.push(paint(limb, bark));
   }
-  // the fallen leaves, a flat disc just off the ground in the same colour, a shade darker
-  const fallen = new THREE.Color(leaf).multiplyScalar(0.8).getStyle();
-  parts.push(paint(new THREE.CircleGeometry(5.5, 14).rotateX(-Math.PI / 2).translate(0, 0.25, 0), fallen));
+  // the crown: a dozen clusters through a wide, slightly flattened dome
+  const top = 10.4 * tall;
+  const shade = (y: number) => 0.62 + Math.min(1, Math.max(0, (y - (top - 4.5)) / 8)) * 0.5;
+  const n = 11 + Math.floor(rng.next() * 4);
+  for (let i = 0; i < n; i++) {
+    const a = rng.next() * Math.PI * 2;
+    const ring = Math.sqrt(rng.next());
+    const x = Math.cos(a) * ring * 4.4;
+    const z = Math.sin(a) * ring * 4.4;
+    const y = top + (rng.next() - 0.45) * 4.4 * (1 - ring * 0.4);
+    const r = 1.7 + rng.next() * 1.3;
+    parts.push(paint(cluster(r, rng).translate(x, y, z), i % 3 ? leaf : leaf2, shade, rng, true));
+  }
+  // the fallen leaves: a ragged patch just off the ground, a shade darker than the tree
+  const fallen = new THREE.Color(leaf).lerp(new THREE.Color('#3f6630'), 0.72).multiplyScalar(0.78).getStyle();
+  const disc = new THREE.CircleGeometry(5.2, 16);
+  const dp = disc.attributes.position;
+  for (let i = 1; i < dp.count; i++) dp.setXYZ(i, dp.getX(i) * (0.7 + rng.next() * 0.5), dp.getY(i) * (0.7 + rng.next() * 0.5), 0);
+  parts.push(paint(disc.rotateX(-Math.PI / 2).translate(0, 0.22, 0), fallen));
   geo = mergeGeometries(parts, false);
   parts.forEach((p) => p.dispose());
   mapleShapes.set(v, geo);
@@ -231,48 +284,10 @@ export function autumnFrame(h: Hole, root: THREE.Group, floor: number) {
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2 + rng.next() * 0.3;
     const r = 900 + rng.next() * 400;
-    const hill = new THREE.Mesh(new THREE.SphereGeometry(240 + rng.next() * 200, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(i % 3 ? '#6f7a3e' : '#8a6a3a'));
+    const hill = new THREE.Mesh(new THREE.SphereGeometry(240 + rng.next() * 200, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(i % 3 ? '#4d6634' : '#7a5f36'));
     hill.scale.y = 0.18 + rng.next() * 0.12;
     hill.position.set(cx + Math.cos(a) * r, floor - 6, -(cy + Math.sin(a) * r));
     root.add(hill);
   }
 }
 
-// Long rough (holes with thick turf): soft, dark green long grass all over the rough, so you can see what you're in.
-// One instanced mesh of grass tufts on a grid through the rough, inside the hole's border, a little denser near the
-// short grass where it's mown less often. One draw call.
-export function longRough(h: Hole, root: THREE.Group) {
-  if (!h.turf) return;
-  const rng = makeRng(`rough:${h.id}`);
-  // a tuft: seven thin blades of grass fanning out and leaning over, so it reads as soft long grass, not spikes
-  const blades: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2 + rng.next() * 0.6;
-    const tall = 1.8 + rng.next() * 1.4;
-    const lean = 0.35 + rng.next() * 0.35;
-    const b = new THREE.BufferGeometry();
-    b.setAttribute('position', new THREE.Float32BufferAttribute([-0.09, 0, 0, 0.09, 0, 0, 0, tall, lean * tall], 3));
-    b.computeVertexNormals();
-    blades.push(b.rotateY(a).translate(Math.cos(a) * 0.25, 0, Math.sin(a) * 0.25));
-  }
-  const blade = mergeGeometries(blades, false);
-  blades.forEach((b) => b.dispose());
-  const spots: [number, number][] = [];
-  const { x0, y0, x1, y1 } = h.bounds;
-  for (let x = x0; x <= x1; x += 3.4)
-    for (let y = y0; y <= y1; y += 3.4) {
-      const p = { x: x + (rng.next() - 0.5) * 3.5, y: y + (rng.next() - 0.5) * 3.5 };
-      if (surfaceAt(h, p) === 'rough' && inPoly(p, h.border) && !isWater(h, p)) spots.push([p.x, p.y]);
-    }
-  const grass = new THREE.InstancedMesh(blade, new THREE.MeshStandardMaterial({ roughness: 1, side: THREE.DoubleSide }), spots.length);
-  const m = new THREE.Matrix4();
-  const c = new THREE.Color();
-  spots.forEach(([x, y], i) => {
-    const s = 0.8 + rng.next() * 0.7;
-    m.compose(new THREE.Vector3(x, heightAt(h, x, y) - 0.1, -y), new THREE.Quaternion().setFromEuler(new THREE.Euler((rng.next() - 0.5) * 0.4, rng.next() * 6.3, (rng.next() - 0.5) * 0.4)), new THREE.Vector3(s, s * (0.8 + rng.next() * 0.6), s));
-    grass.setMatrixAt(i, m);
-    grass.setColorAt(i, c.set(['#3f5a2a', '#4a6630', '#36502a', '#52693a', '#5a6b34'][Math.floor(rng.next() * 5)]));
-  });
-  grass.receiveShadow = true;
-  root.add(grass);
-}
