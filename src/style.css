@@ -1431,3 +1431,4 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 
 /* the share button on a finished round's card */
 .share-score { justify-self: center; }
+.share-practice { font-size: 13px; color: var(--muted); }
