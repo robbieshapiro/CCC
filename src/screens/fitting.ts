@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Golfer, REGINALD_SPEC, type GolferSpec } from '../golf3d/golfer';
 
-export type Focus = 'full' | 'head' | 'chest' | 'hands' | 'bag';
+export type Focus = 'full' | 'head' | 'chest' | 'hands' | 'club' | 'bag';
 
 // where the camera sits and what it looks at, for each view (world units; the golfer stands at the origin facing +z)
 const VIEWS: Record<Focus, { at: THREE.Vector3; look: THREE.Vector3; spin: boolean }> = {
@@ -13,6 +13,8 @@ const VIEWS: Record<Focus, { at: THREE.Vector3; look: THREE.Vector3; spin: boole
   head: { at: new THREE.Vector3(0.4, 6.2, 6.2), look: new THREE.Vector3(0, 5.95, 0), spin: false },
   chest: { at: new THREE.Vector3(0.5, 5.1, 8), look: new THREE.Vector3(0, 4.6, 0), spin: false },
   hands: { at: new THREE.Vector3(1.6, 3.9, 6.2), look: new THREE.Vector3(0.1, 3.0, 0.6), spin: false },
+  // low and to the side, to see the club head at the ball
+  club: { at: new THREE.Vector3(2.2, 2.4, 8.6), look: new THREE.Vector3(-0.1, 0.6, 2.7), spin: false },
   bag: { at: new THREE.Vector3(4.8, 4.6, -10), look: new THREE.Vector3(0.7, 2.2, -2.4), spin: false },
 };
 
@@ -109,7 +111,7 @@ export class FittingRoom {
     // soft reflections from a lit room, so the gold, the brass and the chrome read as metal
     const pm = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-    this.scene.environmentIntensity = 0.45;
+    this.scene.environmentIntensity = 0.9;
     pm.dispose();
     this.build();
     this.reginald = new Golfer(REGINALD_SPEC);
@@ -175,12 +177,12 @@ export class FittingRoom {
     s.add(side);
 
     // the plinth: club green with a brass ring
-    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.8, 0.34, 48), new THREE.MeshStandardMaterial({ color: '#163b2c', roughness: 0.45 }));
+    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.7, 0.34, 56), new THREE.MeshStandardMaterial({ color: '#163b2c', roughness: 0.45 }));
     plinth.position.y = 0.17;
     plinth.receiveShadow = true;
     plinth.castShadow = true;
     this.turn.add(plinth);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.05, 8, 64), new THREE.MeshStandardMaterial({ color: '#c9a24a', metalness: 0.85, roughness: 0.25 }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.05, 8, 72), new THREE.MeshStandardMaterial({ color: '#c9a24a', metalness: 0.85, roughness: 0.25 }));
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 0.34;
     this.turn.add(ring);
@@ -252,8 +254,11 @@ export class FittingRoom {
     }
     this.golfer = new Golfer(spec);
     this.golfer.holdClub(club);
-    this.golfer.setPose('idle');
+    // with a putter, stand over the ball at address so the head sits on the floor where it can be seen
+    this.golfer.setPose(club === 'putter' ? 'address' : 'idle');
+    // a putter's head sits on the floor: lift a touch so it isn't half sunk into the plinth
     this.golfer.group.position.set(0, 0.34, 0);
+    if (club === 'putter') this.golfer.shiftClub(0.15);
     // a caddie stands beside the plinth
     this.golfer.group.position.x = spec.caddie ? -1.2 * spec.height : 0;
     this.golfer.group.traverse((o) => (o.castShadow = true));
