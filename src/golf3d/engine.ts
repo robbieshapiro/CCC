@@ -1236,8 +1236,11 @@ export class Course3D {
     return bagFor(!!this.hole.tour || !!this.drill);
   }
 
+  // the swing meter: the vertical one on tour courses, or wherever it's asked for (the members' own holes play the
+  // weekly course's meter); the classic one otherwise
+  meterStyle: MeterStyle | null = null;
   private style(): MeterStyle {
-    return this.hole.tour ? 'vertical' : 'classic';
+    return this.meterStyle ?? (this.hole.tour ? 'vertical' : 'classic');
   }
 
   // a stretch of the bar (from, size as shares of it), across or up depending on the meter
