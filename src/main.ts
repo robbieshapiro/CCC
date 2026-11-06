@@ -14,7 +14,7 @@ import { playoff } from './screens/playoff';
 import { clubhouse, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
-import { courseById, courseFor, nextCourse, upcoming } from './golf3d/courses';
+import { courseById, courseFor, nextCourse } from './golf3d/courses';
 import { leaveMember, member } from './screens/member';
 import { checkIn } from './screens/activity';
 import { onSnapshot, refresh, startPolling } from './state';
@@ -70,7 +70,8 @@ async function router() {
     // the admin's look at every hole of a course still to come
     if (page === 'preview') {
       const c = courseById(arg ?? '');
-      if (s.admin && c && upcoming(s.month).includes(c)) return round(s, { course: c });
+      // any course, this week's included: the Committee rehearses before members play
+      if (s.admin && c) return round(s, { course: c });
       location.hash = '#/';
       return;
     }

@@ -1352,3 +1352,4 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 @keyframes coin-burst { 0% { opacity: 1; transform: translate(-50%, 0) scale(0.6) rotate(0deg); } 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), var(--y)) scale(1.1) rotate(200deg); } }
 @keyframes coin-rise { 0% { opacity: 0; transform: translate(-50%, 18px) scale(0.85); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; transform: translate(-50%, -16px); } 100% { opacity: 0; transform: translate(-50%, -40px); } }
 @media (prefers-reduced-motion: reduce) { .coin-pop, .coin-pop .coins i { animation-duration: 0.01s; } .coin-pop { animation: none; } }
+.coin-test { position: fixed; inset: 0; z-index: 100; pointer-events: none; }

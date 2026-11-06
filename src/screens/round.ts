@@ -148,16 +148,22 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   // every counted stroke, by hole, posted with the card (a card picked up mid-round only has the holes played since)
   const shotLog: RoundShot[] = [];
   let holeAt = 0;
-  if (!preview)
+  // the Committee's preview is a rehearsal of next week: the reward moments fire as they will on a card, but nothing's paid
+  const rehearsal = preview && !opts.practice;
+  const pops = card || rehearsal;
+  const unpaid = rehearsal ? 'preview, not paid' : '';
+  const holeShots = new Map<number, number>();
+  if (!opts.practice)
     game.onShotLog = (s) => {
       // the moments worth a cheer, on a daily card only (practice and replays earn nothing)
-      if (card && s.i) {
+      const first = !holeShots.get(holeAt);
+      holeShots.set(holeAt, (holeShots.get(holeAt) ?? 0) + 1);
+      if (pops && s.i) {
         const ft = Math.round(Math.hypot(s.t[0] - s.f[0], s.t[1] - s.f[1]));
-        const first = !shotLog.some((x) => x.h === holeAt);
-        if (s.c === 'putter' && puttBonus(ft)) coinPop(el, puttBonus(ft), ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', `${ft} ft`);
-        else if (s.c !== 'putter' && s.l !== 'green' && !first) coinPop(el, BONUS.chipin, 'Chip-in', 'from off the green');
+        if (s.c === 'putter' && puttBonus(ft)) coinPop(el, puttBonus(ft), ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', unpaid || `${ft} ft`);
+        else if (s.c !== 'putter' && s.l !== 'green' && !first) coinPop(el, BONUS.chipin, 'Chip-in', unpaid || 'from off the green');
       }
-      if (shotLog.length < 150) shotLog.push({ ...s, h: holeAt });
+      if (!preview && shotLog.length < 150) shotLog.push({ ...s, h: holeAt });
     };
   // secrets this member has found before (on any card), so only a first find pays
   const foundBefore = new Set(me.feats ?? []);
@@ -188,9 +194,9 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     scores[i] = r.strokes;
     spots[i] = r.spot;
     // a hole's secret, found for the first time on a card
-    if (card && h.secret && r.feats.includes(h.secret.zone) && SECRET_FEATS.includes(h.secret.zone) && !foundBefore.has(h.secret.zone)) {
+    if (pops && h.secret && r.feats.includes(h.secret.zone) && (rehearsal || (SECRET_FEATS.includes(h.secret.zone) && !foundBefore.has(h.secret.zone)))) {
       foundBefore.add(h.secret.zone);
-      coinPop(el, BONUS.secret, 'Secret found', h.secret.name);
+      coinPop(el, BONUS.secret, 'Secret found', unpaid || h.secret.name);
     }
     r.feats.forEach((f) => feats.add(f));
     i++;

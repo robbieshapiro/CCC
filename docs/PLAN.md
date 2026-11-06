@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (the earnings rework).
+Last updated Nov 6, 2026 (Admin previews as rehearsals).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (the earnings rework).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #163 | Admin previews are rehearsals of next week: any course, this week's included ("Preview this week"), with the hole menu to jump around, and the reward moments (long putts, chip-ins, secrets) firing their coin bursts marked "preview, not paid". A "Test a coin burst" button in Admin plays the animation and sound on demand. Nothing in a preview posts or pays. |
 | #161 | Earnings reworked before the club grows. The Open purse is $250 a player (was $1,000): a 25-player week pays the winner about $1,900, not $7,600. New ways to earn on a daily card, each with a coin burst and a cheer in the round: a holed putt from 30 ft ($75) or 60 ft ($200), a chip-in from off the green ($100), the first time you find each hole's secret ($150); and $100 to a designer each time another member finishes their Members' Course hole (once each a week, up to $500 a week). The Club Legend rack (and the Legend badge) now also needs a weekly title; the caddie costs $50,000 (was $15,000). The secrets on the Pacific Bluffs and the Western Reserve are recorded on cards now (seven were missing). Earnings already banked stay as they are. |
 | #160 | Every Pro Shop piece and hat checked on the golfer in its own view, and fixed where it didn't show: clubs rest on the plinth (in the fitting room and the Locker) instead of sinking through it, and the club view aims at the head, so all five putters and three drivers can be seen; shoes get their own view, with no club in the way; hair tucks under hats (no curls or bun through the crown), and the brimmed hats are round enough to cover the back of the head; the diamond stud sits out on the earlobe. |
 | #159 | The Pro Shop's fitting room lit like a cosy shop instead of a showroom: a dimmer, warm amber room, three brass wall lamps glowing on darker panelling, a lamp over Reginald's counter, and a warm pool of light over the plinth. The even room reflections that made it glare are turned well down (just enough for metal to read). |
