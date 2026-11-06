@@ -634,6 +634,16 @@ export class Course3D {
     this.camera.aspect = w / h;
     this.camera.fov = w < h ? 66 : 52;
     this.camera.updateProjectionMatrix();
+    this.fitHud();
+  }
+
+  // The wind pill and the green read sit just under the hole's title, however many lines the title wraps to on a
+  // narrow phone (--hud-top; the stylesheet's 76px until it's measured)
+  private fitHud() {
+    const title = this.overlay?.querySelector('.g3-title');
+    if (!title) return;
+    const below = Math.round(title.getBoundingClientRect().bottom - this.overlay.getBoundingClientRect().top + 8);
+    this.overlay.style.setProperty('--hud-top', `${Math.max(below, 70)}px`);
   }
 
   // ---------- HUD ----------
@@ -1134,6 +1144,7 @@ export class Course3D {
     const rise = (heightAt(this.hole, this.hole.cup.x, this.hole.cup.y) - heightAt(this.hole, this.pos.x, this.pos.y)) * SCALE;
     const slope = !putt && Math.abs(rise) >= 6 ? ` · ${Math.round(Math.abs(rise))} ft ${rise < 0 ? 'down' : 'up'}` : '';
     if (dist) dist.textContent = this.drill ? `${away(d, putt)}${slope}` : `${away(d, putt)} to the pin${slope}`;
+    this.fitHud();
     const first = this.number === 1 && this.strokes === 0 && !this.drill;
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
     this.hint(
