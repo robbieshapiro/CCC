@@ -51,8 +51,11 @@ export function shoutSheet(host: HTMLElement, g: Ghost, course: Course, p: Playe
       </div>
       ${kit.length ? `<p class="shout-kit"><span>Wearing</span> ${kit.map(esc).join(' · ')}</p>` : ''}
       <form class="shout-own" data-own>
+        <div class="shout-pick-kind" role="radiogroup" aria-label="Kudos or a chirp">
+          <button type="button" role="radio" aria-checked="true" data-pick="kudos">${ICON.kudos} Kudos</button><button type="button" role="radio" aria-checked="false" data-pick="chirp">${ICON.chirp} Chirp</button>
+        </div>
         <input maxlength="${SHOUT_MAX}" placeholder="Say something (optional)" aria-label="Your line" />
-        <div class="shout-own-go"><button class="btn" type="submit" data-kind="kudos">${ICON.kudos} Kudos</button><button class="btn ghost" type="submit" data-kind="chirp">${ICON.chirp} Chirp</button></div>
+        <button class="btn" type="submit" data-send>Send kudos</button>
       </form>
       <p class="shout-msg" role="status"></p>
     </div>`;
@@ -70,9 +73,19 @@ export function shoutSheet(host: HTMLElement, g: Ghost, course: Course, p: Playe
   sheet.addEventListener('keydown', (e) => e.stopPropagation());
   let busy = false;
   const form = sheet.querySelector<HTMLFormElement>('[data-own]')!;
+  // kudos or a chirp, picked first; the send button says which
+  let picked: ShoutKind = 'kudos';
+  const sendBtn = form.querySelector<HTMLButtonElement>('[data-send]')!;
+  form.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((b) => {
+    b.onclick = () => {
+      picked = b.dataset.pick as ShoutKind;
+      form.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+      sendBtn.textContent = picked === 'kudos' ? 'Send kudos' : 'Send chirp';
+    };
+  });
   form.onsubmit = async (e) => {
     e.preventDefault();
-    const kind = (((e as SubmitEvent).submitter as HTMLButtonElement | null)?.dataset.kind as ShoutKind | undefined) ?? 'kudos';
+    const kind = picked;
     // nothing typed: the kudos or the chirp on its own
     const body = form.querySelector('input')!.value.replace(/\s+/g, ' ').trim() || ICON[kind];
     if (busy) return;
