@@ -1402,3 +1402,29 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .shout-note { padding-right: 14px; }
 .adm-list li.gone { opacity: 0.5; }
 .shout-card .eyebrow { padding: 0 30px; }
+
+/* next week's course on home, between Play and the board: a warm band in its own colours */
+.preview-band { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; text-decoration: none; color: var(--cream); background: linear-gradient(120deg, #3a2a1c, #4d3420 55%, #5a3a1e); border: 1px solid rgba(214, 169, 64, 0.35); box-shadow: 0 8px 24px -14px rgba(60, 30, 10, 0.6); position: relative; overflow: hidden; animation: rise 0.45s ease-out both; transition: transform 0.15s, box-shadow 0.15s; }
+.preview-band:hover { transform: translateY(-1px); box-shadow: 0 12px 28px -14px rgba(60, 30, 10, 0.7); }
+.preview-band.autumn { background: radial-gradient(120% 140% at 100% 0%, rgba(232, 150, 52, 0.38), transparent 55%), radial-gradient(90% 120% at 0% 100%, rgba(170, 52, 26, 0.35), transparent 60%), linear-gradient(120deg, #4a2617, #6b3418 50%, #7d4a1c); }
+.preview-band.volcanic { background: linear-gradient(120deg, #2a0f08, #4a1a0c 60%, #7a2c10); }
+.preview-band.coastal { background: linear-gradient(120deg, #0b2c44, #11496a 60%, #1d6b86); }
+.pb-icon { flex: none; font-size: 30px; line-height: 1; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3)); }
+.pb-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.pb-text small { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #f3cf8e; }
+.pb-text small em { font-style: normal; }
+.pb-text b { font-family: var(--serif); font-size: 22px; font-weight: 600; line-height: 1.15; }
+.pb-text > span { font-size: 13px; opacity: 0.85; }
+.pb-go { flex: none; font-size: 13px; font-weight: 800; padding: 8px 14px; border-radius: 999px; background: #e9a64a; color: #3a1d0c; }
+.preview-band.volcanic .pb-go { background: #e8501c; color: #fff; }
+.preview-band.coastal .pb-go { background: #f4ad62; color: #0b2c44; }
+
+/* what's new on a course, before its practice */
+.whats-new { padding-block: 24px; }
+.wn-card { display: grid; gap: 8px; padding: 22px 20px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--gold); }
+.whats-new.autumn .wn-card { border-top-color: #c8692a; background: linear-gradient(180deg, #fbf3e6, var(--paper) 40%); }
+.wn-card h1 { margin: 0; }
+.wn-card h2 { margin: 8px 0 0; font-size: 18px; }
+.wn-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.4; }
+.wn-list li::marker { color: #c8692a; }
+.wn-card .summary-actions { margin-top: 8px; justify-content: flex-start; }

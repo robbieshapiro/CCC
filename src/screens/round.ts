@@ -174,7 +174,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   game.starter = HANK.firstTee(me.name, snap.today, course.holes[0]?.theme);
   const scores: number[] = resume ? [...resume.scores] : [];
   // who comes by with drinks, and on which holes: different every round
-  const visits = planVisits(course.holes.length);
+  // (none on a practice of next week's course: that's for Sunday)
+  const visits = opts.practice && !livePractice ? [] : planVisits(course.holes.length);
   const spots: Spot[] = resume ? resume.scores.map((_, i) => (resume.spots?.[i] ?? null) as Spot) : [];
   // a counted round logs its start and each hole it reaches, so the Committee can see who stops and where (a card does
   // it as it saves itself)
@@ -393,10 +394,24 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   };
 }
 
-// A practice round on the next course: straight in. The how-to card covers what plays differently.
+// A practice round on the next course. A course with notes on what's new shows them first, then in.
 export function practice(snap: Snapshot, next: Course) {
   const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
-  void round(snap, { course: next, holes: n, practice: true });
+  const go = () => void round(snap, { course: next, holes: n, practice: true });
+  if (!next.whatsNew?.length) return go();
+  closeRound();
+  const theme = next.holes[0]?.theme ?? '';
+  render(`<main class="narrow whats-new ${esc(theme)}">
+    <section class="wn-card">
+      <p class="eyebrow">Practice · nothing counts</p>
+      <h1>${esc(next.name)}</h1>
+      <p class="muted">${n} ${n === 1 ? 'hole' : 'holes'} · par ${next.holes.slice(0, n).reduce((a, h) => a + h.par, 0)}</p>
+      <h2>What's new</h2>
+      <ul class="wn-list">${next.whatsNew.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="summary-actions"><button class="btn big" data-start>Start practice</button><a class="btn ghost" href="#/">Back to the club</a></div>
+    </section>
+  </main>`);
+  document.querySelector<HTMLButtonElement>('[data-start]')!.onclick = go;
 }
 
 // The range or the short game area at the practice facility: a session from the moment you step on to when you leave.

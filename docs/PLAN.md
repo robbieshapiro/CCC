@@ -1,16 +1,16 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (kudos and chirps clear themselves).
+Last updated Nov 6, 2026 (Western Reserve preview on home, deer in view).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
 - **Daily cards start Sun Nov 8** (#149): one round a day counts. The SQL is live; nothing changes until Sunday. Play a real card Sunday morning to check it end to end.
-- **Western Reserve opens Sun Nov 8** (#146). Members practise Creek Bend until then. Its test switches (`windByHeight`, `calmChip` from #143) now count for real scores from Sunday. Robbie hasn't said whether to keep them on; ask if unsure.
+- **Western Reserve opens Sun Nov 8** (#146). Members practise all five holes until then (#174). Its test switches (`windByHeight`, `calmChip` from #143) now count for real scores from Sunday. Robbie hasn't said whether to keep them on; ask if unsure.
 - **Open PRs #132, #134, #138** (wind by height and the calmer chip meter for every course). On hold: Robbie is testing them on the Western Reserve first. #132 was closed as superseded by #134. The scheduled task that would have merged them at the Caldera close was deleted; Robbie decides after playing the Western Reserve. Don't merge without his say.
-- **Caldera storm** (#144, toned down in #145): looks and sounds only, ends by itself when the Caldera closes Sat Nov 7 at midnight ET (`tempestOn` in `src/golf3d/conditions.ts`). Nothing to do.
+- **Caldera storm** (#144, #145): cleared early on Nov 6 (#166); the Blowhole and the Caldera now gust 10 to 15 mph. Nothing to do.
 - **Pacific Bluffs** is the Nov 15 draft. It needs Robbie's play-through and approval (see Setup status).
 - **Vercel was slow to pick up merges on Nov 5** (one waited about 30 minutes, another sat 11 minutes before building). After merging, confirm the production deployment for the merge SHA is READY (Vercel `list_deployments` with `sha`) before telling Robbie something is live.
-- **Offered, not built:** split the admin's unfinished-rounds stat into restarts (quit in the first ~20 s on hole 1) and real abandons. Also still open from #135: branch protection and the Anthropic spend limit. The Architect and Steward are written up in #148 (see Agents below); their scheduled tasks are created once it merges.
+- **Offered, not built:** split the admin's unfinished-rounds stat into restarts (quit in the first ~20 s on hole 1) and real abandons. Branch protection, the spend limit and the Architect and Steward are all done (see Setup status).
 
 ## Shipped (all live on Vercel)
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (kudos and chirps clear themselves).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #174 | The Western Reserve preview: members can now practise all five holes before Sunday (was Creek Bend only), from a warm autumn band on home between the Play card and the board (its own colours per course: leaves, embers or sea), with the countdown. Before the practice starts, a short "What's new" card. Next week's practice has no drinks visits (that's for Sunday). The deer, turkeys and rabbits now stand out in the deep rough where you can see them, a herd within sight of the tee and often another further down, well off the line of play and never under a tree (they were behind the tree line). |
 | #172 | Kudos and chirps are easy to clear: each line on the home page has its own ×, "Clear all" when there's more than one, and any left alone clear themselves after 24 hours (were 14 days). The Committee's list in Admin still shows the last fortnight's. |
 | #170 | Kudos and chirps. Tap another member out on the course (their figure or the name card over them) and their card comes up: today's scores hole by hole, ready-made kudos and chirps (a couple about how their day went, like a birdie or a blow-up hole), or your own line in 80 characters. It waits on their home page under "From the course" until they tap it away, in whichever of their clubs they open. Same club only; 20 a day from a member, 3 a day to any one member; no AI, so no cost. The Committee sees the last fortnight's in Admin, Activity, and can take any down. A one-time tip on the course tells members they can tap. In the rehearsal, tapping a sample member shows how it sends without sending. |
 | #169 | Drinks that suit the hole, and who brings them mixed up. The cart's tray is matched to the hole: steady drinks (Arnold Palmer, Transfusion, Espresso) on a par 3 or anything under 200 yd, distance (Lager, Espresso, Palmer) on a par 5 or 430 yd and over, a mix in between, always with sparkling water; the late cart brings Fireball on the longer holes only. Each round plans its own visits: the cart on any hole but the first, a late cart near the end of a five-hole round, and about every other round Reginald walks out himself with a silver tray on a hole of his own, with a line. Birdies, eagles and aces on a card now pop coins as they drop, and the round's club bonus lands with a coin burst on the card. The Committee's preview is a rehearsal of Sunday: the same visits and coins, the club bonus as a card would earn it (marked not paid), and a few of the club's members out on the course. |
@@ -126,9 +127,9 @@ Last updated Nov 6, 2026 (kudos and chirps clear themselves).
 - [x] The #124 birdie fix SQL, run Nov 4 (checked: Marc $1,650 in bonuses against $2,972 in purses).
 - [x] The #125 purse SQL, run Nov 4 (checked: October's closed purses unchanged, $9,998 Kellogg and $4,000 The Clergy).
 - [x] The #129 lockout SQL, run Nov 4 (checked: `sign_in` gone, both sign-in paths check the lock, the public role can't reach `pin_failures` or its helpers).
-- [ ] Set a monthly spend limit in the Anthropic Console (about $25).
-- [ ] Turn on branch protection for `main` (GitHub → Settings → Branches → Add rule): require a pull request (0 approvals), require the `checks` status to pass, and don't allow bypassing. Agents can't set this, and none may merge anything until it's on.
-- [ ] Create the Architect and Steward as routines in claude.ai (Robbie, from the claude.ai/code routines page: the repo `robbieshapiro/CCC`, plus Supabase and Vercel for the Steward). An agent couldn't attach the repo or connectors. Then delete the paused copies `trig_01VL4jyxguewx9BmYHhEGcgn` and `trig_01JTEuR8TDGCEgBV7ze79J8i`.
+- [x] Monthly spend limit set in the Anthropic Console: $20 (Nov 6).
+- [x] Branch protection on `main` (a "Main" ruleset, checked Nov 5) (GitHub → Settings → Branches → Add rule): require a pull request (0 approvals), require the `checks` status to pass, and don't allow bypassing. Agents can't set this, and none may merge anything until it's on.
+- [x] The Architect and Steward are on (Nov 6): Robbie enabled `trig_01JTEuR8TDGCEgBV7ze79J8i` (Architect, Sundays 9:07am ET, the repo attached) and `trig_01VL4jyxguewx9BmYHhEGcgn` (Steward, daily 8:17am ET, the repo plus Supabase and Vercel). A test run of the Steward on Nov 6 read the club and Vercel and pushed its note.
 - [x] The #157 and #161 SQL, run Nov 6 (pasted by Robbie; checked: the purse is $250 a player, the caddie $50,000, one `submit_round` with shots, the five new functions and `design_plays` live, the bonus and shot export hidden from the app, 21 secrets recorded, and Marc's and Robbie's bonuses unchanged at $2,275 and $2,400): `rounds.shots`, `secret_feats`, the new `submit_round`, `admin_holes`, `shot_export`, `open_per_player`, `open_payouts`, `admin_kpis`, `design_plays`, `record_design_play`, `person_bonus`, `buy_item`, and the caddie's price.
 - [x] The #156 SQL, run Nov 5 as `pr_156_catalogue` (checked: 61 pieces, 32 member, 17 pro, 12 legend, $150 to $30,000; all 7 earlier purchases still match a piece).
 - [x] The #154 SQL, run Nov 5 as `pr_154_admin_kpis` (checked: `admin_kpis` returns live numbers for Robbie, 5 in today and 5 of 13 back; `admin_insights` has row security on).
