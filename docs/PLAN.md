@@ -135,7 +135,7 @@ Last updated Nov 6, 2026 (kudos and chirps clear themselves).
 - [x] The #151 Open purse SQL, run Nov 5 as `pr_151_open_purse` (checked: the four purse functions are live and hidden from the public role, the snapshot loads for both clubs, October's purses still read $9,998 at Kellogg and $4,000 at The Clergy, and the Open pays nothing until the Nov 8 week closes): `club_payouts` (the old club purse, renamed), `open_purse_from`, `open_payouts`, the new `period_payouts`, and `get_snapshot` (the last purse paid lists the whole Open, with names).
 - [x] The #149 daily cards SQL, run Nov 5 (pasted by Robbie; checked: the five card functions, the new `start_round` and `submit_round` with the old signatures gone, the new columns, the `course` practice kind, member access to the card functions with the helpers hidden, and cards still off until Sunday): `cards_on`, the `card` columns on `rounds` and `round_starts` (with `scores`, `shots`, `spots`, `feats`), `card_of`, `card_in`, `card_today`, `card_progress`, the new `start_round` and `submit_round`, the `course` practice kind and `practice_report`.
 - [x] The #170 kudos and chirps SQL, applied Nov 6 (`pr_170_shoutouts`). Checked live: the `shoutouts` table with row security on, all five functions there and callable by members, and the inbox answering (empty so far).
-- [ ] The #172 SQL: `my_shoutouts` shows only the last 24 hours. Claude applies it after merge.
+- [x] The #172 SQL, applied Nov 6 (`pr_172_shoutouts_day`). Checked live: `my_shoutouts` reads the last 24 hours and members can call it.
 - [x] GitHub default branch switched to `main`.
 - [x] "Automatically delete head branches" turned on in GitHub.
 - [x] Stale branches deleted. Only `main` is left.
