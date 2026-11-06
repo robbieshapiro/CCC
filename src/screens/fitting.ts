@@ -53,9 +53,9 @@ function wallTex() {
   c.width = 512;
   c.height = 256;
   const x = c.getContext('2d')!;
-  x.fillStyle = '#efe6d2';
+  x.fillStyle = '#cdb48c';
   x.fillRect(0, 0, 512, 256);
-  x.fillStyle = '#1d4634';
+  x.fillStyle = '#163326';
   x.fillRect(0, 150, 512, 106);
   x.fillStyle = '#b8955a';
   x.fillRect(0, 146, 512, 6);
@@ -103,15 +103,16 @@ export class FittingRoom {
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
     this.renderer.shadowMap.enabled = true;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 0.82;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.appendChild(this.renderer.domElement);
-    this.scene.background = new THREE.Color('#2a2118');
-    this.scene.fog = new THREE.Fog('#2a2118', 30, 60);
+    this.scene.background = new THREE.Color('#150e08');
+    this.scene.fog = new THREE.Fog('#150e08', 24, 50);
     // soft reflections from a lit room, so the gold, the brass and the chrome read as metal
     const pm = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-    this.scene.environmentIntensity = 0.9;
+    // just enough to make metal read as metal; the lamps do the lighting
+    this.scene.environmentIntensity = 0.22;
     pm.dispose();
     this.build();
     this.reginald = new Golfer(REGINALD_SPEC);
@@ -144,9 +145,10 @@ export class FittingRoom {
 
   private build() {
     const s = this.scene;
-    s.add(new THREE.HemisphereLight('#ffe9c8', '#3a2a1a', 1.1));
+    // a low, warm fill: a shop lit by lamps, not a showroom
+    s.add(new THREE.HemisphereLight('#ffcf98', '#24160b', 0.42));
     // the key light over the plinth, warm and soft
-    const key = new THREE.SpotLight('#ffe2b8', 260, 40, 0.5, 0.6, 1.6);
+    const key = new THREE.SpotLight('#ffc27a', 230, 40, 0.42, 0.75, 1.6);
     key.position.set(3, 16, 9);
     key.target.position.set(0, 2.5, 0);
     key.castShadow = true;
@@ -154,13 +156,31 @@ export class FittingRoom {
     key.shadow.bias = -0.0005;
     s.add(key, key.target);
     // a cool rim from behind, so the outline reads against the wall
-    const rim = new THREE.DirectionalLight('#bcd4ff', 0.9);
+    const rim = new THREE.DirectionalLight('#ffd7a8', 0.28);
     rim.position.set(-6, 9, -8);
     s.add(rim);
     // a lamp over the counter
-    const lamp = new THREE.PointLight('#ffcf8a', 30, 14, 1.8);
-    lamp.position.set(-6, 8, -3);
+    const lamp = new THREE.PointLight('#ffb15e', 48, 14, 1.8);
+    lamp.position.set(-6, 7.5, -3);
     s.add(lamp);
+    // brass wall lamps along the back wall, each a warm glow on the panelling
+    const brassM = new THREE.MeshStandardMaterial({ color: '#b8893a', metalness: 0.8, roughness: 0.35 });
+    const bulbM = new THREE.MeshStandardMaterial({ color: '#ffd39a', emissive: '#ffb050', emissiveIntensity: 2.2 });
+    for (const x of [-9, -1.5, 6]) {
+      const glow = new THREE.PointLight('#ffa850', 16, 9, 1.8);
+      glow.position.set(x, 7.6, -8.2);
+      s.add(glow);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.7, 8), brassM);
+      arm.rotation.x = Math.PI / 2;
+      arm.position.set(x, 7.3, -8.7);
+      s.add(arm);
+      const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.38, 0.45, 16, 1, true), new THREE.MeshStandardMaterial({ color: '#f1d9a8', emissive: '#c7782a', emissiveIntensity: 0.9, side: THREE.DoubleSide }));
+      shade.position.set(x, 7.6, -8.3);
+      s.add(shade);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), bulbM);
+      bulb.position.set(x, 7.5, -8.3);
+      s.add(bulb);
+    }
 
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ map: woodTex(), roughness: 0.55 }));
     floor.rotation.x = -Math.PI / 2;
