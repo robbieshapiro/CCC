@@ -10,9 +10,23 @@ export const BONUS = {
   birdie: 25, // birdies and better pay on the day's first finished round only
   eagle: 100,
   ace: 500,
+  // on a daily card (counted rounds only, one a day): the moments worth a cheer
+  longPutt: 75, // holed from 30 ft
+  monsterPutt: 200, // holed from 60 ft
+  chipin: 100, // holed from off the green (not the tee: that's an ace)
+  secret: 150, // the first time you find each hole's secret route
+  designPlay: 100, // another member finishes your Members' Course hole (once each a week)
+  designWeek: 500, // the most your holes can earn you in a week
 };
+export const LONG_PUTT_FT = 30;
+export const MONSTER_PUTT_FT = 60;
+// every hole's secret route, by its zone (secret_feats in supabase/schema.sql)
+export const SECRET_FEATS = ['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch', 'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk'];
 
-export type Bonus = { rounds: number; streaks: number; ctp: number; shots: number; total: number };
+export type Bonus = { rounds: number; streaks: number; ctp: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; total: number };
+
+// what a holed putt from this far is worth on a card
+export const puttBonus = (ft: number) => (ft >= MONSTER_PUTT_FT ? BONUS.monsterPutt : ft >= LONG_PUTT_FT ? BONUS.longPutt : 0);
 
 // what one hole earns: an ace is an ace whatever the par
 export const shotBonus = (strokes: number, par: number) =>
@@ -33,10 +47,11 @@ export function streakBonus(days: string[]) {
   return total;
 }
 
-export function bonusOf(o: { roundDays: string[]; days: string[]; ctpWins: number; holes: [number, number][] }): Bonus {
+export function bonusOf(o: { roundDays: string[]; days: string[]; ctpWins: number; holes: [number, number][]; putts?: number; chipins?: number; secrets?: number; designs?: number }): Bonus {
   const rounds = new Set(o.roundDays).size * BONUS.round;
   const streaks = streakBonus(o.days);
   const ctp = o.ctpWins * BONUS.ctp;
   const shots = o.holes.reduce((a, [s, p]) => a + shotBonus(s, p), 0);
-  return { rounds, streaks, ctp, shots, total: rounds + streaks + ctp + shots };
+  const extra = { putts: o.putts ?? 0, chipins: o.chipins ?? 0, secrets: o.secrets ?? 0, designs: o.designs ?? 0 };
+  return { rounds, streaks, ctp, shots, ...extra, total: rounds + streaks + ctp + shots + extra.putts + extra.chipins + extra.secrets + extra.designs };
 }

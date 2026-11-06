@@ -56,7 +56,7 @@ export function member(snap: Snapshot, id: string) {
       <p><a class="link" href="#/clubhouse/members">‹ Members</a></p>
       ${hostChip(remark(p.name, p.wins, row.rank, row.best ? 1 : 0, c.rounds), p.wins ? 'pleased' : 'dry')}
       <section class="member-card">
-        <div class="mc-top">${crest(46, 'mc')}<div><p class="eyebrow">Claude Country Club</p><p class="mc-kind">${p.host ? 'Full Member' : rankOf(earningsOf(p)).name}</p></div></div>
+        <div class="mc-top">${crest(46, 'mc')}<div><p class="eyebrow">Claude Country Club</p><p class="mc-kind">${p.host ? 'Full Member' : rankOf(earningsOf(p), p.wins ?? 0).name}</p></div></div>
         <div class="mc-body">
           <div class="mc-portrait">${portrait(p.avatar, 120)}</div>
           <div>

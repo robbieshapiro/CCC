@@ -3,11 +3,11 @@
 // Buy it and it's worn straight away. Pieces you own can be put on and taken off for free.
 import { api } from '../api';
 import type { Avatar, Player, Snapshot } from '../api/types';
-import { BONUS } from '../bonus';
+import { BONUS, LONG_PUTT_FT, MONSTER_PUTT_FT } from '../bonus';
 import { specOf } from '../avatar';
 import type { GolferSpec } from '../golf3d/golfer';
 import { reginaldSvg } from '../host';
-import { money } from '../purse';
+import { money, OPEN_PER_PLAYER } from '../purse';
 import { badgeSvg, balanceOf, canShop, earningsOf, focusOf, ITEMS, KIND_ICON, KIND_NAME, KINDS, nextRank, rankOf, RANKS, type Item, type Kind } from '../shop';
 import { refresh, requireSession } from '../state';
 import { toast } from '../nudges';
@@ -44,7 +44,8 @@ export function shopPane(snap: Snapshot) {
   const me = snap.players.find((p) => p.id === snap.me);
   if (!me || me.host) return `<p class="muted">The Pro Shop is for playing members. Your shopping happens at your home club.</p>`;
   const earned = earningsOf(me);
-  const rank = rankOf(earned);
+  const titles = me.wins ?? 0;
+  const rank = rankOf(earned, titles);
   const next = nextRank(earned);
   const toNext = next ? Math.min(100, Math.round(((earned - rank.from) / (next.from - rank.from)) * 100)) : 100;
   const kinds = KINDS.filter((k) => ITEMS.some((i) => i.kind === k));
@@ -67,24 +68,27 @@ export function shopPane(snap: Snapshot) {
         <button role="tab" data-kind="" class="on">All</button>
         ${kinds.map((k) => `<button role="tab" data-kind="${k}">${KIND_ICON[k]} ${KIND_NAME[k]}</button>`).join('')}
       </div>
-      <div class="fit-racks" id="fit-racks">${racks(earned)}</div>
+      <div class="fit-racks" id="fit-racks">${racks(earned, titles)}</div>
       <div class="fit-pick" id="fit-pick" hidden></div>
       <details class="shop-how"><summary>How to earn</summary>
-        <p><b>The weekly purse</b> is the big money: the top 10 on the Open get paid.</p>
-        <p><b>On the side:</b> ${money(BONUS.round)} for your first round of the day, plus ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle and ${money(BONUS.ace)} an ace on it. ${money(BONUS.streak3)} for three days running, ${money(BONUS.streak7)} for every full week, and ${money(BONUS.ctp)} for winning the day’s Closest to the Pin.</p>
-        <p class="muted">Spending never touches your career earnings. It’s all for looks: it shows on the course, in the stands and on your member card.</p>
+        <p><b>The weekly purse:</b> ${money(OPEN_PER_PLAYER)} goes in for every player on the Open, and the top 10 split it like a tour event. The bigger the field, the bigger the purse.</p>
+        <p><b>Every day you play your card:</b> ${money(BONUS.round)}, plus ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle and ${money(BONUS.ace)} a hole in one. ${money(BONUS.streak3)} for three days running at the club, ${money(BONUS.streak7)} for every full week.</p>
+        <p><b>The moments:</b> hole a putt from ${LONG_PUTT_FT} ft for ${money(BONUS.longPutt)}, from ${MONSTER_PUTT_FT} ft for ${money(BONUS.monsterPutt)}. Chip in from off the green for ${money(BONUS.chipin)}. Find a hole's secret route for the first time for ${money(BONUS.secret)}.</p>
+        <p><b>Around the club:</b> ${money(BONUS.ctp)} for winning the day's Closest to the Pin. ${money(BONUS.designPlay)} each time another member finishes a hole you designed on the Members' Course (once each a week, up to ${money(BONUS.designWeek)} a week).</p>
+        <p class="muted">Only your daily card counts; practice is free and earns nothing. Spending never touches your career earnings. The Club Legend rack also needs a weekly title.</p>
       </details>
     </div>`;
 }
 
 // the racks: one shelf per rank, the pieces in category order; a locked rack shows what's coming
-function racks(earned: number, kind = '') {
+function racks(earned: number, titles: number, kind = '') {
   return RANKS.map((r) => {
     const items = KINDS.flatMap((k) => ITEMS.filter((i) => i.rack === r.id && i.kind === k && (!kind || i.kind === kind)));
     if (!items.length) return '';
-    const open = canShop(r.id, earned);
+    const open = canShop(r.id, earned, titles);
+    const why = r.id === 'legend' && earned >= r.from && !titles ? 'opens with a weekly title' : `opens at ${money(r.from)} career${r.id === 'legend' ? ' and a weekly title' : ''}`;
     return `<section class="fit-rack rack-${r.id}${open ? '' : ' locked'}">
-      <h3>${badgeSvg(r.id, 18)} ${r.id === 'member' ? 'The shop floor' : `${r.name} rack`}${open ? '' : ` <small>🔒 opens at ${money(r.from)} career</small>`}</h3>
+      <h3>${badgeSvg(r.id, 18)} ${r.id === 'member' ? 'The shop floor' : `${r.name} rack`}${open ? '' : ` <small>🔒 ${why}</small>`}</h3>
       <div class="fit-row">${items.map(card).join('')}</div>
     </section>`;
   }).join('');
@@ -104,6 +108,10 @@ function earnedFrom(me: Player) {
       ['Streaks', b?.streaks ?? 0],
       ['Closest to the Pin', b?.ctp ?? 0],
       ['Birdies and better', b?.shots ?? 0],
+      ['Long putts', b?.putts ?? 0],
+      ['Chip-ins', b?.chipins ?? 0],
+      ['Secrets found', b?.secrets ?? 0],
+      ['Your holes played', b?.designs ?? 0],
     ] as [string, number][]
   ).filter(([, n]) => n > 0);
   if (!parts.length) return '';
@@ -117,6 +125,7 @@ export function bindShop(snap: Snapshot) {
   let spec: GolferSpec = { ...specOf(me.avatar), caddieBib: me.name };
   const owned = new Set(me.owned ?? []);
   const earned = earningsOf(me);
+  const titles = me.wins ?? 0;
   let trying: Item | null = null;
   leaveShop();
   try {
@@ -135,7 +144,7 @@ export function bindShop(snap: Snapshot) {
   const show = () => room?.set(trying ? tryOn(spec, trying) : spec, trying?.kind === 'putter' ? 'putter' : trying?.kind === 'shoes' ? null : 'driver');
   const state = (i: Item) => {
     if (owned.has(i.id)) return i.worn(spec) ? 'Wearing' : 'Owned';
-    if (!canShop(i.rack, earned)) return `🔒 ${money(i.price)}`;
+    if (!canShop(i.rack, earned, titles)) return `🔒 ${money(i.price)}`;
     return money(i.price);
   };
   // the piece being tried: what it is, and the one button that matters
@@ -146,7 +155,7 @@ export function bindShop(snap: Snapshot) {
     if (!trying) return;
     const i = trying;
     const own = owned.has(i.id);
-    const locked = !canShop(i.rack, earned);
+    const locked = !canShop(i.rack, earned, titles);
     const short = Math.max(0, i.price - balanceOf(me));
     const action = own
       ? `<button class="btn" data-act="wear">${i.worn(spec) ? 'Take it off' : 'Wear it'}</button>`
@@ -217,7 +226,7 @@ export function bindShop(snap: Snapshot) {
         trying = trying?.id === i.id ? null : i;
         show();
         view(trying ? focusOf(i) : 'full');
-        if (trying) say(!canShop(i.rack, earned) && !owned.has(i.id) ? `That one is kept for the ${RANKS.find((r) => r.id === i.rack)!.name} rack. Try it all the same. ${line(i)}` : line(i));
+        if (trying) say(!canShop(i.rack, earned, titles) && !owned.has(i.id) ? `That one is kept for the ${RANKS.find((r) => r.id === i.rack)!.name} rack. Try it all the same. ${line(i)}` : line(i));
         draw();
         // bring the fitting room back into view, so the try-on can be seen; the piece's panel sticks to the bottom
         if (trying) host.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -228,7 +237,7 @@ export function bindShop(snap: Snapshot) {
     (b) =>
       (b.onclick = () => {
         document.querySelectorAll('.fit-tabs [data-kind]').forEach((x) => x.classList.toggle('on', x === b));
-        document.getElementById('fit-racks')!.innerHTML = racks(earned, b.dataset.kind);
+        document.getElementById('fit-racks')!.innerHTML = racks(earned, titles, b.dataset.kind);
         bindCards();
         draw();
       }),

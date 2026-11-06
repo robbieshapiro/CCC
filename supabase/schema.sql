@@ -252,6 +252,9 @@ revoke all on function club_payouts(uuid) from public, anon, authenticated;
 -- week, however many clubs they play in, on one board; $1,000 in for each of them and the top ten paid as above. Ties
 -- share; the Open has no playoff. Each person is paid once, on their home seat (the club the Open lists them under).
 create or replace function open_purse_from() returns text language sql immutable as $$ select '2026-11-08' $$;
+-- what each player puts into the Open purse (src/purse.ts OPEN_PER_PLAYER): $250, so the winner of a 25-player week
+-- takes about $1,900 and the shop stays a chase as the club grows
+create or replace function open_per_player() returns int language sql immutable as $$ select 250 $$;
 create or replace function open_payouts()
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
 language sql stable security definer set search_path = public, extensions as $$
@@ -269,7 +272,7 @@ language sql stable security definer set search_path = public, extensions as $$
   g as (select b.month, b.r, count(*)::int as k from b group by b.month, b.r),
   sh as (select array[0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725]::numeric[] as a)
   select b.month, b.home_id, b.r, g.k > 1,
-    round(f.n * 1000 * coalesce((select sum(sh.a[i]) from generate_series(b.r, least(10, b.r + g.k - 1)) i), 0)
+    round(f.n * open_per_player() * coalesce((select sum(sh.a[i]) from generate_series(b.r, least(10, b.r + g.k - 1)) i), 0)
       / (select sum(sh.a[i]) from generate_series(1, least(10, f.n)) i) / g.k)::int
   from b join f on f.month = b.month join g on g.month = b.month and g.r = b.r cross join sh
 $$;
@@ -612,6 +615,13 @@ begin
   update notices set live = false where id = p_id and group_id = me.group_id;
 end $$;
 
+-- Every hole's secret route, by the zone a ball passes through to find it (each hole's secret.zone in
+-- src/golf3d/holes): recorded on the card, and worth $150 the first time a member finds each one (person_bonus)
+create or replace function secret_feats() returns text[] language sql immutable as $$
+  select array['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch',
+    'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk']
+$$;
+
 -- Daily cards, from the week of Sun Nov 8: one round a day counts, the day's card. It locks at the first swing; if it's
 -- cut short (the app closes, a call comes in) it picks up where it left off, the same day. Practice rounds of the
 -- week's course are unlimited and never posted here (they're practice sessions). Before Nov 8, every round counts.
@@ -636,7 +646,7 @@ begin
     clean := clean || greatest(1, least(p_pars[i] + 3, p_holes[i]));
     par := par + p_pars[i];
   end loop;
-  f := array(select distinct x from unnest(coalesce(p_feats, '{}')) x where x in ('ace', 'chipin', 'cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch', 'nineteenth'));
+  f := array(select distinct x from unnest(coalesce(p_feats, '{}')) x where x = any (array['ace', 'chipin', 'nineteenth'] || secret_feats()));
   if (select sum(x) from unnest(clean) x) < par then f := f || 'underpar'::text; end if;
   -- one spot per hole, numbers only, clamped to the map
   if jsonb_typeof(p_spots) = 'array' and jsonb_array_length(p_spots) = n then
@@ -1152,9 +1162,9 @@ begin
       'firstRound14', (select count(*) from mem where created_at > now() - interval '14 days' and exists (select 1 from rd where rd.player_id = mem.id)),
       'neverPlayed14', (select coalesce(json_agg(mem.name order by mem.created_at), '[]') from mem where created_at > now() - interval '14 days' and not exists (select 1 from rd where rd.player_id = mem.id)),
       -- the purse a week is worth: from Nov 8 the Open's, every person in any club; before, every club's added up
-      'purse', 1000 * (case when per >= open_purse_from()
-        then (select count(distinct (lower(p.name), p.pin_hash)) from rounds r join players p on p.id = r.player_id where r.month = per)
-        else (select count(*) from pp where month = per) end),
+      'purse', (case when per >= open_purse_from()
+        then open_per_player() * (select count(distinct (lower(p.name), p.pin_hash)) from rounds r join players p on p.id = r.player_id where r.month = per)
+        else 1000 * (select count(*) from pp where month = per) end),
       'shop7', (select coalesce(sum(pu.price), 0) from purchases pu join mem on mem.id = pu.player_id where pu.created_at > now() - interval '7 days'),
       'shopAll', (select coalesce(sum(pu.price), 0) from purchases pu join mem on mem.id = pu.player_id),
       'ai', json_build_object(
@@ -1648,6 +1658,17 @@ create table if not exists designs (
   reviewed_at timestamptz
 );
 alter table designs enable row level security;
+-- Someone else finishing your hole on the Members' Course: $100 to the designer, once per member per hole per week,
+-- up to $500 a week (person_bonus). week: the Sunday it was played.
+create table if not exists design_plays (
+  design_id bigint not null references designs on delete cascade,
+  player_id uuid not null references players on delete cascade,
+  week date not null,
+  created_at timestamptz not null default now(),
+  primary key (design_id, player_id, week)
+);
+alter table design_plays enable row level security;
+
 -- one row per call to the architect, for the daily caps
 create table if not exists design_calls (
   id bigserial primary key,
@@ -1718,6 +1739,21 @@ grant execute on function submit_design(uuid, bigint, int) to anon;
 grant execute on function design_queue(uuid) to anon;
 grant execute on function review_design(uuid, bigint, boolean) to anon;
 grant execute on function members_course(uuid) to anon;
+
+-- A member finished a hole on the Members' Course: log the play for its designer (never their own hole). True when it
+-- was a new play this week, so the app can say the designer's been paid.
+create or replace function record_design_play(p_token uuid, p_design bigint) returns boolean
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); owner players; n int;
+begin
+  select pl.* into owner from designs d join players pl on pl.id = d.player_id where d.id = p_design and d.status = 'approved';
+  if owner.id is null or owner.id in (select person_seats(me)) then return false; end if;
+  insert into design_plays (design_id, player_id, week) values (p_design, me.id, game_today() - extract(dow from game_today())::int)
+  on conflict do nothing;
+  get diagnostics n = row_count;
+  return n > 0;
+end $$;
+grant execute on function record_design_play(uuid, bigint) to anon;
 
 -- The Pro Shop (src/shop.ts): looks bought with purse money and club bonuses. Career earnings (period_payouts plus
 -- person_bonus) never go down; what a member spends comes out of their balance. Club Pro ($5,000 earned) and Club
@@ -1791,7 +1827,7 @@ insert into shop_items (id, price, rack) values
   ('goldstaff', 3000, 'pro'),
   ('leatherbag', 4000, 'pro'),
   ('crocbag', 16000, 'legend'),
-  ('caddie', 15000, 'legend')
+  ('caddie', 50000, 'legend')
 on conflict (id) do update set price = excluded.price, rack = excluded.rack;
 
 create table if not exists purchases (
@@ -1836,7 +1872,10 @@ revoke all on function ctp_winners() from public, anon, authenticated;
 
 -- what a person has earned on the side, across their clubs: $50 a day they finish a round, $100 on the third day running
 -- at the club and $250 every seventh, $150 a Closest to the Pin win, and $25 a birdie, $100 an eagle, $500 an ace on
--- the day's first finished round (so replaying a short course isn't a money farm)
+-- the day's first finished round (so replaying a short course isn't a money farm). From the shots on their cards: $75 a
+-- holed putt from 30 ft, $200 from 60 ft, $100 a chip-in from off the green. $150 the first time they find each hole's
+-- secret on a card. And $100 each time another member finishes one of their Members' Course holes (once per member per
+-- hole per week, up to $500 a week). From Nov 8 a day has one card, so none of this grows with replays.
 create or replace function person_bonus(p players) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with seats as (select person_seats(p) as id),
@@ -1848,6 +1887,14 @@ language sql stable security definer set search_path = public, extensions as $$
   shots as (
     select r.holes[i] as s, r.hp[i] as par from r cross join lateral generate_subscripts(r.holes, 1) i
     where r.nth = 1 and array_length(r.hp, 1) = array_length(r.holes, 1)
+  ),
+  strokes as (
+    select x.id, (e->>'c') as c, coalesce((e->>'i')::int, 0) as i, e->>'l' as l,
+      row_number() over (partition by x.id, e->>'h' order by k) as nth,
+      sqrt(power(coalesce((e->'f'->>0)::numeric, 0) - coalesce((e->'t'->>0)::numeric, 0), 2) + power(coalesce((e->'f'->>1)::numeric, 0) - coalesce((e->'t'->>1)::numeric, 0), 2)) as d
+    from rounds x cross join lateral jsonb_array_elements(case when jsonb_typeof(x.shots) = 'array' then x.shots else '[]'::jsonb end) with ordinality a(e, k)
+    -- daily cards only: one a day, so a long putt or a chip-in can't be farmed on replays
+    where x.player_id in (select id from seats) and x.card
   ),
   days as (
     select distinct d from (
@@ -1862,10 +1909,15 @@ language sql stable security definer set search_path = public, extensions as $$
       50 * (select count(distinct (r.created_at at time zone 'America/New_York')::date) from r)::int as rounds,
       (select coalesce(sum(case when n >= 3 then 100 else 0 end + (n / 7) * 250), 0) from runs)::int as streaks,
       150 * (select count(*) from ctp_winners() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
-      (select coalesce(sum(case when s = 1 then 500 when s <= par - 2 then 100 when s = par - 1 then 25 else 0 end), 0) from shots)::int as shots
+      (select coalesce(sum(case when s = 1 then 500 when s <= par - 2 then 100 when s = par - 1 then 25 else 0 end), 0) from shots)::int as shots,
+      (select coalesce(sum(case when d >= 60 then 200 when d >= 30 then 75 else 0 end), 0) from strokes where c = 'putter' and i = 1)::int as putts,
+      100 * (select count(*) from strokes where c <> 'putter' and i = 1 and coalesce(l, '') <> 'green' and nth > 1)::int as chipins,
+      150 * (select count(distinct f) from rounds x cross join lateral unnest(x.feats) f where x.player_id in (select id from seats) and x.card and f = any (secret_feats()))::int as secrets,
+      (select coalesce(sum(least(500, 100 * n)), 0) from (select dp.week, count(*) as n from design_plays dp join designs d on d.id = dp.design_id where d.player_id in (select id from seats) group by dp.week) w)::int as designs
   )
   select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'shots', b.shots,
-    'total', b.rounds + b.streaks + b.ctp + b.shots) from b
+    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs,
+    'total', b.rounds + b.streaks + b.ctp + b.shots + b.putts + b.chipins + b.secrets + b.designs) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 
@@ -1882,6 +1934,13 @@ begin
     cross join lateral period_payouts(g.group_id) pp where pp.player_id in (select person_seats(me));
   earned := earned + (person_bonus(me)->>'total')::int;
   select coalesce(sum(price), 0) into spent from purchases where player_id in (select person_seats(me));
+  -- the Club Legend rack also needs a weekly title, at any of their clubs
+  if it.rack = 'legend' and not exists (
+    select 1 from (select distinct s.group_id from players s where s.id in (select person_seats(me))) g
+    cross join lateral period_champs(g.group_id) c where c.player_id in (select person_seats(me)) and c.how <> 'playoff'
+  ) then
+    raise exception 'The Club Legend rack opens with a weekly title.';
+  end if;
   if (it.rack = 'pro' and earned < 5000) or (it.rack = 'legend' and earned < 25000) then
     raise exception 'That rack is for higher ranks.';
   end if;
