@@ -1,6 +1,6 @@
 // Browser-only backend for playing without Supabase. Mirrors supabase/schema.sql.
 import { STOCK_BUDDIES } from '../buddies';
-import { GAME_TZ, periodOf, todayInGameTz } from '../day';
+import { cardsOn, GAME_TZ, periodOf, todayInGameTz } from '../day';
 import { courseById, courseFor } from '../golf3d/courses';
 import { bonusOf } from '../bonus';
 import { makeRng } from '../seed';
@@ -10,14 +10,14 @@ import { weekOf } from '../bar';
 import { payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type CardProgress, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[] };
+type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[] };
 
 const KEY = 'ccc-local-db';
 
@@ -228,7 +228,13 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const feats = [...new Set(r.feats)];
     if (total < course.par) feats.push('underpar');
     const spots = r.spots?.length === holes.length ? r.spots.map((p) => (p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null)) : null;
+    const today = todayInGameTz();
+    // daily cards: one round a day counts
+    if (cardsOn(month) && db.rounds.some((x) => x.playerId === me.id && x.month === month && todayInGameTz(new Date(x.createdAt)) === today))
+      throw new Error('Your card for today is already in. Practise as much as you like.');
     db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, createdAt: new Date().toISOString() });
+    const card = (db.cards ?? []).find((c) => c.playerId === me.id && c.day === today);
+    if (card) card.done = true;
     save(db);
   },
 
@@ -376,7 +382,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const name = (id: string) => db.players.find((p) => p.id === id)?.name ?? '';
     const s = (db.practice ?? []).filter((x) => x.groupId === me.groupId && !db.players.find((p) => p.id === x.playerId)?.admin && x.startedAt.startsWith(month));
     const mins = (x: DbPractice) => (x.endedAt ? Math.min(10800, (Date.parse(x.endedAt) - Date.parse(x.startedAt)) / 1000) : 0);
-    const kinds = (['caldera', 'range', 'shortgame'] as const).flatMap((kind) => {
+    const kinds = (['caldera', 'range', 'shortgame', 'course'] as const).flatMap((kind) => {
       const k = s.filter((x) => x.kind === kind);
       return k.length ? [{ kind, sessions: k.length, members: new Set(k.map((x) => x.playerId)).size, minutes: Math.round(k.reduce((a, x) => a + mins(x), 0) / 60) }] : [];
     });
@@ -384,7 +390,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       .map((id) => {
         const m = s.filter((x) => x.playerId === id);
         const n = (k: PracticeKind) => m.filter((x) => x.kind === k).length;
-        return { name: name(id), caldera: n('caldera'), range: n('range'), shortgame: n('shortgame'), lastAt: m.map((x) => x.startedAt).sort().pop()! };
+        return { name: name(id), caldera: n('caldera'), range: n('range'), shortgame: n('shortgame'), course: n('course'), lastAt: m.map((x) => x.startedAt).sort().pop()! };
       })
       .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
     const recent = [...s]
@@ -537,11 +543,40 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     };
   },
 
-  // local mode doesn't keep round starts
-  async startRound() {
-    return null;
+  // local mode keeps only today's card, not every round start
+  async startRound(session, course, card) {
+    if (!card || !cardsOn(periodOf(todayInGameTz()))) return null;
+    const db = load();
+    const me = playSeat(db, playerByToken(db, session.token));
+    const today = todayInGameTz();
+    const cards = (db.cards ??= []);
+    const c = cards.find((x) => x.playerId === me.id && x.day === today);
+    if (c?.done) throw new Error('Your card for today is already in. Practise as much as you like.');
+    if (c) return c.id;
+    const id = cards.length + 1;
+    cards.push({ id, playerId: me.id, day: today, course, done: false, scores: [], shots: 0, spots: [], feats: [] });
+    save(db);
+    return id;
   },
   async roundProgress() {},
+  async cardToday(session) {
+    const today = todayInGameTz();
+    if (!cardsOn(periodOf(today))) return null;
+    const db = load();
+    const me = playSeat(db, playerByToken(db, session.token));
+    const c = (db.cards ?? []).find((x) => x.playerId === me.id && x.day === today);
+    const done = db.rounds.some((x) => x.playerId === me.id && todayInGameTz(new Date(x.createdAt)) === today);
+    return c ? { ...c, done: done || c.done } : { done, id: null, course: null, scores: [], shots: 0, spots: [], feats: [] };
+  },
+  async cardProgress(session, id, p) {
+    const db = load();
+    const me = playSeat(db, playerByToken(db, session.token));
+    const c = (db.cards ?? []).find((x) => x.id === id && x.playerId === me.id && !x.done && x.day === todayInGameTz());
+    // a swing can't be taken back
+    if (!c || p.scores.length < c.scores.length || (p.scores.length === c.scores.length && p.shots < c.shots)) return;
+    Object.assign(c, { scores: p.scores, shots: p.shots, spots: p.spots, feats: p.feats });
+    save(db);
+  },
 
   // as on the server: Weekly Players for each day since the first member joined
   async adminTrend(session): Promise<TrendDay[]> {

@@ -4,7 +4,7 @@ import { clubPurse, money, placeLabel, purseOf } from '../purse';
 import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
-import { CALDERA_START, GAME_TZ, periodClosesAt, periodName, span } from '../day';
+import { CALDERA_START, cardsOn, GAME_TZ, periodClosesAt, periodName, span, todayInGameTz } from '../day';
 import { REGINALD, reginaldSvg, type Mood } from '../host';
 import { bindOpen } from './open';
 import { askReginald, championWord } from '../reginald';
@@ -126,6 +126,9 @@ export function home(snap: Snapshot) {
   const mine = myBest(snap);
   const me = rows.find((r) => r.playerId === snap.me)!; // absent when you only run this club
   const host = !!snap.players.find((p) => p.id === snap.me)?.host;
+  // daily cards: one counts a day; once today's is in, the course is open for practice
+  const cards = cardsOn(snap.month) && !host;
+  const cardIn = cards && snap.rounds.some((r) => r.playerId === snap.me && todayInGameTz(new Date(r.createdAt)) === snap.today);
 
   let line = REGINALD.course(course.name, course.holes.length, course.par, span(snap.month));
   let mood: Mood = 'dry';
@@ -194,12 +197,18 @@ export function home(snap: Snapshot) {
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
           ${mine ? '' : lastWord(snap)}
-          <a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>
+          ${
+            !cards
+              ? `<a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>`
+              : cardIn
+                ? `<a class="btn big" href="#/round/practice">Practice round</a><p class="fine card-line">Today's card is in. A new one at midnight.</p>`
+                : `<a class="btn big" href="#/round" id="card-btn">Play today's card</a><p class="fine card-line">One card a day counts. <a href="#/round/practice">Practise first</a></p>`
+          }
         </div>
       </section>
       <section class="board${look(course)}">
         ${countdown(snap.month, course, purse.field)}
-        <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best round counts</span></div>
+        <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist" hidden>
           <button role="tab" data-tab="open">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club">My club</button>
         </div>
@@ -237,6 +246,12 @@ export function home(snap: Snapshot) {
       say.dataset.ai = '1';
       say.classList.add('reg-fresh');
       say.innerHTML = `<b>Reginald</b> ${esc(text)}${host ? '' : ` <span class="reg-board">${standing}</span>`}`;
+    });
+  // a card started and cut short: say so on the button
+  if (cards && !cardIn)
+    void api.cardToday(requireSession()).then((t) => {
+      const btn = document.getElementById('card-btn');
+      if (btn && t && !t.done && (t.scores.length || t.shots)) btn.textContent = `Finish today's card · hole ${Math.min(t.scores.length + 1, course.holes.length)}`;
     });
   void bindNotices();
   void bindDaily(snap.today, snap.crown);

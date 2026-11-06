@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminOverview, Api, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
+import type { AdminOverview, Api, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -43,12 +43,12 @@ export const supabaseApi: Api = {
   createClub: (s, name) => rpc<Session>('create_club', { p_token: s.token, p_name: name }),
   snapshot: (s) => rpc<Snapshot>('get_snapshot', { p_token: s.token }),
   submitRound: async (s, r) => {
-    const args = { p_token: s.token, p_course: r.course, p_holes: r.holes, p_pars: r.pars, p_feats: r.feats };
+    const args = { p_token: s.token, p_course: r.course, p_holes: r.holes, p_pars: r.pars, p_feats: r.feats, p_spots: r.spots ?? null };
     try {
-      await rpc('submit_round', { ...args, p_spots: r.spots ?? null });
+      await rpc('submit_round', r.card ? { ...args, p_card: true } : args);
     } catch (err) {
-      // a database without tee-shot spots yet: the score still counts
-      if (!/submit_round|function|schema cache/i.test((err as Error).message)) throw err;
+      // a database without daily cards yet: the score still counts
+      if (!r.card || !/submit_round|function|schema cache/i.test((err as Error).message)) throw err;
       await rpc('submit_round', args);
     }
   },
@@ -115,7 +115,10 @@ export const supabaseApi: Api = {
   openChampions: (s) => rpc<OpenChampion[]>('open_champions', { p_token: s.token }),
   dailyCrown: (s) => rpc<DailyCrown | null>('daily_crown', { p_token: s.token }),
   periodHonors: (s, period) => rpc<Honors>('period_honors', { p_token: s.token, p_period: period }),
-  startRound: (s, course) => rpc<number | null>('start_round', { p_token: s.token, p_course: course }),
+  startRound: (s, course, card) => rpc<number | null>('start_round', card ? { p_token: s.token, p_course: course, p_card: true } : { p_token: s.token, p_course: course }),
+  // a database without daily cards yet reads as no cards
+  cardToday: (s) => rpc<CardToday | null>('card_today', { p_token: s.token }).catch(() => null),
+  cardProgress: (s, id, c) => rpc<void>('card_progress', { p_token: s.token, p_id: id, p_scores: c.scores, p_shots: c.shots, p_spots: c.spots, p_feats: c.feats }),
   roundProgress: (s, id, hole, finished) => rpc<void>('round_progress', { p_token: s.token, p_id: id, p_hole: hole, p_finished: finished }),
   adminTrend: (s) => rpc<TrendDay[]>('admin_trend', { p_token: s.token }),
   playoffState: (s) => rpc<PlayoffState | null>('playoff_state', { p_token: s.token }),

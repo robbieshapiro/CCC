@@ -14,7 +14,7 @@ import { playoff } from './screens/playoff';
 import { clubhouse, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
-import { courseById, nextCourse, upcoming } from './golf3d/courses';
+import { courseById, courseFor, nextCourse, upcoming } from './golf3d/courses';
 import { leaveMember, member } from './screens/member';
 import { checkIn } from './screens/activity';
 import { onSnapshot, refresh, startPolling } from './state';
@@ -60,7 +60,8 @@ async function router() {
       location.replace('#/');
       return;
     }
-    if (page === 'round') return round(s);
+    // #/round is today's card (or any round, before daily cards); #/round/practice a practice round of the week's course
+    if (page === 'round') return arg === 'practice' ? round(s, { course: courseFor(s.month), practice: true }) : round(s);
     if (page === 'daily') return dailyRound(s);
     if (page === 'playoff') return playoff(s);
     if (page === 'bar') return arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');

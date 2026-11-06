@@ -15,6 +15,8 @@ export const FIRST_WEEK = '2026-11-08';
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const weekday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay(); // 0 Sunday
 
+// Daily cards from the first week: one round a day counts (see cards_on in supabase/schema.sql)
+export const cardsOn = (period: string) => period >= FIRST_WEEK;
 export const isWeek = (period: string) => period.length === 10;
 
 export function periodOf(day: string): string {

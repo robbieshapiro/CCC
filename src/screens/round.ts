@@ -1,14 +1,15 @@
-// A full round: every hole of this period's course in one go, then the card goes up on the board.
-// A preview round (the admin, every hole of a course still to come) and a practice round (any member, the first few holes
-// of the next course) are played the same way but never posted.
+// A full round: every hole of this period's course in one go, then the card goes up on the board. From Nov 8 that's
+// today's card: one a day counts, locked at the first swing, and picked up where it left off if it's cut short.
+// A preview round (the admin, every hole of a course still to come) and a practice round (any member: the first few
+// holes of the next course, or the whole of the week's course once cards start) are played the same way but never posted.
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { crest } from '../brand';
 import { sfx } from '../fx/sound';
 import { Course3D, scoreName, type Ghost } from '../golf3d/engine';
-import { todayInGameTz } from '../day';
+import { cardsOn, todayInGameTz } from '../day';
 import { BONUS, shotBonus } from '../bonus';
-import type { Spot } from '../api/types';
+import type { CardToday, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
 import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
@@ -58,10 +59,39 @@ function todaysField(snap: Snapshot): Ghost[] {
   });
 }
 
+// Today's card is already in: practise as much as you like
+function cardIn(snap: Snapshot) {
+  render(`<main class="narrow card-in">
+    <p class="eyebrow">${esc(courseFor(snap.month).name)}</p>
+    <h1>Today's card is in</h1>
+    ${hostChip('One card a day, and yours is on the board. The course is open for practice until midnight. Nobody counts those.', 'dry')}
+    <div class="summary-actions"><a class="btn" href="#/round/practice">Practice round</a><a class="btn ghost" href="#/">Back to the club</a></div>
+  </main>`);
+}
+
 export async function round(snap: Snapshot, opts: { course?: Course; holes?: number; practice?: boolean } = {}) {
   closeRound();
   const preview = !!opts.course;
   const full = opts.course ?? courseFor(snap.month);
+  // a practice round of the week's own course (once cards start), rather than the next course's preview holes
+  const livePractice = !!opts.practice && full.id === courseFor(snap.month).id;
+  // today's card: null when it isn't a card (a preview, practice, before Nov 8, or a database without cards yet)
+  let today: CardToday | null = null;
+  let cardId: number | null = null;
+  if (!preview && cardsOn(snap.month)) {
+    today = await api.cardToday(requireSession()).catch(() => null);
+    if (today?.done) return cardIn(snap);
+    if (today) {
+      try {
+        cardId = await api.startRound(requireSession(), full.id, true);
+      } catch (err) {
+        if (/already in/i.test((err as Error).message)) return cardIn(snap);
+      }
+    }
+  }
+  const card = !!today;
+  // a card cut short picks up where it left off (on this course, today)
+  const resume = card && today!.course === full.id && (today!.scores.length > 0 || today!.shots > 0) ? today! : null;
   // a practice round plays just the first few holes
   const holes = full.holes.slice(0, opts.holes ?? full.holes.length);
   const course: Course = { ...full, holes, par: holes.reduce((a, h) => a + h.par, 0) };
@@ -86,8 +116,9 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   if (opts.practice) {
     game.leaveText = 'Leave';
     game.howTo = 'practice';
-    game.onShot = joinPractice('caldera').shot;
+    game.onShot = joinPractice(livePractice ? 'course' : 'caldera').shot;
   }
+  if (card) game.quitAsk = 'Leave for now? Your card is saved. Come back before midnight to finish it.';
   // today's players are on this period's course, not the preview
   if (!preview) game.setGhosts(todaysField(snap));
   // a hole with a stadium fills its stands with everyone in the Open who has played it this period
@@ -106,21 +137,31 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       .catch(() => {});
   }
   game.starter = HANK.firstTee(me.name, snap.today, course.holes[0]?.theme);
-  const scores: number[] = [];
-  const spots: Spot[] = [];
-  // a counted round logs its start and each hole it reaches, so the Committee can see who stops and where
-  const started = preview ? Promise.resolve(null) : api.startRound(requireSession(), course.id).catch(() => null);
+  const scores: number[] = resume ? [...resume.scores] : [];
+  const spots: Spot[] = resume ? resume.scores.map((_, i) => (resume.spots?.[i] ?? null) as Spot) : [];
+  // a counted round logs its start and each hole it reaches, so the Committee can see who stops and where (a card does
+  // it as it saves itself)
+  const started = preview || card ? Promise.resolve(null) : api.startRound(requireSession(), course.id).catch(() => null);
   const progress = (hole: number, finished = false) =>
     void started.then((id) => (id === null ? undefined : api.roundProgress(requireSession(), id, hole, finished).catch(() => {})));
-  const feats = new Set<string>();
+  const feats = new Set<string>(resume?.feats ?? []);
+  // a card saves itself after every stroke, so a swing can't be taken back by leaving
+  const save = (shots: number) => {
+    if (cardId !== null)
+      void api.cardProgress(requireSession(), cardId, { scores: [...scores], shots, spots: scores.map((_, j) => spots[j] ?? null), feats: [...feats] }).catch(() => {});
+  };
+  if (card) game.onStroke = save;
+  let carry = resume?.shots ?? 0;
   // the admin's preview can jump to any hole, or start the one they're on over
   let jump: ((i: number) => void) | null = null;
   if (preview && !opts.practice) game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
-  for (let i = 0; i < course.holes.length; ) {
+  for (let i = scores.length; i < course.holes.length; ) {
     const h = course.holes[i];
     const par = course.holes.reduce((a, x, j) => a + (scores[j] === undefined ? 0 : x.par), 0);
     const jumped = new Promise<number>((res) => (jump = res));
-    const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i === 1 ? 'drinks' : i === 4 && course.holes.length >= 5 ? 'shots' : undefined, of: course.holes.length });
+    // picking a card up mid-hole: back to the tee, with the strokes already played on it
+    const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i === 1 ? 'drinks' : i === 4 && course.holes.length >= 5 ? 'shots' : undefined, of: course.holes.length, strokes: carry });
+    carry = 0;
     const r = await Promise.race([played, jumped]);
     if (quit || !game) return;
     if (typeof r === 'number') {
@@ -131,7 +172,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     spots[i] = r.spot;
     r.feats.forEach((f) => feats.add(f));
     i++;
-    if (i < course.holes.length) progress(i + 1);
+    if (card) save(0);
+    else if (i < course.holes.length) progress(i + 1);
   }
   if (opts.practice) leavePractice();
   const total = scores.reduce((a, b) => a + b, 0);
@@ -140,7 +182,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   let posted = true;
   if (!preview)
     try {
-      await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots });
+      await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots, card });
       progress(course.holes.length, true);
     } catch {
       posted = false;
@@ -178,15 +220,15 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         <tr>${course.holes.map((_, i) => scores[i]).map((s, i) => s === undefined ? '<td class="num">–</td>' : `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>`}
       ${
         opts.practice
-          ? hostChip('Practice. Nobody is keeping score, least of all me. Come November it counts.', 'dry')
+          ? hostChip(livePractice ? "Practice. Nobody is keeping score, least of all me. Tomorrow's card is where it counts." : 'Practice. Nobody is keeping score, least of all me. Come November it counts.', 'dry')
           : preview
             ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry')
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
       ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
       ${bonusLine}
-      <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? 'Posted to the board.' : "Couldn't post this round. Check your connection."}</p>
-      <div class="summary-actions"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the club</button></div>
+      <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : "Couldn't post this round. Check your connection."}</p>
+      <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : 'Play again'}</button><button class="btn ghost" data-back>Back to the club</button></div>
       ${
         asking
           ? `<form class="reg-ask" id="reg-ask">
@@ -237,7 +279,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       }
     });
   }
-  sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => round(await refresh(), opts);
+  // after today's card, play again is practice on the same course
+  sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => (card ? navigate('#/round/practice') : round(await refresh(), opts));
   const context = `After a ${total} (${toParLabel(toPar)}) on ${course.name}`;
   const fb = sheet.querySelector<HTMLButtonElement>('[data-feedback]');
   if (fb) fb.onclick = () => openFeedback(context, el);

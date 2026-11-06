@@ -574,11 +574,19 @@ begin
   update notices set live = false where id = p_id and group_id = me.group_id;
 end $$;
 
+-- Daily cards, from the week of Sun Nov 8: one round a day counts, the day's card. It locks at the first swing; if it's
+-- cut short (the app closes, a call comes in) it picks up where it left off, the same day. Practice rounds of the
+-- week's course are unlimited and never posted here (they're practice sessions). Before Nov 8, every round counts.
+create or replace function cards_on() returns boolean
+language sql stable as $$ select game_month() >= '2026-11-08' $$;
+alter table rounds add column if not exists card boolean not null default false;
 drop function if exists submit_round(uuid, text, int[], int[], text[]);
-create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[], p_spots jsonb default null) returns void
+drop function if exists submit_round(uuid, text, int[], int[], text[], jsonb);
+create or replace function submit_round(p_token uuid, p_course text, p_holes int[], p_pars int[], p_feats text[], p_spots jsonb default null, p_card boolean default false) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := play_seat(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
 begin
+  if cards_on() and card_in(me) then raise exception 'Your card for today is already in. Practise as much as you like.'; end if;
   if n not between 1 and 9 or n <> coalesce(array_length(p_pars, 1), 0) then raise exception 'That round is not a full card.'; end if;
   if char_length(coalesce(p_course, '')) not between 1 and 40 then raise exception 'Unknown course.'; end if;
   for i in 1..n loop
@@ -594,8 +602,11 @@ begin
         then jsonb_build_object('x', round(greatest(-2000, least(2000, (e->>'x')::numeric)), 1), 'y', round(greatest(-2000, least(2000, (e->>'y')::numeric)), 1))
         else 'null'::jsonb end order by k) from jsonb_array_elements(p_spots) with ordinality as t(e, k));
   end if;
-  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots, pars)
-  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp, p_pars);
+  insert into rounds (player_id, group_id, month, course, holes, total, par, feats, spots, pars, card)
+  values (me.id, me.group_id, game_month(), p_course, clean, (select sum(x) from unnest(clean) x), par, f, sp, p_pars, cards_on());
+  if cards_on() then
+    update round_starts set finished = true, finished_at = now(), hole = n, scores = clean, shots = 0 where id = (card_of(me)).id;
+  end if;
 end $$;
 
 create or replace function save_avatar(p_token uuid, p_avatar jsonb) returns void
@@ -678,6 +689,9 @@ create table if not exists practice_sessions (
   shots int not null default 0
 );
 alter table practice_sessions enable row level security;
+-- 'course': a practice round of the week's course, once daily cards start
+alter table practice_sessions drop constraint if exists practice_sessions_kind_check;
+alter table practice_sessions add constraint practice_sessions_kind_check check (kind in ('caldera', 'range', 'shortgame', 'course'));
 
 create or replace function start_practice(p_token uuid, p_kind text) returns bigint
 language plpgsql security definer set search_path = public, extensions as $$
@@ -711,9 +725,9 @@ begin
         select kind, count(*) as n, count(distinct player_id) as m,
           round(coalesce(sum(least(extract(epoch from ended_at - started_at), 10800)), 0) / 60)::int as mins
         from s group by kind) k), '[]'),
-      'members', coalesce((select json_agg(json_build_object('name', x.name, 'caldera', x.c, 'range', x.r, 'shortgame', x.g, 'lastAt', x.last) order by x.last desc) from (
+      'members', coalesce((select json_agg(json_build_object('name', x.name, 'caldera', x.c, 'range', x.r, 'shortgame', x.g, 'course', x.k, 'lastAt', x.last) order by x.last desc) from (
         select name, count(*) filter (where kind = 'caldera') as c, count(*) filter (where kind = 'range') as r,
-          count(*) filter (where kind = 'shortgame') as g, max(started_at) as last
+          count(*) filter (where kind = 'shortgame') as g, count(*) filter (where kind = 'course') as k, max(started_at) as last
         from s group by player_id, name) x), '[]'),
       'recent', coalesce((select json_agg(json_build_object('name', r.name, 'kind', r.kind, 'startedAt', r.started_at, 'endedAt', r.ended_at, 'shots', r.shots) order by r.started_at desc) from (
         select * from s order by started_at desc limit 20) r), '[]')
@@ -853,7 +867,7 @@ revoke all on function player_for(uuid) from public, anon, authenticated;
 revoke all on function month_bests(uuid) from public, anon, authenticated;
 grant execute on function join_group(text, text, text) to anon;
 grant execute on function get_snapshot(uuid) to anon;
-grant execute on function submit_round(uuid, text, int[], int[], text[], jsonb) to anon;
+grant execute on function submit_round(uuid, text, int[], int[], text[], jsonb, boolean) to anon;
 grant execute on function save_avatar(uuid, jsonb) to anon;
 revoke all on function rand_code(int) from public, anon, authenticated;
 grant execute on function create_invite(uuid, text) to anon;
@@ -1060,6 +1074,26 @@ create table if not exists round_starts (
   started_at timestamptz not null default now(),
   finished_at timestamptz
 );
+-- a card in progress: the holes finished so far, strokes on the hole being played, and the tee-shot spots and feats
+alter table round_starts add column if not exists card boolean not null default false;
+alter table round_starts add column if not exists scores int[] not null default '{}';
+alter table round_starts add column if not exists shots int not null default 0;
+alter table round_starts add column if not exists spots jsonb;
+alter table round_starts add column if not exists feats text[] not null default '{}';
+
+-- today's card at this seat, if one has been started (and whether it's already in)
+create or replace function card_of(me players) returns round_starts
+language sql stable security definer set search_path = public, extensions as $$
+  select * from round_starts rs where rs.player_id = me.id and rs.card and (rs.started_at at time zone 'America/New_York')::date = game_today()
+  order by rs.started_at desc limit 1
+$$;
+revoke all on function card_of(players) from public, anon, authenticated;
+create or replace function card_in(me players) returns boolean
+language sql stable security definer set search_path = public, extensions as $$
+  select exists (select 1 from rounds r where r.player_id = me.id and (r.created_at at time zone 'America/New_York')::date = game_today() and r.month = game_month())
+$$;
+revoke all on function card_in(players) from public, anon, authenticated;
+
 alter table round_starts enable row level security;
 create index if not exists round_starts_recent on round_starts (started_at);
 
@@ -1071,13 +1105,51 @@ language sql stable as $$
     or exists (select 1 from round_starts n where n.player_id = rs.player_id and n.started_at > rs.started_at))
 $$;
 
-create or replace function start_round(p_token uuid, p_course text) returns bigint
+-- p_card: start today's card, or carry on with the one already started (it's the same card all day)
+drop function if exists start_round(uuid, text);
+create or replace function start_round(p_token uuid, p_course text, p_card boolean default false) returns bigint
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token); new_id bigint;
+declare me players := player_for(p_token); new_id bigint; c round_starts;
 begin
+  if p_card and cards_on() then
+    me := play_seat(me);
+    if card_in(me) then raise exception 'Your card for today is already in. Practise as much as you like.'; end if;
+    c := card_of(me);
+    if c.id is not null then return c.id; end if;
+    insert into round_starts (player_id, group_id, period, course, card) values (me.id, me.group_id, game_month(), left(p_course, 40), true)
+    returning id into new_id;
+    return new_id;
+  end if;
   insert into round_starts (player_id, group_id, period, course) values (me.id, me.group_id, game_month(), left(p_course, 40))
   returning id into new_id;
   return new_id;
+end $$;
+
+-- Today's card: null before cards start; otherwise whether it's in, and where a card in progress stands
+create or replace function card_today(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := play_seat(player_for(p_token)); c round_starts;
+begin
+  if not cards_on() then return null; end if;
+  c := card_of(me);
+  return json_build_object('done', card_in(me), 'id', c.id, 'course', c.course, 'scores', coalesce(c.scores, '{}'),
+    'shots', coalesce(c.shots, 0), 'spots', c.spots, 'feats', coalesce(c.feats, '{}'));
+end $$;
+
+-- A card's progress after every counted stroke. It only moves forward: a swing can't be taken back.
+create or replace function card_progress(p_token uuid, p_id bigint, p_scores int[], p_shots int, p_spots jsonb, p_feats text[]) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := play_seat(player_for(p_token)); n int := coalesce(array_length(p_scores, 1), 0);
+begin
+  if n > 9 or p_shots not between 0 and 12 or exists (select 1 from unnest(coalesce(p_scores, '{}')) x where x not between 1 and 12) then
+    raise exception 'That card doesn''t add up.';
+  end if;
+  update round_starts rs set scores = coalesce(p_scores, '{}'), shots = p_shots, hole = greatest(rs.hole, least(n + 1, 18)),
+    spots = case when jsonb_typeof(p_spots) = 'array' and pg_column_size(p_spots) < 4000 then p_spots else rs.spots end,
+    feats = (select coalesce(array_agg(distinct x), '{}') from unnest(coalesce(p_feats, '{}')) x where char_length(x) <= 20)
+  where rs.id = p_id and rs.player_id = me.id and rs.card and not rs.finished
+    and (rs.started_at at time zone 'America/New_York')::date = game_today()
+    and (n > coalesce(array_length(rs.scores, 1), 0) or (n = coalesce(array_length(rs.scores, 1), 0) and p_shots >= rs.shots));
 end $$;
 
 -- the furthest hole reached, and finished once the card is in
@@ -1122,7 +1194,9 @@ begin
     )
   );
 end $$;
-grant execute on function start_round(uuid, text) to anon;
+grant execute on function start_round(uuid, text, boolean) to anon;
+grant execute on function card_today(uuid) to anon;
+grant execute on function card_progress(uuid, bigint, int[], int, jsonb, text[]) to anon;
 grant execute on function round_progress(uuid, bigint, int, boolean) to anon;
 grant execute on function admin_round_starts(uuid, text) to anon;
 grant execute on function admin_feedback_done(uuid, bigint, boolean) to anon;
