@@ -1952,8 +1952,8 @@ grant execute on function buy_item(uuid, text) to anon;
 
 -- Kudos and chirps: tap another member out on the course, see their card, and send them a kudos or a chirp (one of
 -- the ready-made lines, or your own in 80 characters). It shows on their home page next time they open the app,
--- until they've seen it. Members of the same club only; 20 a day from a member and 3 a day to any one member. The
--- Committee can take any down from Admin.
+-- until they clear it (one at a time, or all), or for a day at most. Members of the same club only; 20 a day from a
+-- member and 3 a day to any one member. The Committee can take any down from Admin.
 create table if not exists shoutouts (
   id bigserial primary key,
   group_id uuid not null references groups on delete cascade,
@@ -1986,7 +1986,8 @@ begin
   insert into shoutouts (group_id, from_id, to_id, kind, body) values (me.group_id, me.id, them.id, p_kind, clean);
 end $$;
 
--- what's waiting for me, in every club I'm a member of: unseen, from the last fortnight, newest first
+-- what's waiting for me, in every club I'm a member of: unseen, from the last 24 hours (they clear themselves after a
+-- day), newest first
 create or replace function my_shoutouts(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
@@ -1996,7 +1997,7 @@ begin
       'createdAt', s.created_at) order by s.created_at desc)
     from (select * from shoutouts s
       where s.to_id in (select p.id from players p where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash)
-        and not s.seen and not s.removed and s.created_at > now() - interval '14 days'
+        and not s.seen and not s.removed and s.created_at > now() - interval '24 hours'
       order by s.created_at desc limit 12) s
     join players f on f.id = s.from_id
   ), '[]');

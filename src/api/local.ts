@@ -416,7 +416,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const db = load();
     const me = playerByToken(db, session.token);
     const mine = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
-    const since = Date.now() - 14 * 86400000;
+    const since = Date.now() - 86400000; // a day, then they clear themselves
     return (db.shoutouts ?? [])
       .filter((x) => mine.has(x.toId) && !x.seen && !x.removed && Date.parse(x.createdAt) > since)
       .reverse()
