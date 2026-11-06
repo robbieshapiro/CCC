@@ -9,11 +9,9 @@ import { courseFor } from '../golf3d/courses';
 import { REGINALD } from '../host';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
-import { store } from '../storage';
 import { esc } from '../ui';
 import { scoreClass } from './home';
 
-const TAB_KEY = 'ccc-board-tab';
 const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: GAME_TZ });
 
 // ranks shared on a tie, as on the club board
@@ -70,7 +68,14 @@ export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false)
   const openPane = document.getElementById('board-open');
   const clubPane = document.getElementById('board-club');
   const say = document.querySelector<HTMLElement>('#reg-line');
-  if (!rows || !tabs || !openPane || !clubPane) return;
+  if (!tabs || !openPane || !clubPane) return;
+  // the Open couldn't load: the club's own board is all there is
+  if (!rows) {
+    openPane.hidden = true;
+    clubPane.hidden = false;
+    tabs.hidden = true;
+    return;
+  }
   const list = ranked(rows);
   openPane.innerHTML = table(snap, list);
   const lineOpen = `<b>Reginald</b> ${openLine(list, snap.today)}`;
@@ -84,13 +89,10 @@ export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false)
   };
   tabs.hidden = false;
   tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {
-    b.onclick = () => {
-      const tab = b.dataset.tab as 'open' | 'club';
-      store.set(TAB_KEY, tab);
-      show(tab);
-    };
+    b.onclick = () => show(b.dataset.tab as 'open' | 'club');
   });
-  show(store.get(TAB_KEY) === 'club' ? 'club' : 'open');
+  // the Open always comes first: every member, every club, one board
+  show('open');
 
   // the plaque: each month's Open champion beside the club's own
   const plaque = document.querySelector('.plaque ol');

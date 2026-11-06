@@ -103,7 +103,8 @@ async function bindHonours(snap: Snapshot) {
 const FROZEN = 4;
 function freezeBoard() {
   const table = document.querySelector<HTMLTableElement>('#board-club .scorecard');
-  if (!table) return;
+  // a hidden board measures as nothing: wait until it's on show
+  if (!table || !table.offsetParent) return;
   const widths = [...(table.tHead?.rows[0].cells ?? [])].slice(0, FROZEN).map((c) => c.getBoundingClientRect().width);
   for (const row of table.rows)
     [...row.cells].slice(0, FROZEN).forEach((c, i) => {
@@ -209,11 +210,11 @@ export function home(snap: Snapshot) {
       <section class="board${look(course)}">
         ${countdown(snap.month, course, purse.field)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
-        <div class="board-tabs" id="board-tabs" role="tablist" hidden>
-          <button role="tab" data-tab="open">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club">My club</button>
+        <div class="board-tabs" id="board-tabs" role="tablist">
+          <button role="tab" data-tab="open" aria-selected="true">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club" aria-selected="false">My club</button>
         </div>
-        <div id="board-open" hidden></div>
-        <div id="board-club"><div class="table-wrap"><table class="scorecard">
+        <div id="board-open"><p class="muted">Loading the Open…</p></div>
+        <div id="board-club" hidden><div class="table-wrap"><table class="scorecard">
           <thead><tr><th></th><th>Member</th><th class="num m">Tot</th><th class="num m">±</th>${head}<th class="num d">Tot</th><th class="num d">±</th></tr></thead>
           <tbody>
             <tr class="par"><td></td><td>Par</td><td class="num m">${course.par}</td><td class="m"></td>${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num d">${course.par}</td><td class="d"></td></tr>
@@ -238,6 +239,8 @@ export function home(snap: Snapshot) {
   tickCountdown();
   freezeBoard();
   void bindOpen(snap, line, host);
+  // the club board starts hidden behind the Open: set its frozen columns once it's on show
+  document.querySelector('[data-tab="club"]')?.addEventListener('click', () => requestAnimationFrame(() => freezeBoard()));
   // today's line, written for you by Reginald (Claude): it takes over from the scripted one when it arrives
   if (!host)
     void askReginald('daily', course, snap.today).then((text) => {

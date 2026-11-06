@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 5, 2026 (daily cards from Nov 8).
+Last updated Nov 6, 2026 (the Open first on the board).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 5, 2026 (daily cards from Nov 8).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #151 | The Open is always the board members land on, with My club as the second tab. It no longer remembers the last tab picked, and the club board no longer flashes up first while the Open loads. If the Open can't load, the club board shows on its own. |
 | #149 | Daily cards from the week of Nov 8: one round a day counts. "Play today's card" on home; the card locks at the first swing, saves itself after every stroke, and if it's cut short (the app closes, a call) it picks up at the hole they were on, back on the tee with the strokes already played there. Once today's card is in, home offers a practice round of the week's course: unlimited, logged as practice (a new "Rounds" column in the admin's practice log), never on the board, the purse or the bonuses, and no Reginald note. Before Nov 8 nothing changes. The board says "best card counts", How to play and Reginald's and the Chronicle's prompts explain it. The server enforces one round a day per seat. Built because members were restarting hole 1 hundreds of times a day hunting for a perfect opening (541 starts, 6 finishes in a day on Nov 5). |
 | #148 | Two agents for a more hands-off club. The Architect (`.claude/skills/build-course/`) builds the course two weeks out every Sunday, runs the hole checks and opens it as a draft PR for Robbie to play. The Steward (`.claude/skills/steward/`) reads the club every morning (activity, quits split into hole-1 restarts and later abandons, feedback, AI calls, site errors, the week's close) and pings Robbie only when something's worth knowing, with a weekly digest on Sundays. Both run report-only: neither merges or touches live data. |
 | #146 | The Western Reserve is the Nov 8 course, out of draft; the Pacific Bluffs moves to Nov 15 (still a draft). Until it opens, every member can practise its first hole, Creek Bend, from a 🍁 preview tile on home with a countdown: practice only, never on the board or in the purse, and logged in the admin practice log (the "Caldera" column is now "Preview"). The Western Reserve's test switches (the wind fix and calmer chip meter, #143) go live with it. |
