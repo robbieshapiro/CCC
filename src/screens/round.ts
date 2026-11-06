@@ -34,7 +34,7 @@ import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
 import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
-import { dailySummary } from './daily';
+import { canShare, dailySummary, share } from './daily';
 
 let game: Course3D | null = null;
 
@@ -80,6 +80,15 @@ function sampleField(snap: Snapshot, course: Course): Ghost[] {
       return null;
     }),
   }));
+}
+
+// The round as a text for the group chat: the course and day, the score, and a square for each hole
+// (⭐ ace, 🟪 eagle or better, 🟩 birdie, ⬜ par, 🟨 bogey, 🟥 double or worse)
+function scoreShare(course: Course, scores: number[], total: number, toPar: number, card: boolean, rehearsal: boolean) {
+  const sq = (s: number | undefined, par: number) => (s === undefined ? '▫️' : s === 1 ? '⭐' : s <= par - 2 ? '🟪' : s === par - 1 ? '🟩' : s === par ? '⬜' : s === par + 1 ? '🟨' : '🟥');
+  const day = new Date(`${todayInGameTz()}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const what = rehearsal ? 'Preview' : card ? "Today's card" : 'Round';
+  return `⛳ Claude Country Club\n${course.name.replace(/ Course$/, '')} · ${day}\n${what}: ${total} (${toParLabel(toPar)})\n${course.holes.map((h, i) => sq(scores[i], h.par)).join('')}\n${location.origin}`;
 }
 
 // Today's card is already in: practise as much as you like
@@ -302,6 +311,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
       ${bonusLine}
       <p class="fine">${opts.practice ? 'Practice round, not counted.' : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : "Couldn't post this round. Check your connection."}</p>
+      ${opts.practice ? '' : `<button class="btn ghost share-score" data-share-score>${canShare() ? '📤 Share your score' : '📋 Copy your score'}</button>`}
       <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : 'Play again'}</button><button class="btn ghost" data-back>Back to the club</button></div>
       ${
         asking
@@ -369,6 +379,9 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       }
     });
   }
+  // a result to text the group, Wordle style: one square a hole
+  const shareBtn = sheet.querySelector<HTMLButtonElement>('[data-share-score]');
+  if (shareBtn) shareBtn.onclick = () => void share(scoreShare(course, scores, total, toPar, card, rehearsal), shareBtn);
   // after today's card, play again is practice on the same course
   sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => (card ? navigate('#/round/practice') : round(await refresh(), opts));
   const context = `After a ${total} (${toParLabel(toPar)}) on ${course.name}`;

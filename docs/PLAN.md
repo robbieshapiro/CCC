@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (Western Reserve preview on home, deer in view).
+Last updated Nov 6, 2026 (share your score).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (Western Reserve preview on home, deer in view).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #175 | Share your score: a button on the card after every counted round (and the Committee's preview) shares a text for the group chat, Wordle style: the course and day, the score against par, and a square a hole (⭐ ace, 🟪 eagle, 🟩 birdie, ⬜ par, 🟨 bogey, 🟥 double or worse), with the club's link. On a phone it opens the share sheet; on a computer it copies. |
 | #174 | The Western Reserve preview: members can now practise all five holes before Sunday (was Creek Bend only), from a warm autumn band on home between the Play card and the board (its own colours per course: leaves, embers or sea), with the countdown. Before the practice starts, a short "What's new" card. Next week's practice has no drinks visits (that's for Sunday). The deer, turkeys and rabbits now stand out in the deep rough where you can see them, a herd within sight of the tee and often another further down, well off the line of play and never under a tree (they were behind the tree line). |
 | #172 | Kudos and chirps are easy to clear: each line on the home page has its own ×, "Clear all" when there's more than one, and any left alone clear themselves after 24 hours (were 14 days). The Committee's list in Admin still shows the last fortnight's. |
 | #170 | Kudos and chirps. Tap another member out on the course (their figure or the name card over them) and their card comes up: today's scores hole by hole, ready-made kudos and chirps (a couple about how their day went, like a birdie or a blow-up hole), or your own line in 80 characters. It waits on their home page under "From the course" until they tap it away, in whichever of their clubs they open. Same club only; 20 a day from a member, 3 a day to any one member; no AI, so no cost. The Committee sees the last fortnight's in Admin, Activity, and can take any down. A one-time tip on the course tells members they can tap. In the rehearsal, tapping a sample member shows how it sends without sending. |
