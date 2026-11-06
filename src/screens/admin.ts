@@ -4,14 +4,14 @@
 import { api, getSession, listSessions } from '../api';
 import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
-import { courseById, upcoming } from '../golf3d/courses';
+import { courseById, courseFor, upcoming } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { store } from '../storage';
 import { buildHole, tidy } from '../designer/hole';
 import { isHole } from '../designer/desk';
 import { planCanvas } from '../designer/plan';
-import { testHole } from './round';
+import { coinPop, testHole } from './round';
 import { esc, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
@@ -58,7 +58,9 @@ export function admin(snap: Snapshot) {
         <div class="adm-actions">
           <button class="btn" data-tool="notice">📣 Post a notice</button>
           <button class="btn" data-tool="invite">✉️ Invite someone</button>
+          <a class="btn ghost" href="#/preview/${courseFor(snap.month).id}">⛳ Preview this week: ${esc(courseFor(snap.month).name.replace(/ Course$/, ''))}</a>
           ${next.map((c) => `<a class="btn ghost" href="#/preview/${c.id}">⛳ Preview ${esc(c.name.replace(/ Course$/, ''))}${c.draft ? ' (draft)' : ''}</a>`).join('')}
+          <button class="btn ghost" data-coin-test>🪙 Test a coin burst</button>
           <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
         </div>
         <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
@@ -79,6 +81,20 @@ export function admin(snap: Snapshot) {
       if (!was) open.querySelector<HTMLElement>('textarea, input')?.focus();
     };
   });
+  // the reward moment, on demand: the animation and the sound, nothing paid
+  const coin = document.querySelector<HTMLButtonElement>('[data-coin-test]');
+  if (coin) {
+    let n = 0;
+    coin.onclick = () => {
+      const host = document.createElement('div');
+      host.className = 'coin-test';
+      document.body.appendChild(host);
+      const sample = [[200, 'Monster putt', '64 ft'], [75, 'Long putt', '38 ft'], [100, 'Chip-in', 'from off the green'], [150, 'Secret found', 'The Cliff Walk']] as const;
+      const [amount, title, sub] = sample[n++ % sample.length];
+      coinPop(host, amount, title, `${sub} · test, not paid`);
+      window.setTimeout(() => host.remove(), 3300);
+    };
+  }
   bindClubMaker();
   bindNoticeTool();
   bindInviteTool();
