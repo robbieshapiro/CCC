@@ -6,7 +6,7 @@ import { bestTry, DAILY_TRIES, dailyShot, resultLabel, tryMark } from '../daily'
 import { requireSession } from '../state';
 import { esc } from '../ui';
 
-const canShare = () => typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
+export const canShare = () => typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
 
 export function shareText(day: string, tries: DailyTry[]) {
   const shot = dailyShot(day);
