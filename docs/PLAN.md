@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (a warmer, cosier fitting room).
+Last updated Nov 6, 2026 (gear try-on checked piece by piece).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (a warmer, cosier fitting room).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #160 | Every Pro Shop piece and hat checked on the golfer in its own view, and fixed where it didn't show: clubs rest on the plinth (in the fitting room and the Locker) instead of sinking through it, and the club view aims at the head, so all five putters and three drivers can be seen; shoes get their own view, with no club in the way; hair tucks under hats (no curls or bun through the crown), and the brimmed hats are round enough to cover the back of the head; the diamond stud sits out on the earlobe. |
 | #159 | The Pro Shop's fitting room lit like a cosy shop instead of a showroom: a dimmer, warm amber room, three brass wall lamps glowing on darker panelling, a lamp over Reginald's counter, and a warm pool of light over the plinth. The even room reflections that made it glare are turned well down (just enough for metal to read). |
 | #158 | The Members' Course at the bar, and trying a hole at the Design Desk, now swing on the weekly course's vertical meter instead of the old sideways one (`Course3D.meterStyle`). The holes themselves are unchanged: their greens and putting play as before. |
 | #157 | Shot data. Every counted stroke is posted with the card (club, power, the swing's error off the meter, where it was hit from and where it finished, the lie, penalty or holed; about 1 to 2 KB a round, at most 150 shots) into `rounds.shots`. Admin gets a hole report for this week's course: each hole drawn with where tee shots (cream) and penalties (red) finished, average putts, three-putt share, penalties per hole, the club off the tee and where shots are hit from. `npm run check-holes -- calibrate <file>` reads `select shot_export()` and prints the SKILL that swings most like the members, and the Architect's playbook uses it for the even-par target. |

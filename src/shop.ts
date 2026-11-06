@@ -53,7 +53,7 @@ export type Item = {
   wear: (s: GolferSpec) => void;
   off: (s: GolferSpec) => void;
   worn: (s: GolferSpec) => boolean;
-  focus?: 'full' | 'head' | 'chest' | 'hands' | 'club' | 'bag';
+  focus?: 'full' | 'head' | 'chest' | 'hands' | 'club' | 'feet' | 'bag';
 };
 const top = (id: string, name: string, price: number, rack: Rack, what: string, t: GolferSpec['top']): Item => ({ id, name, kind: 'top', price, rack, what, wear: (s) => (s.top = t), off: (s) => (s.top = 'polo'), worn: (s) => s.top === t });
 const hat = (id: string, name: string, price: number, rack: Rack, what: string, h: GolferSpec['hat']): Item => ({ id, name, kind: 'hat', price, rack, what, wear: (s) => (s.hat = h), off: (s) => (s.hat = 'cap'), worn: (s) => s.hat === h });
@@ -131,10 +131,10 @@ export const ITEMS: Item[] = [
   slot('leather', 'Leather trousers', 4000, 'pro', 'bottoms', 'Black leather. They creak on the backswing.', 'bottoms', 'leather', 'trousers', 'full'),
   slot('goldpants', 'Gold trousers', 10000, 'legend', 'bottoms', 'Metallic gold from the belt to the shoe.', 'bottoms', 'goldpants', 'trousers', 'full'),
   // shoes
-  slot('sneaker', 'Tour sneakers', 300, 'member', 'shoes', 'Spikeless white sneakers with a green sole.', 'shoeStyle', 'sneaker', undefined, 'full'),
-  slot('spectator', 'Spectator brogues', 700, 'member', 'shoes', 'Black and white two-tones. A classic for a reason.', 'shoeStyle', 'spectator', undefined, 'full'),
-  slot('crocshoes', 'Croc leather shoes', 3000, 'pro', 'shoes', 'Dark croc leather, polished to a shine.', 'shoeStyle', 'croc', undefined, 'full'),
-  slot('goldshoes', 'Gold spikes', 11000, 'legend', 'shoes', 'Solid gold shoes on black soles. Mind the greens.', 'shoeStyle', 'gold', undefined, 'full'),
+  slot('sneaker', 'Tour sneakers', 300, 'member', 'shoes', 'Spikeless white sneakers with a green sole.', 'shoeStyle', 'sneaker', undefined, 'feet'),
+  slot('spectator', 'Spectator brogues', 700, 'member', 'shoes', 'Black and white two-tones. A classic for a reason.', 'shoeStyle', 'spectator', undefined, 'feet'),
+  slot('crocshoes', 'Croc leather shoes', 3000, 'pro', 'shoes', 'Dark croc leather, polished to a shine.', 'shoeStyle', 'croc', undefined, 'feet'),
+  slot('goldshoes', 'Gold spikes', 11000, 'legend', 'shoes', 'Solid gold shoes on black soles. Mind the greens.', 'shoeStyle', 'gold', undefined, 'feet'),
   // gloves
   glove('blackglove', 'Black glove', 150, 'member', 'Black leather on the lead hand.', 'black'),
   glove('pairgloves', 'A pair of gloves', 350, 'member', 'White on both hands, like the old pros.', 'pair'),
@@ -188,12 +188,13 @@ export const KIND_ICON: Record<Kind, string> = { top: '👕', outer: '🧥', bot
 
 // where the fitting room's camera goes for a piece: the face for hats and glasses, the hands for watches, gloves,
 // putters and drivers, round the back for a bag
-export function focusOf(i: Item): 'full' | 'head' | 'chest' | 'hands' | 'club' | 'bag' {
+export function focusOf(i: Item): 'full' | 'head' | 'chest' | 'hands' | 'club' | 'feet' | 'bag' {
   if (i.focus) return i.focus;
   if (i.kind === 'hat' || i.kind === 'eyewear') return 'head';
   if (i.kind === 'top' || i.kind === 'outer') return 'chest';
   if (i.kind === 'putter' || i.kind === 'driver') return 'club';
   if (i.kind === 'gloves') return 'hands';
+  if (i.kind === 'shoes') return 'feet';
   if (i.kind === 'bag') return 'bag';
   return 'full';
 }

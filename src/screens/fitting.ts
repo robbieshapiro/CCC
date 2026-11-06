@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Golfer, REGINALD_SPEC, type GolferSpec } from '../golf3d/golfer';
 
-export type Focus = 'full' | 'head' | 'chest' | 'hands' | 'club' | 'bag';
+export type Focus = 'full' | 'head' | 'chest' | 'hands' | 'club' | 'feet' | 'bag';
 
 // where the camera sits and what it looks at, for each view (world units; the golfer stands at the origin facing +z)
 const VIEWS: Record<Focus, { at: THREE.Vector3; look: THREE.Vector3; spin: boolean }> = {
@@ -15,6 +15,8 @@ const VIEWS: Record<Focus, { at: THREE.Vector3; look: THREE.Vector3; spin: boole
   hands: { at: new THREE.Vector3(1.6, 3.9, 6.2), look: new THREE.Vector3(0.1, 3.0, 0.6), spin: false },
   // low and to the side, to see the club head at the ball
   club: { at: new THREE.Vector3(2.2, 2.4, 8.6), look: new THREE.Vector3(-0.1, 0.6, 2.7), spin: false },
+  // down at the shoes, a little to the side
+  feet: { at: new THREE.Vector3(2.6, 1.7, 5.4), look: new THREE.Vector3(0, 0.55, 0.2), spin: false },
   bag: { at: new THREE.Vector3(4.8, 4.6, -10), look: new THREE.Vector3(0.7, 2.2, -2.4), spin: false },
 };
 
@@ -97,6 +99,7 @@ export class FittingRoom {
   private camAt = VIEWS.full.at.clone();
   private camLook = VIEWS.full.look.clone();
   private turnTo: number | null = null;
+  private clubAt: THREE.Vector3 | null = null;
 
   constructor(private host: HTMLElement, spec: GolferSpec) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -267,7 +270,8 @@ export class FittingRoom {
     }
   }
 
-  set(spec: GolferSpec, club: 'driver' | 'putter' = 'driver') {
+  // club: what they hold (nothing while trying shoes, so the shoes can be seen)
+  set(spec: GolferSpec, club: 'driver' | 'putter' | null = 'driver') {
     if (this.golfer) {
       this.turn.remove(this.golfer.group);
       this.golfer.dispose();
@@ -275,14 +279,19 @@ export class FittingRoom {
     this.golfer = new Golfer(spec);
     this.golfer.holdClub(club);
     // with a putter, stand over the ball at address so the head sits on the floor where it can be seen
-    this.golfer.setPose(club === 'putter' ? 'address' : 'idle');
+    this.golfer.setPose(club === 'putter' ? 'address' : club ? 'idle' : 'clasp');
     // a putter's head sits on the floor: lift a touch so it isn't half sunk into the plinth
     this.golfer.group.position.set(0, 0.34, 0);
-    if (club === 'putter') this.golfer.shiftClub(0.15);
     // a caddie stands beside the plinth
     this.golfer.group.position.x = spec.caddie ? -1.2 * spec.height : 0;
     this.golfer.group.traverse((o) => (o.castShadow = true));
     this.turn.add(this.golfer.group);
+    // the club's head rests on the plinth rather than sinking into it, and the club view looks at it
+    const r = this.turn.rotation.y;
+    this.turn.rotation.y = 0;
+    this.turn.updateMatrixWorld(true);
+    this.clubAt = this.golfer.restClub();
+    this.turn.rotation.y = r;
   }
 
   // move the camera to what's being tried on; the golfer turns to face it
@@ -312,7 +321,8 @@ export class FittingRoom {
     const now = performance.now();
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
-    const v = VIEWS[this.view];
+    // the club view follows wherever the club's head ended up (it differs by club, pose and height)
+    const v = this.view === 'club' && this.clubAt ? { at: this.clubAt.clone().add(new THREE.Vector3(2.4, 1.7, 5.2)), look: this.clubAt.clone().add(new THREE.Vector3(-0.2, 0.35, 0)), spin: false } : VIEWS[this.view];
     const k = 1 - Math.exp(-dt * 3.2);
     this.camAt.lerp(v.at, k);
     this.camLook.lerp(v.look, k);
