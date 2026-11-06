@@ -1949,3 +1949,92 @@ begin
 end $$;
 grant execute on function buy_item(uuid, text) to anon;
 
+
+-- Kudos and chirps: tap another member out on the course, see their card, and send them a kudos or a chirp (one of
+-- the ready-made lines, or your own in 80 characters). It shows on their home page next time they open the app,
+-- until they've seen it. Members of the same club only; 20 a day from a member and 3 a day to any one member. The
+-- Committee can take any down from Admin.
+create table if not exists shoutouts (
+  id bigserial primary key,
+  group_id uuid not null references groups on delete cascade,
+  from_id uuid not null references players on delete cascade,
+  to_id uuid not null references players on delete cascade,
+  kind text not null check (kind in ('kudos', 'chirp')),
+  body text not null check (char_length(body) between 1 and 80),
+  seen boolean not null default false,
+  removed boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists shoutouts_to on shoutouts (to_id, created_at desc);
+create index if not exists shoutouts_from on shoutouts (from_id, created_at desc);
+alter table shoutouts enable row level security;
+
+create or replace function send_shoutout(p_token uuid, p_to uuid, p_kind text, p_body text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); them players; clean text := trim(regexp_replace(coalesce(p_body, ''), '\s+', ' ', 'g'));
+  today timestamptz := (game_today()::timestamp) at time zone 'America/New_York';
+begin
+  if p_kind not in ('kudos', 'chirp') then raise exception 'Kudos or a chirp, nothing else.'; end if;
+  if char_length(clean) not between 1 and 80 then raise exception 'Keep it to 80 characters.'; end if;
+  select * into them from players where id = p_to;
+  if not found or them.group_id <> me.group_id then raise exception 'They are not in your club.'; end if;
+  if them.id = me.id then raise exception 'You cannot chirp yourself. Well, you can, but not here.'; end if;
+  if (select count(*) from shoutouts where from_id = me.id and created_at >= today) >= 20 then
+    raise exception 'That is twenty for today. Save some for tomorrow.'; end if;
+  if (select count(*) from shoutouts where from_id = me.id and to_id = them.id and created_at >= today) >= 3 then
+    raise exception 'Three to one member is plenty for one day.'; end if;
+  insert into shoutouts (group_id, from_id, to_id, kind, body) values (me.group_id, me.id, them.id, p_kind, clean);
+end $$;
+
+-- what's waiting for me, in every club I'm a member of: unseen, from the last fortnight, newest first
+create or replace function my_shoutouts(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((
+    select json_agg(json_build_object('id', s.id, 'kind', s.kind, 'body', s.body, 'from', f.name, 'fromAvatar', f.avatar,
+      'createdAt', s.created_at) order by s.created_at desc)
+    from (select * from shoutouts s
+      where s.to_id in (select p.id from players p where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash)
+        and not s.seen and not s.removed and s.created_at > now() - interval '14 days'
+      order by s.created_at desc limit 12) s
+    join players f on f.id = s.from_id
+  ), '[]');
+end $$;
+
+create or replace function seen_shoutouts(p_token uuid, p_ids bigint[]) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  update shoutouts set seen = true
+  where id = any(p_ids) and to_id in (select p.id from players p where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash);
+end $$;
+
+-- the Committee's view: the last fortnight's, across their clubs, with a way to take one down
+create or replace function admin_shoutouts(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
+  return coalesce((
+    select json_agg(json_build_object('id', s.id, 'kind', s.kind, 'body', s.body, 'from', f.name, 'to', t.name,
+      'seen', s.seen, 'removed', s.removed, 'createdAt', s.created_at) order by s.created_at desc)
+    from (select * from shoutouts where group_id in (select admin_clubs(me)) and created_at > now() - interval '14 days'
+      order by created_at desc limit 60) s
+    join players f on f.id = s.from_id join players t on t.id = s.to_id
+  ), '[]');
+end $$;
+
+create or replace function remove_shoutout(p_token uuid, p_id bigint) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can take these down.'; end if;
+  update shoutouts set removed = true where id = p_id and group_id in (select admin_clubs(me));
+end $$;
+
+grant execute on function send_shoutout(uuid, uuid, text, text) to anon;
+grant execute on function my_shoutouts(uuid) to anon;
+grant execute on function seen_shoutouts(uuid, bigint[]) to anon;
+grant execute on function admin_shoutouts(uuid) to anon;
+grant execute on function remove_shoutout(uuid, bigint) to anon;

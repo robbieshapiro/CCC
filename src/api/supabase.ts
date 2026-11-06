@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminOverview, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
+import type { AdminKpis, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -83,6 +83,17 @@ export const supabaseApi: Api = {
   listNotices: (s) => rpc<Notice[]>('list_notices', { p_token: s.token }),
   takeDownNotice: async (s, id) => {
     await rpc('take_down_notice', { p_token: s.token, p_id: id });
+  },
+  sendShoutout: async (s, to, kind, body) => {
+    await rpc('send_shoutout', { p_token: s.token, p_to: to, p_kind: kind, p_body: body });
+  },
+  myShoutouts: (s) => rpc<Shoutout[]>('my_shoutouts', { p_token: s.token }),
+  seenShoutouts: async (s, ids) => {
+    await rpc('seen_shoutouts', { p_token: s.token, p_ids: ids });
+  },
+  adminShoutouts: (s) => rpc<AdminShoutout[]>('admin_shoutouts', { p_token: s.token }),
+  removeShoutout: async (s, id) => {
+    await rpc('remove_shoutout', { p_token: s.token, p_id: id });
   },
   startPractice: (s, kind) => rpc<number>('start_practice', { p_token: s.token, p_kind: kind }),
   endPractice: async (s, id, shots) => {

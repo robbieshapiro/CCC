@@ -98,6 +98,10 @@ export type Invite = { id: string; name: string; code: string; createdAt: string
 // A note to the Committee. Only the admin reads them.
 export type Feedback = { id: number; from: string | null; body: string; context: string | null; done: boolean; createdAt: string };
 // Club news from the admin, signed as Reginald or as themselves.
+// a kudos or a chirp from another member, waiting on your home page
+export type ShoutKind = 'kudos' | 'chirp';
+export type Shoutout = { id: number; kind: ShoutKind; body: string; from: string; fromAvatar?: Avatar; createdAt: string };
+export type AdminShoutout = { id: number; kind: ShoutKind; body: string; from: string; to: string; seen: boolean; removed: boolean; createdAt: string };
 export type Notice = { id: number; body: string; asReginald: boolean; author: string | null; createdAt: string };
 // Practice on the range, the short game area, or a practice round of the next course. Never on the board.
 // 'caldera' is a practice round on the next course's preview holes (the name is from the first one); 'course' is a
@@ -209,6 +213,12 @@ export interface Api {
   postNotice(session: Session, body: string, asReginald: boolean): Promise<void>;
   listNotices(session: Session): Promise<Notice[]>;
   takeDownNotice(session: Session, id: number): Promise<void>;
+  // kudos and chirps between members of a club (send_shoutout and friends in schema.sql)
+  sendShoutout(session: Session, to: string, kind: ShoutKind, body: string): Promise<void>;
+  myShoutouts(session: Session): Promise<Shoutout[]>;
+  seenShoutouts(session: Session, ids: number[]): Promise<void>;
+  adminShoutouts(session: Session): Promise<AdminShoutout[]>;
+  removeShoutout(session: Session, id: number): Promise<void>;
   startPractice(session: Session, kind: PracticeKind): Promise<number>;
   endPractice(session: Session, id: number, shots: number): Promise<void>;
   practiceReport(session: Session): Promise<PracticeReport>;

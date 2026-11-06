@@ -10,6 +10,7 @@ import { bindOpen } from './open';
 import { askReginald, championWord } from '../reginald';
 import { bindDaily, dailyCard } from './daily';
 import { bindNotices, noticesStrip } from './notices';
+import { bindShoutouts, shoutStrip } from './shoutouts';
 import { bindPlayoff, playoffCard } from './playoff';
 import { board, crownFor, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
@@ -194,6 +195,7 @@ export function home(snap: Snapshot) {
       ${championStrip(snap)}
       ${playoffCard()}
       ${noticesStrip()}
+      ${shoutStrip()}
       <section class="play-hero${look(course)}">
         <div class="play-reg"><span class="host-face big">${reginaldSvg(mood, 72)}</span><p id="reg-line"><b>Reginald</b> ${line}</p></div>
         <div class="play-main">
@@ -269,6 +271,7 @@ export function home(snap: Snapshot) {
       if (btn && t && !t.done && (t.scores.length || t.shots)) btn.textContent = `Finish today's card · hole ${Math.min(t.scores.length + 1, course.holes.length)}`;
     });
   void bindNotices();
+  void bindShoutouts();
   void bindDaily(snap.today, snap.crown);
   void bindHonours(snap);
   void bindPlayoff();

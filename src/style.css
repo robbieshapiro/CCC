@@ -1371,3 +1371,30 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .adm-tabs button[aria-selected='true'] { background: var(--green); color: var(--cream); }
 .adm-pane { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .adm-pane > * { min-width: 0; margin: 0; }
+
+/* kudos and chirps: a member's card over the course, the lines to send, and what's waiting on home */
+.shout-sheet { z-index: 30; pointer-events: auto; }
+.shout-card { position: relative; gap: 10px; width: min(420px, 100%); padding: 20px 18px 18px; }
+.shout-card h2 { margin: 0; font-family: var(--serif); font-size: 30px; }
+.shout-card h2 small { font-family: var(--font); font-size: 15px; color: var(--muted); font-weight: 700; margin-left: 6px; }
+.shout-x { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 26px; line-height: 1; color: var(--muted); cursor: pointer; padding: 4px 8px; }
+.shout-pick { width: 100%; display: grid; gap: 6px; text-align: left; }
+.shout-label { margin: 4px 0 0; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.shout-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.shout-chips button { font: inherit; font-size: 13px; padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); background: #fffdf7; color: var(--ink); cursor: pointer; text-align: left; }
+.shout-chips button:hover:not(:disabled) { border-color: var(--gold); }
+.shout-chips button:disabled, .shout-own button:disabled { opacity: 0.45; cursor: default; }
+.shout-own { display: grid; gap: 6px; margin-top: 6px; }
+.shout-own input { font: inherit; font-size: 15px; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); min-width: 0; }
+.shout-own-go { display: flex; gap: 6px; flex-wrap: wrap; }
+.shout-own-go .btn { flex: 1; }
+.shout-msg { margin: 0; min-height: 1.2em; font-size: 13px; font-weight: 700; color: var(--green); }
+.shout-msg.error { color: #b2472f; }
+.shout-tip { position: absolute; left: 50%; top: calc(var(--hud-top, 76px) + 44px); transform: translateX(-50%); width: min(340px, calc(100vw - 32px)); margin: 0; padding: 8px 12px; border-radius: 10px; text-align: center; font-size: 13px; font-weight: 700; color: var(--cream); background: rgba(15, 42, 31, 0.82); border: 1px solid rgba(184, 149, 90, 0.7); pointer-events: none; z-index: 6; animation: shout-tip 7s ease forwards; }
+@keyframes shout-tip { 0%, 85% { opacity: 1; } 100% { opacity: 0; } }
+.shout-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
+.shout-list li { display: flex; gap: 8px; align-items: baseline; line-height: 1.4; }
+.shout-list small { color: var(--muted); margin-left: 4px; }
+.shout-kind { flex: none; }
+.adm-list li.gone { opacity: 0.5; }
+.shout-card .eyebrow { padding: 0 30px; }
