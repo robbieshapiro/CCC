@@ -283,8 +283,9 @@ export class GolferStage {
     const h = this.host.clientHeight || 360;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    this.camera.position.set(0, 4.2, 15.5);
-    this.camera.lookAt(0, 3.1, 0);
+    // close enough to see a face, the hands on the grip and what's on the wrist
+    this.camera.position.set(0, 3.6, 13.5);
+    this.camera.lookAt(0, 3.05, 0);
     this.camera.updateProjectionMatrix();
   };
 

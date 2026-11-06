@@ -9,7 +9,7 @@ import { todayInGameTz } from '../day';
 import { CartGirl } from './cartgirl';
 import { conditionsFor, gusted, tempestOn, withPin, type Conditions } from './conditions';
 import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
-import { Golfer } from './golfer';
+import { Golfer, HANK_SPEC } from './golfer';
 import { BALL_R, dropPoint, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Result } from './physics';
 import * as stands from './stands';
 import * as props from './props';
@@ -201,7 +201,7 @@ export class Course3D {
   private puffs: { m: THREE.Mesh; t: number }[] = [];
   private cart: CartGirl | null = null;
   private ghosts: Ghost[] = [];
-  private onCourse: { golfer: Golfer; objs: THREE.Object3D[]; at: THREE.Vector3 }[] = [];
+  private onCourse: { golfer: Golfer; objs: THREE.Object3D[]; at: THREE.Vector3; keep?: boolean }[] = [];
   // the rest of a full stadium: simple figures, two instanced meshes for the lot
   private crowd: THREE.InstancedMesh[] = [];
   private spot: V2 | null | undefined; // the tee shot's resting place, once it has one
@@ -1663,6 +1663,23 @@ export class Course3D {
     this.clearGhosts();
     this.seatCrowd();
     const i = this.number - 1;
+    // Hank, the starter, stands across the tee on the first hole and sees you off
+    if (this.number === 1 && !this.drill && this.starter) {
+      const a = this.aim;
+      const hx = this.pos.x + 4.5 * Math.cos(a) + 5 * Math.sin(a);
+      const hy = this.pos.y - 4.5 * Math.sin(a) + 5 * Math.cos(a);
+      const hank = new Golfer(HANK_SPEC);
+      hank.holdClub(null);
+      hank.showBag(false);
+      hank.setPose('wave');
+      window.setTimeout(() => hank.setPose('clasp'), 2600);
+      hank.group.position.copy(w3(hx, hy, heightAt(this.hole, hx, hy)));
+      hank.group.rotation.y = Math.PI / 2 - a + Math.PI;
+      const tag = nameTag('Hank', 'The starter');
+      tag.position.copy(hank.group.position).add(new THREE.Vector3(0, 8.5 * hank.spec.height, 0));
+      this.scene.add(hank.group, tag);
+      this.onCourse.push({ golfer: hank, objs: [hank.group, tag], at: hank.group.position.clone(), keep: true });
+    }
     for (const g of this.ghosts) {
       const s = g.spots[i];
       if (!s) continue;
@@ -1691,7 +1708,7 @@ export class Course3D {
   // Step aside when your own ball comes to rest beside theirs.
   private updateGhosts(dt: number) {
     for (const o of this.onCourse) {
-      const near = o.at.distanceTo(this.ball.position) < 7 || o.at.distanceTo(this.golfer.group.position) < 5;
+      const near = !o.keep && (o.at.distanceTo(this.ball.position) < 7 || o.at.distanceTo(this.golfer.group.position) < 5);
       o.objs.forEach((x) => (x.visible = !near));
       if (!near) o.golfer.update(dt);
     }
