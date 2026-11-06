@@ -40,7 +40,9 @@ export const badgeFor = (p: Player, size = 18) => (p.host ? '' : badgeSvg(rankOf
 
 // ---------- the catalogue ----------
 
-export type Kind = 'top' | 'hat' | 'bling' | 'bag' | 'putter' | 'caddie';
+export type Kind = 'top' | 'outer' | 'bottoms' | 'shoes' | 'gloves' | 'hat' | 'eyewear' | 'bling' | 'putter' | 'driver' | 'bag' | 'caddie';
+// the order the racks and the fitting room's tabs go in
+export const KINDS: Kind[] = ['top', 'outer', 'bottoms', 'shoes', 'gloves', 'hat', 'eyewear', 'bling', 'putter', 'driver', 'bag', 'caddie'];
 export type Item = {
   id: string;
   name: string;
@@ -51,6 +53,7 @@ export type Item = {
   wear: (s: GolferSpec) => void;
   off: (s: GolferSpec) => void;
   worn: (s: GolferSpec) => boolean;
+  focus?: 'full' | 'head' | 'chest' | 'hands' | 'bag';
 };
 const top = (id: string, name: string, price: number, rack: Rack, what: string, t: GolferSpec['top']): Item => ({ id, name, kind: 'top', price, rack, what, wear: (s) => (s.top = t), off: (s) => (s.top = 'polo'), worn: (s) => s.top === t });
 const hat = (id: string, name: string, price: number, rack: Rack, what: string, h: GolferSpec['hat']): Item => ({ id, name, kind: 'hat', price, rack, what, wear: (s) => (s.hat = h), off: (s) => (s.hat = 'cap'), worn: (s) => s.hat === h });
@@ -79,13 +82,25 @@ export const ITEMS: Item[] = [
   hat('tourcap', 'Tour cap', 500, 'member', 'A gold button on top and a gold crest on the front.', 'tourcap'),
   hat('cowboy', 'Cowboy hat', 1200, 'pro', 'Tall crown, wide brim. Nobody asked.', 'cowboy'),
   hat('goldvisor', 'Gold visor', 2000, 'pro', 'A visor with a solid gold band and brim.', 'goldvisor'),
-  flag('aviators', 'Aviators', 350, 'member', 'Gold-rimmed, mirrored. On at all times.', 'aviators'),
-  flag('watch', 'Gold watch', 900, 'member', 'On the lead wrist, where it catches the light on the backswing.', 'watch'),
-  flag('chain', 'Gold chain', 2500, 'pro', 'A heavy gold chain with a little club-head pendant.', 'chain'),
+  { ...flag('aviators', 'Aviators', 350, 'member', 'Gold-rimmed, mirrored. On at all times.', 'aviators'), kind: 'eyewear', focus: 'head' },
+  { ...flag('watch', 'Gold watch', 900, 'member', 'On the lead wrist, where it catches the light on the backswing.', 'watch'), focus: 'hands' },
+  { ...flag('chain', 'Gold chain', 2500, 'pro', 'A heavy gold chain with a little club-head pendant.', 'chain'), focus: 'chest' },
   putter('chrome', 'Chrome putter', 600, 'member', 'A mirror-polished head.', 'chrome'),
   bag('schoolbag', 'School bag', 1000, 'member', 'A bag in your school kit’s colours with its letters (pick a school in the Locker).', 'school'),
   bag('goldstaff', 'Gold staff bag', 3000, 'pro', 'A big tour staff bag in gold, banded in black.', 'goldstaff'),
   caddieItem,
 ];
 export const itemById = (id: string) => ITEMS.find((i) => i.id === id);
-export const KIND_NAME: Record<Kind, string> = { top: 'Tops', hat: 'Headwear', bling: 'Bling', bag: 'Bags', putter: 'Putters', caddie: 'Service' };
+export const KIND_NAME: Record<Kind, string> = { top: 'Tops', outer: 'Outerwear', bottoms: 'Trousers', shoes: 'Shoes', gloves: 'Gloves', hat: 'Headwear', eyewear: 'Eyewear', bling: 'Watches & jewellery', putter: 'Putters', driver: 'Drivers', bag: 'Bags', caddie: 'Service' };
+export const KIND_ICON: Record<Kind, string> = { top: '👕', outer: '🧥', bottoms: '👖', shoes: '👟', gloves: '🧤', hat: '🧢', eyewear: '🕶️', bling: '⌚', putter: '⛳', driver: '🏌️', bag: '🎒', caddie: '🤵' };
+
+// where the fitting room's camera goes for a piece: the face for hats and glasses, the hands for watches, gloves,
+// putters and drivers, round the back for a bag
+export function focusOf(i: Item): 'full' | 'head' | 'chest' | 'hands' | 'bag' {
+  if (i.focus) return i.focus;
+  if (i.kind === 'hat' || i.kind === 'eyewear') return 'head';
+  if (i.kind === 'top' || i.kind === 'outer') return 'chest';
+  if (i.kind === 'gloves' || i.kind === 'putter' || i.kind === 'driver') return 'hands';
+  if (i.kind === 'bag') return 'bag';
+  return 'full';
+}

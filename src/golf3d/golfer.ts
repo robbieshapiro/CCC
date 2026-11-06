@@ -684,7 +684,7 @@ export class Golfer {
       this.plane.add(mesh(joint(shoulder, 0.19 * w, 0.85), topMat));
       // the arm under the sleeve: an upper arm with some shape to it, a forearm narrowing to the wrist
       this.plane.add(mesh(lathe(shoulder, elbow, [[0, 0.16 * tw], [0.35, 0.165 * tw], [0.8, 0.13 * tw], [1, 0.12 * tw]], 14, 0.9), skin));
-      this.plane.add(mesh(joint(elbow, 0.118 * tw), skin));
+      this.plane.add(mesh(joint(elbow, 0.126 * tw), skin));
       this.plane.add(mesh(lathe(elbow, wrist, [[0, 0.118 * tw], [0.3, 0.125 * tw], [0.8, 0.088], [1, 0.072]], 14, 0.82), skin));
       if (shortSleeve) {
         const hem = shoulder.clone().lerp(elbow, 0.58);
@@ -692,7 +692,7 @@ export class Golfer {
       } else {
         const cuff = elbow.clone().lerp(wrist, 0.86);
         this.plane.add(mesh(lathe(shoulder, elbow, [[0, 0.205 * tw], [1, 0.165 * tw]], 16, 0.92), topMat));
-        this.plane.add(mesh(joint(elbow, 0.165 * tw, 0.92), topMat));
+        this.plane.add(mesh(joint(elbow, 0.175 * tw, 0.92), topMat));
         this.plane.add(mesh(lathe(elbow, cuff, [[0, 0.165 * tw], [0.85, 0.125], [1, 0.13]], 16, 0.88), topMat));
       }
       // the hand itself, fingers wrapped round the grip (the glove on the lead hand)
