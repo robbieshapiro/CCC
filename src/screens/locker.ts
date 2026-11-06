@@ -101,7 +101,7 @@ function kitRow(spec: GolferSpec) {
 
 // The Pro Shop row on a tab: what you own to wear (tap to put on or take off), then the rest, locked with their price,
 // each a link to the shop. One closet: the locker wears everything, the shop sells it.
-const SHOP_TABS: Record<string, Kind[]> = { top: ['top'], hat: ['hat'], gear: ['bling', 'putter', 'bag', 'caddie'] };
+const SHOP_TABS: Record<string, Kind[]> = { top: ['top', 'outer', 'bottoms', 'shoes'], hat: ['hat', 'eyewear'], gear: ['bling', 'gloves', 'putter', 'driver', 'bag', 'caddie'] };
 function shopRow(tab: string, spec: GolferSpec, owned: string[] | undefined) {
   const kinds = SHOP_TABS[tab];
   if (!owned || !kinds) return '';

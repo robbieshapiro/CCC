@@ -1274,3 +1274,56 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .s-bogey { background: #4f6d8f; }
 .s-worse { background: #1f2d4a; }
 .spread-key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 3px 0 8px; vertical-align: -1px; }
+/* the Pro Shop's fitting room (screens/shop.ts, screens/fitting.ts) */
+.fit { display: grid; gap: 12px; }
+.fit-stage { position: relative; height: min(62vh, 540px); min-height: 360px; border-radius: 14px; overflow: hidden; background: radial-gradient(80% 70% at 50% 35%, #4a3a28, #1c150e); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.fit-stage canvas { width: 100% !important; height: 100% !important; display: block; }
+.fit-stage.no-3d::after { content: 'This device can’t draw the fitting room.'; position: absolute; inset: 0; display: grid; place-items: center; color: #e6cf9f; }
+.fit-views { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 2; }
+.fit-views button { font: inherit; font-size: 12px; font-weight: 700; padding: 6px 11px; border-radius: 999px; border: 1px solid rgba(243, 217, 138, 0.5); background: rgba(20, 14, 8, 0.55); color: #f3ecdc; backdrop-filter: blur(6px); cursor: pointer; }
+.fit-views button.on { background: #f3d98a; color: #2a1f05; border-color: #f3d98a; }
+.fit-hint { position: absolute; bottom: 8px; left: 0; right: 0; margin: 0; text-align: center; font-size: 11px; color: rgba(243, 236, 220, 0.6); pointer-events: none; }
+.fit-say { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--green); color: var(--cream); }
+.fit-say p { margin: 0; font-size: 14px; line-height: 1.4; }
+.fit-say b { color: #e6cf9f; font-family: var(--serif); margin-right: 4px; }
+.fit-wallet { display: grid; gap: 6px; padding: 12px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
+.fit-wallet p { margin: 0; }
+.fit-balance { font-size: 13px; color: var(--muted); }
+.fit-balance b { font-family: var(--serif); font-size: 30px; color: var(--green); margin-right: 6px; font-variant-numeric: tabular-nums; }
+.fit-rank { font-size: 13px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.fit-progress { height: 6px; border-radius: 3px; background: #eee6d2; overflow: hidden; }
+.fit-progress i { display: block; height: 100%; background: linear-gradient(90deg, #d6a940, #f3d98a); }
+.fit-wallet .shop-from span { background: #f4efe2; color: var(--muted); }
+.fit-wallet .shop-from b { color: #8a6514; }
+.fit-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.fit-tabs::-webkit-scrollbar { display: none; }
+.fit-tabs button { flex: none; font: inherit; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; white-space: nowrap; }
+.fit-tabs button.on { background: var(--green); color: var(--cream); border-color: var(--green); }
+.fit-racks { display: grid; gap: 14px; }
+.fit-rack h3 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; font-size: 18px; }
+.fit-rack h3 small { font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--muted); }
+.fit-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; }
+.fit-item { flex: none; width: 132px; scroll-snap-align: start; display: grid; gap: 4px; justify-items: start; text-align: left; padding: 12px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); font: inherit; color: var(--ink); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.fit-item:active { transform: scale(0.97); }
+.fit-item .fi-icon { font-style: normal; font-size: 26px; line-height: 1; }
+.fit-item b { font-family: var(--serif); font-size: 15px; line-height: 1.2; color: var(--green); }
+.fit-item em { font-style: normal; font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: #fbf4e0; border: 1px solid rgba(214, 169, 64, 0.6); color: #8a6514; }
+.fit-item.trying { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(214, 169, 64, 0.4); }
+.fit-item.owned em { background: #eaf3ec; border-color: #9cc5a6; color: #2f7d4a; }
+.fit-item.worn { border-color: #2f7d4a; }
+.fit-rack.locked .fit-item { opacity: 0.75; }
+.fit-rack.rack-legend .fit-item { background: linear-gradient(135deg, #141414, #2a2418); border-color: #e6c35c; color: #f3ecdc; }
+.fit-rack.rack-legend .fit-item b { color: #f3d98a; }
+.fit-pick { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 5; display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: #fffdf7; border: 1px solid var(--gold); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); }
+.fit-pick h3 { margin: 2px 0; font-size: 20px; }
+.fit-pick .eyebrow { margin: 0; display: flex; align-items: center; gap: 4px; }
+.fit-pick .muted { margin: 0; font-size: 13px; }
+.fit-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.fit-acts .btn.gold { background: linear-gradient(180deg, #f3d98b, #d6a940); color: #2a1f05; border-color: #7a5a14; }
+.fit { grid-template-columns: minmax(0, 1fr); }
+.fit > * { min-width: 0; }
+.fit-say p { min-width: 0; overflow-wrap: anywhere; }
+.fit-pick .fit-eyebrow { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.fit-pick .fit-eyebrow span { display: inline-flex; align-items: center; gap: 4px; }
+.fit-racks { grid-template-columns: minmax(0, 1fr); }
+.fit-rack { min-width: 0; }
