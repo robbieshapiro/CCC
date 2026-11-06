@@ -6,7 +6,8 @@ import type { Avatar } from '../api/types';
 import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
 import { todayInGameTz } from '../day';
-import { CartGirl } from './cartgirl';
+import { CartGirl, type Visitor } from './cartgirl';
+import { ReginaldTray } from './reginaldtray';
 import { conditionsFor, gusted, tempestOn, withPin, type Conditions } from './conditions';
 import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
 import { Golfer, HANK_SPEC } from './golfer';
@@ -73,6 +74,25 @@ function nameTag(name: string, score: string) {
   s.scale.set(0.15, 0.05, 1);
   s.renderOrder = 10;
   return s;
+}
+
+// who brings drinks to a hole's tee: the cart, the late cart with the shots tray, or Reginald with his
+export type Visit = 'drinks' | 'shots' | 'reginald';
+// Different every round: the cart once, on any hole but the first; on a round of five or more a late cart with the
+// shots tray near the end; and about every other round Reginald walks out with his tray on a hole of his own.
+export function planVisits(n: number, r: () => number = Math.random): (Visit | undefined)[] {
+  const plan: (Visit | undefined)[] = Array(n).fill(undefined);
+  if (n < 2) return plan;
+  const free = () => [...Array(n).keys()].filter((i) => i > 0 && !plan[i]);
+  const pickFrom = (xs: number[]) => xs[Math.floor(r() * xs.length)];
+  const early = free().filter((i) => n < 5 || i < n - 2);
+  plan[pickFrom(early)] = 'drinks';
+  if (n >= 5) {
+    const late = free().filter((i) => i >= n - 2);
+    if (late.length) plan[pickFrom(late)] = 'shots';
+  }
+  if (r() < 0.5 && free().length) plan[pickFrom(free())] = 'reginald';
+  return plan;
 }
 
 type Look = 'day' | 'night' | 'links' | 'desert' | 'autumn' | 'coastal' | 'storm' | 'tempest';
@@ -202,7 +222,7 @@ export class Course3D {
   private birds: THREE.Object3D[] = [];
   private petals: THREE.Points | null = null;
   private puffs: { m: THREE.Mesh; t: number }[] = [];
-  private cart: CartGirl | null = null;
+  private cart: Visitor | null = null;
   private ghosts: Ghost[] = [];
   private onCourse: { golfer: Golfer; objs: THREE.Object3D[]; at: THREE.Vector3; keep?: boolean }[] = [];
   // the rest of a full stadium: simple figures, two instanced meshes for the lot
@@ -370,7 +390,7 @@ export class Course3D {
 
   // Plays one hole to completion. The beverage cart may stop by on the tee.
   // opts.strokes: a card picked up mid-hole starts again from the tee, keeping the strokes already played on it
-  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: 'drinks' | 'shots'; of?: number; strokes?: number } = {}): Promise<HoleResult> {
+  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: Visit; of?: number; strokes?: number } = {}): Promise<HoleResult> {
     this.holesInRound = opts.of ?? this.holesInRound;
     this.clearRead();
     if (this.world) {
@@ -420,7 +440,8 @@ export class Course3D {
     this.setStrokes();
     this.miniBase = null;
     this.placeGhosts();
-    if (opts.cart && !hole.noCart) this.cart = new CartGirl(this.scene, hole, (k) => this.order(k), opts.cart === 'shots');
+    if (opts.cart && !hole.noCart && !hole.putterOnly)
+      this.cart = opts.cart === 'reginald' ? new ReginaldTray(this.scene, hole, (k) => this.order(k)) : new CartGirl(this.scene, hole, (k) => this.order(k), opts.cart === 'shots');
     this.startFlyover();
     // the practice areas skip the flyover and get straight to it
     if (this.drill) this.endFlyover();

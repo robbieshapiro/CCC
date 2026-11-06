@@ -6,8 +6,9 @@ import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { crest } from '../brand';
 import { sfx } from '../fx/sound';
-import { Course3D, scoreName, type Ghost } from '../golf3d/engine';
+import { Course3D, planVisits, scoreName, type Ghost } from '../golf3d/engine';
 import { cardsOn, openPurseOn, todayInGameTz } from '../day';
+import { inPoly, isWater, surfaceAt } from '../golf3d/terrain';
 import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus } from '../bonus';
 import type { CardToday, RoundShot, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
@@ -57,6 +58,26 @@ function todaysField(snap: Snapshot): Ghost[] {
     const p = snap.players.find((x) => x.id === r.playerId);
     return p ? [{ name: p.name, avatar: p.avatar, spots: r.spots!, holes: r.holes }] : [];
   });
+}
+
+// A made-up field for the Committee's rehearsal: up to four other members, each somewhere sensible on every hole with
+// a believable score, so the course looks as it will with people out on it
+function sampleField(snap: Snapshot, course: Course): Ghost[] {
+  const others = snap.players.filter((p) => p.id !== snap.me).slice(0, 4);
+  return others.map((p) => ({
+    name: p.name,
+    avatar: p.avatar,
+    holes: course.holes.map((h) => Math.max(2, h.par + [-1, 0, 0, 0, 1, 1, 2][Math.floor(Math.random() * 7)])),
+    spots: course.holes.map((h) => {
+      for (let t = 0; t < 12; t++) {
+        const f = 0.45 + Math.random() * 0.4;
+        const p = { x: h.tee.x + (h.cup.x - h.tee.x) * f + (Math.random() - 0.5) * 30, y: h.tee.y + (h.cup.y - h.tee.y) * f + (Math.random() - 0.5) * 30 };
+        const s = surfaceAt(h, p);
+        if ((s === 'fairway' || s === 'rough' || s === 'fringe') && !isWater(h, p) && inPoly(p, h.border)) return p;
+      }
+      return null;
+    }),
+  }));
 }
 
 // Today's card is already in: practise as much as you like
@@ -121,6 +142,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   if (card) game.quitAsk = 'Leave for now? Your card is saved. Come back before midnight to finish it.';
   // today's players are on this period's course, not the preview
   if (!preview) game.setGhosts(todaysField(snap));
+  // the rehearsal puts a few of the club's members out on the course, as Sunday's field would look
+  else if (!opts.practice) game.setGhosts(sampleField(snap, course));
   // a hole with a stadium fills its stands with everyone in the Open who has played it this period
   const standsAt = course.holes.findIndex((h) => h.decor.some((d) => d.kind === 'stands'));
   if (standsAt >= 0 && !preview) {
@@ -138,6 +161,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   }
   game.starter = HANK.firstTee(me.name, snap.today, course.holes[0]?.theme);
   const scores: number[] = resume ? [...resume.scores] : [];
+  // who comes by with drinks, and on which holes: different every round
+  const visits = planVisits(course.holes.length);
   const spots: Spot[] = resume ? resume.scores.map((_, i) => (resume.spots?.[i] ?? null) as Spot) : [];
   // a counted round logs its start and each hole it reaches, so the Committee can see who stops and where (a card does
   // it as it saves itself)
@@ -183,7 +208,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     const par = course.holes.reduce((a, x, j) => a + (scores[j] === undefined ? 0 : x.par), 0);
     const jumped = new Promise<number>((res) => (jump = res));
     // picking a card up mid-hole: back to the tee, with the strokes already played on it
-    const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: i === 1 ? 'drinks' : i === 4 && course.holes.length >= 5 ? 'shots' : undefined, of: course.holes.length, strokes: carry });
+    const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: visits[i], of: course.holes.length, strokes: carry });
     carry = 0;
     const r = await Promise.race([played, jumped]);
     if (quit || !game) return;
@@ -193,6 +218,9 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     }
     scores[i] = r.strokes;
     spots[i] = r.spot;
+    // a birdie or better on a card pays (the card is the day's first round): the coins come as it drops
+    const sb = pops && !opts.practice ? shotBonus(r.strokes, h.par) : 0;
+    if (sb) coinPop(el, sb, r.strokes === 1 ? 'Hole in one' : sb === BONUS.eagle ? 'Eagle' : 'Birdie', unpaid || h.name);
     // a hole's secret, found for the first time on a card
     if (pops && h.secret && r.feats.includes(h.secret.zone) && (rehearsal || (SECRET_FEATS.includes(h.secret.zone) && !foundBefore.has(h.secret.zone)))) {
       foundBefore.add(h.secret.zone);
@@ -216,11 +244,15 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       posted = false;
     }
   sfx(best ? 'cheer' : 'ooh');
-  // the club bonus this round earned: the day's first finished round pays, with its birdies or better (src/bonus.ts)
-  const bonusLine = (() => {
-    if (preview || !posted) return '';
-    const firstToday = !snap.rounds.some((x) => x.playerId === snap.me && todayInGameTz(new Date(x.createdAt)) === todayInGameTz());
-    if (!firstToday) return '';
+  // the club bonus this round earned: the day's first finished round pays, with its birdies or better (src/bonus.ts).
+  // The Committee's rehearsal shows it as a card would earn it, not paid.
+  const bonus = (() => {
+    if (rehearsal) return { first: true };
+    if (preview || !posted) return null;
+    return { first: !snap.rounds.some((x) => x.playerId === snap.me && todayInGameTz(new Date(x.createdAt)) === todayInGameTz()) };
+  })();
+  const bonusSum = (() => {
+    if (!bonus?.first) return { sum: 0, line: '' };
     const kinds = new Map<string, { n: number; v: number }>();
     scores.forEach((s, i) => {
       const v = shotBonus(s, course.holes[i].par);
@@ -229,10 +261,11 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       const x = kinds.get(k) ?? { n: 0, v: 0 };
       kinds.set(k, { n: x.n + 1, v: x.v + v });
     });
-    const parts = [...(firstToday ? [`round ${money(BONUS.round)}`] : []), ...[...kinds].map(([k, x]) => `${x.n > 1 ? `${x.n} ${k}s` : `${k}`} ${money(x.v)}`)];
-    const sum = (firstToday ? BONUS.round : 0) + [...kinds.values()].reduce((a, x) => a + x.v, 0);
-    return sum ? `<p class="purse-line bonus-line"><b>+${money(sum)}</b><span>Club bonus · ${parts.join(' · ')}</span></p>` : '';
+    const parts = [`round ${money(BONUS.round)}`, ...[...kinds].map(([k, x]) => `${x.n > 1 ? `${x.n} ${k}s` : `${k}`} ${money(x.v)}`)];
+    const sum = BONUS.round + [...kinds.values()].reduce((a, x) => a + x.v, 0);
+    return { sum, line: `<p class="purse-line bonus-line"><b>+${money(sum)}</b><span>Club bonus${rehearsal ? ' (preview, not paid)' : ''} · ${parts.join(' · ')}</span></p>` };
   })();
+  const bonusLine = bonusSum.line;
   // a counted round ends on Reginald's one question; the answer goes in with the rest of the feedback
   const asking = !opts.practice && !preview && posted;
   const sheet = document.createElement('div');
@@ -255,7 +288,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       }
       ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
       ${bonusLine}
-      <p class="fine">${opts.practice ? 'Practice round, not counted.' : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : "Couldn't post this round. Check your connection."}</p>
+      <p class="fine">${opts.practice ? 'Practice round, not counted.' : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : "Couldn't post this round. Check your connection."}</p>
       <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : 'Play again'}</button><button class="btn ghost" data-back>Back to the club</button></div>
       ${
         asking
@@ -269,6 +302,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       }
     </div>`;
   el.appendChild(sheet);
+  // the round's bonus lands with a burst of coins
+  if (bonusSum.sum) window.setTimeout(() => coinPop(el, bonusSum.sum, 'Club bonus', rehearsal ? 'preview, not paid' : "today's card"), 700);
   // where this leaves you on the board, and what the purse would pay you if the week ended now
   if (!preview && posted)
     void refresh()

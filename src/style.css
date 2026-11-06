@@ -277,7 +277,8 @@ html:has(.g3), body:has(.g3) { overflow: hidden; overscroll-behavior: none; }
 .cart-drinks button b { font-family: var(--serif); font-size: 17px; color: var(--green); }
 .cart-drinks button:hover { border-color: var(--gold); }
 .cart-card .link { justify-self: center; }
-.cart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cart-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 2px 8px; }
+.cart-line { flex-basis: 100%; margin: 0; font-size: 13px; font-style: italic; opacity: 0.85; }
 .cart-head .link { font-size: 13px; }
 .cart-log { display: grid; gap: 8px; }
 .cart-card .msg { margin: 0; font-size: 16px; line-height: 1.4; }
