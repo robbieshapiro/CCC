@@ -7,7 +7,7 @@ import type { Snapshot } from '../api/types';
 import { crest } from '../brand';
 import { sfx } from '../fx/sound';
 import { Course3D, scoreName, type Ghost } from '../golf3d/engine';
-import { cardsOn, todayInGameTz } from '../day';
+import { cardsOn, openPurseOn, todayInGameTz } from '../day';
 import { BONUS, shotBonus } from '../bonus';
 import type { CardToday, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
@@ -30,7 +30,7 @@ import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
 import { board } from '../standings';
-import { clubPurse, money, placeLabel, purseOf } from '../purse';
+import { clubPurse, money, openPurse, placeLabel, purseOf } from '../purse';
 import { dailySummary } from './daily';
 
 let game: Course3D | null = null;
@@ -244,7 +244,21 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   // where this leaves you on the board, and what the purse would pay you if the week ended now
   if (!preview && posted)
     void refresh()
-      .then((s) => {
+      .then(async (s) => {
+        // from Nov 8 the Open pays: your place on it, across every club
+        if (openPurseOn(s.month)) {
+          const open = await api.openBoard(requireSession());
+          const purse = openPurse(open);
+          const meRow = open.find((r) => r.mine);
+          const line = sheet.querySelector<HTMLElement>('#purse-line');
+          const mine = meRow && purse.pay.get(meRow.playerId);
+          if (!line || !mine) return;
+          line.innerHTML = mine.payout
+            ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${open.length} on the Open if the week ended now · Open purse ${money(purseOf(purse.field))}</span>`
+            : `<b>${placeLabel(mine.place, mine.tied)} of ${open.length} on the Open</b><span>Top 10 get paid. Open purse ${money(purseOf(purse.field))}</span>`;
+          line.hidden = false;
+          return;
+        }
         const rows = board(s).filter((r) => r.best);
         const away = !!s.players.find((x) => x.id === s.me)?.away;
         const purse = clubPurse(rows, (id) => !!s.players.find((x) => x.id === id)?.away);

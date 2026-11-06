@@ -4,7 +4,7 @@ import { clubPurse, money, placeLabel, purseOf } from '../purse';
 import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
-import { CALDERA_START, cardsOn, GAME_TZ, periodClosesAt, periodName, span, todayInGameTz } from '../day';
+import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz } from '../day';
 import { REGINALD, reginaldSvg, type Mood } from '../host';
 import { bindOpen } from './open';
 import { askReginald, championWord } from '../reginald';
@@ -89,12 +89,13 @@ async function bindHonours(snap: Snapshot) {
     ['📊', 'Steadiest hand', h.lowestAverage ? `${names(h.lowestAverage.names)} · ${toParLabel(h.lowestAverage.avg!)} average` : ''],
     ['🫡', 'The Honest Card', h.highestScore ? `${names(h.highestScore.names)} · ${toParLabel(h.highestScore.toPar!)}, posted all the same` : ''],
   ];
-  // what the purse paid
+  // what the purse paid (from Nov 8, the whole Open's, with names from every club)
   const paid = (snap.payouts ?? []).filter((p) => p.month === last.month);
-  const who = (id: string) => esc(snap.players.find((p) => p.id === id)?.name ?? '?');
+  const who = (p: (typeof paid)[number]) => esc(p.name ?? snap.players.find((x) => x.id === p.playerId)?.name ?? '?');
+  const mine = (p: (typeof paid)[number]) => p.mine ?? p.playerId === snap.me;
   el.innerHTML = `<div class="board-head"><h2>${esc(periodName(last.month))} honours</h2><span>Your club</span></div>
     <ul>${rows.filter((r) => r[2]).map(([i, t, v]) => `<li><i>${i}</i><b>${t}</b><span>${v}</span></li>`).join('')}</ul>
-    ${paid.length ? `<div class="paid"><b>💰 The purse paid ${money(paid.reduce((a, p) => a + p.payout, 0))}</b><ol>${paid.map((p) => `<li${p.playerId === snap.me ? ' class="me"' : ''}><span>${placeLabel(p.place, p.tied)}</span>${who(p.playerId)}<b>${money(p.payout)}</b></li>`).join('')}</ol></div>` : ''}`;
+    ${paid.length ? `<div class="paid"><b>💰 The ${openPurseOn(last.month) ? 'Open ' : ''}purse paid ${money(paid.reduce((a, p) => a + p.payout, 0))}</b><ol>${paid.map((p) => `<li${mine(p) ? ' class="me"' : ''}><span>${placeLabel(p.place, p.tied)}</span>${who(p)}<b>${money(p.payout)}</b></li>`).join('')}</ol></div>` : ''}`;
   el.hidden = false;
 }
 
@@ -122,7 +123,9 @@ export function home(snap: Snapshot) {
   // the week's purse, and what each of the top ten would take if it ended now
   // members playing from another club are paid at home, so the purse here goes round without them
   const purse = clubPurse(rows, (id) => !!player(id)?.away);
-  const pay = purse.pay;
+  // from Nov 8 the Open pays: the club board shows each member's Open money once it has loaded (see bindOpen below)
+  const openMoney = openPurseOn(snap.month);
+  const pay = openMoney ? new Map<string, { place: number; tied: boolean; payout: number }>() : purse.pay;
   const played = rows.filter((r) => r.best);
   const mine = myBest(snap);
   const me = rows.find((r) => r.playerId === snap.me)!; // absent when you only run this club
@@ -166,7 +169,7 @@ export function home(snap: Snapshot) {
         <td class="num topar ${where} ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>`;
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${p.away ? `<b class="pay away">Guest</b> · ` : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
+        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${openMoney ? `<span data-pay-for="${p.id}">${p.away ? `<b class="pay away">Guest</b> · ` : ''}</span>` : p.away ? `<b class="pay away">Guest</b> · ` : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
         ${score('m')}${cells}${score('d')}
       </tr>`;
     })
@@ -208,7 +211,7 @@ export function home(snap: Snapshot) {
         </div>
       </section>
       <section class="board${look(course)}">
-        ${countdown(snap.month, course, purse.field)}
+        ${countdown(snap.month, course, purse.field, openMoney)}
         <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist">
           <button role="tab" data-tab="open" aria-selected="true">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club" aria-selected="false">My club</button>
@@ -238,7 +241,16 @@ export function home(snap: Snapshot) {
 
   tickCountdown();
   freezeBoard();
-  void bindOpen(snap, line, host);
+  void bindOpen(snap, line, host).then((open) => {
+    if (!openMoney || !open) return;
+    // the Open purse, the same figures on the countdown, the Open and the club board
+    const cd = document.querySelector('.cd-purse');
+    if (cd) cd.textContent = `💰 ${money(purseOf(open.field))} Open purse`;
+    document.querySelectorAll<HTMLElement>('[data-pay-for]').forEach((el) => {
+      const won = open.local.get(el.dataset.payFor!)?.payout;
+      if (won) el.insertAdjacentHTML('beforeend', `<b class="pay">${money(won)}</b> · `);
+    });
+  });
   // the club board starts hidden behind the Open: set its frozen columns once it's on show
   document.querySelector('[data-tab="club"]')?.addEventListener('click', () => requestAnimationFrame(() => freezeBoard()));
   // today's line, written for you by Reginald (Claude): it takes over from the scripted one when it arrives
@@ -282,12 +294,16 @@ export function home(snap: Snapshot) {
 
 // The period's clock: how long until the board closes and the champion goes up.
 // with the club purse alongside: it's paid when the clock runs out
-function countdown(month: string, course: Course, field: number) {
+function countdown(month: string, course: Course, field: number, open = false) {
   const ends = periodClosesAt(month);
   const day = new Date(ends.getTime() - 1).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
   return `<div class="countdown${look(course)}" data-countdown="${ends.getTime()}">
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
-    <small><em class="cd-purse">💰 ${money(purseOf(field))} purse</em> · top 10 paid${field ? '' : ' · $1,000 in with every player'} · champion crowned midnight ET, ${day}</small>
+    <small>${
+      open
+        ? `<em class="cd-purse">💰 Open purse</em> · top 10 on the Open paid · $1,000 in with every player, every club`
+        : `<em class="cd-purse">💰 ${money(purseOf(field))} purse</em> · top 10 paid${field ? '' : ' · $1,000 in with every player'}`
+    } · champion crowned midnight ET, ${day}</small>
   </div>`;
 }
 

@@ -1,6 +1,6 @@
 // Browser-only backend for playing without Supabase. Mirrors supabase/schema.sql.
 import { STOCK_BUDDIES } from '../buddies';
-import { cardsOn, GAME_TZ, periodOf, todayInGameTz } from '../day';
+import { cardsOn, GAME_TZ, openPurseOn, periodOf, todayInGameTz } from '../day';
 import { courseById, courseFor } from '../golf3d/courses';
 import { bonusOf } from '../bonus';
 import { makeRng } from '../seed';
@@ -48,9 +48,28 @@ const career = (rs: Round[]) => {
 
 // The purses of every closed period at a club, as period_payouts does on the server: everyone who played puts in, but
 // only members whose home club it is take money out (someone playing in from another club is paid at home)
-function paidIn(db: Db, groupId: string, month: string): Payout[] {
-  const rounds = db.rounds.filter((r) => r.groupId === groupId && r.month < month);
+// From Nov 8, as open_payouts does: one purse across every club, each person once, paid on their home seat
+function openPaid(db: Db, month: string): Payout[] {
   const out: Payout[] = [];
+  for (const m of [...new Set(db.rounds.filter((r) => openPurseOn(r.month) && r.month < month).map((r) => r.month))].sort()) {
+    const best = new Map<string, { tp: number; name: string }>();
+    for (const r of db.rounds.filter((x) => x.month === m)) {
+      const p = db.players.find((x) => x.id === r.playerId);
+      if (!p) continue;
+      const home = homeOf(db, p);
+      const tp = r.total - r.par;
+      if (tp < (best.get(home.id)?.tp ?? Infinity)) best.set(home.id, { tp, name: home.name });
+    }
+    const sorted = [...best.entries()].sort((a, b) => a[1].tp - b[1].tp);
+    const rows = sorted.map(([id, b]) => ({ id, rank: sorted.findIndex((x) => x[1].tp === b.tp) + 1 }));
+    for (const [id, p] of payouts(rows)) if (p.payout > 0) out.push({ month: m, playerId: id, name: best.get(id)!.name, ...p });
+  }
+  return out;
+}
+
+function paidIn(db: Db, groupId: string, month: string): Payout[] {
+  const rounds = db.rounds.filter((r) => r.groupId === groupId && r.month < month && !openPurseOn(r.month));
+  const out: Payout[] = openPaid(db, month).filter((p) => db.players.find((x) => x.id === p.playerId)?.groupId === groupId);
   for (const m of [...new Set(rounds.map((r) => r.month))].sort()) {
     const best = new Map<string, number>();
     const entries = new Set<string>();
@@ -165,7 +184,13 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       .filter((c): c is Champion => !!c);
     const wins = (id: string) => champions.filter((c) => c.playerIds.includes(id)).length;
     const paid = paidIn(db, me.groupId, month);
-    const lastPaid = paid.length ? paid.filter((p) => p.month === paid[paid.length - 1].month).sort((a, b) => a.place - b.place) : [];
+    // the last closed period's purse: from Nov 8 the whole Open's
+    const last = [...paid, ...openPaid(db, month)].map((p) => p.month).sort().pop();
+    const lastPaid = !last
+      ? []
+      : openPurseOn(last)
+        ? openPaid(db, month).filter((p) => p.month === last).map((p) => ({ ...p, mine: db.players.some((x) => x.id === p.playerId && x.name.toLowerCase() === me.name.toLowerCase() && x.pin === me.pin) })).sort((a, b) => a.place - b.place)
+        : paid.filter((p) => p.month === last).sort((a, b) => a.place - b.place);
     // the money list and the Pro Shop follow the person across their clubs
     const seatsOf = (p: DbPlayer) => db.players.filter((x) => x.name.toLowerCase() === p.name.toLowerCase() && x.pin === p.pin);
     const money = (p: DbPlayer) => {
