@@ -9,8 +9,9 @@ import type { Hole, Piece, Post, V2 } from '../types';
 
 // thick, long autumn rough that grabs a landing ball and smothers the next swing, firm fairways that run, and heavy
 // wet bunker sand that a wedge only gets 70% out of (an iron about half) and that can send it anywhere
-// (greens and fairways run about 10% quicker than the other tour courses)
-export const RESERVE_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.15, roughDrag: 1.9, roughLie: 0.72, roughScatter: 0.28, fairwayRoll: 0.54, greenRoll: 0.9, sandLie: 0.7, sandScatter: 0.35 };
+// (greens run about 10% quicker than the other tour courses, fairways about a quarter quicker: they were nearly
+// twice as quick, faster than the greens, until Nov 6)
+export const RESERVE_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.15, roughDrag: 1.9, roughLie: 0.72, roughScatter: 0.28, fairwayRoll: 0.75, greenRoll: 0.9, sandLie: 0.7, sandScatter: 0.35 };
 
 // A green complex in the parkland style: a broad plateau `lift` ft above `base`, its sides running down over `edge` ft
 // (wide for a green that sits into the ground, tight for a cupcake), tilted `tilt` ft across its width ([x, y]: the
