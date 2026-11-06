@@ -1,57 +1,59 @@
-// Kudos and chirps. Tap another member out on the course and their card comes up: today's scores, hole by hole, and
-// a kudos or a chirp to send them (a ready-made line or your own, up to 80 characters). It waits on their home page
+// Kudos and chirps. Tap another member out on the course and their card comes up: their headshot, club and standing,
+// today's low and what they're wearing, and a kudos or a chirp to send them (with a line of your own if you like, up to
+// 80 characters). It waits on their home page
 // until they clear it, or for a day at most. The Committee sees them all in Admin and can take any down.
 import { api } from '../api';
-import type { AdminShoutout, ShoutKind, Shoutout } from '../api/types';
+import type { AdminShoutout, Player, ShoutKind, Shoutout } from '../api/types';
+import { portrait, specOf } from '../avatar';
+import { kitByKey } from '../kits';
+import { badgeFor, earningsOf, ITEMS, rankOf } from '../shop';
+import { toParLabel } from '../standings';
 import { sfx } from '../fx/sound';
 import type { Ghost } from '../golf3d/engine';
-import { scoreName } from '../golf3d/engine';
 import type { Course } from '../golf3d/courses';
 import { requireSession } from '../state';
 import { esc } from '../ui';
-import { scoreClass } from './home';
 
 export const SHOUT_MAX = 80;
 const ICON: Record<ShoutKind, string> = { kudos: '👏', chirp: '🐦' };
 
-// ready-made lines, a couple of them about how their day went
-function presets(g: Ghost, course: Course): Record<ShoutKind, string[]> {
-  const played = course.holes.map((h, i) => ({ h, n: g.holes[i] })).filter((x) => x.n !== undefined && x.n !== null);
-  const birdie = played.find((x) => x.n < x.h.par);
-  const blow = played.find((x) => x.n >= x.h.par + 2);
-  const short = (s: string) => s.replace(/^The /, '');
-  return {
-    kudos: [birdie ? `Lovely ${scoreName(birdie.n, birdie.h.par).toLowerCase()} on ${short(birdie.h.name)}` : 'Steady golf. Annoyingly steady.', 'Round well played', 'Pure strike out there'].map((x) => x.slice(0, SHOUT_MAX)),
-    chirp: [blow ? `A ${blow.n} on ${short(blow.h.name)}? Bold.` : 'Saw that one. Brave.', 'Is that the swing or the warm-up?', 'The range is open till midnight.', 'Reginald has asked me to have a word.'].map((x) => x.slice(0, SHOUT_MAX)),
-  };
+// what they're wearing worth a mention: the fall kit if they have it on, then the shop's pieces they wear, best first
+function wearing(p: Player | undefined): string[] {
+  if (!p) return [];
+  const spec = specOf(p.avatar);
+  const kit = spec.top === 'quarterzip' ? kitByKey(spec.kit) : undefined;
+  const items = ITEMS.filter((i) => i.price > 0 && i.kind !== 'caddie' && i.worn(spec))
+    .sort((x, y) => y.price - x.price)
+    .map((i) => i.name);
+  return [...(kit ? [`${kit.name} kit`] : []), ...items].slice(0, 4);
 }
 
-// The card over the course: their round so far, and what to send. A rehearsal ghost (no id) sends nothing.
-export function shoutSheet(host: HTMLElement, g: Ghost, course: Course, done: () => void = () => {}) {
+// Their card over the course: their headshot, club and standing, today's low, what they're wearing, and a line to send
+// as kudos or a chirp. A rehearsal's sample member (no id) sends nothing.
+export function shoutSheet(host: HTMLElement, g: Ghost, course: Course, p: Player | undefined, club: string, done: () => void = () => {}) {
   const sheet = document.createElement('div');
   sheet.className = 'summary shout-sheet';
-  const lines = presets(g, course);
-  const total = course.holes.reduce((a, _, i) => a + (g.holes[i] ?? 0), 0);
-  const par = course.holes.reduce((a, h, i) => a + (g.holes[i] === undefined || g.holes[i] === null ? 0 : h.par), 0);
-  const toPar = total - par;
+  const played = course.holes.map((h, i) => ({ par: h.par, n: g.holes[i] })).filter((x) => x.n !== undefined && x.n !== null);
+  const total = played.reduce((a, x) => a + x.n, 0);
+  const toPar = total - played.reduce((a, x) => a + x.par, 0);
+  const status = p ? (p.host ? 'Full Member' : rankOf(earningsOf(p), p.wins ?? 0).name) : 'Member';
+  const kit = wearing(p);
   sheet.innerHTML = `
-    <div class="summary-card shout-card" role="dialog" aria-label="${esc(g.name)}'s card">
+    <div class="summary-card shout-card" role="dialog" aria-label="${esc(g.name)}">
       <button class="shout-x" data-close aria-label="Close">×</button>
-      <p class="eyebrow">Out on ${esc(course.name)} today</p>
-      <h2>${esc(g.name)} <small>${total ? `${total} · ${toPar === 0 ? 'E' : toPar > 0 ? `+${toPar}` : toPar}` : ''}</small></h2>
-      <table class="scorecard"><thead><tr>${course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('')}</tr></thead>
-        <tbody><tr class="par">${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}</tr>
-        <tr>${course.holes.map((h, i) => (g.holes[i] === undefined || g.holes[i] === null ? '<td class="num">–</td>' : `<td class="num"><span class="sc ${scoreClass(g.holes[i], h.par)}">${g.holes[i]}</span></td>`)).join('')}</tr></tbody></table>
-      <div class="shout-pick">
-        <p class="shout-label">${ICON.kudos} Kudos</p>
-        <div class="shout-chips">${lines.kudos.map((t) => `<button data-send="kudos" data-text="${esc(t)}">${esc(t)}</button>`).join('')}</div>
-        <p class="shout-label">${ICON.chirp} Chirp</p>
-        <div class="shout-chips">${lines.chirp.map((t) => `<button data-send="chirp" data-text="${esc(t)}">${esc(t)}</button>`).join('')}</div>
-        <form class="shout-own" data-own>
-          <input maxlength="${SHOUT_MAX}" placeholder="Or say your own (${SHOUT_MAX} characters)" aria-label="Your own line" />
-          <div class="shout-own-go"><button class="btn small" type="submit" data-kind="kudos">${ICON.kudos} Send kudos</button><button class="btn small ghost" type="submit" data-kind="chirp">${ICON.chirp} Send chirp</button></div>
-        </form>
+      <div class="shout-who">
+        <span class="shout-face">${portrait(g.avatar, 84)}</span>
+        <div>
+          <h2>${esc(g.name)}${p ? badgeFor(p, 20) : ''}</h2>
+          <p class="shout-meta">${esc(club)} · ${esc(status)}</p>
+          ${played.length ? `<p class="shout-low">Today's low <b>${total}</b> <span>${toParLabel(toPar)}</span></p>` : ''}
+        </div>
       </div>
+      ${kit.length ? `<p class="shout-kit"><span>Wearing</span> ${kit.map(esc).join(' · ')}</p>` : ''}
+      <form class="shout-own" data-own>
+        <input maxlength="${SHOUT_MAX}" placeholder="Say something (optional)" aria-label="Your line" />
+        <div class="shout-own-go"><button class="btn" type="submit" data-kind="kudos">${ICON.kudos} Kudos</button><button class="btn ghost" type="submit" data-kind="chirp">${ICON.chirp} Chirp</button></div>
+      </form>
       <p class="shout-msg" role="status"></p>
     </div>`;
   host.appendChild(sheet);
@@ -67,29 +69,26 @@ export function shoutSheet(host: HTMLElement, g: Ghost, course: Course, done: ()
   // keys typed here are for the box, not the course
   sheet.addEventListener('keydown', (e) => e.stopPropagation());
   let busy = false;
-  const send = async (kind: ShoutKind, text: string) => {
-    const body = text.replace(/\s+/g, ' ').trim();
-    if (!body || busy) return;
+  const form = sheet.querySelector<HTMLFormElement>('[data-own]')!;
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const kind = (((e as SubmitEvent).submitter as HTMLButtonElement | null)?.dataset.kind as ShoutKind | undefined) ?? 'kudos';
+    // nothing typed: the kudos or the chirp on its own
+    const body = form.querySelector('input')!.value.replace(/\s+/g, ' ').trim() || ICON[kind];
+    if (busy) return;
     busy = true;
     msg.classList.remove('error');
     try {
       if (g.id) await api.sendShoutout(requireSession(), g.id, kind, body);
       sfx('pop');
       msg.textContent = g.id ? `Sent. ${g.name} sees it next time they open the club.` : 'Preview: this is how it sends. Nothing went to anyone.';
-      sheet.querySelectorAll<HTMLButtonElement>('button[data-send], .shout-own button').forEach((b) => (b.disabled = true));
+      form.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.disabled = true));
       window.setTimeout(close, 1600);
-    } catch (e) {
-      msg.textContent = (e as Error).message || "Couldn't send that one.";
+    } catch (err) {
+      msg.textContent = (err as Error).message || "Couldn't send that one.";
       msg.classList.add('error');
       busy = false;
     }
-  };
-  sheet.querySelectorAll<HTMLButtonElement>('[data-send]').forEach((b) => (b.onclick = () => void send(b.dataset.send as ShoutKind, b.dataset.text ?? '')));
-  const form = sheet.querySelector<HTMLFormElement>('[data-own]')!;
-  form.onsubmit = (e) => {
-    e.preventDefault();
-    const kind = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.dataset.kind as ShoutKind | undefined;
-    void send(kind ?? 'kudos', form.querySelector('input')!.value);
   };
 }
 

@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (Western Reserve fairways slowed, practice share).
+Last updated Nov 6, 2026 (a member's card on the course).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (Western Reserve fairways slowed, practice share).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #177 | Tapping a member on the course now shows their card: headshot (as on the member card), club and status (Club Member, Club Legend and so on, with the badge; no money), today's low, and what they're wearing (the fall kit, then their best shop pieces). Below it one optional line and two buttons, Kudos and Chirp: no ready-made lines. Sent with no words, it's just the 👏 or the 🐦. |
 | #176 | The Western Reserve's fairways run slower: they were nearly twice as quick as the other tour courses and quicker than its own greens (friction 2.7); now about a quarter quicker (3.75, just under the greens). Hole checks pass; the steady bot drops about a stroke more on The Gorge. The "What's new" card is cut to eight short lines in order of what matters, daily cards first and the deer last. Practice rounds end with a quiet link to send the group a nudge: your practice score in squares and a dig at whoever hasn't practised. |
 | #175 | Share your score: a button on the card after every counted round (and the Committee's preview) shares a text for the group chat, Wordle style: the course and day, the score against par, and a square a hole (⭐ ace, 🟪 eagle, 🟩 birdie, ⬜ par, 🟨 bogey, 🟥 double or worse), with the club's link. On a phone it opens the share sheet; on a computer it copies. |
 | #174 | The Western Reserve preview: members can now practise all five holes before Sunday (was Creek Bend only), from a warm autumn band on home between the Play card and the board (its own colours per course: leaves, embers or sea), with the countdown. Before the practice starts, a short "What's new" card. Next week's practice has no drinks visits (that's for Sunday). The deer, turkeys and rabbits now stand out in the deep rough where you can see them, a herd within sight of the tee and often another further down, well off the line of play and never under a tree (they were behind the tree line). |

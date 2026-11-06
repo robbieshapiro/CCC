@@ -43,7 +43,8 @@ export type ShotLog = { c: ClubId; p: number; e: number; f: [number, number]; t:
 export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; // spot: where the tee shot came to rest
 // A member who played today, standing where their tee shot finished on each hole.
 // id: their player id, to send them a kudos or a chirp (a made-up member in the Committee's rehearsal has none)
-export type Ghost = { id?: string; name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
+// pid: who they are, for their card (set for the rehearsal's sample members too, who have no id to send to)
+export type Ghost = { id?: string; pid?: string; name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
 // someone in the stands on a hole that has them: a member who has played it, with their score on it
 export type Spectator = { name: string; avatar: Avatar; label: string };
 type Mode = 'fly' | 'aim' | 'meter' | 'swing' | 'roll' | 'done' | 'cart';
