@@ -138,5 +138,5 @@ const theledgesBack: Hole = {
   ],
 };
 
-// played from a tee about 10% up the hole (since Nov 6: the course was playing long everywhere); the old tee is the back tee
-export const theledges = teeUp(theledgesBack, { x: 0, y: 64 }, 9.1, 425);
+// played from a tee well up the hole (since Nov 6: the course was playing long everywhere; par 4s about 395 yd, Maple Lake 185); the old tee is the back tee
+export const theledges = teeUp(theledgesBack, { x: 0, y: 112 }, 5.9, 395);

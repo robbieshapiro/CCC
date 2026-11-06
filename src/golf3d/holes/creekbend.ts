@@ -154,5 +154,5 @@ const creekbendBack: Hole = {
   ],
 };
 
-// played from a tee about 10% up the hole (since Nov 6: the course was playing long everywhere); the old tee is the back tee
-export const creekbend = teeUp(creekbendBack, { x: -1, y: 63 }, 8.7, 415);
+// played from a tee well up the hole (since Nov 6: the course was playing long everywhere; par 4s about 395 yd, Maple Lake 185); the old tee is the back tee
+export const creekbend = teeUp(creekbendBack, { x: -1, y: 100 }, 6.7, 395);

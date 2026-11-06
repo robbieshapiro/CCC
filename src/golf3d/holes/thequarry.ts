@@ -137,5 +137,5 @@ const thequarryBack: Hole = {
   ],
 };
 
-// played from a tee about 10% up the hole (since Nov 6: the course was playing long everywhere); the old tee is the back tee
-export const thequarry = teeUp(thequarryBack, { x: 14, y: 63 }, 6.1, 430);
+// played from a tee well up the hole (since Nov 6: the course was playing long everywhere; par 4s about 395 yd, Maple Lake 185); the old tee is the back tee
+export const thequarry = teeUp(thequarryBack, { x: 26, y: 118 }, 6.2, 400);
