@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (the Open first on the board).
+Last updated Nov 6, 2026 (new golfers, and the Pro Shop plan).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (the Open first on the board).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #153 | Every golfer rebuilt (`src/golf3d/body.ts`): a sculpted head with a jaw and chin, real eyes (whites, coloured irises, lids), brows, a nose, lips and ears; hair and beards that follow the head; a shaped torso, arms and legs instead of tubes; hands with fingers wrapped round the grip, held in front where they can be seen (they used to rest behind the hips); proper golf shoes; the watch with a face you can read, the chain and collar sitting on the chest. Hank the starter now stands on the first tee, in a navy blazer and flat cap. Reginald and every member's golfer get the new look automatically. About 13,000 triangles a golfer (was 7,000), merged into a few draw calls each, with shared shapes reused, so a full grandstand still draws on a phone. |
 | #151 | The Open becomes the main board. It's always the one members land on, with My club as the second tab, and from the week of Nov 8 it pays the purse: one purse across every club, $1,000 in for each person who plays, the top ten on the Open paid, each person once (on their home club, the one the Open lists them under). The countdown, the Open, the club board and the after-round line all show the same Open money, and the honours list what the whole Open paid. Club titles and plaques stay as they were. The Caldera week and earlier keep their club purses (`club_payouts`); `period_payouts` now returns a club's share of the Open from Nov 8 (`open_payouts`). |
 | #149 | Daily cards from the week of Nov 8: one round a day counts. "Play today's card" on home; the card locks at the first swing, saves itself after every stroke, and if it's cut short (the app closes, a call) it picks up at the hole they were on, back on the tee with the strokes already played there. Once today's card is in, home offers a practice round of the week's course: unlimited, logged as practice (a new "Rounds" column in the admin's practice log), never on the board, the purse or the bonuses, and no Reginald note. Before Nov 8 nothing changes. The board says "best card counts", How to play and Reginald's and the Chronicle's prompts explain it. The server enforces one round a day per seat. Built because members were restarting hole 1 hundreds of times a day hunting for a perfect opening (541 starts, 6 finishes in a day on Nov 5). |
 | #148 | Two agents for a more hands-off club. The Architect (`.claude/skills/build-course/`) builds the course two weeks out every Sunday, runs the hole checks and opens it as a draft PR for Robbie to play. The Steward (`.claude/skills/steward/`) reads the club every morning (activity, quits split into hole-1 restarts and later abandons, feedback, AI calls, site errors, the week's close) and pings Robbie only when something's worth knowing, with a weekly digest on Sundays. Both run report-only: neither merges or touches live data. |
@@ -169,6 +170,12 @@ The problem with the new members: once your best round is in, there's no reason 
 1. ~~Weeks instead of months.~~ Built in #78. The period still lives in the `month` column (since #80: `2026-10-30` for the Caldera challenge, then each week's Sunday), so no data moves. Boards, the Open, the plaque, the countdown, gear thresholds (now 1, 3, 5, 8, 12, 20 titles), and Reginald's and the Chronicle's prompts all follow it. The Chronicle now gets last week's final standings.
 2. ~~The Nov 9 course.~~ The Western Reserve, #79. New kit for later courses: the `autumn` theme (`src/golf3d/autumn.ts`), `maple` trees, `barn` walls, and roofs with a `top` so a high ball sails over a building.
 3. ~~The scheduled course agent.~~ The Architect, #148 (see Agents).
+
+### The Pro Shop, run by Reginald (decided Nov 6, three PRs)
+
+1. ~~The new golfer, and Hank on the first tee.~~ #153.
+2. **The fitting room.** Your golfer full size in a lit fitting room, turning on drag. Racks by category beside them; tap any piece to try it on before buying. Reginald in 3D behind the counter with a scripted line on each piece (no AI cost). A "bag check" close-up for the putter, driver and bag.
+3. **The catalogue: about 60 pieces** across roughly 10 categories (tops, outerwear, trousers and shorts, shoes, gloves, headwear, eyewear, watches and jewellery, putters, drivers and headcovers, bags). A wide price ladder: Member rack $100 to $1,500, Pro $2,000 to $8,000, Legend $10,000 to $40,000. New rows in `shop_items` (SQL). The 7 pieces already bought stay owned and worn, redrawn in the new style.
 
 ### Later
 
