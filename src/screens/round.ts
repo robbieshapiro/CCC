@@ -58,7 +58,7 @@ function todaysField(snap: Snapshot): Ghost[] {
   }
   return [...best.values()].flatMap((r) => {
     const p = snap.players.find((x) => x.id === r.playerId);
-    return p ? [{ id: p.id, name: p.name, avatar: p.avatar, spots: r.spots!, holes: r.holes }] : [];
+    return p ? [{ id: p.id, pid: p.id, name: p.name, avatar: p.avatar, spots: r.spots!, holes: r.holes }] : [];
   });
 }
 
@@ -67,6 +67,7 @@ function todaysField(snap: Snapshot): Ghost[] {
 function sampleField(snap: Snapshot, course: Course): Ghost[] {
   const others = snap.players.filter((p) => p.id !== snap.me).slice(0, 4);
   return others.map((p) => ({
+    pid: p.id,
     name: p.name,
     avatar: p.avatar,
     holes: course.holes.map((h) => Math.max(2, h.par + [-1, 0, 0, 0, 1, 1, 2][Math.floor(Math.random() * 7)])),
@@ -164,7 +165,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   // the rehearsal puts a few of the club's members out on the course, as Sunday's field would look
   else if (!opts.practice) game.setGhosts(sampleField(snap, course));
   // tap another member out on the course: their card, and a kudos or a chirp to send them
-  game.onGhostTap = (g) => shoutSheet(el, g, course);
+  game.onGhostTap = (g) => shoutSheet(el, g, course, snap.players.find((p) => p.id === g.pid), snap.groupName);
   if (!store.get('ccc-shout-tip') && (preview ? !opts.practice : todaysField(snap).length)) {
     store.set('ccc-shout-tip', '1');
     const tip = document.createElement('p');
