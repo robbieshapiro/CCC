@@ -37,6 +37,15 @@ export function payouts(rows: { id: string; rank: number }[], winner?: string | 
   return out;
 }
 
+// From Nov 8, one purse across every club: the Open. Each person once (their best round, wherever they played it),
+// $1,000 in each, the top ten paid. pay is keyed by the Open's id for them; local by their seat in your club, if any.
+export function openPurse(rows: { playerId: string; localId: string | null; total: number; par: number }[]) {
+  const pay = payouts(rows.map((r) => ({ id: r.playerId, rank: rows.filter((x) => x.total - x.par < r.total - r.par).length + 1 })));
+  const local = new Map<string, { place: number; tied: boolean; payout: number }>();
+  for (const r of rows) if (r.localId && pay.get(r.playerId)) local.set(r.localId, pay.get(r.playerId)!);
+  return { field: rows.length, pay, local };
+}
+
 export const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
 export const placeLabel = (place: number, tied: boolean) => `${tied ? 'T' : ''}${place}${place % 100 >= 11 && place % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][place % 10] ?? 'th'}`;
 

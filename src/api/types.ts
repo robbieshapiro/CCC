@@ -76,7 +76,8 @@ export type Snapshot = {
   crown?: DailyCrown | null; // filled in by state.refresh alongside the snapshot
   payouts?: Payout[]; // what the last closed period's purse paid, best first
 };
-export type Payout = { month: string; playerId: string; place: number; tied: boolean; payout: number };
+// name and mine: from Nov 8 the payouts are the whole Open's, most of them from other clubs
+export type Payout = { month: string; playerId: string; place: number; tied: boolean; payout: number; name?: string; mine?: boolean };
 
 // Yesterday's Closest to the Pin winner across every club. ids: their member ids in your club, if they're in it.
 export type DailyCrown = { day: string; name: string; club: string; ft: number | null; holed: boolean; ids: string[] };

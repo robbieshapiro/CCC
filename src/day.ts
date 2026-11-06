@@ -17,6 +17,8 @@ const weekday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay(); // 0 
 
 // Daily cards from the first week: one round a day counts (see cards_on in supabase/schema.sql)
 export const cardsOn = (period: string) => period >= FIRST_WEEK;
+// One purse across every club from the first week: the Open pays (see open_payouts in supabase/schema.sql)
+export const openPurseOn = (period: string) => period >= FIRST_WEEK;
 export const isWeek = (period: string) => period.length === 10;
 
 export function periodOf(day: string): string {

@@ -211,7 +211,7 @@ $$;
 -- for every member with a round that period, all of it paid to the top ten (everyone, if fewer played) in the
 -- proportions of a tour purse (18% to 2.725% of a full one, scaled up so the places paid share it all). Ties share the places
 -- they cover; a playoff winner takes first money and the others split the places below. Play money, for the money list.
-create or replace function period_payouts(p_group uuid)
+create or replace function club_payouts(p_group uuid)
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
 language sql stable security definer set search_path = public, extensions as $$
   -- the money: everyone who played puts $1,000 in, but only members whose home club this is take it out. Someone
@@ -245,6 +245,44 @@ language sql stable security definer set search_path = public, extensions as $$
       from generate_series(1, least(10, sp.n)) i
     ) / sp.kk)::int
   from sp
+$$;
+revoke all on function club_payouts(uuid) from public, anon, authenticated;
+
+-- The Open purse, from the week of Sun Nov 8 (src/purse.ts): one purse across every club. Each person's best round of the
+-- week, however many clubs they play in, on one board; $1,000 in for each of them and the top ten paid as above. Ties
+-- share; the Open has no playoff. Each person is paid once, on their home seat (the club the Open lists them under).
+create or replace function open_purse_from() returns text language sql immutable as $$ select '2026-11-08' $$;
+create or replace function open_payouts()
+returns table (month text, player_id uuid, place int, tied boolean, payout int)
+language sql stable security definer set search_path = public, extensions as $$
+  with people as (
+    select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id
+    from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+  ), best as (
+    select distinct on (rd.month, pe.home_id) rd.month, pe.home_id, rd.total - rd.par as tp
+    from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
+    join rounds rd on rd.player_id = p.id
+    where rd.month >= open_purse_from() and rd.month < game_month()
+    order by rd.month, pe.home_id, rd.total - rd.par, rd.created_at
+  ), b as (select best.month, best.home_id, rank() over (partition by best.month order by best.tp)::int as r from best),
+  f as (select b.month, count(*)::int as n from b group by b.month),
+  g as (select b.month, b.r, count(*)::int as k from b group by b.month, b.r),
+  sh as (select array[0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725]::numeric[] as a)
+  select b.month, b.home_id, b.r, g.k > 1,
+    round(f.n * 1000 * coalesce((select sum(sh.a[i]) from generate_series(b.r, least(10, b.r + g.k - 1)) i), 0)
+      / (select sum(sh.a[i]) from generate_series(1, least(10, f.n)) i) / g.k)::int
+  from b join f on f.month = b.month join g on g.month = b.month and g.r = b.r cross join sh
+$$;
+revoke all on function open_payouts() from public, anon, authenticated;
+
+-- What a club's members were paid each closed period: the club's own purse up to the Caldera challenge, then their share
+-- of the Open purse (each person once, at their home club)
+create or replace function period_payouts(p_group uuid)
+returns table (month text, player_id uuid, place int, tied boolean, payout int)
+language sql stable security definer set search_path = public, extensions as $$
+  select * from club_payouts(p_group) c where c.month < open_purse_from()
+  union all
+  select o.* from open_payouts() o join players pl on pl.id = o.player_id where pl.group_id = p_group
 $$;
 revoke all on function period_payouts(uuid) from public, anon, authenticated;
 
@@ -657,11 +695,19 @@ begin
         from period_payouts(me.group_id) pp group by pp.player_id) pay on pay.player_id = pl.id
       where pl.group_id = me.group_id and (not pl.host_only or pl.id = me.id)
     ), '[]'),
-    -- what the last closed period paid out
+    -- what the last closed period paid out: the club's purse, or from Nov 8 the whole Open's (with names, since most
+    -- of the field is in other clubs)
     'payouts', coalesce((
-      select json_agg(json_build_object('month', pp.month, 'playerId', pp.player_id, 'place', pp.place, 'tied', pp.tied, 'payout', pp.payout) order by pp.place)
-      from period_payouts(me.group_id) pp
-      where pp.payout > 0 and pp.month = (select max(x.month) from period_payouts(me.group_id) x)
+      with last as (select max(x.month) as m from (select pp.month from period_payouts(me.group_id) pp union all select o.month from open_payouts() o) x),
+      src as (
+        select pp.month, pp.player_id, pp.place, pp.tied, pp.payout, pl.name, pl.id = me.id as mine
+          from period_payouts(me.group_id) pp join players pl on pl.id = pp.player_id, last where pp.month = last.m and last.m < open_purse_from()
+        union all
+        select o.month, o.player_id, o.place, o.tied, o.payout, pl.name, lower(pl.name) = lower(me.name) and pl.pin_hash = me.pin_hash
+          from open_payouts() o join players pl on pl.id = o.player_id, last where o.month = last.m
+      )
+      select json_agg(json_build_object('month', month, 'playerId', player_id, 'place', place, 'tied', tied, 'payout', payout, 'name', name, 'mine', mine) order by place, name)
+      from src where payout > 0
     ), '[]'),
     'rounds', coalesce((
       select json_agg(json_build_object('playerId', r.player_id, 'month', r.month, 'course', r.course, 'holes', r.holes,

@@ -4,16 +4,15 @@
 import { api } from '../api';
 import type { OpenChampion, OpenRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
-import { GAME_TZ, periodName } from '../day';
+import { GAME_TZ, openPurseOn, periodName } from '../day';
+import { money, openPurse } from '../purse';
 import { courseFor } from '../golf3d/courses';
 import { REGINALD } from '../host';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
-import { store } from '../storage';
 import { esc } from '../ui';
 import { scoreClass } from './home';
 
-const TAB_KEY = 'ccc-board-tab';
 const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: GAME_TZ });
 
 // ranks shared on a tie, as on the club board
@@ -26,14 +25,14 @@ function ranked(rows: OpenRow[]) {
   });
 }
 
-function table(snap: Snapshot, rows: ReturnType<typeof ranked>) {
+function table(snap: Snapshot, rows: ReturnType<typeof ranked>, pay?: ReturnType<typeof openPurse>['pay']) {
   const course = courseFor(snap.month);
   if (!rows.length) return `<p class="muted open-empty">Nobody has posted a round yet, in any club.</p>`;
   const head = course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('');
   const body = rows
     .map((r) => {
       const crowned = snap.crown && snap.crown.name === r.name && snap.crown.club === r.club ? ` <span class="crown" title="Yesterday's Closest to the Pin">🎯</span>` : '';
-      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}${crowned}<em>${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
+      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}${crowned}<em>${pay?.get(r.playerId)?.payout ? `<b class="pay">${money(pay.get(r.playerId)!.payout)}</b> · ` : ''}${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
       const link = r.mine ? '#/locker' : r.localId ? `#/member/${r.localId}` : '';
       return `<tr class="${r.mine ? 'me' : ''}">
         <td class="rank">${r.rank}</td>
@@ -63,16 +62,25 @@ function openLine(rows: ReturnType<typeof ranked>, today: string) {
 // Called after the home page draws. If the Open isn't available (the SQL isn't run yet, or offline), nothing
 // changes: the club board stays as it always was.
 // pinned: Reginald's line stays put whichever tab is showing (a club you only run)
-export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false) {
+// Returns the Open purse once it's drawn (from Nov 8), so the page can show the same money everywhere
+export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false): Promise<ReturnType<typeof openPurse> | null> {
   const s = requireSession();
   const [rows, champs] = await Promise.all([api.openBoard(s).catch(() => null), api.openChampions(s).catch(() => [] as OpenChampion[])]);
   const tabs = document.getElementById('board-tabs');
   const openPane = document.getElementById('board-open');
   const clubPane = document.getElementById('board-club');
   const say = document.querySelector<HTMLElement>('#reg-line');
-  if (!rows || !tabs || !openPane || !clubPane) return;
+  if (!tabs || !openPane || !clubPane) return null;
+  // the Open couldn't load: the club's own board is all there is
+  if (!rows) {
+    openPane.hidden = true;
+    clubPane.hidden = false;
+    tabs.hidden = true;
+    return null;
+  }
   const list = ranked(rows);
-  openPane.innerHTML = table(snap, list);
+  const purse = openPurseOn(snap.month) ? openPurse(list) : null;
+  openPane.innerHTML = table(snap, list, purse?.pay);
   const lineOpen = `<b>Reginald</b> ${openLine(list, snap.today)}`;
   const lineClub = `<b>Reginald</b> ${clubLine}`;
   const show = (tab: 'open' | 'club') => {
@@ -84,13 +92,10 @@ export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false)
   };
   tabs.hidden = false;
   tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {
-    b.onclick = () => {
-      const tab = b.dataset.tab as 'open' | 'club';
-      store.set(TAB_KEY, tab);
-      show(tab);
-    };
+    b.onclick = () => show(b.dataset.tab as 'open' | 'club');
   });
-  show(store.get(TAB_KEY) === 'club' ? 'club' : 'open');
+  // the Open always comes first: every member, every club, one board
+  show('open');
 
   // the plaque: each month's Open champion beside the club's own
   const plaque = document.querySelector('.plaque ol');
@@ -101,4 +106,5 @@ export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false)
       champs.slice(0, 6).map((c) => `<li class="open-champ"><span>${periodName(c.month)} · The Open</span><b>${c.names.map(esc).join(' & ')}</b><em>${toParLabel(c.total - c.par)}</em></li>`).join(''),
     );
   }
+  return purse;
 }
