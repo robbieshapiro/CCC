@@ -1353,3 +1353,17 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 @keyframes coin-rise { 0% { opacity: 0; transform: translate(-50%, 18px) scale(0.85); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; transform: translate(-50%, -16px); } 100% { opacity: 0; transform: translate(-50%, -40px); } }
 @media (prefers-reduced-motion: reduce) { .coin-pop, .coin-pop .coins i { animation-duration: 0.01s; } .coin-pop { animation: none; } }
 .coin-test { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+/* the Committee Room, top down: summary, needs you, then tabs (admin.ts) */
+.admin-page .adm-kpis:not(.adm-kpis-more) .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 560px) { .admin-page .adm-kpis:not(.adm-kpis-more) .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.adm-kpis-more { margin: 0 0 12px; }
+.adm-needs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: #fbf4e0; border: 1px solid rgba(214, 169, 64, 0.5); }
+.adm-needs-label { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8a6514; margin-right: 4px; }
+.adm-needs button { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(214, 169, 64, 0.6); background: #fffdf7; color: var(--ink); cursor: pointer; }
+.adm-needs button b { color: #b2472f; margin-right: 2px; }
+.adm-tabs { position: sticky; top: 0; z-index: 6; display: flex; gap: 4px; overflow-x: auto; margin: 0 -4px 12px; padding: 8px 4px; background: var(--bg, #f5efe2); border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.adm-tabs::-webkit-scrollbar { display: none; }
+.adm-tabs button { flex: none; font: inherit; font-size: 14px; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer; }
+.adm-tabs button[aria-selected='true'] { background: var(--green); color: var(--cream); }
+.adm-pane { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.adm-pane > * { min-width: 0; margin: 0; }

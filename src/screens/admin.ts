@@ -16,7 +16,7 @@ import { esc, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
-import { chartSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
+import { chartSections, courseSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -50,26 +50,49 @@ export function admin(snap: Snapshot) {
         <div class="seg" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
       </div>
       ${kpiSections()}
-      <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
-      ${chartSections()}
-      <section class="adm-card adm-do">
-        <h2>To do</h2>
-        <div id="adm-todo"><p class="muted">Loading…</p></div>
-        <div class="adm-actions">
-          <button class="btn" data-tool="notice">📣 Post a notice</button>
-          <button class="btn" data-tool="invite">✉️ Invite someone</button>
-          <a class="btn ghost" href="#/preview/${courseFor(snap.month).id}">⛳ Preview this week: ${esc(courseFor(snap.month).name.replace(/ Course$/, ''))}</a>
-          ${next.map((c) => `<a class="btn ghost" href="#/preview/${c.id}">⛳ Preview ${esc(c.name.replace(/ Course$/, ''))}${c.draft ? ' (draft)' : ''}</a>`).join('')}
-          <button class="btn ghost" data-coin-test>🪙 Test a coin burst</button>
-          <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
-        </div>
-        <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
-        <div class="adm-tool" data-panel="invite" hidden>${inviteTool()}</div>
-        <div class="adm-tool" data-panel="club" hidden>${clubMaker(true)}</div>
-      </section>
-      <section class="adm-card" id="adm-holes" hidden></section>
-      <div id="adm-body"><p class="muted">Loading every club…</p></div>
+      <section class="adm-needs" id="adm-needs" aria-label="Needs you"></section>
+      <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
+      <div class="adm-pane" data-pane="overview">
+        <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
+        ${chartSections()}
+      </div>
+      <div class="adm-pane" data-pane="course" hidden>
+        <section class="adm-card adm-do">
+          <h2>Test what's coming</h2>
+          <p class="muted">Previews are rehearsals: jump between holes, and the reward moments fire without paying.</p>
+          <div class="adm-actions">
+            <a class="btn" href="#/preview/${courseFor(snap.month).id}">⛳ Preview this week: ${esc(courseFor(snap.month).name.replace(/ Course$/, ''))}</a>
+            ${next.map((c) => `<a class="btn ghost" href="#/preview/${c.id}">⛳ Preview ${esc(c.name.replace(/ Course$/, ''))}${c.draft ? ' (draft)' : ''}</a>`).join('')}
+            <button class="btn ghost" data-coin-test>🪙 Test a coin burst</button>
+          </div>
+        </section>
+        ${courseSections()}
+      </div>
+      <div class="adm-pane" data-pane="members" hidden>
+        <section class="adm-card" id="adm-holes" hidden></section>
+      </div>
+      <div class="adm-pane" data-pane="activity" hidden>
+        <section class="adm-card" id="adm-feedback-card">
+          <h2>Feedback</h2>
+          <div id="adm-todo"><p class="muted">Loading…</p></div>
+        </section>
+      </div>
+      <div class="adm-pane" data-pane="tools" hidden>
+        <section class="adm-card adm-do">
+          <h2>Tools</h2>
+          <div class="adm-actions">
+            <button class="btn" data-tool="notice">📣 Post a notice</button>
+            <button class="btn" data-tool="invite">✉️ Invite someone</button>
+            <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
+          </div>
+          <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
+          <div class="adm-tool" data-panel="invite" hidden>${inviteTool()}</div>
+          <div class="adm-tool" data-panel="club" hidden>${clubMaker(true)}</div>
+        </section>
+      </div>
+      <div id="adm-body" hidden></div>
     </main>`);
+  bindTabs();
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
     b.onclick = () => {
       const open = document.querySelector<HTMLElement>(`[data-panel="${b.dataset.tool}"]`)!;
@@ -112,8 +135,9 @@ async function loadHoles(snap: Snapshot) {
   if (!el) return;
   const list = (await api.designQueue(requireSession()).catch(() => [] as Design[])).filter(isHole);
   el.hidden = !list.length;
-  if (!list.length) return;
   const waiting = list.filter((d) => d.status === 'submitted');
+  setNeeds('holes', waiting.length);
+  if (!list.length) return;
   const live = list.filter((d) => d.status === 'approved');
   const row = (d: Design) => {
     const spec = tidy(d.spec);
@@ -400,7 +424,7 @@ function draw() {
     );
   }
   body.innerHTML = `
-    <section class="adm-card">
+    <section class="adm-card" data-goes="activity">
       <h2>Activity</h2>
       <div class="adm-stats">
         ${stat(sum('members'), 'Members', `${d.clubs.reduce((a, c) => a + c.newMembers, 0)} new`)}
@@ -419,12 +443,12 @@ function draw() {
       <h3 class="adm-sub">Activity <small>${d.feed.length >= 1000 ? 'the latest 1,000' : `${d.feed.length} ${d.feed.length === 1 ? 'event' : 'events'}`} · ${(WINDOWS.find((w) => w.id === state.window)?.label ?? '').toLowerCase().replace('month', 'this month')}</small></h3>
       ${feed(d, many)}
     </section>
-    <section class="adm-card">
+    <section class="adm-card" data-goes="members">
       <div class="adm-head"><h2>Members</h2>${many ? `<div class="adm-chips">${['', ...d.clubs.map((c) => c.name)].map((c) => `<button data-club="${esc(c)}" class="${state.club === c ? 'on' : ''}">${c ? esc(c) : 'All'}</button>`).join('')}</div>` : ''}</div>
       ${memberTable(d.members)}
       <p class="fine">Days: days in the window they opened the club, played or practised. Best: their best round to par in the window.</p>
     </section>
-    <section class="adm-card">
+    <section class="adm-card" data-goes="members" id="adm-invites">
       <h2>Member management</h2>
       <h3 class="adm-sub">Invited, not joined yet${d.invites.length ? ` · ${d.invites.length}` : ''}</h3>
       ${pending(d, many)}
@@ -456,6 +480,64 @@ function draw() {
         }
       }),
   );
+  arrange(body);
+  needs.feedback = d.feedback.length;
+  needs.invites = d.invites.length;
+  drawNeeds();
+}
+
+// ---------- the layout: a summary on top, then tabs ----------
+
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'course', label: 'Course' },
+  { id: 'members', label: 'Members' },
+  { id: 'activity', label: 'Activity' },
+  { id: 'tools', label: 'Tools' },
+] as const;
+type Tab = (typeof TABS)[number]['id'];
+const TAB_KEY = 'ccc-adm-tab';
+
+function showTab(t: Tab, scrollTo?: string) {
+  document.querySelectorAll<HTMLElement>('.adm-pane').forEach((p) => (p.hidden = p.dataset.pane !== t));
+  document.querySelectorAll<HTMLButtonElement>('#adm-tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  store.set(TAB_KEY, t);
+  if (scrollTo) document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function bindTabs() {
+  document.querySelectorAll<HTMLButtonElement>('#adm-tabs [data-tab]').forEach((b) => (b.onclick = () => showTab(b.dataset.tab as Tab)));
+  const saved = store.get(TAB_KEY) as Tab | null;
+  showTab(saved && TABS.some((t) => t.id === saved) ? saved : 'overview');
+  drawNeeds();
+}
+
+// the sections draw() renders go to their tabs (replacing the last lot)
+function arrange(body: HTMLElement) {
+  document.querySelectorAll('[data-moved]').forEach((x) => x.remove());
+  for (const el of [...body.querySelectorAll<HTMLElement>('[data-goes]')]) {
+    el.dataset.moved = '1';
+    document.querySelector(`.adm-pane[data-pane="${el.dataset.goes}"]`)?.appendChild(el);
+  }
+}
+
+// "Needs you": what's waiting on the Committee, each a tap to where it's dealt with
+const needs = { feedback: 0, holes: 0, invites: 0, unplayed: 0 };
+export const setNeeds = (k: keyof typeof needs, n: number) => ((needs[k] = n), drawNeeds());
+function drawNeeds() {
+  const el = document.getElementById('adm-needs');
+  if (!el) return;
+  const items: [number, string, Tab, string][] = [
+    [needs.feedback, needs.feedback === 1 ? 'piece of feedback' : 'pieces of feedback', 'activity', 'adm-feedback-card'],
+    [needs.holes, needs.holes === 1 ? 'hole to review' : 'holes to review', 'members', 'adm-holes'],
+    [needs.unplayed, needs.unplayed === 1 ? 'new member yet to play' : 'new members yet to play', 'members', ''],
+    [needs.invites, needs.invites === 1 ? 'invite not taken up' : 'invites not taken up', 'members', 'adm-invites'],
+  ];
+  const live = items.filter(([n]) => n > 0);
+  el.innerHTML = live.length
+    ? `<span class="adm-needs-label">Needs you</span>${live.map(([n, label, tab, to]) => `<button data-need-tab="${tab}" data-need-to="${to}"><b>${n}</b> ${label}</button>`).join('')}`
+    : `<span class="adm-needs-label">Needs you</span><span class="muted">Nothing. The club runs itself today.</span>`;
+  el.querySelectorAll<HTMLButtonElement>('[data-need-tab]').forEach((b) => (b.onclick = () => showTab(b.dataset.needTab as Tab, b.dataset.needTo || undefined)));
 }
 
 const stat = (n: number, label: string, sub: string) => `<div class="adm-stat"><b>${n}</b><span>${label}</span><small>${esc(sub)}</small></div>`;

@@ -9,11 +9,15 @@ import { courseFor } from '../golf3d/courses';
 import { money } from '../purse';
 import { requireSession } from '../state';
 import { esc } from '../ui';
+import { setNeeds } from './admin';
 
 export const kpiSections = () => `
   <section class="adm-card adm-brief" id="adm-brief" hidden></section>
   <section class="adm-kpis" id="adm-kpis"><p class="muted">Loading…</p></section>`;
-export const chartSections = () => `<section class="adm-card adm-charts" id="adm-charts" hidden></section>
+export const chartSections = () => `<section class="adm-kpis adm-kpis-more" id="adm-kpis-more"></section>
+  <section class="adm-card adm-charts" id="adm-charts" hidden></section>`;
+// the Course tab: how this week's course is scoring, then the hole report from members' shots
+export const courseSections = () => `<section class="adm-card adm-charts" id="adm-course-chart" hidden></section>
   <section class="adm-card adm-report" id="adm-report" hidden></section>`;
 
 // The hole report: from the shots members post with their cards, how each hole is really being played, with where tee
@@ -109,8 +113,12 @@ function drawKpis() {
       ${tile(String(k.visitedToday), 'In today', `${k.playedToday} played a round`, delta(k.visitedToday, k.visitedWeekAgo))}
       ${tile(k.lastPlayers ? `${back}%` : '–', 'Came back', k.lastPlayers ? `${k.cameBack} of last week's ${k.lastPlayers} players have played this week` : 'no last week to compare yet')}
       ${tile(String(rpp), 'Rounds per player', `${k.rounds} rounds by ${k.players} players this week`, rppBefore === null ? '' : delta(rpp, rppBefore))}
-      ${tile(`${k.firstRound14} of ${k.joined14}`, 'New members playing', k.neverPlayed14.length ? `yet to play: ${k.neverPlayed14.slice(0, 4).map(esc).join(', ')}${k.neverPlayed14.length > 4 ? ` and ${k.neverPlayed14.length - 4} more` : ''}` : k.joined14 ? 'joined in the last 14 days, all have played' : 'nobody new in the last 14 days')}
       ${tile(money(k.purse), 'Purse in play', `Pro Shop: ${money(k.shop7)} in 7 days, ${money(k.shopAll)} ever`)}
+    </div>`;
+  // the rest, in the Overview tab
+  const more = document.getElementById('adm-kpis-more');
+  if (more) more.innerHTML = `<div class="kpi-grid">
+      ${tile(`${k.firstRound14} of ${k.joined14}`, 'New members playing', k.neverPlayed14.length ? `yet to play: ${k.neverPlayed14.slice(0, 4).map(esc).join(', ')}${k.neverPlayed14.length > 4 ? ` and ${k.neverPlayed14.length - 4} more` : ''}` : k.joined14 ? 'joined in the last 14 days, all have played' : 'nobody new in the last 14 days')}
       ${tile(String(aiToday), 'AI calls today', `${k.ai.today.daily ?? 0} daily lines · ${k.ai.today.round ?? 0} round notes · ${k.ai.designsToday} designs · ${k.ai.month} this month`)}
     </div>`;
   drawCharts(k);
@@ -120,7 +128,13 @@ function drawCharts(k: AdminKpis) {
   const el = document.getElementById('adm-charts');
   if (!el) return;
   el.hidden = false;
-  el.innerHTML = `${perDay(k)}${weeks(k)}${holes(k)}`;
+  el.innerHTML = `${perDay(k)}${weeks(k)}`;
+  const course = document.getElementById('adm-course-chart');
+  if (course) {
+    course.hidden = false;
+    course.innerHTML = holes(k);
+  }
+  setNeeds('unplayed', k.neverPlayed14.length);
 }
 
 // the last 14 days: who played a round, and who only came in, stacked
