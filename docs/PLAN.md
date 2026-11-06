@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (kudos or chirp, then send).
+Last updated Nov 6, 2026 (reactions after every hole).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (kudos or chirp, then send).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #179 | A reaction to every hole, in place of the old arms-up sway. The golfer's arms are now each their own (upper arm and forearm; the swing is unchanged), so: a hole in one is replayed in slow motion from down by the cup, then a backflip and both arms up; an eagle or better a backflip; a birdie a fist pump; a par a nod and a wave to the crowd; a bogey a kick at the turf and a shake of the head; a double or worse the club over the head and into the ground. The camera cuts to a close-up of your golfer for it (about 2.5 seconds), then the flag as before; a tap skips. The card waits until the replay and the reaction are over, so a slow phone doesn't cut them off. |
 | #178 | Sending from a member's card is clearer: pick Kudos or Chirp at the top (Kudos to start with), then the optional line, then one Send button that says which. |
 | #177 | Tapping a member on the course now shows their card: headshot (as on the member card), club and status (Club Member, Club Legend and so on, with the badge; no money), today's low, and what they're wearing (the fall kit, then their best shop pieces). Below it one optional line and two buttons, Kudos and Chirp: no ready-made lines. Sent with no words, it's just the 👏 or the 🐦. |
 | #176 | The Western Reserve's fairways run slower: they were nearly twice as quick as the other tour courses and quicker than its own greens (friction 2.7); now about a quarter quicker (3.75, just under the greens). Hole checks pass; the steady bot drops about a stroke more on The Gorge. The "What's new" card is cut to eight short lines in order of what matters, daily cards first and the deer last. Practice rounds end with a quiet link to send the group a nudge: your practice score in squares and a dig at whoever hasn't practised. |
