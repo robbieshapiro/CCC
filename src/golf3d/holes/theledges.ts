@@ -7,7 +7,7 @@
 // The secret: the rock shelf behind the green on the right. Land on it and it tips the ball down onto the green.
 import { band, blob, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
-import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
+import { bunker, FAIRWAY_DEPTH, greenside, greenComplex, RESERVE_TURF, tree, treeLine, teeUp } from './woods';
 
 const GREEN = { x: 30, y: 640, rx: 28, ry: 22 };
 const GROUND = 4;
@@ -26,15 +26,15 @@ const SPINE = { x0: -16, y0: 170, x1: 18, y1: 470 };
 const LEDGE = { x0: -42, y0: 572, x1: 10, y1: 602 };
 
 const traps = [
-  bunker(-64, 250, 16, 8, 1, 4, 0.3), // down the left fairway, left side
-  bunker(-30, 304, 10, 5, 7, 4, 0.1), // the left fairway's right side, against the spine
-  bunker(-78, 384, 12, 6, 8, 4, -0.2), // further down the left side
-  bunker(-40, 428, 14, 7, 2, 4, -0.4), // where the left fairway ends
-  bunker(80, 300, 12, 5, 9, 4, 0.1), // the right fairway's right side, above the creek
-  bunker(62, 466, 14, 6, 3, 4, 0.5), // where the right fairway ends
-  bunker(26, 684, 20, 7, 4), // behind the green
-  bunker(-14, 642, 9, 16, 5), // left of the green
-  bunker(64, 604, 10, 6, 6, 3.6), // between the pond and the green
+  bunker(-64, 250, 16, 8, 1, FAIRWAY_DEPTH, 0.3), // down the left fairway, left side
+  bunker(-30, 304, 10, 5, 7, FAIRWAY_DEPTH, 0.1), // the left fairway's right side, against the spine
+  bunker(-78, 384, 12, 6, 8, FAIRWAY_DEPTH, -0.2), // further down the left side
+  bunker(-40, 428, 14, 7, 2, FAIRWAY_DEPTH, -0.4), // where the left fairway ends
+  bunker(80, 300, 12, 5, 9, FAIRWAY_DEPTH, 0.1), // the right fairway's right side, above the creek
+  bunker(62, 466, 14, 6, 3, FAIRWAY_DEPTH, 0.5), // where the right fairway ends
+  greenside(GREEN, 26, 684, 20, 7, 4, 3.4, 0), // behind the green
+  greenside(GREEN, -14, 642, 9, 16, 5, 3.4, 0), // left of the green
+  greenside(GREEN, 64, 604, 10, 6, 6, 3.4, 0), // between the pond and the green
 ];
 
 const woods: Post[] = [
@@ -50,7 +50,7 @@ const woods: Post[] = [
   tree(36, -20, 4, 24),
 ];
 
-export const theledges: Hole = {
+const theledgesBack: Hole = {
   id: 'theledges',
   name: 'The Ledges',
   par: 4,
@@ -58,7 +58,6 @@ export const theledges: Hole = {
   tour: true,
   turf: RESERVE_TURF,
   windByHeight: true,
-  calmChip: true,
   chipDrop: 0.7,
   greenFirm: 0.05,
   yards: 470,
@@ -138,3 +137,6 @@ export const theledges: Hole = {
     { kind: 'rock', x: -20, y: 586, scale: 1.8 },
   ],
 };
+
+// played from a tee well up the hole (since Nov 6: the course was playing long everywhere; par 4s about 395 yd, Maple Lake 185); the old tee is the back tee
+export const theledges = teeUp(theledgesBack, { x: 0, y: 112 }, 5.9, 395);

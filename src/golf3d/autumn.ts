@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeRng } from '../seed';
-import { mat, mesh, pine } from './props';
+import { mat, mesh, pine, textTexture } from './props';
 import { heightAt } from './terrain';
 import type { Decor, Hole, Surface, V2 } from './types';
 
@@ -254,8 +254,103 @@ function falls(scale = 1) {
   return g;
 }
 
+// A red barn: board walls, a white-trimmed door, and a pitched grey roof. Faces +z.
+function barn(scale = 1) {
+  const g = new THREE.Group();
+  const w = 26 * scale;
+  const d = 18 * scale;
+  const h = 12 * scale;
+  g.add(mesh(new THREE.BoxGeometry(w, h, d), mat(BARN_RED)).translateY(h / 2));
+  // the roof: a prism along the barn's length
+  const roof = new THREE.Shape([new THREE.Vector2(-d / 2 - 1, 0), new THREE.Vector2(d / 2 + 1, 0), new THREE.Vector2(0, 8 * scale)]);
+  const prism = new THREE.ExtrudeGeometry(roof, { depth: w + 2, bevelEnabled: false });
+  prism.translate(0, 0, -(w + 2) / 2);
+  prism.rotateY(Math.PI / 2);
+  g.add(mesh(prism, mat(ROOF)).translateY(h));
+  const door = mesh(new THREE.BoxGeometry(8 * scale, 9 * scale, 0.4), mat('#7d241c'));
+  door.position.set(0, 4.5 * scale, d / 2 + 0.2);
+  g.add(door);
+  for (const [x, y, ww, hh] of [[0, 9.2, 8.6, 0.5], [-4.2, 4.6, 0.5, 9.2], [4.2, 4.6, 0.5, 9.2], [0, 4.6, 11.4, 0.4]] as const) {
+    const t = mesh(new THREE.BoxGeometry(ww * scale, hh * scale, 0.5), mat(TRIM));
+    t.position.set(x * scale, y * scale, d / 2 + 0.3);
+    if (ww === 11.4) t.rotation.z = Math.atan2(9.2, 8.6);
+    g.add(t);
+  }
+  g.traverse((o) => (o.castShadow = true));
+  return g;
+}
+
+// The cider stand on the hillside: a wooden counter under a striped awning, jugs on top, and its sign. Faces +z.
+function ciderStand() {
+  const g = new THREE.Group();
+  const wood = mat('#8a5a34');
+  g.add(mesh(new THREE.BoxGeometry(8, 3.6, 3), wood).translateY(1.8));
+  for (const x of [-3.8, 3.8]) for (const z of [-1.4, 1.4]) g.add(mesh(new THREE.CylinderGeometry(0.18, 0.18, 7.2, 6), wood).translateX(x).translateY(3.6).translateZ(z));
+  // the awning in red and cream stripes
+  for (let i = 0; i < 8; i++) {
+    const strip = mesh(new THREE.BoxGeometry(1, 0.2, 4.4), mat(i % 2 ? '#f1e6cf' : '#b7372a'));
+    strip.position.set(-3.5 + i, 7.3, 0.3);
+    strip.rotation.x = 0.18;
+    g.add(strip);
+  }
+  for (let i = 0; i < 4; i++) {
+    const jug = mesh(new THREE.CylinderGeometry(0.32, 0.4, 0.9, 10), mat(i % 2 ? '#a45a1e' : '#c8822e', { rough: 0.3 }));
+    jug.position.set(-2.4 + i * 1.6, 4.05, 0.4);
+    g.add(jug);
+  }
+  const tex = textTexture([{ text: 'Hot Cider', font: '600 54px Georgia, serif', color: '#f3e3c2', y: 80 }], 320, 128, '#5a2a18');
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(5, 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+  sign.position.set(0, 2.4, 1.52);
+  g.add(sign);
+  g.traverse((o) => (o.castShadow = true));
+  return g;
+}
+
+// The last hole's gallery on the Western Reserve: rows of square straw bales up the hillside for the members to stand
+// on (in place of the Caldera's stone tiers), with a swag of festoon lights strung between two poles over the top row.
+// x, y: the front middle of the bank; across, back: the bank's own axes in course space; ground: the height under a
+// point. One instanced mesh of bales, one of bulbs.
+export function strawTerraces(rows: number, cols: number, gap: number, depth: number, rise: number, place: (across: number, back: number) => THREE.Vector3, rot: number, anim: ((c: number, dt: number) => void)[]) {
+  const g = new THREE.Group();
+  const bales = new THREE.InstancedMesh(new THREE.BoxGeometry(gap - 0.25, rise, depth - 0.7), mat(STRAW), rows * cols);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rot, 0));
+  const one = new THREE.Vector3(1, 1, 1);
+  let i = 0;
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      const p = place((c - (cols - 1) / 2) * gap, (r + 0.5) * depth);
+      p.y += rise / 2;
+      bales.setMatrixAt(i++, m.compose(p, q, one));
+    }
+  bales.castShadow = true;
+  bales.receiveShadow = true;
+  g.add(bales);
+  // the lights: a pole at each back corner and a sagging line of warm bulbs between them
+  const half = ((cols - 1) / 2) * gap + gap * 0.6;
+  const backAt = rows * depth + 0.4;
+  const ends = [place(-half, backAt), place(half, backAt)];
+  for (const e of ends) g.add(mesh(new THREE.CylinderGeometry(0.16, 0.2, 9, 6), mat('#4a3426')).translateX(e.x).translateY(e.y + 4.5).translateZ(e.z));
+  const glow = new THREE.MeshStandardMaterial({ color: '#ffe7b0', emissive: '#f4b860', emissiveIntensity: 1 });
+  const n = 18;
+  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.24, 6, 4), glow, n);
+  for (let k = 0; k < n; k++) {
+    const t = (k + 0.5) / n;
+    const p = ends[0].clone().lerp(ends[1], t);
+    p.y = ends[0].y + (ends[1].y - ends[0].y) * t + 8.4 - Math.sin(t * Math.PI) * 1.8;
+    bulbs.setMatrixAt(k, m.compose(p, new THREE.Quaternion(), one));
+  }
+  g.add(bulbs);
+  anim.push((clock) => {
+    glow.emissiveIntensity = 0.9 + Math.sin(clock * 0.8) * 0.12;
+  });
+  return g;
+}
+
 // the decor a hole can place: d.scale sizes it (for corn, the side of a square patch in ft)
 export function autumnDecor(d: Decor): THREE.Object3D | null {
+  if (d.kind === 'barn') return barn(d.scale ?? 1);
+  if (d.kind === 'cider') return ciderStand();
   if (d.kind === 'falls') return falls(d.scale ?? 1);
   if (d.kind === 'silo') return silo(d.scale ?? 1);
   if (d.kind === 'haybale') return haybale(d.scale ?? 1);

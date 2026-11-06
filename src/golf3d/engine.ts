@@ -1314,9 +1314,9 @@ export class Course3D {
     el.style.cssText = this.style() === 'vertical' ? `bottom:${at * 100}%` : `left:${at * 100}%`;
   }
 
-  // Where a power sits on the meter: the chipper's stretched scale on a course with calmChip, straight otherwise
+  // Where a power sits on the meter: the chipper's stretched scale (on every course since Nov 6), straight otherwise
   private meterAt(p: number) {
-    return this.hole.calmChip ? meterPos(this.club, p) : p;
+    return meterPos(this.club, p);
   }
 
   // Tap 1: the power bar starts to fill. Your plan is the gold line on it.
@@ -2174,7 +2174,7 @@ export class Course3D {
         // you the overswing is the fire, and the bar slows right down in it so you can stop it there
         const fire = !!this.drink && DRINKS[this.drink.kind].boost > 1 && m.p > 1;
         // the chipper climbs its stretched scale at a steady pace (see meterPos); the rest fill by power
-        if (this.club === 'chip' && this.hole.calmChip) {
+        if (this.club === 'chip') {
           m.d = Math.min(OVERSWING, m.d + CHIP_RATE * m.speed * (fire ? 0.45 : 1) * dt);
           m.p = m.d >= OVERSWING ? OVERSWING : fromMeter(this.club, m.d);
         } else m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * dt);

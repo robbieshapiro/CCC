@@ -8,7 +8,7 @@
 // Scenery: a red covered bridge carries the cart path over the creek. It's for looking at; it doesn't play.
 import { band, blob, circle, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
-import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
+import { bunker, FAIRWAY_DEPTH, greenside, greenComplex, RESERVE_TURF, tree, treeLine, teeUp } from './woods';
 
 const GROUND = 3;
 const LEVEL = GROUND - 2.2;
@@ -33,14 +33,14 @@ const BRIDGE = { x: 40, y0: 527, y1: 565, half: 5 };
 const DECK = GROUND + 0.4;
 
 const traps = [
-  bunker(-28, 190, 14, 6, 7, 4, 0.2), // short of the landing, left
-  bunker(20, 236, 14, 6, 8, 4, -0.2), // short of the landing, right
-  bunker(36, 380, 22, 10, 1, 4, 0.2), // the long one right of the landing
-  bunker(-38, 318, 15, 8, 2, 4, 0.6), // inside the turn
-  bunker(-2, 474, 20, 7, 3, 4, -0.3), // across the end of the turn
-  bunker(-108, 648, 14, 8, 4, 4, 0.5), // behind the green, right
-  bunker(-198, 606, 10, 18, 5), // left of the green
-  bunker(-152, 566, 24, 6, 6, 3.6), // the front, between the creek and the green
+  bunker(-28, 190, 14, 6, 7, FAIRWAY_DEPTH, 0.2), // short of the landing, left
+  bunker(20, 236, 14, 6, 8, FAIRWAY_DEPTH, -0.2), // short of the landing, right
+  bunker(36, 380, 22, 10, 1, FAIRWAY_DEPTH, 0.2), // the long one right of the landing
+  bunker(-38, 318, 15, 8, 2, FAIRWAY_DEPTH, 0.6), // inside the turn
+  bunker(-2, 474, 20, 7, 3, FAIRWAY_DEPTH, -0.3), // across the end of the turn
+  greenside(GREEN, -108, 648, 14, 8, 4, 3.4, 0.5), // behind the green, right
+  greenside(GREEN, -198, 606, 10, 18, 5, 3.4, 0), // left of the green
+  greenside(GREEN, -152, 566, 24, 6, 6, 3.4, 0), // the front, between the creek and the green
 ];
 
 const woods: Post[] = [
@@ -61,7 +61,7 @@ const woods: Post[] = [
   tree(30, -20, 4, 24),
 ];
 
-export const creekbend: Hole = {
+const creekbendBack: Hole = {
   id: 'creekbend',
   name: 'Creek Bend',
   par: 4,
@@ -69,7 +69,6 @@ export const creekbend: Hole = {
   tour: true,
   turf: RESERVE_TURF,
   windByHeight: true,
-  calmChip: true,
   chipDrop: 0.7,
   greenFirm: 0.05,
   yards: 460,
@@ -154,3 +153,6 @@ export const creekbend: Hole = {
     { kind: 'rock', x: -76, y: 460, scale: 1 },
   ],
 };
+
+// played from a tee well up the hole (since Nov 6: the course was playing long everywhere; par 4s about 395 yd, Maple Lake 185); the old tee is the back tee
+export const creekbend = teeUp(creekbendBack, { x: -1, y: 100 }, 6.7, 395);

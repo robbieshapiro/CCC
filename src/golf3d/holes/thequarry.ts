@@ -8,7 +8,7 @@
 // The secret: the spillway bank behind the green on the left. Run it down that and it feeds onto the green.
 import { band, blob, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
-import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
+import { bunker, FAIRWAY_DEPTH, greenside, greenComplex, RESERVE_TURF, tree, treeLine, teeUp } from './woods';
 
 const GROUND = 6;
 // the water in the pit sits well below the rim
@@ -35,14 +35,14 @@ const rblob = (x: number, y: number, rx: number, ry: number, seed: number): V2[]
 };
 
 const traps = [
-  bunker(-30, 348, 20, 7, 1, 4, TURN), // along the far edge of the fairway, left
-  bunker(58, 410, 16, 6, 2, 4, TURN), // along the far edge, right
-  bunker(70, 360, 10, 5, 3, 3.6, TURN), // on the water side, where the carry is longest
-  bunker(-84, 292, 12, 5, 7, 3.6, TURN), // on the water side, at the safe end
-  bunker(98, 444, 10, 5, 8, 4, TURN), // the far end of the fairway
-  bunker(124, 688, 20, 7, 4), // behind the green
-  bunker(164, 640, 9, 16, 5), // right of the green
-  bunker(86, 612, 11, 7, 6, 3.6), // front left, above the water
+  bunker(-30, 348, 20, 7, 1, FAIRWAY_DEPTH, TURN), // along the far edge of the fairway, left
+  bunker(58, 410, 16, 6, 2, FAIRWAY_DEPTH, TURN), // along the far edge, right
+  bunker(70, 360, 10, 5, 3, FAIRWAY_DEPTH, TURN), // on the water side, where the carry is longest
+  bunker(-84, 292, 12, 5, 7, FAIRWAY_DEPTH, TURN), // on the water side, at the safe end
+  bunker(98, 444, 10, 5, 8, FAIRWAY_DEPTH, TURN), // the far end of the fairway
+  greenside(GREEN, 124, 688, 20, 7, 4, 3.4, 0), // behind the green
+  greenside(GREEN, 164, 640, 9, 16, 5, 3.4, 0), // right of the green
+  greenside(GREEN, 86, 612, 11, 7, 6, 3.4, 0), // front left, above the water
 ];
 
 const woods: Post[] = [
@@ -57,7 +57,7 @@ const woods: Post[] = [
   tree(44, -20, 4, 24),
 ];
 
-export const thequarry: Hole = {
+const thequarryBack: Hole = {
   id: 'thequarry',
   name: 'The Quarry',
   par: 4,
@@ -65,7 +65,6 @@ export const thequarry: Hole = {
   tour: true,
   turf: RESERVE_TURF,
   windByHeight: true,
-  calmChip: true,
   chipDrop: 0.7,
   greenFirm: 0.05,
   yards: 475,
@@ -137,3 +136,6 @@ export const thequarry: Hole = {
     { kind: 'rock', x: 20, y: 560, scale: 1.6 },
   ],
 };
+
+// played from a tee well up the hole (since Nov 6: the course was playing long everywhere; par 4s about 395 yd, Maple Lake 185); the old tee is the back tee
+export const thequarry = teeUp(thequarryBack, { x: 26, y: 118 }, 6.2, 400);

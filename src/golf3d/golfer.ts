@@ -1340,8 +1340,8 @@ export class Golfer {
         // a nod, then a hand up to the crowd
         nod = t < 0.9 ? 0.2 * Math.sin(t * 7) ** 2 : 0;
         const up = smooth((t - 0.6) / 0.35) * (1 - smooth((t - 2.05) / 0.3));
-        tr.uz = ts * 2.45 * up;
-        tr.lz = ts * (0.6 + 0.3 * Math.sin(t * 9)) * up;
+        // the arm straight up and out, waving from the shoulder (an elbow only bends one way)
+        tr.uz = ts * (2.55 + 0.22 * Math.sin(t * 9)) * up;
         target.headTilt = -0.05;
       } else if (k === 'kick') {
         // head down, a kick at the turf, a shake of the head
@@ -1368,8 +1368,7 @@ export class Golfer {
         } else if (t < 1.4) target.knee = 0.45;
         else {
           this.arms.forEach((a, i) => {
-            arm[i].uz = a.side * 2.75;
-            arm[i].lz = -a.side * 0.25;
+            arm[i].uz = a.side * 2.8;
           });
           target.headTilt = k === 'ace' ? -0.35 : -0.2;
         }
@@ -1423,8 +1422,9 @@ export class Golfer {
       const g = arm[i];
       a.upper.rotation.x += (g.ux - a.upper.rotation.x) * armEase;
       a.upper.rotation.z += (g.uz - a.upper.rotation.z) * armEase;
-      a.lower.rotation.x += (g.lx - a.lower.rotation.x) * armEase;
-      a.lower.rotation.z += (g.lz - a.lower.rotation.z) * armEase;
+      // an elbow only bends forward: the forearm never goes past straight, and never sideways
+      a.lower.rotation.x += (Math.min(0, g.lx) - a.lower.rotation.x) * armEase;
+      a.lower.rotation.z = 0;
     });
     this.spine.scale.y = 1 + Math.sin(this.t * 1.6) * 0.006;
   }

@@ -58,7 +58,6 @@ export type Hole = {
   // greenRoll: green friction against the usual tour green's (under 1 is quicker).
   turf?: { roughKeep: number; roughDrag: number; roughLie: number; roughScatter: number; fairwayRoll: number; greenRoll?: number; sandLie: number; sandScatter: number };
   windByHeight?: boolean; // wind scales with how high a shot climbs (none below 3 ft of apex, all of it from 23 ft), on its first flight only
-  calmChip?: boolean; // the chipper's meter is drawn on a stretched scale, its line a third to half way up, filling steadily
   gusts?: boolean; // an exposed hole: a 10 to 15 mph wind every day, gusting from shot to shot (see conditions.ts)
   weather?: 'storm'; // autumn storms: a stronger, gusting wind, and rain on some days (see conditions.ts)
   wet?: boolean; // raining today: greens and fairways run a little slower

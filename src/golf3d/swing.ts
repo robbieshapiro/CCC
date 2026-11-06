@@ -8,15 +8,15 @@ export const OVERSWING = 1.1; // the bar runs past 100% to here
 
 // how fast the power bar fills, in power per second; it speeds up toward the top
 const FILL: Record<ClubId, number> = { driver: 0.9, wood: 0.85, iron: 0.75, wedge: 0.6, chip: 0.85, putter: 0 };
-// calm: the course draws the chipper's meter on the stretched scale below (Hole.calmChip)
+// calm: the chipper's meter on the stretched scale below (every course since Nov 6)
 export const powerSpeed = (club: ClubId, p: number, calm = false) =>
   club === 'chip' && calm ? Math.max(0.05, (2 * meterPos(club, p)) / OVERSWING) * CHIP_RATE : FILL[club] * (0.6 + 1.4 * p * p);
 
-// On a course with calmChip, the chipper's meter is drawn on a stretched scale: a chip on a quick green needs only a sliver of power, so on a
+// The chipper's meter is drawn on a stretched scale (on every course since Nov 6; the Western Reserve tried it first): a chip on a quick green needs only a sliver of power, so on a
 // straight scale its line sat at the foot of the bar and the fill was past it before you could look. Here the bar
 // shows the square root of the power, so a typical chip's line sits a third to half way up, and it fills at a steady,
 // unhurried pace. The physics is the same; only where the line is drawn and how fast the bar climbs to it change.
-export const CHIP_RATE = 0.7; // bar-heights (of the full 0..OVERSWING) per second
+export const CHIP_RATE = 0.48; // bar-heights (of the full 0..OVERSWING) per second (0.7 until Nov 6: chips ran long)
 export const meterPos = (club: ClubId, p: number) => (club === 'chip' ? Math.sqrt(Math.max(0, p) * OVERSWING) : p);
 export const fromMeter = (club: ClubId, d: number) => (club === 'chip' ? (d * d) / OVERSWING : d);
 

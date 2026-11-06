@@ -6,21 +6,21 @@
 import { band, blob, circle, rect } from '../terrain';
 import { extend } from './extend';
 import type { Hole, Post, V2 } from '../types';
-import { bunker, greenComplex, RESERVE_TURF, tree, treeLine } from './woods';
+import { bunker, FAIRWAY_DEPTH, greenside, greenComplex, RESERVE_TURF, tree, treeLine, teeUp } from './woods';
 
 const GREEN = { x: -20, y: 716, rx: 30, ry: 22 };
 const traps = [
-  bunker(30, 372, 16, 7, 7, 4, 0.4), // right of the drive's landing
-  bunker(-36, 296, 13, 6, 8, 4, -0.4), // left of it
-  bunker(-28, 456, 14, 7, 5, 4, 0.3), // short of the chute, left
-  bunker(22, 432, 10, 6, 9), // short of the chute, right
-  bunker(-22, 536, 13, 6, 10, 4, -0.3), // in the second-shot fairway
-  bunker(-40, 380, 12, 6, 14, 4, -0.2), // left of the drive's landing, further on
-  bunker(28, 300, 12, 6, 15, 4, 0.2), // right, short of the landing
-  bunker(20, 560, 10, 5, 16, 4, 0.2), // the second-shot fairway, right
-  bunker(26, 712, 9, 16, 11), // right of the green
-  bunker(-70, 762, 9, 12, 12, 3.6), // left of the green, behind the bank
-  bunker(-14, 758, 20, 7, 13, 3.6), // behind the green
+  bunker(30, 372, 16, 7, 7, FAIRWAY_DEPTH, 0.4), // right of the drive's landing
+  bunker(-36, 296, 13, 6, 8, FAIRWAY_DEPTH, -0.4), // left of it
+  bunker(-28, 456, 14, 7, 5, FAIRWAY_DEPTH, 0.3), // short of the chute, left
+  bunker(22, 432, 10, 6, 9, FAIRWAY_DEPTH, 0), // short of the chute, right
+  bunker(-22, 536, 13, 6, 10, FAIRWAY_DEPTH, -0.3), // in the second-shot fairway
+  bunker(-40, 380, 12, 6, 14, FAIRWAY_DEPTH, -0.2), // left of the drive's landing, further on
+  bunker(28, 300, 12, 6, 15, FAIRWAY_DEPTH, 0.2), // right, short of the landing
+  bunker(20, 560, 10, 5, 16, FAIRWAY_DEPTH, 0.2), // the second-shot fairway, right
+  greenside(GREEN, 26, 712, 9, 16, 11, 3.4, 0), // right of the green
+  greenside(GREEN, -70, 762, 9, 12, 12, 3.4, 0), // left of the green, behind the bank
+  greenside(GREEN, -14, 758, 20, 7, 13, 3.4, 0), // behind the green
 ];
 const POND = { x: -62, y: 392, r: 14 };
 const GROUND = 5;
@@ -61,7 +61,6 @@ const base: Hole = {
   tour: true,
   turf: RESERVE_TURF,
   windByHeight: true,
-  calmChip: true,
   chipDrop: 0.7,
   greenFirm: 0.06,
   yards: 640,
@@ -151,20 +150,52 @@ const base: Hole = {
 // a true three-shotter: everything past the chute sits 110 ft further on, so the green isn't there in two
 const long = extend(base, 470, 140);
 
-// then the woods, tight down both sides and behind the green, with out of bounds just past them
-export const thegorge: Hole = {
+// The finale: the members on a harvest hillside behind the green. Three banks of straw bales up the rise, turned to
+// face the pin, with festoon lights over them, a red barn and a cider stand at the top and pumpkins about. (The
+// Caldera's last hole is a stone stadium; this is a small-town fall festival.)
+const PIN = { x: GREEN.x, y: GREEN.y + 140 };
+const HILL = 70;
+const GALLERY = [-40, 0, 40].map((deg) => {
+  const a = (deg * Math.PI) / 180;
+  return { kind: 'stands' as const, x: PIN.x + Math.sin(a) * HILL, y: PIN.y + Math.cos(a) * HILL, rot: a };
+});
+
+// then the woods, tight down both sides, opening behind the green onto the hillside, with out of bounds past it
+const thegorgeBack: Hole = {
   ...long,
+  bounds: { ...long.bounds, y1: 1020 },
+  // the hillside: the ground rises steadily away behind the green, so the rows of bales step up it
+  terrain: [...long.terrain, { kind: 'ramp', x0: -220, y0: 904, x1: 200, y1: 990, axis: 'y', h0: 0, h1: 9, op: 'add' }],
   border: [
     { x: -102, y: -36 },
     { x: 132, y: -36 },
-    { x: 132, y: 956 },
-    { x: -102, y: 956 },
+    { x: 132, y: 1004 },
+    { x: -102, y: 1004 },
   ],
   posts: [
     ...long.posts,
-    // two rows hard by the left of the fairway, all the way up
-    ...treeLine([{ x: -66, y: 200 }, { x: -66, y: 940 }], 18, 'gorge-left', 4, 2, 1, 12),
+    // two rows hard by the left of the fairway, up to the green
+    ...treeLine([{ x: -66, y: 200 }, { x: -66, y: 878 }], 18, 'gorge-left', 4, 2, 1, 12),
     ...treeLine([{ x: 122, y: 220 }, { x: 122, y: 790 }], 20, 'gorge-right', 4),
-    ...treeLine([{ x: -100, y: 910 }, { x: 70, y: 910 }], 18, 'gorge-back', 4),
+    // the wood behind the hillside, and a few either side of it
+    ...treeLine([{ x: -100, y: 994 }, { x: 128, y: 994 }], 18, 'gorge-back', 4),
+    tree(-94, 912, 5, 34),
+    tree(-90, 958, 5, 30),
+    tree(110, 918, 5, 32),
+    tree(116, 962, 5, 36),
+  ],
+  decor: [
+    ...long.decor,
+    ...GALLERY,
+    { kind: 'barn', x: 64, y: 974, rot: -0.5 },
+    { kind: 'cider', x: -64, y: 966, rot: 0.6 },
+    { kind: 'pumpkins', x: -40, y: 912 },
+    { kind: 'pumpkins', x: 16, y: 918 },
+    { kind: 'pumpkins', x: 70, y: 930 },
+    { kind: 'haybale', x: -78, y: 930, scale: 0.8 },
+    { kind: 'haybale', x: 84, y: 948, scale: 0.8 },
   ],
 };
+
+// played from a tee about 10% up the hole (since Nov 6: the course was playing long everywhere); the old tee is the back tee
+export const thegorge = teeUp(thegorgeBack, { x: 0, y: 87 }, 11, 575);

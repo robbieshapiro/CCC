@@ -7,7 +7,7 @@ import * as props from './props';
 import { DESERT_SURFACE, LANDS_FLOOR, LINKS_SURFACE, landsFrame, landsPost } from './lands';
 import { brewFx, HAUNTED_FLOOR, HAUNTED_SURFACE, hauntedDecor, hauntedGrounds, hauntedMover, hauntedPortal, hauntedPost, hauntedWall, slimeBubbles, slimeMaterial } from './haunted';
 import * as stands from './stands';
-import { AUTUMN_FLOOR, AUTUMN_SURFACE, autumnDecor, autumnFrame, BARN_RED, gableRoof, maple } from './autumn';
+import { AUTUMN_FLOOR, AUTUMN_SURFACE, autumnDecor, autumnFrame, BARN_RED, gableRoof, maple, strawTerraces } from './autumn';
 import { wildlife } from './wildlife';
 import { COASTAL_SURFACE, coastalDecor, coastalFrame, lighthouse, montereyCypress, torreyPine, PACIFIC, PACIFIC_BED, SANDSTONE, surf } from './coastal';
 import { mat, mesh, P } from './props';
@@ -625,6 +625,17 @@ export function buildWorld(h: Hole, number: number): World {
     else if (d.kind === 'rock') o = volcanic ? basalt(props.rock(d.scale ?? 2, Math.round(d.x * 3 + d.y))) : props.rock(d.scale ?? 2, Math.round(d.x * 3 + d.y));
     else if (d.kind === 'teebox') {
       for (const side of [-1, 1]) root.add(at(props.teeMarker(), d.x + side * 6, d.y + 2, 0));
+      continue;
+    } else if (d.kind === 'stands' && autumn) {
+      // the Western Reserve's finale: straw bales up the hillside and festoon lights (see strawTerraces)
+      const f = stands.facing(d);
+      const side = { x: -f.y, y: f.x };
+      const place = (across: number, back: number) => {
+        const x = d.x + side.x * across - f.x * back;
+        const y = d.y + side.y * across - f.y * back;
+        return w3(x, y, heightAt(h, x, y));
+      };
+      root.add(strawTerraces(stands.ROWS, stands.COLS, stands.SEAT_GAP, stands.ROW_DEPTH, stands.ROW_RISE, place, -(d.rot ?? 0), anim));
       continue;
     } else if (d.kind === 'stands') {
       // a bank of stone tiers stepping up the slope away from the green, each sat on the ground under it, with a banner
