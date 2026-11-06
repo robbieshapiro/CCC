@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (new golfers, and the Pro Shop plan).
+Last updated Nov 6, 2026 (the Committee Room's headline numbers).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (new golfers, and the Pro Shop plan).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #154 | The Committee Room's headline numbers, above Weekly Players: Reginald's morning read (3 to 5 takeaways from the numbers and the week's feedback, written by Claude once a day and kept in `admin_insights`; `api/insights.ts`); tiles for who's in today and who played, last week's players who've come back (the north star), rounds per player, new members who've played (naming those who haven't), the purse in play and Pro Shop spend, and AI calls today; then players per day for 14 days, week over week, and how this week's course is playing hole by hole against par with the spread of scores. One read-only call, `admin_kpis`. |
 | #153 | Every golfer rebuilt (`src/golf3d/body.ts`): a sculpted head with a jaw and chin, real eyes (whites, coloured irises, lids), brows, a nose, lips and ears; hair and beards that follow the head; a shaped torso, arms and legs instead of tubes; hands with fingers wrapped round the grip, held in front where they can be seen (they used to rest behind the hips); proper golf shoes; the watch with a face you can read, the chain and collar sitting on the chest. Hank the starter now stands on the first tee, in a navy blazer and flat cap. Reginald and every member's golfer get the new look automatically. About 13,000 triangles a golfer (was 7,000), merged into a few draw calls each, with shared shapes reused, so a full grandstand still draws on a phone. |
 | #151 | The Open becomes the main board. It's always the one members land on, with My club as the second tab, and from the week of Nov 8 it pays the purse: one purse across every club, $1,000 in for each person who plays, the top ten on the Open paid, each person once (on their home club, the one the Open lists them under). The countdown, the Open, the club board and the after-round line all show the same Open money, and the honours list what the whole Open paid. Club titles and plaques stay as they were. The Caldera week and earlier keep their club purses (`club_payouts`); `period_payouts` now returns a club's share of the Open from Nov 8 (`open_payouts`). |
 | #149 | Daily cards from the week of Nov 8: one round a day counts. "Play today's card" on home; the card locks at the first swing, saves itself after every stroke, and if it's cut short (the app closes, a call) it picks up at the hole they were on, back on the tee with the strokes already played there. Once today's card is in, home offers a practice round of the week's course: unlimited, logged as practice (a new "Rounds" column in the admin's practice log), never on the board, the purse or the bonuses, and no Reginald note. Before Nov 8 nothing changes. The board says "best card counts", How to play and Reginald's and the Chronicle's prompts explain it. The server enforces one round a day per seat. Built because members were restarting hole 1 hundreds of times a day hunting for a perfect opening (541 starts, 6 finishes in a day on Nov 5). |
@@ -112,6 +113,7 @@ Last updated Nov 6, 2026 (new golfers, and the Pro Shop plan).
 - [ ] Set a monthly spend limit in the Anthropic Console (about $25).
 - [ ] Turn on branch protection for `main` (GitHub → Settings → Branches → Add rule): require a pull request (0 approvals), require the `checks` status to pass, and don't allow bypassing. Agents can't set this, and none may merge anything until it's on.
 - [ ] Create the Architect and Steward as routines in claude.ai (Robbie, from the claude.ai/code routines page: the repo `robbieshapiro/CCC`, plus Supabase and Vercel for the Steward). An agent couldn't attach the repo or connectors. Then delete the paused copies `trig_01VL4jyxguewx9BmYHhEGcgn` and `trig_01JTEuR8TDGCEgBV7ze79J8i`.
+- [ ] The #154 SQL: `admin_kpis` and the `admin_insights` table.
 - [x] The #151 Open purse SQL, run Nov 5 as `pr_151_open_purse` (checked: the four purse functions are live and hidden from the public role, the snapshot loads for both clubs, October's purses still read $9,998 at Kellogg and $4,000 at The Clergy, and the Open pays nothing until the Nov 8 week closes): `club_payouts` (the old club purse, renamed), `open_purse_from`, `open_payouts`, the new `period_payouts`, and `get_snapshot` (the last purse paid lists the whole Open, with names).
 - [x] The #149 daily cards SQL, run Nov 5 (pasted by Robbie; checked: the five card functions, the new `start_round` and `submit_round` with the old signatures gone, the new columns, the `course` practice kind, member access to the card functions with the helpers hidden, and cards still off until Sunday): `cards_on`, the `card` columns on `rounds` and `round_starts` (with `scores`, `shots`, `spots`, `feats`), `card_of`, `card_in`, `card_today`, `card_progress`, the new `start_round` and `submit_round`, the `course` practice kind and `practice_report`.
 - [x] GitHub default branch switched to `main`.
@@ -171,6 +173,10 @@ The problem with the new members: once your best round is in, there's no reason 
 2. ~~The Nov 9 course.~~ The Western Reserve, #79. New kit for later courses: the `autumn` theme (`src/golf3d/autumn.ts`), `maple` trees, `barn` walls, and roofs with a `top` so a high ball sails over a building.
 3. ~~The scheduled course agent.~~ The Architect, #148 (see Agents).
 
+### Shot data (decided Nov 6, after the headline numbers)
+
+Every counted stroke saved: club, power and accuracy, where it started and finished, the lie, any penalty (about 1 to 2 KB a round). Feeds an Admin hole report (average against par, where shots finish, the hazards that catch people, putts per green) and a script that calibrates `check-holes`' steady bot to how members really play, so the Architect can aim for even par for real members.
+
 ### The Pro Shop, run by Reginald (decided Nov 6, three PRs)
 
 1. ~~The new golfer, and Hank on the first tee.~~ #153.
@@ -201,6 +207,8 @@ The problem with the new members: once your best round is in, there's no reason 
   - a Members' Course board on the Play page.
 
 ## Costs to watch
+
+- Reginald's morning read for the Committee: one call a day, whenever Admin is first opened.
 
 Everything runs on Claude Opus 5.5, server-side, with caps:
 - 1 daily line per member;

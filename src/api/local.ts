@@ -10,7 +10,7 @@ import { weekOf } from '../bar';
 import { payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type Api, type CardProgress, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type Api, type CardProgress, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string };
@@ -625,6 +625,71 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       d = next.toISOString().slice(0, 10);
     }
     return out;
+  },
+
+  // as admin_kpis does on the server, from what local mode keeps
+  async adminKpis(session): Promise<AdminKpis> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see the admin tab.');
+    const clubs = new Set(db.players.filter((p) => p.admin && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.groupId));
+    const mem = db.players.filter((p) => clubs.has(p.groupId) && !p.admin && !p.host);
+    const ids = new Set(mem.map((p) => p.id));
+    const rd = db.rounds.filter((r) => ids.has(r.playerId));
+    const today = todayInGameTz();
+    const per = periodOf(today);
+    const months = [...new Set(rd.map((r) => r.month))].sort();
+    const prev = months.filter((m) => m < per).pop() ?? null;
+    const day = (iso: string) => todayInGameTz(new Date(iso));
+    const shift = (d: string, n: number) => {
+      const x = new Date(`${d}T12:00:00Z`);
+      x.setUTCDate(x.getUTCDate() + n);
+      return x.toISOString().slice(0, 10);
+    };
+    const seen = (d: string) =>
+      new Set([...(db.days ?? []).filter((x) => ids.has(x.playerId) && x.day === d).map((x) => x.playerId), ...rd.filter((r) => day(r.createdAt) === d).map((r) => r.playerId), ...(db.practice ?? []).filter((x) => ids.has(x.playerId) && day(x.startedAt) === d).map((x) => x.playerId)]).size;
+    const playedOn = (d: string) => new Set(rd.filter((r) => day(r.createdAt) === d).map((r) => r.playerId)).size;
+    const who = (m: string | null) => new Set(rd.filter((r) => r.month === m).map((r) => r.playerId));
+    const now = who(per);
+    const last = who(prev);
+    const fresh = mem.filter((p) => Date.now() - Date.parse(p.joined) < 14 * 86400000);
+    const course = courseFor(per);
+    const mine = rd.filter((r) => r.month === per);
+    const holes = course.holes.map((h, i) => {
+      const xs = mine.map((r) => r.holes[i]).filter((x) => x !== undefined);
+      const c = (f: (x: number) => boolean) => xs.filter(f).length;
+      return { hole: i + 1, par: h.par, n: xs.length, avg: xs.length ? Math.round((xs.reduce((a, x) => a + x - h.par, 0) / xs.length) * 100) / 100 : 0, eagle: c((x) => x <= h.par - 2), birdie: c((x) => x === h.par - 1), pars: c((x) => x === h.par), bogey: c((x) => x === h.par + 1), worse: c((x) => x >= h.par + 2) };
+    });
+    return {
+      period: per,
+      prevPeriod: prev,
+      today,
+      members: mem.length,
+      visitedToday: seen(today),
+      playedToday: playedOn(today),
+      visitedWeekAgo: seen(shift(today, -7)),
+      playedWeekAgo: playedOn(shift(today, -7)),
+      lastPlayers: last.size,
+      cameBack: [...last].filter((id) => now.has(id)).length,
+      rounds: mine.length,
+      players: now.size,
+      prevRounds: rd.filter((r) => r.month === prev).length,
+      prevPlayers: last.size,
+      joined14: fresh.length,
+      firstRound14: fresh.filter((p) => rd.some((r) => r.playerId === p.id)).length,
+      neverPlayed14: fresh.filter((p) => !rd.some((r) => r.playerId === p.id)).map((p) => p.name),
+      purse: 1000 * now.size,
+      shop7: (db.purchases ?? []).filter((x) => ids.has(x.playerId)).reduce((a, x) => a + x.price, 0),
+      shopAll: (db.purchases ?? []).filter((x) => ids.has(x.playerId)).reduce((a, x) => a + x.price, 0),
+      ai: { today: {}, designsToday: 0, month: 0 },
+      days: Array.from({ length: 14 }, (_, i) => shift(today, i - 13)).map((d) => ({ day: d, played: playedOn(d), visited: seen(d) })),
+      weeks: months.map((m, i) => {
+        const before = who(months[i - 1] ?? null);
+        const these = who(m);
+        return { period: m, players: these.size, rounds: rd.filter((r) => r.month === m).length, back: [...before].filter((id) => these.has(id)).length, before: before.size };
+      }),
+      holes,
+    };
   },
 
   // local mode keeps one period at a time, so there's never a playoff to play

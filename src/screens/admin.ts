@@ -16,6 +16,7 @@ import { esc, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
+import { chartSections, kpiSections, loadBrief, loadKpis } from './adminKpis';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -48,7 +49,9 @@ export function admin(snap: Snapshot) {
         <div><p class="eyebrow">Committee only</p><h1>The Committee Room</h1></div>
         <div class="seg" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
       </div>
+      ${kpiSections()}
       <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
+      ${chartSections()}
       <section class="adm-card adm-do">
         <h2>To do</h2>
         <div id="adm-todo"><p class="muted">Loading…</p></div>
@@ -82,6 +85,8 @@ export function admin(snap: Snapshot) {
   void load();
   void loadHoles(snap);
   void loadTrend();
+  void loadKpis();
+  void loadBrief();
 }
 
 // Members' golf holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
@@ -276,7 +281,10 @@ async function loadTrend() {
   trend = await api.adminTrend(requireSession()).catch(() => trend);
   if (!document.getElementById('adm-trend')) return; // left the page
   drawTrend();
-  trendTimer = window.setTimeout(() => void loadTrend(), 60_000);
+  trendTimer = window.setTimeout(() => {
+    void loadTrend();
+    void loadKpis();
+  }, 60_000);
 }
 
 function drawTrend() {
