@@ -428,6 +428,8 @@ export function testHole(snap: Snapshot, hole: Hole, back: () => void) {
   game = g;
   g.leaveText = 'Back';
   g.howTo = hole.putterOnly ? 'minigolf' : 'round';
+  // trying a hole from the Design Desk: the same meter it'll be played on
+  if (!hole.putterOnly) g.meterStyle = 'vertical';
   const go = async () => {
     const r = await g.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
     if (game !== g) return;
@@ -472,6 +474,8 @@ export function barRound(snap: Snapshot, kind: BarGame) {
   if (kind === 'minigolf' || kind === 'members') {
     // six holes of Hollow Hills, or the members' own holes (up to nine): putter only, fewest strokes counts
     g.howTo = kind === 'minigolf' ? 'minigolf' : 'round';
+    // the members' holes swing on the weekly course's meter
+    if (kind === 'members') g.meterStyle = 'vertical';
     g.starter = kind === 'minigolf' ? `Six holes, ${me.name}. Mind the scythe.` : `Your fellow members built these, ${me.name}. Blame them.`;
     void (async () => {
       const holes = kind === 'minigolf' ? HOLLOW_HILLS : await membersHoles();
