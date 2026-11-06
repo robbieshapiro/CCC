@@ -527,6 +527,15 @@ function caddie(owner: GolferSpec) {
 // ---------- the golfer ----------
 
 export type PoseName = 'idle' | 'address' | 'cheer' | 'groan' | 'wave' | 'clasp';
+// what you do when the ball drops: an ace or an eagle (and better) is a backflip, a birdie a fist pump, a par a nod and
+// a wave to the crowd, a bogey a kick at the turf, and anything worse the club goes into the ground
+export type Reaction = 'ace' | 'flip' | 'pump' | 'nod' | 'kick' | 'mad';
+const REACT_FOR: Record<Reaction, number> = { ace: 2.8, flip: 2.4, pump: 2.2, nod: 2.4, kick: 2.4, mad: 2.4 };
+export const reactionFor = (strokes: number, par: number): Reaction =>
+  strokes === 1 ? 'ace' : strokes <= par - 2 ? 'flip' : strokes === par - 1 ? 'pump' : strokes === par ? 'nod' : strokes === par + 1 ? 'kick' : 'mad';
+const smooth = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+// 0 outside [a, b], rising to 1 and back over it
+const bump = (t: number, a: number, b: number) => (t <= a || t >= b ? 0 : Math.sin(((t - a) / (b - a)) * Math.PI));
 
 export class Golfer {
   readonly group = new THREE.Group();
@@ -538,8 +547,9 @@ export class Golfer {
   private club: THREE.Group | null = null;
   private clubId: ClubId | null = null;
   private legs: THREE.Group[] = [];
+  private arms: { upper: THREE.Group; lower: THREE.Group; side: number }[] = [];
   private t = 0;
-  private state: { pose: PoseName; hold?: number; swing?: { t: number; back: number; dur: number; impact: () => void; done: () => void; hit: boolean } } = { pose: 'idle' };
+  private state: { pose: PoseName; hold?: number; react?: { kind: Reaction; t: number }; swing?: { t: number; back: number; dur: number; impact: () => void; done: () => void; hit: boolean } } = { pose: 'idle' };
   private cur = { tilt: 0, phi: 0, twist: 0, bend: 0, knee: 0, headTilt: 0 };
 
   constructor(readonly spec: GolferSpec) {
@@ -923,26 +933,37 @@ export class Golfer {
       const shoulder = V(0.6 * side * w, 0.12, 0);
       const wrist = hand.clone().add(V(0.05 * side, 0.08, -0.03));
       const elbow = shoulder.clone().lerp(wrist, 0.5).add(V(0.1 * side, 0, 0.07));
-      this.plane.add(mesh(joint(shoulder, 0.19 * w, 0.85), topMat));
+      // each arm on its own: the upper arm pivots at the shoulder and carries the forearm, which pivots at the elbow
+      // (still for the swing, so it plays as one rig; free for the reactions after a hole)
+      const upper = new THREE.Group();
+      upper.position.copy(shoulder);
+      this.plane.add(upper);
+      const lower = new THREE.Group();
+      lower.position.copy(elbow).sub(shoulder);
+      upper.add(lower);
+      this.arms.push({ upper, lower, side });
+      const toU = (o: THREE.Object3D) => (o.position.sub(shoulder), upper.add(o));
+      const toL = (o: THREE.Object3D) => (o.position.sub(elbow), lower.add(o));
+      toU(mesh(joint(shoulder, 0.19 * w, 0.85), topMat));
       // the arm under the sleeve: an upper arm with some shape to it, a forearm narrowing to the wrist
-      this.plane.add(mesh(lathe(shoulder, elbow, [[0, 0.16 * tw], [0.35, 0.165 * tw], [0.8, 0.13 * tw], [1, 0.12 * tw]], 14, 0.9), skin));
-      this.plane.add(mesh(joint(elbow, 0.126 * tw), skin));
-      this.plane.add(mesh(lathe(elbow, wrist, [[0, 0.118 * tw], [0.3, 0.125 * tw], [0.8, 0.088], [1, 0.072]], 14, 0.82), skin));
+      toU(mesh(lathe(shoulder, elbow, [[0, 0.16 * tw], [0.35, 0.165 * tw], [0.8, 0.13 * tw], [1, 0.12 * tw]], 14, 0.9), skin));
+      toL(mesh(joint(elbow, 0.126 * tw), skin));
+      toL(mesh(lathe(elbow, wrist, [[0, 0.118 * tw], [0.3, 0.125 * tw], [0.8, 0.088], [1, 0.072]], 14, 0.82), skin));
       if (shortSleeve) {
         const hem = shoulder.clone().lerp(elbow, 0.58);
-        this.plane.add(mesh(lathe(shoulder, hem, [[0, 0.205 * tw], [0.85, 0.185 * tw], [1, 0.18 * tw]], 16, 0.92), topMat));
+        toU(mesh(lathe(shoulder, hem, [[0, 0.205 * tw], [0.85, 0.185 * tw], [1, 0.18 * tw]], 16, 0.92), topMat));
       } else {
         const cuff = elbow.clone().lerp(wrist, 0.86);
-        this.plane.add(mesh(lathe(shoulder, elbow, [[0, 0.205 * tw], [1, 0.165 * tw]], 16, 0.92), topMat));
-        this.plane.add(mesh(joint(elbow, 0.175 * tw, 0.92), topMat));
-        this.plane.add(mesh(lathe(elbow, cuff, [[0, 0.165 * tw], [0.85, 0.125], [1, 0.13]], 16, 0.88), topMat));
+        toU(mesh(lathe(shoulder, elbow, [[0, 0.205 * tw], [1, 0.165 * tw]], 16, 0.92), topMat));
+        toL(mesh(joint(elbow, 0.175 * tw, 0.92), topMat));
+        toL(mesh(lathe(elbow, cuff, [[0, 0.165 * tw], [0.85, 0.125], [1, 0.13]], 16, 0.88), topMat));
       }
       // the hand itself, fingers wrapped round the grip (the glove on the lead hand)
       const gloveM = s.gloveStyle === 'gold' ? GOLD() : s.gloveStyle === 'black' ? m('#1a1a1a', 0.5) : m('#f6f4ee', 0.65);
       const gloved = (s.glove && lead) || s.gloveStyle === 'pair';
       const h = mesh(gripHand(side), gloved ? gloveM : skin);
       h.position.copy(hand);
-      this.plane.add(h);
+      toL(h);
       // the gold watch, on the lead wrist, its face turned out where it catches the light
       if (s.watch && lead) {
         const at = wrist.clone().lerp(elbow, 0.12);
@@ -952,7 +973,7 @@ export class Golfer {
         const band = mesh(new THREE.TorusGeometry(0.086, 0.022, 8, 18), metal);
         band.position.copy(at);
         band.quaternion.setFromUnitVectors(V(0, 0, 1), axis);
-        this.plane.add(band);
+        toL(band);
         const outward = V(1, 0.15, 0.5).normalize();
         const face = new THREE.Group();
         face.position.copy(at).addScaledVector(outward, 0.09);
@@ -978,14 +999,14 @@ export class Golfer {
             d.position.set(Math.cos(a) * 0.05, 0.02, Math.sin(a) * 0.05);
             face.add(d);
           }
-        this.plane.add(face);
+        toL(face);
       }
       // a silver bracelet on the trail wrist
       if (s.bracelet && !lead) {
         const b = mesh(new THREE.TorusGeometry(0.082, 0.016, 6, 18), m('#dfe3e8', 0.15, { metalness: 0.95 }));
         b.position.copy(wrist.clone().lerp(elbow, 0.1));
         b.quaternion.setFromUnitVectors(V(0, 0, 1), elbow.clone().sub(wrist).normalize());
-        this.plane.add(b);
+        toL(b);
       }
     }
 
@@ -1209,6 +1230,20 @@ export class Golfer {
     this.state = { pose: p };
   }
 
+  // Play a reaction (see Reaction), then settle back to standing
+  react(kind: Reaction) {
+    this.state = { pose: 'idle', react: { kind, t: 0 } };
+  }
+
+  get reacting() {
+    return !!this.state.react;
+  }
+
+  // the middle of the body in the world (it rises with a jump), for a camera to keep framed
+  center() {
+    return this.hips.getWorldPosition(new THREE.Vector3());
+  }
+
   get swinging() {
     return !!this.state.swing;
   }
@@ -1268,6 +1303,80 @@ export class Golfer {
       target.headTilt = 0.6;
       target.knee = 0.15;
     }
+    // the reactions: arm by arm, and the odd move of the whole body
+    const arm = this.arms.map(() => ({ ux: 0, uz: 0, lx: 0, lz: 0 }));
+    const trail = this.arms.findIndex((a) => a.side < 0);
+    const lead = this.arms.findIndex((a) => a.side > 0);
+    let flip = 0;
+    let lift = 0;
+    let nod = 0;
+    let shake = 0;
+    let kick = 0;
+    const rc = this.state.react;
+    if (rc) {
+      rc.t += dt;
+      const t = rc.t;
+      const k = rc.kind;
+      const tr = arm[trail];
+      // the club hangs from the lead hand, just in front
+      target.tilt = -0.08;
+      // side: -1 for the trail arm (the golfer's right), +1 for the lead. A turn of side * a about z swings an arm out
+      // and up its own side; about x, a negative turn brings it forward and up.
+      const ts = trail >= 0 ? this.arms[trail].side : -1;
+      if (k === 'pump') {
+        // up, then the elbow yanked down to the ribs, twice, the second one held: the fist pump
+        const pull = t < 0.28 ? 0 : t < 0.48 ? 1 : t < 0.66 ? 0 : t < 1.7 ? 1 : 0;
+        // the arm comes up bent in front, the fist level with the head; held, then let go
+        if (t < 1.7) {
+          tr.ux = pull ? -0.5 : -1.15;
+          tr.uz = ts * 0.3;
+          tr.lx = pull ? -2.1 : -1.6;
+        }
+        target.knee = pull ? 0.32 : 0.12;
+        target.bend = pull ? 0.16 : 0.04;
+        target.headTilt = pull ? 0.12 : -0.12;
+        target.twist = pull ? -0.18 : 0;
+      } else if (k === 'nod') {
+        // a nod, then a hand up to the crowd
+        nod = t < 0.9 ? 0.2 * Math.sin(t * 7) ** 2 : 0;
+        const up = smooth((t - 0.6) / 0.35) * (1 - smooth((t - 2.05) / 0.3));
+        tr.uz = ts * 2.45 * up;
+        tr.lz = ts * (0.6 + 0.3 * Math.sin(t * 9)) * up;
+        target.headTilt = -0.05;
+      } else if (k === 'kick') {
+        // head down, a kick at the turf, a shake of the head
+        target.headTilt = 0.5;
+        target.bend = 0.22;
+        kick = -0.95 * bump(t, 0.45, 0.95);
+        shake = t > 1.05 && t < 2.05 ? 0.28 * Math.sin((t - 1.05) * 9) : 0;
+      } else if (k === 'mad') {
+        // the club up over the head and into the ground, then bent over it
+        target.tilt = t < 0.38 ? 2.5 : t < 1.6 ? -0.55 : -0.08;
+        target.knee = t > 0.38 && t < 0.7 ? 0.38 : 0.12;
+        target.bend = t > 0.38 && t < 1.9 ? 0.34 : 0;
+        target.headTilt = t > 0.38 ? 0.55 : -0.2;
+        shake = t > 1.0 && t < 1.9 ? 0.22 * Math.sin((t - 1.0) * 10) : 0;
+      } else {
+        // the backflip: crouch, up and over, stick it, then both arms up (still, no sway)
+        const air = (t - 0.28) / 0.82;
+        if (t < 0.28) target.knee = 0.55;
+        else if (air < 1) {
+          lift = Math.sin(air * Math.PI) * 2.7;
+          flip = -Math.PI * 2 * smooth(air);
+          target.knee = 0.95 * Math.sin(air * Math.PI);
+          target.tilt = 2.4;
+        } else if (t < 1.4) target.knee = 0.45;
+        else {
+          this.arms.forEach((a, i) => {
+            arm[i].uz = a.side * 2.75;
+            arm[i].lz = -a.side * 0.25;
+          });
+          target.headTilt = k === 'ace' ? -0.35 : -0.2;
+        }
+      }
+      if (t > REACT_FOR[k]) this.state = { pose: 'idle' };
+    }
+    if (lead >= 0 && rc?.kind === 'pump') arm[lead] = { ux: 0, uz: 0, lx: 0, lz: 0 };
     const sw = this.state.swing;
     if (sw) {
       sw.t += dt;
@@ -1290,7 +1399,8 @@ export class Golfer {
       this.cur.phi = phi;
     }
     const ease = 1 - Math.exp(-dt * 10);
-    for (const key of Object.keys(this.cur) as (keyof typeof this.cur)[]) {
+    const cur = this.cur;
+    for (const key of Object.keys(cur) as (keyof typeof cur)[]) {
       if (key === 'phi' && sw) continue;
       this.cur[key] += (target[key] - this.cur[key]) * ease;
     }
@@ -1302,9 +1412,20 @@ export class Golfer {
     this.spine.rotation.y = c.twist;
     this.head.rotation.x = c.headTilt - c.bend * 0.6;
     this.head.rotation.y = -c.twist * 0.7;
-    this.hips.position.y = 3.05 - c.knee * 0.5;
-    this.hips.rotation.x = -c.bend * 0.25;
-    for (const l of this.legs) l.rotation.x = c.knee * 0.4;
+    this.head.rotation.x += nod;
+    this.head.rotation.y += shake;
+    this.hips.position.y = 3.05 - c.knee * 0.5 + lift;
+    this.hips.rotation.x = -c.bend * 0.25 + flip;
+    this.legs.forEach((l, i) => (l.rotation.x = c.knee * 0.4 + (i === 0 ? kick : 0)));
+    // the arms ease to where the reaction wants them (all at rest for the swing)
+    const armEase = 1 - Math.exp(-dt * 16);
+    this.arms.forEach((a, i) => {
+      const g = arm[i];
+      a.upper.rotation.x += (g.ux - a.upper.rotation.x) * armEase;
+      a.upper.rotation.z += (g.uz - a.upper.rotation.z) * armEase;
+      a.lower.rotation.x += (g.lx - a.lower.rotation.x) * armEase;
+      a.lower.rotation.z += (g.lz - a.lower.rotation.z) * armEase;
+    });
     this.spine.scale.y = 1 + Math.sin(this.t * 1.6) * 0.006;
   }
 

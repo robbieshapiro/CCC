@@ -10,8 +10,8 @@ import { CartGirl, type Visitor } from './cartgirl';
 import { ReginaldTray } from './reginaldtray';
 import { conditionsFor, gusted, tempestOn, withPin, type Conditions } from './conditions';
 import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
-import { Golfer, HANK_SPEC } from './golfer';
-import { BALL_R, dropPoint, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Result } from './physics';
+import { Golfer, HANK_SPEC, reactionFor, type Reaction } from './golfer';
+import { BALL_R, dropPoint, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Frame, type Result } from './physics';
 import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
@@ -48,6 +48,9 @@ export type Ghost = { id?: string; pid?: string; name: string; avatar: Avatar; s
 // someone in the stands on a hole that has them: a member who has played it, with their score on it
 export type Spectator = { name: string; avatar: Avatar; label: string };
 type Mode = 'fly' | 'aim' | 'meter' | 'swing' | 'roll' | 'done' | 'cart';
+
+// the ace's replay runs at this share of real time
+const REPLAY_SPEED = 0.4;
 
 // A floating name card over another member: their name, and what they made on this hole.
 function nameTag(name: string, score: string) {
@@ -206,6 +209,11 @@ export class Course3D {
   private frameAvg = 1 / 60; // a running average of frame time, in seconds
 
   private ballSink = 0; // how far the drawn ball is lowered to sit a smaller ball on the ground
+  // after the ball drops: the shot that went in (for an ace's replay), the replay as it plays, and until when the camera
+  // stays close on your golfer for their reaction
+  private holedFrames: Frame[] | null = null;
+  private replay: { frames: Frame[]; t: number; end: number } | null = null;
+  private closeUntil = 0;
   // the green read on a tour green while you putt: dots streaming downhill, quicker where it's steeper
   // the green read on a tour green, Golden Tee style: how much it climbs or falls and breaks between the ball and cup
   private read: { slope: number; brk: number } | null = null;
@@ -397,6 +405,9 @@ export class Course3D {
   play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: Visit; of?: number; strokes?: number } = {}): Promise<HoleResult> {
     this.holesInRound = opts.of ?? this.holesInRound;
     this.clearRead();
+    this.replay = null;
+    this.closeUntil = 0;
+    this.holedFrames = null;
     if (this.world) {
       this.scene.remove(this.world.root);
       this.world.dispose();
@@ -1189,6 +1200,12 @@ export class Course3D {
     el.style.touchAction = 'none';
     el.addEventListener('pointerdown', (e) => {
       if (this.mode === 'fly') return this.endFlyover();
+      // the hole's over: a tap skips the replay, then the close-up
+      if (this.mode === 'done') {
+        if (this.replay) this.endReplay();
+        else this.closeUntil = 0;
+        return;
+      }
       if (this.mode === 'meter') return this.tapSwing();
       if (this.mode !== 'aim') return;
       el.setPointerCapture(e.pointerId);
@@ -1556,6 +1573,7 @@ export class Course3D {
     if (r.holed) {
       sfx('pop');
       window.setTimeout(() => sfx('cheer'), 250);
+      this.holedFrames = r.frames;
       const feats = [...this.zones];
       if (this.strokes === 1) feats.push('ace');
       if (s.club === 'wedge' || s.club === 'chip') feats.push('chipin');
@@ -1595,15 +1613,66 @@ export class Course3D {
   private finish(feats: string[], delay = 0) {
     this.mode = 'done';
     const name = scoreName(this.strokes, this.hole.par);
-    const d = this.strokes - this.hole.par;
-    this.golfer.setPose(d <= 0 ? 'cheer' : 'groan');
+    // the reaction to the score; a hole in one is shown again first, in slow motion from down by the cup
+    const kind = reactionFor(this.strokes, this.hole.par);
+    const frames = this.holedFrames;
+    this.holedFrames = null;
+    let extra = 0;
+    if (kind === 'ace' && frames && frames.length > 1) {
+      const end = frames[frames.length - 1].t;
+      this.replay = { frames, t: 0, end };
+      extra = 1200;
+    } else this.startReaction(kind);
     if (this.strokes < this.hole.par + MAX_OVER || delay === 0) this.callout(name, `${this.strokes} ${this.strokes === 1 ? 'stroke' : 'strokes'}`, 2400);
     const pin = this.world?.root.getObjectByName('pin');
     if (pin) pin.position.y += 1.2;
     this.orbit = 0;
     // a hole the admin jumped away from never reports
     const done = this.resolve;
-    window.setTimeout(() => this.resolve === done && done?.({ strokes: this.strokes, feats: [...new Set(feats)], spot: this.spot ?? null }), 2800 + delay);
+    // on to the card once the moment's over: the usual pause, and never in the middle of the replay or the reaction
+    // (a slow phone plays them slower than the clock on the wall); a tap skips both
+    const started = performance.now();
+    const wait = () => {
+      if (this.resolve !== done) return;
+      const busy = !!this.replay || this.clock < this.closeUntil - 0.3;
+      if (busy || performance.now() - started < 2800 + delay + extra) return void window.setTimeout(wait, 150);
+      done?.({ strokes: this.strokes, feats: [...new Set(feats)], spot: this.spot ?? null });
+    };
+    window.setTimeout(wait, 2800 + delay);
+  }
+
+  // your golfer reacts, with the camera close on them for it
+  private startReaction(kind: Reaction) {
+    this.golfer.react(kind);
+    this.closeUntil = this.clock + (kind === 'ace' ? 2.9 : 2.5);
+    // a cut to them, as on television, not a long pan across the course
+    this.snapCamera();
+  }
+
+  // the ace's replay: the ball along its path again, slowed right down, then the reaction
+  private stepReplay(dt: number) {
+    const rp = this.replay;
+    if (!rp) return;
+    rp.t += dt * REPLAY_SPEED;
+    const f = rp.frames;
+    let i = 0;
+    while (i < f.length - 1 && f[i + 1].t < rp.t) i++;
+    const a = f[i];
+    const b = f[Math.min(i + 1, f.length - 1)];
+    const k = b.t > a.t ? Math.min(1, (rp.t - a.t) / (b.t - a.t)) : 1;
+    this.ball.visible = true;
+    this.ball.position.copy(w3(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, a.z + (b.z - a.z) * k + BALL_R));
+    if (rp.t >= rp.end) this.endReplay();
+  }
+
+  private endReplay() {
+    const rp = this.replay;
+    if (!rp) return;
+    this.replay = null;
+    const last = rp.frames[rp.frames.length - 1];
+    this.ball.position.copy(w3(last.x, last.y, last.z + BALL_R));
+    sfx('cheer');
+    this.startReaction('ace');
   }
 
   // On the range: how far it carried, how far it went, and which flag it finished by.
@@ -2009,6 +2078,31 @@ export class Course3D {
       this.camLook.copy(this.landing);
       return;
     }
+    if (this.mode === 'done' && this.replay) {
+      // down by the cup at grass height, looking back up the line the ball came in on
+      const c = w3(this.hole.cup.x, this.hole.cup.y, heightAt(this.hole, this.hole.cup.x, this.hole.cup.y));
+      const f = this.replay.frames;
+      const from = f[Math.max(0, f.length - 40)];
+      const dir = new THREE.Vector3(this.hole.cup.x - from.x, 0, -(this.hole.cup.y - from.y));
+      if (dir.lengthSq() < 1e-3) dir.set(0, 0, -1);
+      dir.normalize();
+      this.camPos.copy(c).addScaledVector(dir, 7).add(new THREE.Vector3(0, 1.1, 0));
+      this.camLook.copy(this.ball.position).lerp(c, 0.25);
+      return;
+    }
+    if (this.mode === 'done' && this.clock < this.closeUntil) {
+      // close on your golfer, a little to one side of square on, for the reaction
+      const g = this.golfer.group;
+      const fwd = new THREE.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y));
+      const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
+      const portrait = this.camera.aspect < 1;
+      this.camPos.copy(g.position).addScaledVector(fwd, portrait ? 13 : 10.5).addScaledVector(side, -3.5).add(new THREE.Vector3(0, 4.6, 0));
+      const ground = heightAt(this.hole, this.camPos.x, -this.camPos.z);
+      this.camPos.y = Math.max(this.camPos.y, ground + 2.5);
+      // the waist, so a backflip stays in frame
+      this.camLook.copy(this.golfer.center()).add(new THREE.Vector3(0, 0.6, 0));
+      return;
+    }
     if (this.mode === 'done') {
       this.orbit += 0.004;
       const c = w3(this.hole.cup.x, this.hole.cup.y, heightAt(this.hole, this.hole.cup.x, this.hole.cup.y));
@@ -2070,6 +2164,7 @@ export class Course3D {
     }
     this.clock += dt;
     this.world?.update(this.clock, dt);
+    if (this.replay) this.stepReplay(dt);
     this.cart?.update(dt);
 
     if (this.mode === 'meter') {
