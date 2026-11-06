@@ -3,14 +3,46 @@
 // Fireball on it too.
 import * as THREE from 'three';
 import { sfx } from '../fx/sound';
-import { DRINKS, type Drink } from './clubs';
+import { DRINKS, SCALE, type Drink } from './clubs';
 import { CREW, Hostess } from './hostess';
 import * as props from './props';
 import { w3 } from './scene';
 import { heightAt } from './terrain';
 import type { Hole, V2 } from './types';
 
-export class CartGirl {
+// Whoever brings the drinks out to the tee: the cart, or Reginald with his tray (reginaldtray.ts)
+export interface Visitor {
+  visited: boolean;
+  focus(): THREE.Vector3;
+  closeUp(aspect: number): { pos: THREE.Vector3; look: THREE.Vector3 } | null;
+  arrive(at: V2, aim: number, card: HTMLElement): void;
+  update(dt: number): void;
+  dispose(): void;
+}
+
+// what the hole asks for: a short one wants steady hands, a long one wants distance
+type Need = 'touch' | 'mid' | 'long';
+function needOf(h: Hole): Need {
+  const yd = h.yards ?? (Math.hypot(h.cup.x - h.tee.x, h.cup.y - h.tee.y) * SCALE) / 3;
+  if (h.par <= 3 || yd < 200) return 'touch';
+  if (h.par >= 5 || yd >= 430) return 'long';
+  return 'mid';
+}
+
+// The drinks on offer, matched to the hole, with sparkling water always there. The late cart (shots) brings Fireball
+// for the long ones only: on a short hole it's the steady drinks again.
+export function menuFor(h: Hole, shots: boolean): Drink[] {
+  const need = needOf(h);
+  const pick: Drink[] =
+    need === 'touch' ? ['palmer', 'transfusion', 'espresso'] : need === 'long' ? (shots ? ['fireball', 'lager', 'espresso'] : ['lager', 'espresso', 'palmer']) : shots ? ['fireball', 'palmer', 'transfusion'] : ['palmer', 'lager', 'transfusion'];
+  return [...pick, 'water'];
+}
+export function menuLine(h: Hole) {
+  const need = needOf(h);
+  return need === 'touch' ? 'A delicate one, this. Something for steady hands?' : need === 'long' ? 'A long one ahead. Something with a little lift?' : 'Anything to help it along?';
+}
+
+export class CartGirl implements Visitor {
   visited = false;
   private cart = props.cart();
   private crew: Hostess;
@@ -34,13 +66,14 @@ export class CartGirl {
     const look = CREW[Math.floor(Math.random() * CREW.length)];
     this.name = look.name;
     this.crew = new Hostess(look);
-    this.menu = shots ? ['fireball', 'lager', 'palmer'] : ['palmer', 'lager', 'espresso', 'transfusion', 'water'];
+    this.menu = menuFor(hole, shots);
     this.crew.setPose('idle');
     this.group.add(this.cart, this.crew.group);
     this.crew.group.position.set(3.4, 0, 1.5);
     this.crew.group.rotation.y = 0.6;
     // what's on the tray
-    const tray = shots ? ['#c4361b', '#c98a3a', '#e8c86a'] : ['#c98a3a', '#e8c86a', '#bfe3ec'];
+    const GLASS: Record<Drink, string> = { palmer: '#c98a3a', lager: '#e8c86a', espresso: '#3b2418', transfusion: '#8e2f4a', water: '#bfe3ec', fireball: '#c4361b' };
+    const tray = this.menu.slice(0, 3).map((d) => GLASS[d]);
     tray.forEach((color, i) => {
       const g = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.6, 10), new THREE.MeshStandardMaterial({ color, transparent: true, opacity: 0.85, roughness: 0.1 }));
       g.position.set(-0.4 + i * 0.8, 2.75, 2.8);
@@ -82,7 +115,7 @@ export class CartGirl {
     card.hidden = false;
     card.innerHTML = `
       <div class="cart-card">
-        <div class="cart-head"><p class="eyebrow">The beverage cart · ${this.name}</p></div>
+        <div class="cart-head"><p class="eyebrow">The beverage cart · ${this.name}</p><p class="cart-line">${menuLine(this.hole)}</p></div>
         <div class="cart-drinks">${this.menu
           .map((k) => `<button data-drink="${k}"><b>${DRINKS[k].name}</b><small>${DRINKS[k].blurb}</small></button>`)
           .join('')}</div>

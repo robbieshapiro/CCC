@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (the Western Reserve, prettier and calmer).
+Last updated Nov 6, 2026 (drinks that suit the hole, Reginald's tray, the Sunday rehearsal).
 
 ## Handoff (Nov 5, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (the Western Reserve, prettier and calmer).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #169 | Drinks that suit the hole, and who brings them mixed up. The cart's tray is matched to the hole: steady drinks (Arnold Palmer, Transfusion, Espresso) on a par 3 or anything under 200 yd, distance (Lager, Espresso, Palmer) on a par 5 or 430 yd and over, a mix in between, always with sparkling water; the late cart brings Fireball on the longer holes only. Each round plans its own visits: the cart on any hole but the first, a late cart near the end of a five-hole round, and about every other round Reginald walks out himself with a silver tray on a hole of his own, with a line. Birdies, eagles and aces on a card now pop coins as they drop, and the round's club bonus lands with a coin burst on the card. The Committee's preview is a rehearsal of Sunday: the same visits and coins, the club bonus as a card would earn it (marked not paid), and a few of the club's members out on the course. |
 | #168 | The Western Reserve, nicer to look at and calmer to play. The rough is a proper dark green and the long-grass tufts are gone (it still plays the same: the thick turf is unchanged). The maples are rebuilt: a trunk forking into limbs under a soft crown of a dozen knobbly leaf clusters, darker underneath, in a wider spread of autumn colour with some still green, over a ragged patch of fallen leaves. The storm is off: light wind like other courses (0 to 16 mph) and no rain. White-tailed deer (sometimes a buck), wild turkeys and cottontails turn up in the trees just off the course, different each visit, grazing, pecking and hopping; never in play (always outside the hole's border). |
 | #167 | The play screen fits the part of the phone you can see: it sizes to the visible viewport (not 100vh, which iPhone Chrome's bottom toolbar covers), so the aim arrows, Practice and Target are no longer cut off; the page behind can't scroll while you play; and the wind pill sits under the hole's title however it wraps. Covers every course, practice, mini golf and the intro. |
 | #166 | The Caldera clears up for its last two days: the storm (dark sky, rain, lightning) ends Nov 6 and the island plays in sunny daylight. Two exposed holes, the Blowhole and the Caldera, now always blow 10 to 15 mph and gust from shot to shot (about +0.6 a hole for the steady bot; the Plunge was tried and left calm, as wind made it +2). |
