@@ -21,6 +21,21 @@ import { onSnapshot, refresh, startPolling } from './state';
 import { store } from './storage';
 import { esc, muteButton, navigate, render } from './ui';
 
+// The height you can actually see: on a phone the browser's own bars can cover the bottom of 100vh, so the play
+// screen (.g3) sizes itself to this instead. The canvases follow on the resize they hear.
+function fitViewport() {
+  const h = window.visualViewport?.height ?? window.innerHeight;
+  document.documentElement.style.setProperty('--app-h', `${Math.round(h)}px`);
+}
+fitViewport();
+window.addEventListener('resize', fitViewport);
+window.addEventListener('orientationchange', () => window.setTimeout(fitViewport, 300));
+window.visualViewport?.addEventListener('resize', () => {
+  const before = document.documentElement.style.getPropertyValue('--app-h');
+  fitViewport();
+  if (document.documentElement.style.getPropertyValue('--app-h') !== before) window.dispatchEvent(new Event('resize'));
+});
+
 let route = '';
 let routing = false; // the router draws the page itself; the refresh hook mustn't draw it a second time
 
