@@ -1453,3 +1453,5 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
   .pb-lead { display: none; }
   .pb-go { grid-column: 1 / -1; justify-self: stretch; text-align: center; padding: 10px 14px; margin-top: 6px; font-size: 14px; }
 }
+.adm-rehearse { display: grid; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); justify-items: start; }
+.adm-rehearse p { margin: 0; font-size: 13px; }

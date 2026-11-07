@@ -83,6 +83,13 @@ async function router() {
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     if (page === 'clubhouse') return clubhouse(s, isClubhouseTab(arg) ? arg : 'members', extra);
     // the admin's look at every hole of a course still to come
+    // the Committee rehearses Sunday's card on next week's course: the member's card flow, nothing posted
+    if (page === 'rehearse') {
+      const c = nextCourse(s.month) ?? courseFor(s.month);
+      if (s.admin) return round(s, { course: c, dry: true });
+      location.hash = '#/';
+      return;
+    }
     if (page === 'preview') {
       const c = courseById(arg ?? '');
       // any course, this week's included: the Committee rehearses before members play

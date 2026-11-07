@@ -4,7 +4,7 @@
 import { api, getSession, listSessions } from '../api';
 import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
-import { courseById, courseFor, upcoming } from '../golf3d/courses';
+import { courseById, courseFor, nextCourse, upcoming } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { store } from '../storage';
@@ -66,6 +66,10 @@ export function admin(snap: Snapshot) {
             <a class="btn" href="#/preview/${courseFor(snap.month).id}">⛳ Preview this week: ${esc(courseFor(snap.month).name.replace(/ Course$/, ''))}</a>
             ${next.map((c) => `<a class="btn ghost" href="#/preview/${c.id}">⛳ Preview ${esc(c.name.replace(/ Course$/, ''))}${c.draft ? ' (draft)' : ''}</a>`).join('')}
             <button class="btn ghost" data-coin-test>🪙 Test a coin burst</button>
+          </div>
+          <div class="adm-rehearse">
+            <a class="btn" href="#/rehearse">🃏 Rehearse Sunday's card: ${esc((nextCourse(snap.month) ?? courseFor(snap.month)).name.replace(/ Course$/, ''))}</a>
+            <p class="muted">Exactly as a member plays it: one card, locked at the first swing, saved if you leave (come back here to pick it up), the card-in screen after. Kept on this device; nothing posted or paid.</p>
           </div>
         </section>
         ${courseSections()}

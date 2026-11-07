@@ -16,7 +16,7 @@ import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
-import { accuracyError, CHIP_RATE, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, type MeterStyle } from './swing';
+import { accuracyError, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, stretched, stretchRate, type MeterStyle } from './swing';
 import type { Hole, Shot, V2 } from './types';
 
 export const MAX_OVER = 3; // pick up at par + 3
@@ -2173,9 +2173,9 @@ export class Course3D {
         // fills faster toward the top; at the end of the overswing it stops on its own. With a lager or a fireball in
         // you the overswing is the fire, and the bar slows right down in it so you can stop it there
         const fire = !!this.drink && DRINKS[this.drink.kind].boost > 1 && m.p > 1;
-        // the chipper climbs its stretched scale at a steady pace (see meterPos); the rest fill by power
-        if (this.club === 'chip') {
-          m.d = Math.min(OVERSWING, m.d + CHIP_RATE * m.speed * (fire ? 0.45 : 1) * dt);
+        // the chipper and the wedge climb their stretched scale at a steady pace (see meterPos); the rest fill by power
+        if (stretched(this.club)) {
+          m.d = Math.min(OVERSWING, m.d + stretchRate(this.club) * m.speed * (fire ? 0.45 : 1) * dt);
           m.p = m.d >= OVERSWING ? OVERSWING : fromMeter(this.club, m.d);
         } else m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * dt);
         m.x = barX(this.meterAt(m.p));
