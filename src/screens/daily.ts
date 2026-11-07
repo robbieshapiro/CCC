@@ -5,6 +5,7 @@ import type { DailyCrown, DailyState, DailyTry } from '../api/types';
 import { bestTry, DAILY_TRIES, dailyShot, resultLabel, tryMark } from '../daily';
 import { requireSession } from '../state';
 import { esc } from '../ui';
+import { copyBox } from '../dialog';
 
 export const canShare = () => typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
 
@@ -22,7 +23,7 @@ export async function share(text: string, btn?: HTMLButtonElement) {
       if (btn) btn.textContent = 'Copied';
     }
   } catch {
-    window.prompt('Copy your result', text);
+    void copyBox('Copy your result', text);
   }
 }
 

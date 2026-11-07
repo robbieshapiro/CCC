@@ -6,6 +6,7 @@ import type { Avatar } from '../api/types';
 import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
 import { todayInGameTz } from '../day';
+import { ask, type AskOpts } from '../dialog';
 import { CartGirl, type Visitor } from './cartgirl';
 import { ReginaldTray } from './reginaldtray';
 import { conditionsFor, gusted, tempestOn, withPin, type Conditions } from './conditions';
@@ -293,8 +294,8 @@ export class Course3D {
   onShotLog: ((s: ShotLog) => void) | null = null;
   // a tap on another member out on the course (their figure or their name card), instead of a swing
   onGhostTap: ((g: Ghost) => void) | null = null;
-  // what Leave asks before it lets you go (a counted round's default when empty)
-  quitAsk = '';
+  // what Leave asks before it lets you go (a counted round's default when unset)
+  quitAsk: (() => AskOpts) | null = null;
   private drag: { x: number; y: number; aim: number; power: number; kind: '' | 'aim' | 'power' } | null = null;
   private miniBase: HTMLCanvasElement | null = null;
   private faded = new Map<THREE.Object3D, number>();
@@ -745,8 +746,10 @@ export class Course3D {
       </div>
       <button class="g3-skip" data-skip>Skip flyover</button>`;
     const q = (s: string) => this.overlay.querySelector(s) as HTMLElement;
-    q('[data-quit]').onclick = () => {
-      if (this.leaveText || confirm(this.quitAsk || 'Leave the round? An unfinished round does not count.')) this.onQuit();
+    q('[data-quit]').onclick = async () => {
+      if (this.leaveText) return this.onQuit();
+      const o = this.quitAsk?.() ?? { title: 'Leave the round?', body: "<p>An unfinished round doesn't count.</p>", ok: 'Leave', cancel: 'Keep playing' };
+      if (await ask(o)) this.onQuit();
     };
     if (this.drill && this.drill.stations.length > 1) q('[data-station]').onclick = () => this.nextStation();
     if (this.menu) q('[data-holes]').onclick = () => this.holeMenu();

@@ -10,6 +10,7 @@ import { courseFor } from '../golf3d/courses';
 import { requireSession } from '../state';
 import { esc, navigate, render } from '../ui';
 import { closeRound, useGame } from './round';
+import { tell } from '../dialog';
 
 const names = (s: PlayoffState) => s.players.map((p) => esc(p.name)).join(' v ');
 
@@ -86,7 +87,7 @@ export async function playoff(snap: Snapshot) {
       try {
         await api.playoffStart(session);
       } catch (err) {
-        alert((err as Error).message);
+        await tell("The playoff can't start", `<p>${esc((err as Error).message)}</p>`);
         return navigate('#/');
       }
     }

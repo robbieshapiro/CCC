@@ -35,6 +35,7 @@ import { barSummary } from './bar';
 import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
 import { canShare, dailySummary, share } from './daily';
+import { cardStatus } from './cardnote';
 
 let game: Course3D | null = null;
 
@@ -107,7 +108,7 @@ function cardIn(snap: Snapshot, dry?: Course) {
     <p class="eyebrow">${esc((dry ?? courseFor(snap.month)).name)}${dry ? ' · rehearsal' : ''}</p>
     <h1>Today's card is in</h1>
     ${hostChip('One card a day, and yours is on the board. The course is open for practice until midnight. Nobody counts those.', 'dry')}
-    <div class="summary-actions"><a class="btn" href="#/round/practice">Practice round</a><a class="btn ghost" href="#/">Back to the club</a></div>
+    <div class="summary-actions"><a class="btn" href="${dry ? `#/preview/${dry.id}` : '#/round/practice'}">Practice round</a><a class="btn ghost" href="${dry ? '#/admin' : '#/'}">${dry ? 'Back to the Committee Room' : 'Back to the club'}</a></div>
     ${dry ? '<p class="fine">This is what a member sees after their card on Sunday. Nothing was posted. <button class="link" data-dry-reset>Deal a fresh card and rehearse again</button></p>' : ''}
   </main>`);
   const reset = document.querySelector<HTMLButtonElement>('[data-dry-reset]');
@@ -122,7 +123,7 @@ function cardIn(snap: Snapshot, dry?: Course) {
 // every stroke, picks up where it left off, and ends on the card-in screen), with the card kept on this device instead
 // of the club's database, so nothing is posted or paid.
 const DRY_CARD = 'ccc-dry-card';
-function dryToday(course: string): CardToday {
+export function dryToday(course: string): CardToday {
   try {
     const c = JSON.parse(store.get(DRY_CARD) || 'null') as (CardToday & { day: string }) | null;
     if (c && c.course === course && c.day === todayInGameTz()) return c;
@@ -131,6 +132,8 @@ function dryToday(course: string): CardToday {
   }
   return { done: false, id: -1, course, scores: [], shots: 0, spots: [], feats: [] };
 }
+// the rehearsal's card thrown away: a fresh one next time
+export const dryForget = () => store.set(DRY_CARD, '');
 const drySave = (c: CardToday) => store.set(DRY_CARD, JSON.stringify({ ...c, day: todayInGameTz() }));
 
 export async function round(snap: Snapshot, opts: { course?: Course; holes?: number; practice?: boolean; dry?: boolean } = {}) {
@@ -175,7 +178,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     game = new Course3D(el, me.avatar, () => {
       quit = true;
       closeRound();
-      navigate('#/');
+      // leaving the rehearsal goes back to the Committee Room, where its Play tile now shows the card in progress
+      navigate(dry ? '#/admin' : '#/');
     });
   } catch {
     closeRound();
@@ -188,7 +192,6 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     game.howTo = 'practice';
     game.onShot = joinPractice(livePractice ? 'course' : 'caldera').shot;
   }
-  if (card) game.quitAsk = 'Leave for now? Your card is saved. Come back before midnight to finish it.';
   // today's players are on this period's course, not the preview
   if (!preview) game.setGhosts(todaysField(snap));
   // the rehearsal puts a few of the club's members out on the course, as Sunday's field would look
@@ -253,13 +256,27 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   // secrets this member has found before (on any card), so only a first find pays
   const foundBefore = new Set(me.feats ?? []);
   // a card saves itself after every stroke, so a swing can't be taken back by leaving
+  let here = resume?.shots ?? 0; // strokes on the hole being played, for Leave's summary
   const save = (shots: number) => {
+    here = shots;
     if (dry) return drySave({ done: false, id: -1, course: full.id, scores: [...scores], shots, spots: scores.map((_, j) => spots[j] ?? null), feats: [...feats] });
     if (cardId !== null)
       void api.cardProgress(requireSession(), cardId, { scores: [...scores], shots, spots: scores.map((_, j) => spots[j] ?? null), feats: [...feats] }).catch(() => {});
   };
   if (card) game.onStroke = save;
   let carry = resume?.shots ?? 0;
+  // Leave on a card: where it stands, and that it's forfeited at midnight if it isn't finished (before the first
+  // swing nothing is locked yet, so nothing to lose)
+  if (card)
+    game.quitAsk = () =>
+      !scores.length && !here
+        ? { title: 'Leave for now?', body: "<p>You haven't swung yet, so today's card hasn't started. It'll be here when you come back.</p>", ok: 'Leave', cancel: 'Keep playing' }
+        : {
+            title: 'Leave for now?',
+            body: `<p class="dlg-card">${esc(cardStatus(course, scores, here))}</p><p>Your card is saved. Come back and finish it <b>before midnight ET</b>, or it's forfeited and today doesn't count.</p>`,
+            ok: 'Leave for now',
+            cancel: 'Keep playing',
+          };
   // the admin's preview can jump to any hole, or start the one they're on over
   let jump: ((i: number) => void) | null = null;
   if (preview && !opts.practice && !dry) game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
@@ -353,7 +370,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       ${bonusLine}
       <p class="fine">${opts.practice ? 'Practice round, not counted.' : dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : "Couldn't post this round. Check your connection."}</p>
       ${opts.practice ? `<button class="link share-practice" data-share-score>${canShare() ? 'Send it to the group, and see who else has practised' : 'Copy it for the group chat'}</button>` : `<button class="btn ghost share-score" data-share-score>${canShare() ? '📤 Share your score' : '📋 Copy your score'}</button>`}
-      <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : 'Play again'}</button><button class="btn ghost" data-back>Back to the club</button></div>
+      <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : 'Play again'}</button><button class="btn ghost" data-back>${dry ? 'Back to the Committee Room' : 'Back to the club'}</button></div>
       ${
         asking
           ? `<form class="reg-ask" id="reg-ask">
@@ -444,7 +461,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     };
   sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {
     closeRound();
-    navigate('#/');
+    navigate(dry ? '#/admin' : '#/');
   };
 }
 

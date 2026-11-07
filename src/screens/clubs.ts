@@ -3,6 +3,7 @@
 import { api, setSession } from '../api';
 import { requireSession } from '../state';
 import { navigate } from '../ui';
+import { ask } from '../dialog';
 
 export function clubMaker(admin: boolean) {
   if (!admin) return '';
@@ -23,7 +24,7 @@ export function bindClubMaker() {
   form.onsubmit = async (e) => {
     e.preventDefault();
     const name = (document.getElementById('club-name') as HTMLInputElement).value.trim();
-    if (!name || !confirm(`Start a new club called "${name}"? You'll be its admin and move into it now.`)) return;
+    if (!name || !(await ask({ title: `Start ${name}?`, body: "<p>You'll be its admin and move into it now.</p>", ok: 'Start the club' }))) return;
     const btn = form.querySelector('button')!;
     btn.disabled = true;
     try {

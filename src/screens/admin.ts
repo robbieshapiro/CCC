@@ -4,7 +4,7 @@
 import { api, getSession, listSessions } from '../api';
 import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
-import { courseById, courseFor, nextCourse, upcoming } from '../golf3d/courses';
+import { courseById } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { store } from '../storage';
@@ -18,6 +18,8 @@ import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
 import { adminShoutSection, loadAdminShouts } from './shoutouts';
 import { briefSection, chartSections, courseSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
+import { ask, copyBox, tell } from '../dialog';
+import { bindSundayCard, sundayCardSection } from './adminCard';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -41,8 +43,6 @@ const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
 ];
 
 export function admin(snap: Snapshot) {
-  // every course still to come, drafts included: the Committee plays them before members do
-  const next = upcoming(snap.month);
   render(`
     ${header(snap.groupName, 'admin')}
     <main class="admin-page">
@@ -59,19 +59,7 @@ export function admin(snap: Snapshot) {
       </div>
       <div class="adm-pane" data-pane="reginald" hidden>${briefSection()}</div>
       <div class="adm-pane" data-pane="course" hidden>
-        <section class="adm-card adm-do">
-          <h2>Test what's coming</h2>
-          <p class="muted">Previews are rehearsals: jump between holes, and the reward moments fire without paying.</p>
-          <div class="adm-actions">
-            <a class="btn" href="#/preview/${courseFor(snap.month).id}">⛳ Preview this week: ${esc(courseFor(snap.month).name.replace(/ Course$/, ''))}</a>
-            ${next.map((c) => `<a class="btn ghost" href="#/preview/${c.id}">⛳ Preview ${esc(c.name.replace(/ Course$/, ''))}${c.draft ? ' (draft)' : ''}</a>`).join('')}
-            <button class="btn ghost" data-coin-test>🪙 Test a coin burst</button>
-          </div>
-          <div class="adm-rehearse">
-            <a class="btn" href="#/rehearse">🃏 Rehearse Sunday's card: ${esc((nextCourse(snap.month) ?? courseFor(snap.month)).name.replace(/ Course$/, ''))}</a>
-            <p class="muted">Exactly as a member plays it: one card, locked at the first swing, saved if you leave (come back here to pick it up), the card-in screen after. Kept on this device; nothing posted or paid.</p>
-          </div>
-        </section>
+        ${sundayCardSection(snap)}
         ${courseSections()}
       </div>
       <div class="adm-pane" data-pane="members" hidden>
@@ -100,6 +88,7 @@ export function admin(snap: Snapshot) {
       <div id="adm-body" hidden></div>
     </main>`);
   bindTabs();
+  bindSundayCard(snap);
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
     b.onclick = () => {
       const open = document.querySelector<HTMLElement>(`[data-panel="${b.dataset.tool}"]`)!;
@@ -295,7 +284,7 @@ function bindSend(root: HTMLElement) {
           b.textContent = 'Copied';
         }
       } catch {
-        window.prompt('Copy this link', url);
+        void copyBox('Copy this link', url);
       }
     };
   });
@@ -476,7 +465,7 @@ function draw() {
     (b) =>
       (b.onclick = async () => {
         const c = sessionFor(b.dataset.club!);
-        if (!c || !confirm(`Revoke the invitation for ${b.dataset.name}? The link stops working.`)) return;
+        if (!c || !(await ask({ title: 'Revoke this invitation?', body: `<p>The link for ${esc(b.dataset.name ?? '')} stops working.</p>`, ok: 'Revoke', danger: true }))) return;
         b.disabled = true;
         try {
           await api.deleteInvite(c, b.dataset.revoke!);
@@ -484,7 +473,7 @@ function draw() {
           draw();
         } catch (x) {
           b.disabled = false;
-          alert((x as Error).message);
+          void tell("That didn't work", `<p>${esc((x as Error).message)}</p>`);
         }
       }),
   );

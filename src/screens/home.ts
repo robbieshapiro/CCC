@@ -9,13 +9,16 @@ import { REGINALD, reginaldSvg, type Mood } from '../host';
 import { bindOpen } from './open';
 import { askReginald, championWord } from '../reginald';
 import { bindDaily, dailyCard } from './daily';
+import { bindCardNote, cardTile, tileState } from './cardnote';
 import { bindNotices, noticesStrip } from './notices';
 import { bindShoutouts, shoutStrip } from './shoutouts';
 import { bindPlayoff, playoffCard } from './playoff';
 import { board, crownFor, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { store } from '../storage';
-import { esc, header, render } from '../ui';
+import { esc, header, navigate, render } from '../ui';
+
+const CARD_LINKS = { play: '#/round', practice: '#/round/practice' };
 
 export function scoreClass(strokes: number, par: number) {
   if (strokes === 1) return 'ace';
@@ -206,9 +209,7 @@ export function home(snap: Snapshot) {
           ${
             !cards
               ? `<a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>`
-              : cardIn
-                ? `<a class="btn big" href="#/round/practice">Practice round</a><p class="fine card-line">Today's card is in. A new one at midnight.</p>`
-                : `<a class="btn big" href="#/round" id="card-btn">Play today's card</a><p class="fine card-line">One card a day counts. <a href="#/round/practice">Practise first</a></p>`
+              : `<div id="card-tile">${cardTile(cardIn ? 'in' : 'fresh', course, null, CARD_LINKS)}</div>`
           }
         </div>
       </section>
@@ -264,11 +265,16 @@ export function home(snap: Snapshot) {
       say.classList.add('reg-fresh');
       say.innerHTML = `<b>Reginald</b> ${esc(text)}${host ? '' : ` <span class="reg-board">${standing}</span>`}`;
     });
-  // a card started and cut short: say so on the button
+  // the note before a fresh card; and a card started and cut short shows where it stands, with Continue
+  bindCardNote(document, CARD_LINKS, navigate);
   if (cards && !cardIn)
     void api.cardToday(requireSession()).then((t) => {
-      const btn = document.getElementById('card-btn');
-      if (btn && t && !t.done && (t.scores.length || t.shots)) btn.textContent = `Finish today's card · hole ${Math.min(t.scores.length + 1, course.holes.length)}`;
+      const tile = document.getElementById('card-tile');
+      const state = tileState(t, false);
+      if (tile && state !== 'fresh') {
+        tile.innerHTML = cardTile(state, course, t, CARD_LINKS);
+        bindCardNote(tile, CARD_LINKS, navigate);
+      }
     });
   void bindNotices();
   void bindShoutouts();
@@ -345,7 +351,7 @@ const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 
 // The week's course dresses the Play hero, the board and its countdown: ember red for the Caldera, Pacific blue and a
 // sunset for the coast
-const look = (c: Course) => (c.holes[0]?.theme === 'volcanic' ? ' volcanic' : c.holes[0]?.theme === 'coastal' ? ' coastal' : '');
+export const look = (c: Course) => (c.holes[0]?.theme === 'volcanic' ? ' volcanic' : c.holes[0]?.theme === 'coastal' ? ' coastal' : '');
 
 // Next week's course, between the Play card and the board: a warm band in the course's own colours (autumn leaves for
 // the Western Reserve), counting down to its first day, with its practice as the button
