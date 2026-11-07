@@ -1,9 +1,10 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 7, 2026 (rehearse Sunday's card; the wedge's calmer meter).
+Last updated Nov 7, 2026 (handoff for Sunday).
 
-## Handoff (Nov 6, evening): open threads for the next session
+## Handoff (Nov 7): open threads for the next session
 
+- **Before Sunday, Robbie can rehearse a member's card** (Admin, Course, "Rehearse Sunday's card", #183): the whole card flow on the Western Reserve, kept on his device, nothing posted.
 - **Sun Nov 8 is the big day.** Daily cards start (#149: one card a day counts, locked at the first swing) and the Western Reserve opens (#146, reworked in #168, #176, #180). Robbie plays a real card Sunday morning to check it end to end: the card, the Open purse, coins on feats, the drinks visits, kudos and chirps, the reactions after each hole, and the Gorge's harvest hillside.
 - **The chip and wedge meters' speeds are guesses** (`CHIP_RATE` 0.48 and `WEDGE_RATE` 0.55 in `src/golf3d/swing.ts`, on every course since #180 and #183). If Robbie finds them too slow or quick, nudge them.
 - **Open PR #134** (the wind follows the ball's height, for every course). On hold: it's already on for the Western Reserve (`windByHeight`); Robbie decides after playing it whether every course gets it. Don't merge without his say. (#138, the chip meter, was closed on Nov 6: #180 replaced it. Its branch `claude/great-cannon-2kro9n` is still on GitHub; GitHub's auto-delete only runs on merge, so delete it by hand if wanted.)
