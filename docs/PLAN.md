@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 6, 2026 (end of day: handoff for Sunday).
+Last updated Nov 7, 2026 (Western Reserve tile in forest green).
 
 ## Handoff (Nov 6, evening): open threads for the next session
 
@@ -23,6 +23,7 @@ Last updated Nov 6, 2026 (end of day: handoff for Sunday).
 | #70 | Reginald written by Claude: a daily line on the Play page and a note on the card after each round. |
 | #71 | The Clubhouse Chronicle: Reginald's weekly letter (since #82, written when Robbie asks; no cron). |
 | #72, #73 | Design a Hole: members describe a real golf hole and Claude lays it out in one of four looks (Highlands, Caldera, links, desert). A quick check runs, they play it, and approved holes join the Members' Course at the bar. |
+| #182 | The Western Reserve tile on home is forest green with warm amber light, so it stands apart from the Caldera's red. On a phone it lays out like the iPad: the countdown and the name on one line each, and a full-width "Practise the course" button below. |
 | #180 | The chipper's calmer meter on every course (the stretched scale the Western Reserve tried, #143), filling about a third slower again, so chips stop running long. Elbows only bend the right way in the reactions. The Western Reserve, easier and shorter: tees well up every hole (Creek Bend 395 yd, The Ledges 395, Maple Lake 185, The Quarry 400, The Gorge 575; the old tees stay as back tees; the par 4s and Maple Lake cut again on the Architect's review); the rough costs about a sixth of the distance (was over a quarter), keeps more of a landing ball and scatters less, so a green is reachable from it; greenside bunkers moved in to hug the greens, 3 ft past the fringe; fairway bunkers 2.2 ft deep (were 4). The Gorge ends on a harvest hillside: three banks of straw bales up the rise behind the green with the members on them (the same gallery as the Caldera's stadium, a fall festival instead of stone), festoon lights, a red barn, a cider stand and pumpkins. The Architect reviewed it (its first review run): fair and fun, member bot about +0.7 a hole. |
 | #179 | A reaction to every hole, in place of the old arms-up sway. The golfer's arms are now each their own (upper arm and forearm; the swing is unchanged), so: a hole in one is replayed in slow motion from down by the cup, then a backflip and both arms up; an eagle or better a backflip; a birdie a fist pump; a par a nod and a wave to the crowd; a bogey a kick at the turf and a shake of the head; a double or worse the club over the head and into the ground. The camera cuts to a close-up of your golfer for it (about 2.5 seconds), then the flag as before; a tap skips. The card waits until the replay and the reaction are over, so a slow phone doesn't cut them off. |
 | #178 | Sending from a member's card is clearer: pick Kudos or Chirp at the top (Kudos to start with), then the optional line, then one Send button that says which. |

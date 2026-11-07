@@ -359,11 +359,11 @@ function previewBand(month: string) {
   return `<a class="preview-band ${esc(theme)}" href="#/practice/${next.id}">
     <span class="pb-icon" aria-hidden="true">${THEME_ICON[theme] ?? '⛳'}</span>
     <span class="pb-text">
-      <small>Coming up · <span data-countdown="${starts.getTime()}" data-done="Open now">opens in <em data-left>…</em></span></small>
+      <small><span class="pb-lead">Coming up · </span><span data-countdown="${starts.getTime()}" data-done="Open now">opens in <em data-left>…</em></span></small>
       <b>${esc(shortName(next))}</b>
       <span>${n >= next.holes.length ? `Practise all ${n} holes` : `Practise ${n === 1 ? 'the first hole' : `the first ${n} holes`}`} before it counts</span>
     </span>
-    <span class="pb-go">Practise</span>
+    <span class="pb-go">Practise the course</span>
   </a>`;
 }
 
