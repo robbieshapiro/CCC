@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 7, 2026 (handoff for Sunday).
+Last updated Nov 7, 2026 (handoff for Sunday; Sunday's card in Admin and the club's own dialogs).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 7, 2026 (handoff for Sunday).
 
 | PR | What |
 |---|---|
+| #185 | Sunday's card, self-contained in Admin, Course: a copy of the member's Play tile driven by the rehearsal card, with the steps beside it, "Show the note", "Pretend it's midnight" (forfeits an unfinished card) and "Start over"; leaving the rehearsal comes back there. One "Preview a course" picker replaces the row of preview buttons; the coin test is a small link. For members: a note before a fresh card ("Counts" in green: one a day, locked at the first swing, saved if you leave, forfeited at midnight ET if unfinished; "Doesn't count" plain: practise the course); a card in progress shows on the Play tile as the hole and score with "Continue today's card" and the midnight warning; Leave mid-card says where the card stands. Every browser pop-up (Leave, revoke or remove an invite, start a club, copy a link, errors) is now the club's own dialog, not "vercel.app says". |
 | #66 | One home club: Robbie belongs to Kellogg and runs The Clergy as host only (Boomtown merged into The Clergy in #114; since #116 he plays in The Clergy too). The Member Card and Locker Room merged into one Locker page. |
 | #67 | The Clubhouse: Bar, Members, Clubs, How to play, Feedback. A bottom tab bar on phones. |
 | #68 | Hollow Hills haunted mini golf replaced the putting contest at the bar. The preview tile is now a plain tile. |

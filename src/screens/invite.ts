@@ -7,6 +7,7 @@ import { sfx } from '../fx/sound';
 import { reginaldSvg } from '../host';
 import { requireSession, snapshot } from '../state';
 import { esc, render } from '../ui';
+import { ask, copyBox } from '../dialog';
 
 export const inviteLink = (id: string) => `${location.origin}${location.pathname}#/invite/${id}`;
 
@@ -224,7 +225,7 @@ export async function bindInviteMaker() {
     // take back an invitation nobody has opened: the link stops working
     list.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach((b) => {
       b.onclick = async () => {
-        if (!confirm(`Remove the invitation for ${b.dataset.name}? The link will stop working.`)) return;
+        if (!(await ask({ title: 'Remove this invitation?', body: `<p>The link for ${esc(b.dataset.name ?? '')} will stop working.</p>`, ok: 'Remove', danger: true }))) return;
         try {
           await api.deleteInvite(s, b.dataset.remove!);
           draw(await api.listInvites(s));
@@ -243,7 +244,7 @@ export async function bindInviteMaker() {
             b.textContent = 'Copied';
           }
         } catch {
-          window.prompt('Copy this link', url);
+          void copyBox('Copy this link', url);
         }
       };
     });
