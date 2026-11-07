@@ -17,6 +17,18 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
 - `npm run check-holes` if you touched holes, terrain, physics or clubs. Its `greens` sweep (in `quick` and `all`) putts every green from all round every pin; never ship a course that fails it.
 - `npm run check-minigolf` if you touched mini golf or the putting bot.
 
+## Working notes (things agents keep relearning)
+
+- **Look before you report.** For any UI, 3D, course or flow change, use the `browser-check` skill (`.claude/skills/browser-check/`) and read the screenshot.
+- **check-holes is slow.** `quick` takes about 1 to 7 minutes a course, and `member` 10 or more. Run them in the background (one course after another, not in parallel), and carry on meanwhile. A change to clubs, the meter or physics touches every course, so check all four.
+- **Merging.** Merge only after the `checks` run is green. Poll it with `gh api repos/robbieshapiro/ccc/commits/<sha>/check-runs --jq '.check_runs[]|select(.name=="checks")|.conclusion'`, then merge (squash) with `expectedHeadSha` set to that SHA. Reuse the session branch after each merge: `git fetch origin main && git checkout -B <branch> origin/main`. Merged branches are deleted automatically. This session can't delete other branches on GitHub (the safety check blocks it), so ask Robbie if one needs to go.
+- **Scratch Postgres** (for testing SQL) runs as the `postgres` user, not root:
+  - start it with `su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/tmp/pg/data -o '-p 5433 -k /var/tmp/pg' -l /var/tmp/pg/log start"`;
+  - connect with `PGOPTIONS='-c search_path=public,extensions' psql -h /var/tmp/pg -p 5433`;
+  - pipe files in with `cat file | su postgres -c "psql ..."`, because the postgres user can't read the scratchpad.
+- **Live SQL approvals can time out.** If the Supabase `apply_migration` prompt times out, send Robbie the SQL file to paste in the SQL editor, then verify it with a read-only select.
+- **The Architect can review a PR.** Fire its scheduled task (`fire_trigger`) with extra text saying "review, don't build", naming the PR and the checks to run. It posts one comment on the PR, and takes 30 to 60 minutes.
+
 ## Conventions
 
 - One feature per PR, merged as a squash. Titles are a plain sentence about what members get: "Hollow Hills: haunted mini golf replaces the putting contest".
