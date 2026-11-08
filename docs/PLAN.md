@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people, not seats).
+Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people; playoffs decided when played).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 | PR | What |
 |---|---|
+| #198 | A playoff is decided as soon as everyone in it has played the hole and taken their shot at the pin, not at midnight: the champion is crowned and paid straight away (Tyler won The Clergy's Caldera playoff, 3 to Hunter's 6). Until then, or if someone doesn't play, it still settles at midnight as before. `period_champs`. |
 | #196 | The Committee Room counts people, not seats: a guest in two clubs is one member. Members, Active, New and Weekly Players count each person once; the clubs table has a Guests column (members of another club with a seat here); the Members table has one row a person under their home club, with "guest at Gators" under it; a guest seat shows in the feed as "joined as a guest". `admin_overview`, `admin_trend` and `admin_kpis` tag each seat with its person (`home_of`). |
 | #194 | One card a day per person, not per club: a guest (or Robbie, in Kellogg, The Clergy and the Gators) gets one card a day across all their clubs. A card going or in at another club shows on the Play tile ("Today's card is going at Kellogg", with "Continue at Kellogg"), and starting or posting a card there is refused. `card_of`, `card_in`, `start_round`, `submit_round` and `card_today` now look at all of a person's seats (`person_seats`). |
 | #192 | The countdown shows the $10,000 Open purse from the start of the week, not $0 until the first card is in. |
@@ -120,6 +121,8 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #198: `period_champs` (`pr_198_playoff_decided_early`).
 
 - [x] #196: `admin_overview`, `admin_trend` and `admin_kpis` applied Nov 8 (`pr_196_admin_people`). Checked live: functions match the tested ones, anon can still call them, and the Committee Room counts 40 members (it was counting 44 seats; the Gators have 3 members and 4 guests).
 

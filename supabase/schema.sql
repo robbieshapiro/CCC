@@ -182,7 +182,8 @@ language sql immutable as $$
 $$;
 
 -- Each closed period's champions at a club, and how: 'won' outright, 'playoff' (being played today), 'playoff-won',
--- or 'shared' (tied, and nobody played the playoff; or a tie from the monthly days)
+-- or 'shared' (tied, and nobody played the playoff; or a tie from the monthly days). A playoff is decided as soon as
+-- everyone in it has played the hole and taken their shot at the pin, not at midnight.
 create or replace function period_champs(p_group uuid)
 returns table (month text, player_id uuid, total int, par int, how text)
 language sql stable security definer set search_path = public, extensions as $$
@@ -190,21 +191,24 @@ language sql stable security definer set search_path = public, extensions as $$
     select b.month, b.player_id, b.total, b.par, b.board, count(*) over (partition by b.month, b.board) as n
     from month_bests(p_group) b where b.r = 1 and b.month < game_month()
   ), t as (
-    select l.*, playoff_day(l.month) as pday, pt.strokes, pt.ft, pt.holed, pt.lost
+    select l.*, playoff_day(l.month) as pday, pt.strokes, pt.shot, pt.ft, pt.holed, pt.lost
     from lead l left join playoff_tries pt on pt.group_id = p_group and pt.period = l.month and pt.player_id = l.player_id
   ), ranked as (
     select t.*,
       rank() over (partition by t.month, t.board order by t.strokes asc nulls last, t.holed desc, case when t.lost then null else t.ft end asc nulls last) as pr,
-      bool_or(t.strokes is not null) over (partition by t.month, t.board) as anyone
+      bool_or(t.strokes is not null) over (partition by t.month, t.board) as anyone,
+      bool_and(t.strokes is not null and coalesce(t.shot, false)) over (partition by t.month, t.board) as everyone
     from t
+  ), st as (
+    select ranked.*, game_today() <= pday and not everyone as going from ranked
   )
   select month, player_id, total, par,
     case when n = 1 then 'won'
       when pday is null or not anyone and game_today() > pday then 'shared'
-      when game_today() <= pday then 'playoff'
+      when going then 'playoff'
       else 'playoff-won' end
-  from ranked
-  where n = 1 or pday is null or game_today() <= pday or not anyone or pr = 1
+  from st
+  where n = 1 or pday is null or going or not anyone or pr = 1
 $$;
 
 -- The weekly purse (src/purse.ts): each closed period's board pays its top ten like a tour event. The purse is $1,000
