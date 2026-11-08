@@ -188,7 +188,8 @@ export type HoleReport = {
 };
 // Today's card: whether it's in, and where one in progress stands (holes done, strokes on the hole being played)
 export type CardProgress = { scores: number[]; shots: number; spots: (Spot | null)[]; feats: string[] };
-export type CardToday = CardProgress & { done: boolean; id: number | null; course: string | null };
+// club/clubId: set when today's card is in, or going, at another of the member's clubs (one card a day per person)
+export type CardToday = CardProgress & { done: boolean; id: number | null; course: string | null; club?: string | null; clubId?: string | null };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {

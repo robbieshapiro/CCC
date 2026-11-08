@@ -35,7 +35,7 @@ import { barSummary } from './bar';
 import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
 import { canShare, dailySummary, share } from './daily';
-import { cardStatus } from './cardnote';
+import { cardStatus, elsewhereLine } from './cardnote';
 
 let game: Course3D | null = null;
 
@@ -103,11 +103,13 @@ function practiceShare(course: Course, scores: number[], total: number, toPar: n
 
 // Today's card is already in: practise as much as you like. In the Committee's rehearsal, the same screen, with a way
 // to deal a fresh card and go again.
-function cardIn(snap: Snapshot, dry?: Course) {
+function cardIn(snap: Snapshot, dry?: Course, at?: CardToday) {
+  const away = at?.club ? elsewhereLine(at) : null;
   render(`<main class="narrow card-in">
     <p class="eyebrow">${esc((dry ?? courseFor(snap.month)).name)}${dry ? ' · rehearsal' : ''}</p>
-    <h1>Today's card is in</h1>
-    ${hostChip('One card a day, and yours is on the board. The course is open for practice until midnight. Nobody counts those.', 'dry')}
+    <h1>${away ? away.head : "Today's card is in"}</h1>
+    ${hostChip(away ? 'One card a day, whichever club you play it in. Practice here is open, and nobody counts it.' : 'One card a day, and yours is on the board. The course is open for practice until midnight. Nobody counts those.', 'dry')}
+    ${away && !at!.done ? `<div class="summary-actions"><a class="btn" href="#/" data-go-club="${esc(at!.clubId ?? '')}">${away.go}</a></div>` : ''}
     <div class="summary-actions"><a class="btn" href="${dry ? `#/preview/${dry.id}` : '#/round/practice'}">Practice round</a><a class="btn ghost" href="${dry ? '#/admin' : '#/'}">${dry ? 'Back to the Committee Room' : 'Back to the club'}</a></div>
     ${dry ? '<p class="fine">This is what a member sees after their card on Sunday. Nothing was posted. <button class="link" data-dry-reset>Deal a fresh card and rehearse again</button></p>' : ''}
   </main>`);
@@ -153,12 +155,13 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     cardId = -1;
   } else if (!preview && cardsOn(snap.month)) {
     today = await api.cardToday(requireSession()).catch(() => null);
+    if (today?.club) return cardIn(snap, undefined, today);
     if (today?.done) return cardIn(snap);
     if (today) {
       try {
         cardId = await api.startRound(requireSession(), full.id, true);
       } catch (err) {
-        if (/already in/i.test((err as Error).message)) return cardIn(snap);
+        if (/already in|going at/i.test((err as Error).message)) return cardIn(snap);
       }
     }
   }

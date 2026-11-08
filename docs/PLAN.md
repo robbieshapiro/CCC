@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 8, 2026 (the Western Reserve dressed for fall).
+Last updated Nov 8, 2026 (fall colours; one card a day per person).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (the Western Reserve dressed for fall).
 
 | PR | What |
 |---|---|
+| #194 | One card a day per person, not per club: a guest (or Robbie, in Kellogg, The Clergy and the Gators) gets one card a day across all their clubs. A card going or in at another club shows on the Play tile ("Today's card is going at Kellogg", with "Continue at Kellogg"), and starting or posting a card there is refused. `card_of`, `card_in`, `start_round`, `submit_round` and `card_today` now look at all of a person's seats (`person_seats`). |
 | #192 | The countdown shows the $10,000 Open purse from the start of the week, not $0 until the first card is in. |
 | #191 | The Western Reserve in fall colours: the Play tile, the board and its countdown go burnt orange with a maple leaf (🍁) on the tile's eyebrow and the board's title, the way the Caldera went ember red. |
 | #189 | The Open purse has a floor: $250 a player as before, but never less than $10,000 in a week anyone plays (`OPEN_FLOOR`, `open_purse_floor()`), so a 15-player week pays the winner about $3,000 (was about $1,100); past 40 players the $250 a head takes over. The countdown says "$10,000 guaranteed, more as the field grows" and the Pro Shop's How to earn explains it. Covers this week (Nov 8), since the purse is worked out when the week closes. |
@@ -118,6 +119,8 @@ Last updated Nov 8, 2026 (the Western Reserve dressed for fall).
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #194: `card_of`, `card_in`, `start_round`, `card_today` and `submit_round` (`pr_194_one_card_per_person`).
 
 - [x] #189: `open_purse_floor()`, `open_payouts()` and `admin_kpis()` applied Nov 7 (`pr_189_open_purse_floor`). Checked live: the floor is 10,000, both functions use it, permissions unchanged.
 
