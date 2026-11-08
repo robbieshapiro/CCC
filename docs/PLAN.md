@@ -124,7 +124,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #202: `course_field` (`pr_202_course_field`).
+- [x] #202: `course_field` applied Nov 8 (`pr_202_course_field`). Checked live: anon can call it; from Kellogg the field shows Marc, Kevin and Kushol, plus Hunter and Eli G from The Clergy.
 
 - [x] #200: `admin_today` applied Nov 8 (`pr_200_admin_today`). Checked live: anon can call it; it showed 15 in today, 1 card in (Marc, E), 2 on the course (Kushol hole 4, Kevin hole 2).
 
