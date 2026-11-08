@@ -644,6 +644,7 @@ begin
   if cards_on() and card_in(me) then raise exception 'Your card for today is already in. Practise as much as you like.'; end if;
   -- from the daily cards, a round only counts as the card started today on that course: a round begun before midnight
   -- (last week's course, or yesterday's card) can't land on the new day's board or use up its card
+  if cards_on() and (card_of(me)).player_id <> me.id then raise exception 'Today''s card is going at another club. Finish it there.'; end if;
   if cards_on() and coalesce((card_of(me)).course, '') <> left(coalesce(p_course, ''), 40) then
     raise exception 'That round started before midnight, so it can''t count now. Today''s card is waiting.';
   end if;
@@ -1274,16 +1275,17 @@ alter table round_starts add column if not exists shots int not null default 0;
 alter table round_starts add column if not exists spots jsonb;
 alter table round_starts add column if not exists feats text[] not null default '{}';
 
--- today's card at this seat, if one has been started (and whether it's already in)
+-- today's card, if one has been started (and whether it's already in). One card a day per person, not per club: a
+-- guest's card in one club is their card in every club they play in (person_seats).
 create or replace function card_of(me players) returns round_starts
 language sql stable security definer set search_path = public, extensions as $$
-  select * from round_starts rs where rs.player_id = me.id and rs.card and (rs.started_at at time zone 'America/New_York')::date = game_today()
+  select * from round_starts rs where rs.player_id in (select person_seats(me)) and rs.card and (rs.started_at at time zone 'America/New_York')::date = game_today()
   order by rs.started_at desc limit 1
 $$;
 revoke all on function card_of(players) from public, anon, authenticated;
 create or replace function card_in(me players) returns boolean
 language sql stable security definer set search_path = public, extensions as $$
-  select exists (select 1 from rounds r where r.player_id = me.id and (r.created_at at time zone 'America/New_York')::date = game_today() and r.month = game_month())
+  select exists (select 1 from rounds r where r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today() and r.month = game_month())
 $$;
 revoke all on function card_in(players) from public, anon, authenticated;
 
@@ -1308,6 +1310,7 @@ begin
     me := play_seat(me);
     if card_in(me) then raise exception 'Your card for today is already in. Practise as much as you like.'; end if;
     c := card_of(me);
+    if c.player_id <> me.id then raise exception 'Today''s card is going at %. Finish it there.', (select g.name from groups g join players p on p.group_id = g.id where p.id = c.player_id); end if;
     if c.id is not null then return c.id; end if;
     insert into round_starts (player_id, group_id, period, course, card) values (me.id, me.group_id, game_month(), left(p_course, 40), true)
     returning id into new_id;
@@ -1321,12 +1324,18 @@ end $$;
 -- Today's card: null before cards start; otherwise whether it's in, and where a card in progress stands
 create or replace function card_today(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
-declare me players := play_seat(player_for(p_token)); c round_starts;
+declare me players := play_seat(player_for(p_token)); c round_starts; at_id uuid; at_name text;
 begin
   if not cards_on() then return null; end if;
   c := card_of(me);
+  -- the card's club, when it's in or going at another of the person's clubs
+  select g.id, g.name into at_id, at_name from groups g where g.id = coalesce(
+    (select p.group_id from players p where p.id = c.player_id),
+    (select r.group_id from rounds r where r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today()
+      and r.month = game_month() order by r.created_at limit 1));
   return json_build_object('done', card_in(me), 'id', c.id, 'course', c.course, 'scores', coalesce(c.scores, '{}'),
-    'shots', coalesce(c.shots, 0), 'spots', c.spots, 'feats', coalesce(c.feats, '{}'));
+    'shots', coalesce(c.shots, 0), 'spots', c.spots, 'feats', coalesce(c.feats, '{}'),
+    'clubId', case when at_id <> me.group_id then at_id end, 'club', case when at_id <> me.group_id then at_name end);
 end $$;
 
 -- A card's progress after every counted stroke. It only moves forward: a swing can't be taken back.

@@ -268,8 +268,11 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const spots = r.spots?.length === holes.length ? r.spots.map((p) => (p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null)) : null;
     const today = todayInGameTz();
     // daily cards: one round a day counts
-    if (cardsOn(month) && db.rounds.some((x) => x.playerId === me.id && x.month === month && todayInGameTz(new Date(x.createdAt)) === today))
+    const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
+    if (cardsOn(month) && db.rounds.some((x) => seats.has(x.playerId) && x.month === month && todayInGameTz(new Date(x.createdAt)) === today))
       throw new Error('Your card for today is already in. Practise as much as you like.');
+    if (cardsOn(month) && (db.cards ?? []).some((c) => seats.has(c.playerId) && c.playerId !== me.id && c.day === today && !c.done))
+      throw new Error("Today's card is going at another club. Finish it there.");
     db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, shots: r.shots?.slice(0, 150), createdAt: new Date().toISOString() });
     const card = (db.cards ?? []).find((c) => c.playerId === me.id && c.day === today);
     if (card) card.done = true;
@@ -651,8 +654,12 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const me = playSeat(db, playerByToken(db, session.token));
     const today = todayInGameTz();
     const cards = (db.cards ??= []);
-    const c = cards.find((x) => x.playerId === me.id && x.day === today);
-    if (c?.done) throw new Error('Your card for today is already in. Practise as much as you like.');
+    // one card a day per person, whichever club it's played in
+    const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
+    const c = cards.find((x) => seats.has(x.playerId) && x.day === today);
+    if (c?.done || db.rounds.some((x) => seats.has(x.playerId) && todayInGameTz(new Date(x.createdAt)) === today && cardsOn(x.month)))
+      throw new Error('Your card for today is already in. Practise as much as you like.');
+    if (c && c.playerId !== me.id) throw new Error("Today's card is going at another club. Finish it there.");
     if (c) return c.id;
     const id = cards.length + 1;
     cards.push({ id, playerId: me.id, day: today, course, done: false, scores: [], shots: 0, spots: [], feats: [] });
@@ -665,9 +672,14 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     if (!cardsOn(periodOf(today))) return null;
     const db = load();
     const me = playSeat(db, playerByToken(db, session.token));
-    const c = (db.cards ?? []).find((x) => x.playerId === me.id && x.day === today);
-    const done = db.rounds.some((x) => x.playerId === me.id && todayInGameTz(new Date(x.createdAt)) === today);
-    return c ? { ...c, done: done || c.done } : { done, id: null, course: null, scores: [], shots: 0, spots: [], feats: [] };
+    const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
+    const c = (db.cards ?? []).find((x) => seats.has(x.playerId) && x.day === today);
+    const r = db.rounds.find((x) => seats.has(x.playerId) && todayInGameTz(new Date(x.createdAt)) === today);
+    const done = !!r;
+    // the card's club, when it's at another of this person's clubs
+    const atGroup = c ? db.players.find((p) => p.id === c.playerId)?.groupId : r?.groupId;
+    const at = atGroup && atGroup !== me.groupId ? { clubId: atGroup, club: Object.values(db.groups).find((g) => g.id === atGroup)?.name ?? null } : {};
+    return c ? { ...c, done: done || c.done, ...at } : { done, id: null, course: null, scores: [], shots: 0, spots: [], feats: [], ...at };
   },
   async cardProgress(session, id, p) {
     const db = load();

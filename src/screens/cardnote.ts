@@ -18,13 +18,27 @@ export function cardStatus(course: Course, scores: number[], here = 0): string {
   return parts.join(' · ');
 }
 
-export type TileState = 'fresh' | 'going' | 'in';
+export type TileState = 'fresh' | 'going' | 'in' | 'elsewhere';
 export const tileState = (t: CardToday | null, cardIn: boolean): TileState =>
-  cardIn || t?.done ? 'in' : t && (t.scores.length || t.shots) ? 'going' : 'fresh';
+  t?.club ? 'elsewhere' : cardIn || t?.done ? 'in' : t && (t.scores.length || t.shots) ? 'going' : 'fresh';
+
+// Today's card is at another of the member's clubs: one card a day, whichever club it's played in
+export function elsewhereLine(t: CardToday): { head: string; line: string; go: string } {
+  const club = esc(t.club ?? 'your other club');
+  return t.done
+    ? { head: `Today's card is in at ${club}`, line: 'A new one at midnight.', go: `Go to ${club}` }
+    : { head: `Today's card is going at ${club}`, line: `Finish it there <b>before midnight ET</b>.`, go: `Continue at ${club}` };
+}
 
 // The buttons and lines under the course name on the Play tile. `play` and `practice` are where they go; on a fresh
 // card the play button carries data-card-note, so a tap opens the note first (see bindCardNote).
 export function cardTile(state: TileState, course: Course, t: CardToday | null, links: { play: string; practice: string }): string {
+  if (state === 'elsewhere' && t) {
+    const e = elsewhereLine(t);
+    return `<div class="card-going"><p class="eyebrow">One card a day, in any club</p><b>${e.head}</b></div>
+      ${t.done ? `<a class="btn big" href="${links.practice}">Practice round</a>` : `<a class="btn big" href="#/" data-go-club="${esc(t.clubId ?? '')}">${e.go}</a>`}
+      <p class="fine card-line">${e.line}${t.done ? '' : ` <a href="${links.practice}">Practise here</a>`}</p>`;
+  }
   if (state === 'in')
     return `<a class="btn big" href="${links.practice}">Practice round</a><p class="fine card-line">Today's card is in. A new one at midnight.</p>`;
   if (state === 'going' && t)

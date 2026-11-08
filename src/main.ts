@@ -1,6 +1,6 @@
 import './style.css';
 import { inject, pageview } from '@vercel/analytics';
-import { getSession, switchClub } from './api';
+import { getSession, listSessions, switchClub } from './api';
 import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
 import { home, newPeriod } from './screens/home';
@@ -127,6 +127,15 @@ async function router() {
 // Live-update the home page as polls come in; never interrupt a shot.
 onSnapshot((s) => {
   if (route === 'home' && !routing) home(s);
+});
+
+// "Go to Kellogg": today's card is at another of the member's clubs, so take them there
+document.addEventListener('click', (e) => {
+  const a = (e.target as HTMLElement).closest<HTMLElement>('[data-go-club]');
+  if (!a || !listSessions().some((x) => x.groupId === a.dataset.goClub)) return;
+  e.preventDefault();
+  switchClub(a.dataset.goClub!);
+  navigate('#/');
 });
 
 // The admin's club switcher, in the header: a whole other club, so start again from its home page.
