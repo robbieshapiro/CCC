@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 8, 2026 (the Western Reserve dressed for fall).
+Last updated Nov 8, 2026 (the Desert Mesa drafted for Nov 22).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -133,6 +133,7 @@ Last updated Nov 8, 2026 (the Western Reserve dressed for fall).
 - [x] The #102 SQL (`round_abandoned`), run Nov 2.
 - [x] The Western Reserve opens Nov 8 (#146): out of draft, Creek Bend open to members for practice until then.
 - [ ] Before Nov 15: play The Pacific Bluffs (Admin → "Preview The Pacific Bluffs (draft)") and tell an agent to take it out of draft, or what to change. If it's still a draft on Nov 15, the Western Reserve carries over.
+- [ ] Before Nov 22: play The Desert Mesa (Admin → "Preview The Desert Mesa (draft)") and tell an agent "approve desertmesa", or what to change. If it's still a draft on Nov 22, the Western Reserve carries over.
 - [x] All SQL run in Supabase (host only, mini golf, Clubs tab, Reginald / Chronicle / Design Desk tables).
 - [x] One-time move of Robbie's rounds into Kellogg, and the rename to "Kellogg".
 - [x] `ANTHROPIC_API_KEY` in Vercel and redeployed. Confirmed working: a Chronicle edition and a design were written live.
@@ -201,6 +202,7 @@ The problem with the new members: once your best round is in, there's no reason 
 - **Fri Oct 30 to Sat Nov 7: the Caldera challenge,** all six holes (par 25). Every member's first open of the app lands on a card naming October's champion with the Caldera's Play button (#80).
 - **Week of Sun Nov 8:** The Western Reserve, five storm holes in the Ohio woods (#136 to #143, moved up in #146). Members can practise Creek Bend until it opens.
 - **Week of Sun Nov 15:** The Pacific Bluffs, the California coast (#105). Still a draft: once Robbie approves, an agent removes `draft: true` in `src/golf3d/courses.ts`. If it's still a draft then, the Western Reserve carries over.
+- **Week of Sun Nov 22:** The Desert Mesa, the Arizona canyons (draft, built by the Architect). Once Robbie approves, an agent removes `draft: true` in `src/golf3d/courses.ts`. If it's still a draft then, the previous course carries over.
 - **From Nov 15:** agent-built courses every week.
 - **A tie at the top** goes to a sudden-death playoff on the Sunday (#87).
 

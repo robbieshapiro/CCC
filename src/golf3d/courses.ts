@@ -5,6 +5,7 @@
 import { blowhole } from './holes/blowhole';
 import { caldera } from './holes/caldera';
 import { creekbend } from './holes/creekbend';
+import { dryfalls } from './holes/dryfalls';
 import { geyseralley } from './holes/geyseralley';
 import { island } from './holes/island';
 import { lavafield } from './holes/lavafield';
@@ -12,7 +13,9 @@ import { lavalift } from './holes/lavalift';
 import { lavatube } from './holes/lavatube';
 import { lighthouse } from './holes/lighthouse';
 import { maplelake } from './holes/maplelake';
+import { mesatop } from './holes/mesatop';
 import { ridge } from './holes/ridge';
+import { saguarorun } from './holes/saguarorun';
 import { sealion } from './holes/sealion';
 import { summit } from './holes/summit';
 import { thegorge } from './holes/thegorge';
@@ -70,6 +73,18 @@ const COURSES: Course[] = [
     holes: [sealion, lighthouse, thecarry],
     par: par([sealion, lighthouse, thecarry]),
     playoff: { hole: thecarry, from: { x: -80, y: 120 }, label: 'Off the cliff top' },
+  },
+  {
+    id: 'desertmesa',
+    // the Arizona canyons: the week of Nov 22. A draft until Robbie has played it: then drop `draft` and it opens on the
+    // Sunday below.
+    opens: '2026-11-22',
+    draft: true,
+    name: 'The Desert Mesa',
+    tagline: 'Three holes in the Arizona canyons. Red rock, saguaro and a dry wash.',
+    holes: [saguarorun, mesatop, dryfalls],
+    par: par([saguarorun, mesatop, dryfalls]),
+    playoff: { hole: dryfalls, from: { x: -40, y: 690 }, label: 'Over the falls' },
   },
   {
     id: 'westernreserve',

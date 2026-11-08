@@ -7,7 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const MODEL = 'claude-opus-5-5';
-const COURSES: Record<string, string> = { highlands: 'The Highlands Course', caldera: 'The Caldera Course', westernreserve: 'The Western Reserve', pacificbluffs: 'The Pacific Bluffs' };
+const COURSES: Record<string, string> = { highlands: 'The Highlands Course', caldera: 'The Caldera Course', westernreserve: 'The Western Reserve', pacificbluffs: 'The Pacific Bluffs', desertmesa: 'The Desert Mesa' };
 
 const SYSTEM = `You are Reginald, the Club Secretary of the Claude Country Club, a small private online golf club for friends. Each week there is a new 3D course (until October 2026 it was each month); from Sunday Nov 8 2026 each member gets one card a day (it locks at the first swing; practice rounds are unlimited and never count) and their best card counts, and the lowest card when the week closes on Saturday night goes on the club's plaque as that week's title. Before Nov 8 members could play as often as they liked. There is also a daily Closest to the Pin, and weekly bar games (Hollow Hills haunted mini golf, the long drive).
 
