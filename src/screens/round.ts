@@ -195,12 +195,24 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     game.howTo = 'practice';
     game.onShot = joinPractice(livePractice ? 'course' : 'caldera').shot;
   }
-  // today's players are on this period's course, not the preview
-  if (!preview) game.setGhosts(todaysField(snap));
+  // today's players are on this period's course, not the preview: the club's at once, then everyone's from every club
+  // (each person once) when it arrives, from the next hole the course is set out
+  if (!preview) {
+    game.setGhosts(todaysField(snap));
+    const g = game;
+    void api
+      .courseField(requireSession(), course.id)
+      .then((rows) =>
+        g.setGhosts(
+          rows.map((r) => ({ id: r.localId ?? undefined, pid: r.localId ?? undefined, name: r.name, avatar: r.avatar, spots: r.spots, holes: r.holes, club: r.club, away: !r.localId, going: r.going })),
+        ),
+      )
+      .catch(() => {});
+  }
   // the rehearsal puts a few of the club's members out on the course, as Sunday's field would look
   else if (!opts.practice) game.setGhosts(sampleField(snap, course));
   // tap another member out on the course: their card, and a kudos or a chirp to send them
-  game.onGhostTap = (g) => shoutSheet(el, g, course, snap.players.find((p) => p.id === g.pid), snap.groupName);
+  game.onGhostTap = (g) => shoutSheet(el, g, course, snap.players.find((p) => p.id === g.pid), g.club ?? snap.groupName);
   if (!store.get('ccc-shout-tip') && (preview ? !opts.practice : todaysField(snap).length)) {
     store.set('ccc-shout-tip', '1');
     const tip = document.createElement('p');

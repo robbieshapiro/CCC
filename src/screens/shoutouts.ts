@@ -46,11 +46,12 @@ export function shoutSheet(host: HTMLElement, g: Ghost, course: Course, p: Playe
         <div>
           <h2>${esc(g.name)}${p ? badgeFor(p, 20) : ''}</h2>
           <p class="shout-meta">${esc(club)} · ${esc(status)}</p>
-          ${played.length ? `<p class="shout-low">Today's low <b>${total}</b> <span>${toParLabel(toPar)}</span></p>` : ''}
+          ${played.length ? `<p class="shout-low">${g.going ? `Through ${played.length}` : "Today's low"} <b>${total}</b> <span>${toParLabel(toPar)}</span></p>` : ''}
         </div>
       </div>
       ${kit.length ? `<p class="shout-kit"><span>Wearing</span> ${kit.map(esc).join(' · ')}</p>` : ''}
-      <form class="shout-own" data-own>
+      ${g.away ? `<p class="shout-away">Playing out of ${esc(g.club ?? 'another club')}. Kudos and chirps stay within a club.</p>` : ''}
+      <form class="shout-own" data-own ${g.away ? 'hidden' : ''}>
         <div class="shout-pick-kind" role="radiogroup" aria-label="Kudos or a chirp">
           <button type="button" role="radio" aria-checked="true" data-pick="kudos">${ICON.kudos} Kudos</button><button type="button" role="radio" aria-checked="false" data-pick="chirp">${ICON.chirp} Chirp</button>
         </div>

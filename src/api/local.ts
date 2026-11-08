@@ -10,7 +10,7 @@ import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
@@ -713,6 +713,28 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       d = next.toISOString().slice(0, 10);
     }
     return out;
+  },
+
+  // as course_field does on the server: today's finished rounds on the course with their spots, every club, you left out
+  async courseField(session, course): Promise<FieldRow[]> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const today = todayInGameTz();
+    const club = (id: string) => Object.values(db.groups).find((g) => g.id === id)?.name ?? '?';
+    const best = new Map<string, DbRound>();
+    for (const r of db.rounds) {
+      const p = db.players.find((x) => x.id === r.playerId);
+      if (!p || !r.spots || r.course !== course || todayInGameTz(new Date(r.createdAt)) !== today) continue;
+      if (p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin) continue;
+      const k = `${p.name.toLowerCase()}|${p.pin}`;
+      const b = best.get(k);
+      if (!b || r.total - r.par < b.total - b.par) best.set(k, r);
+    }
+    return [...best.values()].map((r) => {
+      const p = db.players.find((x) => x.id === r.playerId)!;
+      const local = db.players.find((x) => x.groupId === me.groupId && x.name.toLowerCase() === p.name.toLowerCase() && x.pin === p.pin);
+      return { name: p.name, club: club(p.groupId), avatar: p.avatar, holes: r.holes, spots: r.spots!, going: false, localId: local?.id ?? null };
+    });
   },
 
   // as admin_today does on the server, from what local mode keeps (no visits, so "in" means did something today)

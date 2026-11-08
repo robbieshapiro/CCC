@@ -1560,3 +1560,4 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .adm-more[open] > summary::before { content: '▾ '; }
 .adm-more[open] > summary { margin-bottom: 12px; }
 .adm-badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 999px; background: #c8692a; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; }
+.shout-away { margin: 6px 0 0; font-size: 13px; color: var(--muted); }

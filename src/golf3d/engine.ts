@@ -45,7 +45,8 @@ export type HoleResult = { strokes: number; feats: string[]; spot: V2 | null }; 
 // A member who played today, standing where their tee shot finished on each hole.
 // id: their player id, to send them a kudos or a chirp (a made-up member in the Committee's rehearsal has none)
 // pid: who they are, for their card (set for the rehearsal's sample members too, who have no id to send to)
-export type Ghost = { id?: string; pid?: string; name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[] };
+// id/pid: their seat in your club (none for someone from another club: away); going: a card still being played
+export type Ghost = { id?: string; pid?: string; name: string; avatar: Avatar; spots: (V2 | null)[]; holes: number[]; club?: string; away?: boolean; going?: boolean };
 // someone in the stands on a hole that has them: a member who has played it, with their score on it
 export type Spectator = { name: string; avatar: Avatar; label: string };
 type Mode = 'fly' | 'aim' | 'meter' | 'swing' | 'roll' | 'done' | 'cart';
