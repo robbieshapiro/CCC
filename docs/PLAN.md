@@ -116,7 +116,7 @@ Last updated Nov 7, 2026 (handoff for Sunday; Sunday's card in Admin and the clu
 
 ## Setup status
 
-- [ ] #187: apply the new `submit_round` (one statement) to live before midnight ET Nov 7, then check it with a read-only select.
+- [x] #187: the new `submit_round`, applied Nov 7 at about 8:30pm ET (`pr_187_card_only_after_midnight`). Checked live: the rule is in the function and anon can still call it.
 
 - [x] The #80 schedule SQL, run Oct 29: October closed at midnight going into Oct 30 and the Caldera challenge opened.
 - [x] The #82 SQL (`daily_crown`, `period_honors`), run Oct 29.
