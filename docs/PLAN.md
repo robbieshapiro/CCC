@@ -122,7 +122,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #198: `period_champs` (`pr_198_playoff_decided_early`).
+- [x] #198: `period_champs` applied Nov 8 (`pr_198_playoff_decided_early`). Checked live: Tyler is The Clergy's Caldera champion (playoff-won) and paid $2,602, Hunter 2nd with $1,576.
 
 - [x] #196: `admin_overview`, `admin_trend` and `admin_kpis` applied Nov 8 (`pr_196_admin_people`). Checked live: functions match the tested ones, anon can still call them, and the Committee Room counts 40 members (it was counting 44 seats; the Gators have 3 members and 4 guests).
 
