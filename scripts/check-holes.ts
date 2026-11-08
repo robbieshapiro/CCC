@@ -208,6 +208,10 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   theledges: { from: { x: 40, y: 520 }, clubs: ['wedge', 'iron'], angles: [2, 26] },
   thequarry: { from: { x: 110, y: 604 }, clubs: ['wedge', 'chip'], angles: [-32, 0] },
   thegorge: { from: { x: -4, y: 720 }, clubs: ['wedge', 'iron'], angles: [-40, -5] },
+  // the Desert Mesa: off the slab right of the green, up the switchback road, the second onto the Overlook
+  saguarorun: { from: { x: 60, y: 440 }, clubs: ['iron', 'wedge'], angles: [10, 40] },
+  mesatop: { from: { x: -62, y: 122 }, clubs: ['putter'], angles: [15, 55] },
+  dryfalls: { from: { x: -10, y: 400 }, clubs: ['driver', 'wood'], angles: [-22, 0], near: 110 },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
