@@ -1023,8 +1023,9 @@ begin
   if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
   return (
     with g as (select id, name from groups where id in (select admin_clubs(me))),
+    -- every seat in the admin's clubs; who: the person's home seat, so a guest in two clubs is one member
     m as (
-      select pl.id, pl.group_id, g.name as club, pl.name, pl.created_at,
+      select pl.id, (home_of(pl)).id as who, pl.group_id, g.name as club, pl.name, pl.created_at,
         greatest(pl.last_seen_at,
           (select max(created_at) from rounds where player_id = pl.id),
           (select max(started_at) from practice_sessions where player_id = pl.id)) as last_seen
@@ -1045,6 +1046,20 @@ begin
         (select count(*) from round_starts rs where rs.player_id = m.id and rs.started_at >= since and round_abandoned(rs)) as unfinished
       from m
     ),
+    -- one row a person: their seats' numbers added up (days counted once), shown under their home club
+    people as (
+      select s.who, min(s.name) filter (where s.id = s.who) as hname, min(s.name) as name,
+        min(s.club) filter (where s.id = s.who) as hclub, min(s.club) as club, min(s.created_at) as created_at,
+        max(s.last_seen) as last_seen, sum(s.rounds)::int as rounds, min(s.best) as best, sum(s.practice)::int as practice,
+        sum(s.lockers)::int as lockers, sum(s.unfinished)::int as unfinished,
+        coalesce(array_agg(s.club order by s.club) filter (where s.id <> s.who), '{}') as guest_at,
+        (select count(*) from (
+            select day from member_days where player_id in (select x.id from m x where x.who = s.who) and day >= (since at time zone 'America/New_York')::date
+            union select (created_at at time zone 'America/New_York')::date from rounds where player_id in (select x.id from m x where x.who = s.who) and created_at >= since
+            union select (started_at at time zone 'America/New_York')::date from practice_sessions where player_id in (select x.id from m x where x.who = s.who) and started_at >= since
+          ) d) as days
+      from stats s group by s.who
+    ),
     feed as (
       select * from (
         select r.created_at as at, 'round' as kind, g.name as club, p.name, r.course, r.total, r.par, null::text as what, null::int as shots
@@ -1053,7 +1068,7 @@ begin
         select s.started_at, 'practice', g.name, p.name, null, null, null, s.kind, s.shots
           from practice_sessions s join players p on p.id = s.player_id join g on g.id = s.group_id where p.role <> 'admin'
         union all
-        select p.created_at, 'join', g.name, p.name, null, null, null, null, null
+        select p.created_at, 'join', g.name, p.name, null, null, null, case when (home_of(p)).id <> p.id then 'guest' end, null
           from players p join g on g.id = p.group_id where p.role <> 'admin'
         union all
         -- a round started and not finished (shots: the hole they got to)
@@ -1068,16 +1083,26 @@ begin
     select json_build_object(
       'clubs', coalesce((select json_agg(json_build_object(
           'id', g.id, 'name', g.name,
-          'members', (select count(*) from m where m.group_id = g.id),
+          -- members: whose home club this is; guests: members of another club with a seat here
+          'members', (select count(*) from m where m.group_id = g.id and m.id = m.who),
+          'guests', (select count(*) from m where m.group_id = g.id and m.id <> m.who),
           'active', (select count(*) from stats s where s.group_id = g.id and s.days > 0),
           'rounds', (select coalesce(sum(s.rounds), 0) from stats s where s.group_id = g.id),
           'practice', (select coalesce(sum(s.practice), 0) from stats s where s.group_id = g.id),
-          'newMembers', (select count(*) from m where m.group_id = g.id and m.created_at >= since)
+          'newMembers', (select count(*) from m where m.group_id = g.id and m.id = m.who and m.created_at >= since)
         ) order by g.name) from g), '[]'),
+      -- across the clubs, each person once
+      'totals', json_build_object(
+        'members', (select count(*) from people),
+        'active', (select count(*) from people where days > 0),
+        'rounds', (select coalesce(sum(rounds), 0) from people),
+        'practice', (select coalesce(sum(practice), 0) from people),
+        'newMembers', (select count(*) from m where m.id = m.who and m.created_at >= since)),
       'members', coalesce((select json_agg(json_build_object(
-          'club', s.club, 'name', s.name, 'joined', s.created_at, 'lastSeen', s.last_seen, 'days', s.days,
-          'rounds', s.rounds, 'unfinished', s.unfinished, 'best', s.best, 'practice', s.practice, 'lockers', s.lockers
-        ) order by s.last_seen desc nulls last, s.name) from stats s), '[]'),
+          'club', coalesce(s.hclub, s.club), 'guestAt', s.guest_at, 'name', coalesce(s.hname, s.name), 'joined', s.created_at,
+          'lastSeen', s.last_seen, 'days', s.days, 'rounds', s.rounds, 'unfinished', s.unfinished, 'best', s.best,
+          'practice', s.practice, 'lockers', s.lockers
+        ) order by s.last_seen desc nulls last, s.name) from people s), '[]'),
       'feed', coalesce((select json_agg(json_build_object(
           'at', e.at, 'kind', e.kind, 'club', e.club, 'name', e.name, 'course', e.course, 'total', e.total,
           'par', e.par, 'what', e.what, 'shots', e.shots
@@ -1113,17 +1138,20 @@ declare me players := player_for(p_token);
 begin
   if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
   return (
-    with m as (
-      select pl.id, (pl.created_at at time zone 'America/New_York')::date as joined from players pl
+    -- seats, each tagged with its person (who: their home seat), so a guest in two clubs counts once
+    with s as (
+      select pl.id, (home_of(pl)).id as who, (pl.created_at at time zone 'America/New_York')::date as joined from players pl
       where pl.group_id in (select admin_clubs(me)) and pl.role <> 'admin' and not pl.host_only
+    ), m as (
+      select who, min(joined) as joined from s group by who
     ), r as (
-      select distinct rd.player_id, (rd.created_at at time zone 'America/New_York')::date as d from rounds rd join m on m.id = rd.player_id
+      select distinct s.who, (rd.created_at at time zone 'America/New_York')::date as d from rounds rd join s on s.id = rd.player_id
     ), days as (
       select generate_series(coalesce((select min(joined) from m), game_today()), game_today(), interval '1 day')::date as day
     )
     select coalesce(json_agg(json_build_object(
         'day', days.day,
-        'players', (select count(distinct r.player_id) from r where r.d > days.day - 7 and r.d <= days.day),
+        'players', (select count(distinct r.who) from r where r.d > days.day - 7 and r.d <= days.day),
         'members', (select count(*) from m where m.joined <= days.day)
       ) order by days.day), '[]')
     from days
@@ -1141,22 +1169,25 @@ begin
   if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
   select max(r.month) into prev from rounds r where r.month < per;
   return (
-    with mem as (select pl.* from players pl where pl.group_id in (select admin_clubs(me)) and pl.role <> 'admin' and not pl.host_only),
-    rd as (select r.* from rounds r join mem on mem.id = r.player_id),
+    -- every seat, tagged with its person (who: their home seat): a guest in two clubs is one member, and below
+    -- player_id is the person, not the seat
+    with mem as (select pl.*, (home_of(pl)).id as who from players pl where pl.group_id in (select admin_clubs(me)) and pl.role <> 'admin' and not pl.host_only),
+    people as (select who, min(created_at) as created_at, min(name) as name from mem group by who),
+    rd as (select r.*, mem.who from rounds r join mem on mem.id = r.player_id),
     -- any sign of life on a day: a visit, a round, practice or a Daily Shot
     seen as (
-      select md.player_id, md.day from member_days md join mem on mem.id = md.player_id
-      union select r.player_id, (r.created_at at time zone 'America/New_York')::date from rd r
-      union select ps.player_id, (ps.started_at at time zone 'America/New_York')::date from practice_sessions ps join mem on mem.id = ps.player_id
-      union select d.player_id, d.day from daily_shots d join mem on mem.id = d.player_id
+      select mem.who as player_id, md.day from member_days md join mem on mem.id = md.player_id
+      union select r.who, (r.created_at at time zone 'America/New_York')::date from rd r
+      union select mem.who, (ps.started_at at time zone 'America/New_York')::date from practice_sessions ps join mem on mem.id = ps.player_id
+      union select mem.who, d.day from daily_shots d join mem on mem.id = d.player_id
     ),
-    played as (select distinct r.player_id, (r.created_at at time zone 'America/New_York')::date as day from rd r),
-    pp as (select distinct r.month, r.player_id from rd r),
+    played as (select distinct r.who as player_id, (r.created_at at time zone 'America/New_York')::date as day from rd r),
+    pp as (select distinct r.month, r.who as player_id from rd r),
     pars as (select r.*, coalesce(r.pars, cp.pars) as hp from rd r left join course_pars cp on cp.course = r.course where r.month = per),
     shots as (select i, p.holes[i] as s, p.hp[i] as par from pars p cross join lateral generate_subscripts(p.holes, 1) i where p.hp is not null and i <= array_length(p.hp, 1))
     select json_build_object(
       'period', per, 'prevPeriod', prev, 'today', today,
-      'members', (select count(*) from mem),
+      'members', (select count(*) from people),
       'visitedToday', (select count(distinct player_id) from seen where day = today),
       'playedToday', (select count(*) from played where day = today),
       'visitedWeekAgo', (select count(distinct player_id) from seen where day = today - 7),
@@ -1167,9 +1198,9 @@ begin
       'players', (select count(*) from pp where month = per),
       'prevRounds', (select count(*) from rd where month = prev),
       'prevPlayers', (select count(*) from pp where month = prev),
-      'joined14', (select count(*) from mem where created_at > now() - interval '14 days'),
-      'firstRound14', (select count(*) from mem where created_at > now() - interval '14 days' and exists (select 1 from rd where rd.player_id = mem.id)),
-      'neverPlayed14', (select coalesce(json_agg(mem.name order by mem.created_at), '[]') from mem where created_at > now() - interval '14 days' and not exists (select 1 from rd where rd.player_id = mem.id)),
+      'joined14', (select count(*) from people where created_at > now() - interval '14 days'),
+      'firstRound14', (select count(*) from people pe where created_at > now() - interval '14 days' and exists (select 1 from rd where rd.who = pe.who)),
+      'neverPlayed14', (select coalesce(json_agg(pe.name order by pe.created_at), '[]') from people pe where created_at > now() - interval '14 days' and not exists (select 1 from rd where rd.who = pe.who)),
       -- the purse a week is worth: from Nov 8 the Open's, every person in any club; before, every club's added up
       'purse', (case when per >= open_purse_from()
         then (select case when n = 0 then 0 else greatest(n * open_per_player(), open_purse_floor()) end
@@ -1189,7 +1220,7 @@ begin
       'weeks', (select coalesce(json_agg(json_build_object('period', w.month, 'players', w.players, 'rounds', w.rounds,
           'back', (select count(*) from pp a where a.month = w.before and exists (select 1 from pp b where b.month = w.month and b.player_id = a.player_id)),
           'before', (select count(*) from pp a where a.month = w.before)) order by w.month), '[]')
-        from (select r.month, count(distinct r.player_id) as players, count(*) as rounds, lag(r.month) over (order by r.month) as before
+        from (select r.month, count(distinct r.who) as players, count(*) as rounds, lag(r.month) over (order by r.month) as before
           from rd r group by r.month) w),
       'holes', (select coalesce(json_agg(json_build_object('hole', i, 'par', par, 'n', n, 'avg', av, 'eagle', e, 'birdie', b, 'pars', pz, 'bogey', bo, 'worse', wo) order by i), '[]')
         from (select i, min(par) as par, count(*) as n, round(avg(s - par), 2) as av,

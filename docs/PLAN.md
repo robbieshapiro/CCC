@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 8, 2026 (fall colours; one card a day per person).
+Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people, not seats).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person).
 
 | PR | What |
 |---|---|
+| #196 | The Committee Room counts people, not seats: a guest in two clubs is one member. Members, Active, New and Weekly Players count each person once; the clubs table has a Guests column (members of another club with a seat here); the Members table has one row a person under their home club, with "guest at Gators" under it; a guest seat shows in the feed as "joined as a guest". `admin_overview`, `admin_trend` and `admin_kpis` tag each seat with its person (`home_of`). |
 | #194 | One card a day per person, not per club: a guest (or Robbie, in Kellogg, The Clergy and the Gators) gets one card a day across all their clubs. A card going or in at another club shows on the Play tile ("Today's card is going at Kellogg", with "Continue at Kellogg"), and starting or posting a card there is refused. `card_of`, `card_in`, `start_round`, `submit_round` and `card_today` now look at all of a person's seats (`person_seats`). |
 | #192 | The countdown shows the $10,000 Open purse from the start of the week, not $0 until the first card is in. |
 | #191 | The Western Reserve in fall colours: the Play tile, the board and its countdown go burnt orange with a maple leaf (🍁) on the tile's eyebrow and the board's title, the way the Caldera went ember red. |
@@ -119,6 +120,8 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person).
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #196: `admin_overview`, `admin_trend` and `admin_kpis` (`pr_196_admin_people`).
 
 - [x] #194: `card_of`, `card_in`, `start_round`, `card_today` and `submit_round` applied Nov 8 (`pr_194_one_card_per_person`). Checked live: the functions match the tested ones, anon can still call them, and cards already under way are untouched.
 
