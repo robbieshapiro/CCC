@@ -123,7 +123,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #200: `admin_today` (`pr_200_admin_today`).
+- [x] #200: `admin_today` applied Nov 8 (`pr_200_admin_today`). Checked live: anon can call it; it showed 15 in today, 1 card in (Marc, E), 2 on the course (Kushol hole 4, Kevin hole 2).
 
 - [x] #198: `period_champs` applied Nov 8 (`pr_198_playoff_decided_early`). Checked live: Tyler is The Clergy's Caldera champion (playoff-won) and paid $2,602, Hunter 2nd with $1,576.
 
