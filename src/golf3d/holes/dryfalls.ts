@@ -9,7 +9,7 @@ import type { Hole, Post, V2 } from '../types';
 import { bunker, FAIRWAY_DEPTH, greenComplex, greenside } from './woods';
 
 const GROUND = 4;
-const GREEN = { x: -40, y: 770, rx: 24, ry: 20 };
+const GREEN = { x: -40, y: 770, rx: 18, ry: 15 };
 const LINE: V2[] = [
   { x: 0, y: 10 },
   { x: 6, y: 200 },
@@ -48,12 +48,13 @@ export const dryfalls: Hole = {
   theme: 'desert',
   tour: true,
   chipDrop: 0.7,
-  greenFirm: 0.06,
+  greenFirm: 0.1,
+  turf: { roughKeep: 0.3, roughDrag: 1.4, roughLie: 0.85, roughScatter: 0.15, fairwayRoll: 1, sandLie: 0.75, sandScatter: 0.3 },
   yards: 570,
   blurb: 'A canyon dogleg left. Over the dry falls to the green. A ledge beside it dodges the falls.',
   tee: { x: 0, y: 0 },
   cup: { x: -40, y: 774 },
-  pins: [{ x: -40, y: 774 }, { x: -50, y: 762 }, { x: -30, y: 778 }, { x: -42, y: 760 }],
+  pins: [{ x: -40, y: 774 }, { x: -48, y: 764 }, { x: -32, y: 778 }, { x: -41, y: 762 }],
   aim: -0.01,
   bounds: { x0: -240, y0: -40, x1: 220, y1: 900 },
   border: [
