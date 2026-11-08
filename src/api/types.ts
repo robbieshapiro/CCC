@@ -118,6 +118,8 @@ export type MemberActivity = { name: string; lastSeen: string | null; days: numb
 // The Open: this month's best round per person across every club. One entry a person, under their first club.
 // localId: their member id in the viewer's club, if they're in it.
 export type OpenRow = { playerId: string; name: string; club: string; mine: boolean; localId: string | null; avatar: Avatar; holes: number[]; total: number; par: number; rounds: number; last: string; createdAt: string };
+// Today's field on a course, every club (course_field): a card in, or the holes so far of one in progress
+export type FieldRow = { name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; localId: string | null };
 export type OpenChampion = { month: string; names: string[]; total: number; par: number };
 // The admin tab: every club the admin runs, on one page.
 export type AdminWindow = 'week' | 'month' | 'all';
@@ -253,6 +255,7 @@ export interface Api {
   periodHonors(session: Session, period: string): Promise<Honors>;
   adminTrend(session: Session): Promise<TrendDay[]>;
   adminToday(session: Session): Promise<AdminToday>;
+  courseField(session: Session, course: string): Promise<FieldRow[]>; // today's golfers on the course, every club
   adminKpis(session: Session): Promise<AdminKpis>;
   // a counted round's start, how far it got, and whether it finished
   // card: today's card (the same one all day, so a card cut short picks up where it left off)
