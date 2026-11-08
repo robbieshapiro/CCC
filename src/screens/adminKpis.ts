@@ -1,5 +1,5 @@
-// The Committee Room's headline numbers, above Weekly Players: Reginald's morning read (api/insights.ts, once a day),
-// tiles for today, last week's players coming back, rounds per player, new members' first rounds, money and AI calls,
+// The Committee Room's secondary numbers, under "More numbers" below Today: Reginald's morning read (api/insights.ts,
+// once a day, in its own tab), last week's players coming back, the purse, new members' first rounds and AI calls,
 // then three charts: players per day, week over week, and how this week's course is scoring hole by hole.
 import { api, useSupabase } from '../api';
 import type { AdminInsights, AdminKpis } from '../api/types';
@@ -10,6 +10,7 @@ import { money } from '../purse';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 import { setNeeds } from './admin';
+import { setWeekAgo } from './adminToday';
 
 export const kpiSections = () => `<section class="adm-kpis" id="adm-kpis"><p class="muted">Loading…</p></section>`;
 // Reginald's read, in a tab of its own
@@ -90,12 +91,6 @@ export async function loadBrief() {
   }
 }
 
-// a change on last week, as an arrow and a number (or a percentage point change)
-const delta = (now: number, before: number | null, unit = '') => {
-  if (before === null) return '';
-  const d = Math.round((now - before) * 10) / 10;
-  return `<em class="${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : '='} ${d > 0 ? '+' : ''}${d}${unit} on last week</em>`;
-};
 const tile = (big: string, label: string, sub: string, change = '') => `<div class="kpi"><b>${big}</b><span>${label}</span><small>${sub}</small>${change}</div>`;
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 
@@ -108,14 +103,10 @@ function drawKpis() {
     return;
   }
   const back = pct(k.cameBack, k.lastPlayers);
-  const rpp = k.players ? Math.round((k.rounds / k.players) * 10) / 10 : 0;
-  const rppBefore = k.prevPlayers ? Math.round((k.prevRounds / k.prevPlayers) * 10) / 10 : null;
   const aiToday = Object.values(k.ai.today).reduce((a, n) => a + n, 0) + k.ai.designsToday;
   el.innerHTML = `
     <div class="kpi-grid">
-      ${tile(String(k.visitedToday), 'In today', `${k.playedToday} played a round`, delta(k.visitedToday, k.visitedWeekAgo))}
       ${tile(k.lastPlayers ? `${back}%` : '–', 'Came back', k.lastPlayers ? `${k.cameBack} of last week's ${k.lastPlayers} players have played this week` : 'no last week to compare yet')}
-      ${tile(String(rpp), 'Rounds per player', `${k.rounds} rounds by ${k.players} players this week`, rppBefore === null ? '' : delta(rpp, rppBefore))}
       ${tile(money(k.purse), 'Purse in play', `Pro Shop: ${money(k.shop7)} in 7 days, ${money(k.shopAll)} ever`)}
     </div>`;
   // the rest, in the Overview tab
@@ -138,6 +129,7 @@ function drawCharts(k: AdminKpis) {
     course.innerHTML = holes(k);
   }
   setNeeds('unplayed', k.neverPlayed14.length);
+  setWeekAgo(k.visitedWeekAgo);
 }
 
 // the last 14 days: who played a round, and who only came in, stacked

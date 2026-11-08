@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people; playoffs decided when played).
+Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 | PR | What |
 |---|---|
+| #200 | The Committee Room's Overview is built around today: a big "in today" number (cards in, on the course, the rest; against the same day last week), who's in today (each person once, with their card in and score, or on the course and the hole, plus practice and the Daily Shot), and a live feed of today that refreshes every minute. Came back, purse, new members, AI calls and the charts fold away under "More numbers"; rounds per player and the "Needs you" box are gone (unread feedback is a count on the Activity tab). New `admin_today`. |
 | #198 | A playoff is decided as soon as everyone in it has played the hole and taken their shot at the pin, not at midnight: the champion is crowned and paid straight away (Tyler won The Clergy's Caldera playoff, 3 to Hunter's 6). Until then, or if someone doesn't play, it still settles at midnight as before. `period_champs`. |
 | #196 | The Committee Room counts people, not seats: a guest in two clubs is one member. Members, Active, New and Weekly Players count each person once; the clubs table has a Guests column (members of another club with a seat here); the Members table has one row a person under their home club, with "guest at Gators" under it; a guest seat shows in the feed as "joined as a guest". `admin_overview`, `admin_trend` and `admin_kpis` tag each seat with its person (`home_of`). |
 | #194 | One card a day per person, not per club: a guest (or Robbie, in Kellogg, The Clergy and the Gators) gets one card a day across all their clubs. A card going or in at another club shows on the Play tile ("Today's card is going at Kellogg", with "Continue at Kellogg"), and starting or posting a card there is refused. `card_of`, `card_in`, `start_round`, `submit_round` and `card_today` now look at all of a person's seats (`person_seats`). |
@@ -121,6 +122,8 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #200: `admin_today` (`pr_200_admin_today`).
 
 - [x] #198: `period_champs` applied Nov 8 (`pr_198_playoff_decided_early`). Checked live: Tyler is The Clergy's Caldera champion (playoff-won) and paid $2,602, Hunter 2nd with $1,576.
 
