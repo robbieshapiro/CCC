@@ -20,6 +20,7 @@ import { adminShoutSection, loadAdminShouts } from './shoutouts';
 import { briefSection, chartSections, courseSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
 import { ask, copyBox, tell } from '../dialog';
 import { bindSundayCard, sundayCardSection } from './adminCard';
+import { loadToday, todaySections } from './adminToday';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -52,10 +53,13 @@ export function admin(snap: Snapshot) {
       </div>
       <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
       <div class="adm-pane" data-pane="overview">
-        <section class="adm-needs" id="adm-needs" aria-label="Needs you"></section>
-        ${kpiSections()}
-        <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
-        ${chartSections()}
+        ${todaySections()}
+        <details class="adm-more">
+          <summary>More numbers <small>came back, purse, new members, AI, the charts</small></summary>
+          ${kpiSections()}
+          ${chartSections()}
+          <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
+        </details>
       </div>
       <div class="adm-pane" data-pane="reginald" hidden>${briefSection()}</div>
       <div class="adm-pane" data-pane="course" hidden>
@@ -117,6 +121,7 @@ export function admin(snap: Snapshot) {
   bindClubMaker();
   bindNoticeTool();
   bindInviteTool();
+  void loadToday();
   void load();
   void loadAdminShouts();
   void loadHoles(snap);
@@ -524,7 +529,10 @@ function arrange(body: HTMLElement) {
 // "Needs you": what's waiting on the Committee, each a tap to where it's dealt with
 const needs = { feedback: 0, holes: 0, invites: 0, unplayed: 0 };
 export const setNeeds = (k: keyof typeof needs, n: number) => ((needs[k] = n), drawNeeds());
+// shown as a count on the Activity tab (unread feedback), not a box up top
 function drawNeeds() {
+  const tab = document.querySelector<HTMLButtonElement>('#adm-tabs [data-tab="activity"]');
+  if (tab) tab.innerHTML = `Activity${needs.feedback ? ` <span class="adm-badge">${needs.feedback}</span>` : ''}`;
   const el = document.getElementById('adm-needs');
   if (!el) return;
   const items: [number, string, Tab, string][] = [

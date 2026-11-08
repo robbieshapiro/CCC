@@ -10,7 +10,7 @@ import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
@@ -713,6 +713,52 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       d = next.toISOString().slice(0, 10);
     }
     return out;
+  },
+
+  // as admin_today does on the server, from what local mode keeps (no visits, so "in" means did something today)
+  async adminToday(session): Promise<AdminToday> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see the admin tab.');
+    const clubs = new Set(db.players.filter((p) => p.admin && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.groupId));
+    const club = (id: string) => Object.values(db.groups).find((g) => g.id === id)?.name ?? '?';
+    const today = todayInGameTz();
+    const isToday = (iso: string) => todayInGameTz(new Date(iso)) === today;
+    const mem = db.players.filter((p) => clubs.has(p.groupId) && !p.admin && !p.host);
+    const who = (id: string) => mem.find((p) => p.id === id);
+    const feed: AdminTodayEvent[] = [];
+    for (const r of db.rounds) {
+      const p = who(r.playerId);
+      if (p && isToday(r.createdAt)) feed.push({ at: r.createdAt, kind: 'round', name: p.name, club: club(p.groupId), what: r.course, total: r.total, par: r.par, n: null, ft: null });
+    }
+    for (const x of db.practice ?? []) {
+      const p = who(x.playerId);
+      if (p && isToday(x.startedAt)) feed.push({ at: x.startedAt, kind: 'practice', name: p.name, club: club(p.groupId), what: x.kind, total: null, par: null, n: x.shots, ft: null });
+    }
+    for (const p of mem) if (isToday(p.joined)) feed.push({ at: p.joined, kind: 'join', name: p.name, club: club(p.groupId), what: null, total: null, par: null, n: null, ft: null });
+    feed.sort((a, b) => b.at.localeCompare(a.at));
+    const cards = (db.cards ?? []).filter((c) => c.day === today);
+    const people: AdminTodayPerson[] = mem
+      .map((p): AdminTodayPerson | null => {
+        const mine = feed.filter((e) => e.name === p.name && e.club === club(p.groupId));
+        const round = mine.find((e) => e.kind === 'round');
+        const going = cards.find((c) => c.playerId === p.id && !c.done);
+        if (!mine.length && !going) return null;
+        return {
+          name: p.name,
+          club: club(p.groupId),
+          last: mine[0]?.at ?? null,
+          card: round ? ('in' as const) : going ? ('going' as const) : null,
+          toPar: round ? round.total! - round.par! : null,
+          total: round?.total ?? null,
+          hole: going ? going.scores.length + 1 : null,
+          practice: mine.filter((e) => e.kind === 'practice').length,
+          daily: false,
+          dailyFt: null,
+        };
+      })
+      .filter((x): x is AdminTodayPerson => !!x);
+    return { today, in: people.length, cardsIn: people.filter((p) => p.card === 'in').length, onCourse: people.filter((p) => p.card === 'going').length, people, feed };
   },
 
   // as admin_kpis does on the server, from what local mode keeps

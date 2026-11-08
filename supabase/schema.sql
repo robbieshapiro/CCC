@@ -1163,6 +1163,89 @@ begin
 end $$;
 grant execute on function admin_trend(uuid) to anon;
 
+-- The Committee Room's Today: everyone in today across the admin's clubs, each person once (a guest in two clubs is
+-- one), with where their card stands (in, with the score; on the course, with the hole), practice and the Daily Shot;
+-- and today's feed, newest first. "In" is any sign of life today: a visit, a round, a card started, practice, the
+-- Daily Shot or the playoff.
+create or replace function admin_today(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); today date := game_today();
+  t0 timestamptz := today::timestamp at time zone 'America/New_York';
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see the admin tab.'; end if;
+  return (
+    with g as (select id, name from groups where id in (select admin_clubs(me))),
+    mem as (
+      select pl.id, pl.name, pl.group_id, pl.last_seen_at, g.name as club, (home_of(pl)).id as who
+      from players pl join g on g.id = pl.group_id where pl.role <> 'admin' and not pl.host_only
+    ),
+    ev as (
+      select m.who, m.name, m.club, r.created_at as at, 'round' as kind, r.course, r.total, r.par, null::int as n, null::numeric as ft
+        from rounds r join mem m on m.id = r.player_id where r.created_at >= t0
+      union all
+      select m.who, m.name, m.club, rs.started_at, 'start', rs.course, null, null, null, null
+        from round_starts rs join mem m on m.id = rs.player_id where rs.card and rs.started_at >= t0
+      union all
+      select m.who, m.name, m.club, ps.started_at, 'practice', ps.kind, null, null, ps.shots, null
+        from practice_sessions ps join mem m on m.id = ps.player_id where ps.started_at >= t0
+      union all
+      -- the Daily Shot: one line a person, at their last try, with their best
+      select m.who, m.name, m.club, max(d.created_at), 'daily', null, null, null, count(*)::int,
+          min(case when d.holed then 0 when d.lost then null else d.ft end)
+        from daily_shots d join mem m on m.id = d.player_id where d.day = today group by m.who, m.name, m.club
+      union all
+      select m.who, m.name, m.club, pt.started_at, 'playoff', null, pt.strokes, null, null, pt.ft
+        from playoff_tries pt join mem m on m.id = pt.player_id where pt.started_at >= t0
+      union all
+      select m.who, m.name, m.club, m2.created_at, 'join', case when m.id <> m.who then 'guest' end, null, null, null, null
+        from mem m join players m2 on m2.id = m.id where m2.created_at >= t0
+      union all
+      select m.who, m.name, m.club, f.created_at, 'feedback', left(f.body, 80), null, null, null, null
+        from feedback f join mem m on m.id = f.player_id where f.created_at >= t0
+    ),
+    -- who's in: anyone with an event today, or who opened the club today
+    ins as (
+      select who from ev
+      union select m.who from mem m where m.last_seen_at >= t0
+      union select m.who from member_days md join mem m on m.id = md.player_id where md.day = today
+    ),
+    -- today's card: the round posted today in this week (one a person)
+    card as (
+      select distinct on (m.who) m.who, r.total - r.par as to_par, r.total, r.created_at as at
+      from rounds r join mem m on m.id = r.player_id where r.created_at >= t0 and r.month = game_month() order by m.who, r.created_at
+    ),
+    going as (
+      select distinct on (m.who) m.who, coalesce(array_length(rs.scores, 1), 0) + 1 as hole, rs.started_at as at
+      from round_starts rs join mem m on m.id = rs.player_id
+      where rs.card and not rs.finished and rs.started_at >= t0 order by m.who, rs.started_at desc
+    ),
+    people as (
+      select i.who,
+        coalesce((select m.name from mem m where m.id = i.who), (select min(m.name) from mem m where m.who = i.who)) as name,
+        coalesce((select m.club from mem m where m.id = i.who), (select min(m.club) from mem m where m.who = i.who)) as club,
+        greatest((select max(at) from ev where ev.who = i.who), (select max(m.last_seen_at) from mem m where m.who = i.who and m.last_seen_at >= t0)) as last,
+        case when c.who is not null then 'in' when gg.who is not null then 'going' end as card,
+        c.to_par, c.total, gg.hole,
+        (select count(*) from ev where ev.who = i.who and ev.kind = 'practice') as practice,
+        (select ev.ft from ev where ev.who = i.who and ev.kind = 'daily' limit 1) as daily_ft,
+        exists (select 1 from ev where ev.who = i.who and ev.kind = 'daily') as daily
+      from ins i left join card c on c.who = i.who left join going gg on gg.who = i.who
+    )
+    select json_build_object(
+      'today', today,
+      'in', (select count(*) from people),
+      'cardsIn', (select count(*) from people where card = 'in'),
+      'onCourse', (select count(*) from people where card = 'going'),
+      'people', coalesce((select json_agg(json_build_object('name', p.name, 'club', p.club, 'last', p.last, 'card', p.card,
+          'toPar', p.to_par, 'total', p.total, 'hole', p.hole, 'practice', p.practice, 'daily', p.daily, 'dailyFt', p.daily_ft)
+        order by p.last desc nulls last, p.name) from people p), '[]'),
+      'feed', coalesce((select json_agg(json_build_object('at', e.at, 'kind', e.kind, 'name', e.name, 'club', e.club,
+          'what', e.course, 'total', e.total, 'par', e.par, 'n', e.n, 'ft', e.ft) order by e.at desc) from ev e), '[]')
+    )
+  );
+end $$;
+grant execute on function admin_today(uuid) to anon;
+
 -- The Committee Room's headline numbers, across the admin's clubs (the admin and host-only seats left out): who's in
 -- today, who came back from last week, rounds per player, new members' first rounds, the money in play, AI calls, the
 -- last 14 days, every week so far, and how this week's course is scoring hole by hole. One call, read-only.

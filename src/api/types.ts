@@ -164,6 +164,10 @@ export type AdminOverview = {
   invites: { id: string; club: string; name: string; code: string; createdAt: string }[];
 };
 // The Daily Shot: one shot a day for everyone, three tries, best counts (see daily.ts)
+// The Committee Room's Today (admin_today): everyone in today, each person once, and today's feed
+export type AdminTodayPerson = { name: string; club: string; last: string | null; card: 'in' | 'going' | null; toPar: number | null; total: number | null; hole: number | null; practice: number; daily: boolean; dailyFt: number | null };
+export type AdminTodayEvent = { at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
+export type AdminToday = { today: string; in: number; cardsIn: number; onCourse: number; people: AdminTodayPerson[]; feed: AdminTodayEvent[] };
 export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: boolean };
 export type DailyRow = { name: string; club: string; ft: number | null; holed: boolean; holedTry?: number | null; tries: number; mine: boolean };
 export type DailyState = { mine: DailyTry[]; board: DailyRow[]; players: number; streak: number };
@@ -248,6 +252,7 @@ export interface Api {
   dailyCrown(session: Session): Promise<DailyCrown | null>;
   periodHonors(session: Session, period: string): Promise<Honors>;
   adminTrend(session: Session): Promise<TrendDay[]>;
+  adminToday(session: Session): Promise<AdminToday>;
   adminKpis(session: Session): Promise<AdminKpis>;
   // a counted round's start, how far it got, and whether it finished
   // card: today's card (the same one all day, so a card cut short picks up where it left off)
