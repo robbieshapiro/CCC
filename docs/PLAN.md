@@ -121,7 +121,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #196: `admin_overview`, `admin_trend` and `admin_kpis` (`pr_196_admin_people`).
+- [x] #196: `admin_overview`, `admin_trend` and `admin_kpis` applied Nov 8 (`pr_196_admin_people`). Checked live: functions match the tested ones, anon can still call them, and the Committee Room counts 40 members (it was counting 44 seats; the Gators have 3 members and 4 guests).
 
 - [x] #194: `card_of`, `card_in`, `start_round`, `card_today` and `submit_round` applied Nov 8 (`pr_194_one_card_per_person`). Checked live: the functions match the tested ones, anon can still call them, and cards already under way are untouched.
 
