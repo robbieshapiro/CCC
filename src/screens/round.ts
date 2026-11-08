@@ -316,12 +316,15 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const toPar = total - course.holes.reduce((a, h, i) => a + (scores[i] === undefined ? 0 : h.par), 0);
   const best = !preview && (!before || toPar < before.total - before.par);
   let posted = true;
+  let notPosted = "Couldn't post this round. Check your connection.";
   if (!preview)
     try {
       await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots, card, shots: shotLog });
       progress(course.holes.length, true);
-    } catch {
+    } catch (err) {
       posted = false;
+      // a round begun before midnight can't count on the new day: say so, rather than blame the connection
+      if (/before midnight/i.test((err as Error).message)) notPosted = (err as Error).message;
     }
   sfx(best ? 'cheer' : 'ooh');
   // the club bonus this round earned: the day's first finished round pays, with its birdies or better (src/bonus.ts).
@@ -370,7 +373,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       }
       ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
       ${bonusLine}
-      ${opts.practice ? '' : `<p class="fine">${dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : "Couldn't post this round. Check your connection."}</p>`}
+      ${opts.practice ? '' : `<p class="fine">${dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : esc(notPosted)}</p>`}
       ${opts.practice ? `<button class="link share-practice" data-share-score>${canShare() ? 'Send to the group' : 'Copy for the group chat'}</button>` : `<button class="btn ghost share-score" data-share-score>${canShare() ? '📤 Share your score' : '📋 Copy your score'}</button>`}
       <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : opts.practice ? 'Practise again' : 'Play again'}</button><button class="btn ghost" data-back>${dry ? 'Back to the Committee Room' : 'Back to the club'}</button></div>
       ${
