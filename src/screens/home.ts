@@ -248,7 +248,7 @@ export function home(snap: Snapshot) {
     if (!openMoney || !open) return;
     // the Open purse, the same figures on the countdown, the Open and the club board
     const cd = document.querySelector('.cd-purse');
-    if (cd) cd.textContent = `💰 ${money(openPurseOf(open.field))} Open purse`;
+    if (cd) cd.textContent = `💰 ${money(Math.max(openPurseOf(open.field), OPEN_FLOOR))} Open purse`; // the floor shows from the start
     document.querySelectorAll<HTMLElement>('[data-pay-for]').forEach((el) => {
       const won = open.local.get(el.dataset.payFor!)?.payout;
       if (won) el.insertAdjacentHTML('beforeend', `<b class="pay">${money(won)}</b> · `);
@@ -310,7 +310,7 @@ function countdown(month: string, course: Course, field: number, open = false) {
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
     <small>${
       open
-        ? `<em class="cd-purse">💰 Open purse</em> · top 10 on the Open paid · ${money(OPEN_FLOOR)} guaranteed, more as the field grows`
+        ? `<em class="cd-purse">💰 ${money(OPEN_FLOOR)} Open purse</em> · top 10 on the Open paid · guaranteed, and more as the field grows`
         : `<em class="cd-purse">💰 ${money(purseOf(field))} purse</em> · top 10 paid${field ? '' : ' · $1,000 in with every player'}`
     } · champion crowned midnight ET, ${day}</small>
   </div>`;
