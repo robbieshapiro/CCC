@@ -393,7 +393,9 @@ function draw() {
   const body = document.getElementById('adm-body');
   const d = state.data;
   if (!body || !d) return;
-  const sum = (k: 'members' | 'active' | 'rounds' | 'practice') => d.clubs.reduce((a, c) => a + c[k], 0);
+  // each person once across the clubs (the server's totals); added up from the clubs only if they're missing
+  const sum = (k: 'members' | 'active' | 'rounds' | 'practice' | 'newMembers') => d.totals?.[k] ?? d.clubs.reduce((a, c) => a + c[k], 0);
+  const guests = d.clubs.reduce((a, c) => a + (c.guests ?? 0), 0);
   const many = d.clubs.length > 1;
   const win = WINDOWS.find((w) => w.id === state.window)!.label.toLowerCase();
   // rounds started and left unfinished, across the members shown (the Unfinished column has them one by one)
@@ -424,15 +426,15 @@ function draw() {
     <section class="adm-card" data-goes="activity">
       <h2>Activity</h2>
       <div class="adm-stats">
-        ${stat(sum('members'), 'Members', `${d.clubs.reduce((a, c) => a + c.newMembers, 0)} new`)}
+        ${stat(sum('members'), 'Members', `${sum('newMembers')} new`)}
         ${stat(sum('active'), 'Active', win === 'all time' ? 'ever' : `last ${win}`.replace('last month', 'this month'))}
         ${stat(sum('rounds'), 'Rounds', unfinished ? `posted · ${unfinished} unfinished` : 'posted')}
         ${stat(sum('practice'), 'Practice', 'sessions')}
       </div>
       ${
         many
-          ? `<div class="table-wrap"><table class="practice-table adm-clubs"><thead><tr><th>Club</th><th class="num">Members</th><th class="num">Active</th><th class="num">New</th><th class="num">Rounds</th><th class="num">Practice</th></tr></thead><tbody>${d.clubs
-              .map((c) => `<tr><td>${esc(c.name)}</td><td class="num">${c.members}</td><td class="num">${c.active}</td><td class="num">${c.newMembers}</td><td class="num">${c.rounds}</td><td class="num">${c.practice}</td></tr>`)
+          ? `<div class="table-wrap"><table class="practice-table adm-clubs"><thead><tr><th>Club</th><th class="num">Members</th>${guests ? '<th class="num">Guests</th>' : ''}<th class="num">Active</th><th class="num">New</th><th class="num">Rounds</th><th class="num">Practice</th></tr></thead><tbody>${d.clubs
+              .map((c) => `<tr><td>${esc(c.name)}</td><td class="num">${c.members}</td>${guests ? `<td class="num">${c.guests ?? 0}</td>` : ''}<td class="num">${c.active}</td><td class="num">${c.newMembers}</td><td class="num">${c.rounds}</td><td class="num">${c.practice}</td></tr>`)
               .join('')}</tbody></table></div>`
           : ''
       }
@@ -553,7 +555,7 @@ function pending(d: AdminOverview, many: boolean) {
 }
 
 function memberTable(all: Members) {
-  const rows = all.filter((m) => !state.club || m.club === state.club);
+  const rows = all.filter((m) => !state.club || m.club === state.club || m.guestAt?.includes(state.club));
   if (!rows.length) return '<p class="muted">No members yet.</p>';
   const val = (m: Members[number]) => {
     const v = m[state.sort];
@@ -573,7 +575,7 @@ function memberTable(all: Members) {
     <tbody>${rows
       .map(
         (m) =>
-          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${esc(m.name)}</b></td><td><small>${esc(m.club)}</small></td><td><small>${ago(m.lastSeen)}</small></td><td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num${m.unfinished ? ' warn' : ''}">${m.unfinished}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td><td class="num">${m.lockers}</td></tr>`,
+          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${esc(m.name)}</b></td><td><small>${esc(m.club)}${m.guestAt?.length ? `<br><span class="muted">guest at ${esc(m.guestAt.join(', '))}</span>` : ''}</small></td><td><small>${ago(m.lastSeen)}</small></td><td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num${m.unfinished ? ' warn' : ''}">${m.unfinished}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td><td class="num">${m.lockers}</td></tr>`,
       )
       .join('')}</tbody></table></div>`;
 }
@@ -590,7 +592,7 @@ function feed(d: AdminOverview, many: boolean) {
     if (e.kind === 'round') return `posted ${e.total} (${toParLabel((e.total ?? 0) - (e.par ?? 0))}) on ${esc(courseById(e.course ?? '')?.name ?? e.course ?? 'a course')}`;
     if (e.kind === 'practice') return `${PRACTICE[e.what ?? ''] ?? 'practised'}${e.shots ? ` · ${e.shots} shots` : ''}`;
     if (e.kind === 'quit') return `started a round on ${esc(courseById(e.course ?? '')?.name ?? e.course ?? 'a course')} but didn't finish${e.shots ? ` (stopped on hole ${e.shots})` : ''}`;
-    if (e.kind === 'join') return 'joined the club';
+    if (e.kind === 'join') return e.what === 'guest' ? 'joined as a guest' : 'joined the club';
     return `sent feedback: “${esc(e.what ?? '')}”`;
   };
   const icon = { round: '⛳', quit: '🚪', practice: '🎯', join: '👋', feedback: '✉️' };

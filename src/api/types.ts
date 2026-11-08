@@ -153,8 +153,12 @@ export type AdminKpis = {
 // Reginald's morning read of the numbers, for the Committee
 export type AdminInsights = { day: string; points: string[] };
 export type AdminOverview = {
-  clubs: { id: string; name: string; members: number; active: number; rounds: number; practice: number; newMembers: number }[];
-  members: { club: string; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; unfinished: number; best: number | null; practice: number; lockers: number }[];
+  // members: whose home club it is; guests: members of another club with a seat here
+  clubs: { id: string; name: string; members: number; guests?: number; active: number; rounds: number; practice: number; newMembers: number }[];
+  // across all the clubs, each person once (a guest in two clubs is one member)
+  totals?: { members: number; active: number; rounds: number; practice: number; newMembers: number };
+  // one row a person, under their home club; guestAt: the other clubs they play in as a guest
+  members: { club: string; guestAt?: string[]; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; unfinished: number; best: number | null; practice: number; lockers: number }[];
   feed: { at: string; kind: 'round' | 'quit' | 'practice' | 'join' | 'feedback'; club: string; name: string; course: string | null; total: number | null; par: number | null; what: string | null; shots: number | null }[];
   feedback: { id: number; club: string; from: string | null; body: string; context: string | null; createdAt: string }[];
   invites: { id: string; club: string; name: string; code: string; createdAt: string }[];
