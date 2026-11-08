@@ -117,7 +117,7 @@ Last updated Nov 7, 2026 (handoff for Sunday; Sunday's card in Admin and the clu
 
 ## Setup status
 
-- [ ] #189: apply `open_purse_floor()`, `open_payouts()` and `admin_kpis()` to live before the week of Nov 8 closes (Sat Nov 14, midnight ET), then check with a read-only select.
+- [x] #189: `open_purse_floor()`, `open_payouts()` and `admin_kpis()` applied Nov 7 (`pr_189_open_purse_floor`). Checked live: the floor is 10,000, both functions use it, permissions unchanged.
 
 - [x] #187: the new `submit_round`, applied Nov 7 at about 8:30pm ET (`pr_187_card_only_after_midnight`). Checked live: the rule is in the function and anon can still call it.
 
