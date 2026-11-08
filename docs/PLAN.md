@@ -17,6 +17,7 @@ Last updated Nov 7, 2026 (handoff for Sunday; Sunday's card in Admin and the clu
 
 | PR | What |
 |---|---|
+| #189 | The Open purse has a floor: $250 a player as before, but never less than $10,000 in a week anyone plays (`OPEN_FLOOR`, `open_purse_floor()`), so a 15-player week pays the winner about $3,000 (was about $1,100); past 40 players the $250 a head takes over. The countdown says "$10,000 guaranteed, more as the field grows" and the Pro Shop's How to earn explains it. Covers this week (Nov 8), since the purse is worked out when the week closes. |
 | #187 | A round started before midnight can't land on the new day: from the daily cards, `submit_round` only takes the card started that day on that course. A Caldera round finished after midnight tonight is turned away (it no longer goes on the Western Reserve's board with a Caldera score or uses up Sunday's card), and the round's summary says why instead of blaming the connection. |
 | #186 | The practice summary, tightened: "Practice done" with the score under it, one short line from Reginald (today's card still waiting, or tomorrow's is the one; the old "Come November it counts" is gone), no extra "not counted" line, "Send to the group" and "Practise again". |
 | #185 | Sunday's card, self-contained in Admin, Course: a copy of the member's Play tile driven by the rehearsal card, with the steps beside it, "Show the note", "Pretend it's midnight" (forfeits an unfinished card) and "Start over"; leaving the rehearsal comes back there. One "Preview a course" picker replaces the row of preview buttons; the coin test is a small link. For members: a note before a fresh card ("Counts" in green: one a day, locked at the first swing, saved if you leave, forfeited at midnight ET if unfinished; "Doesn't count" plain: practise the course); a card in progress shows on the Play tile as the hole and score with "Continue today's card" and the midnight warning; Leave mid-card says where the card stands. Every browser pop-up (Leave, revoke or remove an invite, start a club, copy a link, errors) is now the club's own dialog, not "vercel.app says". |
@@ -115,6 +116,8 @@ Last updated Nov 7, 2026 (handoff for Sunday; Sunday's card in Admin and the clu
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #189: apply `open_purse_floor()`, `open_payouts()` and `admin_kpis()` to live before the week of Nov 8 closes (Sat Nov 14, midnight ET), then check with a read-only select.
 
 - [x] #187: the new `submit_round`, applied Nov 7 at about 8:30pm ET (`pr_187_card_only_after_midnight`). Checked live: the rule is in the function and anon can still call it.
 

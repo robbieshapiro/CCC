@@ -7,7 +7,7 @@ import { BONUS, LONG_PUTT_FT, MONSTER_PUTT_FT } from '../bonus';
 import { specOf } from '../avatar';
 import type { GolferSpec } from '../golf3d/golfer';
 import { reginaldSvg } from '../host';
-import { money, OPEN_PER_PLAYER } from '../purse';
+import { money, OPEN_FLOOR, OPEN_PER_PLAYER } from '../purse';
 import { badgeSvg, balanceOf, canShop, earningsOf, focusOf, ITEMS, KIND_ICON, KIND_NAME, KINDS, nextRank, rankOf, RANKS, type Item, type Kind } from '../shop';
 import { refresh, requireSession } from '../state';
 import { toast } from '../nudges';
@@ -71,7 +71,7 @@ export function shopPane(snap: Snapshot) {
       <div class="fit-racks" id="fit-racks">${racks(earned, titles)}</div>
       <div class="fit-pick" id="fit-pick" hidden></div>
       <details class="shop-how"><summary>How to earn</summary>
-        <p><b>The weekly purse:</b> ${money(OPEN_PER_PLAYER)} goes in for every player on the Open, and the top 10 split it like a tour event. The bigger the field, the bigger the purse.</p>
+        <p><b>The weekly purse:</b> at least ${money(OPEN_FLOOR)} a week, and ${money(OPEN_PER_PLAYER)} a player once more than ${OPEN_FLOOR / OPEN_PER_PLAYER} play. The top 10 on the Open split it like a tour event.</p>
         <p><b>Every day you play your card:</b> ${money(BONUS.round)}, plus ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle and ${money(BONUS.ace)} a hole in one. ${money(BONUS.streak3)} for three days running at the club, ${money(BONUS.streak7)} for every full week.</p>
         <p><b>The moments:</b> hole a putt from ${LONG_PUTT_FT} ft for ${money(BONUS.longPutt)}, from ${MONSTER_PUTT_FT} ft for ${money(BONUS.monsterPutt)}. Chip in from off the green for ${money(BONUS.chipin)}. Find a hole's secret route for the first time for ${money(BONUS.secret)}.</p>
         <p><b>Around the club:</b> ${money(BONUS.ctp)} for winning the day's Closest to the Pin. ${money(BONUS.designPlay)} each time another member finishes a hole you designed on the Members' Course (once each a week, up to ${money(BONUS.designWeek)} a week).</p>
