@@ -7,7 +7,7 @@ import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { weekOf } from '../bar';
-import { OPEN_PER_PLAYER, payouts } from '../purse';
+import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
 import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
@@ -62,7 +62,7 @@ function openPaid(db: Db, month: string): Payout[] {
     }
     const sorted = [...best.entries()].sort((a, b) => a[1].tp - b[1].tp);
     const rows = sorted.map(([id, b]) => ({ id, rank: sorted.findIndex((x) => x[1].tp === b.tp) + 1 }));
-    for (const [id, p] of payouts(rows, null, rows.length, OPEN_PER_PLAYER)) if (p.payout > 0) out.push({ month: m, playerId: id, name: best.get(id)!.name, ...p });
+    for (const [id, p] of payouts(rows, null, rows.length, OPEN_PER_PLAYER, OPEN_FLOOR)) if (p.payout > 0) out.push({ month: m, playerId: id, name: best.get(id)!.name, ...p });
   }
   return out;
 }

@@ -9,15 +9,18 @@ export const PER_PLAYER = 1000;
 export const SHARES = [0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725];
 
 export const purseOf = (field: number) => field * PER_PLAYER;
-// the Open purse, from Nov 8: $250 a player (open_per_player in supabase/schema.sql), so it stays a chase as the club grows
+// the Open purse, from Nov 8: $250 a player (open_per_player in supabase/schema.sql), so it stays a chase as the club grows,
+// and never less than $10,000 once anyone plays (open_purse_floor), so a quiet week still pays like an event
 export const OPEN_PER_PLAYER = 250;
-export const openPurseOf = (field: number) => field * OPEN_PER_PLAYER;
+export const OPEN_FLOOR = 10_000;
+export const openPurseOf = (field: number) => (field ? Math.max(field * OPEN_PER_PLAYER, OPEN_FLOOR) : 0);
 
 // rows: each member with a round, their rank (ties share it). winner: who won a playoff for first, if one was played.
-// entries: how many put into the purse, when more played than are paid (members playing in from another club)
-export function payouts(rows: { id: string; rank: number }[], winner?: string | null, entries = rows.length, perPlayer = PER_PLAYER): Map<string, { place: number; tied: boolean; payout: number }> {
+// entries: how many put into the purse, when more played than are paid (members playing in from another club).
+// floor: the least the purse is worth when anyone plays (the Open's)
+export function payouts(rows: { id: string; rank: number }[], winner?: string | null, entries = rows.length, perPlayer = PER_PLAYER, floor = 0): Map<string, { place: number; tied: boolean; payout: number }> {
   const field = rows.length;
-  const purse = entries * perPlayer;
+  const purse = entries ? Math.max(entries * perPlayer, floor) : 0;
   const out = new Map<string, { place: number; tied: boolean; payout: number }>();
   const byRank = new Map<number, string[]>();
   for (const r of rows) byRank.set(r.rank, [...(byRank.get(r.rank) ?? []), r.id]);
@@ -41,9 +44,9 @@ export function payouts(rows: { id: string; rank: number }[], winner?: string | 
 }
 
 // From Nov 8, one purse across every club: the Open. Each person once (their best round, wherever they played it),
-// $1,000 in each, the top ten paid. pay is keyed by the Open's id for them; local by their seat in your club, if any.
+// $250 in each (at least $10,000 in all), the top ten paid. pay is keyed by the Open's id for them; local by their seat in your club, if any.
 export function openPurse(rows: { playerId: string; localId: string | null; total: number; par: number }[]) {
-  const pay = payouts(rows.map((r) => ({ id: r.playerId, rank: rows.filter((x) => x.total - x.par < r.total - r.par).length + 1 })), null, rows.length, OPEN_PER_PLAYER);
+  const pay = payouts(rows.map((r) => ({ id: r.playerId, rank: rows.filter((x) => x.total - x.par < r.total - r.par).length + 1 })), null, rows.length, OPEN_PER_PLAYER, OPEN_FLOOR);
   const local = new Map<string, { place: number; tied: boolean; payout: number }>();
   for (const r of rows) if (r.localId && pay.get(r.playerId)) local.set(r.localId, pay.get(r.playerId)!);
   return { field: rows.length, pay, local };

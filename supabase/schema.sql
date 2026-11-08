@@ -249,12 +249,15 @@ $$;
 revoke all on function club_payouts(uuid) from public, anon, authenticated;
 
 -- The Open purse, from the week of Sun Nov 8 (src/purse.ts): one purse across every club. Each person's best round of the
--- week, however many clubs they play in, on one board; $1,000 in for each of them and the top ten paid as above. Ties
+-- week, however many clubs they play in, on one board; $250 in for each of them (at least $10,000 a week) and the top ten paid as above. Ties
 -- share; the Open has no playoff. Each person is paid once, on their home seat (the club the Open lists them under).
 create or replace function open_purse_from() returns text language sql immutable as $$ select '2026-11-08' $$;
 -- what each player puts into the Open purse (src/purse.ts OPEN_PER_PLAYER): $250, so the winner of a 25-player week
 -- takes about $1,900 and the shop stays a chase as the club grows
 create or replace function open_per_player() returns int language sql immutable as $$ select 250 $$;
+-- the least the Open purse is worth in a week anyone plays (src/purse.ts OPEN_FLOOR): $10,000, so a quiet week of 15
+-- still pays the winner about $3,000; past 40 players the $250 a head takes over
+create or replace function open_purse_floor() returns int language sql immutable as $$ select 10000 $$;
 create or replace function open_payouts()
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
 language sql stable security definer set search_path = public, extensions as $$
@@ -272,7 +275,7 @@ language sql stable security definer set search_path = public, extensions as $$
   g as (select b.month, b.r, count(*)::int as k from b group by b.month, b.r),
   sh as (select array[0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725]::numeric[] as a)
   select b.month, b.home_id, b.r, g.k > 1,
-    round(f.n * open_per_player() * coalesce((select sum(sh.a[i]) from generate_series(b.r, least(10, b.r + g.k - 1)) i), 0)
+    round(greatest(f.n * open_per_player(), open_purse_floor()) * coalesce((select sum(sh.a[i]) from generate_series(b.r, least(10, b.r + g.k - 1)) i), 0)
       / (select sum(sh.a[i]) from generate_series(1, least(10, f.n)) i) / g.k)::int
   from b join f on f.month = b.month join g on g.month = b.month and g.r = b.r cross join sh
 $$;
@@ -1168,7 +1171,8 @@ begin
       'neverPlayed14', (select coalesce(json_agg(mem.name order by mem.created_at), '[]') from mem where created_at > now() - interval '14 days' and not exists (select 1 from rd where rd.player_id = mem.id)),
       -- the purse a week is worth: from Nov 8 the Open's, every person in any club; before, every club's added up
       'purse', (case when per >= open_purse_from()
-        then open_per_player() * (select count(distinct (lower(p.name), p.pin_hash)) from rounds r join players p on p.id = r.player_id where r.month = per)
+        then (select case when n = 0 then 0 else greatest(n * open_per_player(), open_purse_floor()) end
+          from (select count(distinct (lower(p.name), p.pin_hash)) as n from rounds r join players p on p.id = r.player_id where r.month = per) c)
         else 1000 * (select count(*) from pp where month = per) end),
       'shop7', (select coalesce(sum(pu.price), 0) from purchases pu join mem on mem.id = pu.player_id where pu.created_at > now() - interval '7 days'),
       'shopAll', (select coalesce(sum(pu.price), 0) from purchases pu join mem on mem.id = pu.player_id),
