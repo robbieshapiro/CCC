@@ -120,7 +120,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person).
 
 ## Setup status
 
-- [ ] #194: `card_of`, `card_in`, `start_round`, `card_today` and `submit_round` (`pr_194_one_card_per_person`).
+- [x] #194: `card_of`, `card_in`, `start_round`, `card_today` and `submit_round` applied Nov 8 (`pr_194_one_card_per_person`). Checked live: the functions match the tested ones, anon can still call them, and cards already under way are untouched.
 
 - [x] #189: `open_purse_floor()`, `open_payouts()` and `admin_kpis()` applied Nov 7 (`pr_189_open_purse_floor`). Checked live: the floor is 10,000, both functions use it, permissions unchanged.
 
