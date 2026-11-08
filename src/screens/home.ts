@@ -202,7 +202,7 @@ export function home(snap: Snapshot) {
       <section class="play-hero${look(course)}">
         <div class="play-reg"><span class="host-face big">${reginaldSvg(mood, 72)}</span><p id="reg-line"><b>Reginald</b> ${line}</p></div>
         <div class="play-main">
-          <p class="eyebrow">${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
+          <p class="eyebrow">${leaf(course)}${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
           ${mine ? '' : lastWord(snap)}
@@ -216,7 +216,7 @@ export function home(snap: Snapshot) {
       ${previewBand(snap.month)}
       <section class="board${look(course)}">
         ${countdown(snap.month, course, purse.field, openMoney)}
-        <div class="board-head"><h2>The Board</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
+        <div class="board-head"><h2>${leaf(course)}The Board</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist">
           <button role="tab" data-tab="open" aria-selected="true">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club" aria-selected="false">My club</button>
         </div>
@@ -351,7 +351,10 @@ const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 
 // The week's course dresses the Play hero, the board and its countdown: ember red for the Caldera, Pacific blue and a
 // sunset for the coast
-export const look = (c: Course) => (c.holes[0]?.theme === 'volcanic' ? ' volcanic' : c.holes[0]?.theme === 'coastal' ? ' coastal' : '');
+// and fall orange with a maple leaf for the Western Reserve
+const LOOKS = ['volcanic', 'coastal', 'autumn'];
+export const look = (c: Course) => (LOOKS.includes(c.holes[0]?.theme ?? '') ? ` ${c.holes[0].theme}` : '');
+const leaf = (c: Course) => (c.holes[0]?.theme === 'autumn' ? '🍁 ' : '');
 
 // Next week's course, between the Play card and the board: a warm band in the course's own colours (autumn leaves for
 // the Western Reserve), counting down to its first day, with its practice as the button
