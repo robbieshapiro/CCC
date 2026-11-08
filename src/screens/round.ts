@@ -348,29 +348,31 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const bonusLine = bonusSum.line;
   // a counted round ends on Reginald's one question; the answer goes in with the rest of the feedback
   const asking = !opts.practice && !preview && posted;
+  // a practice round of the week's course: is today's card in yet? (Reginald's line says which card is next)
+  const cardInToday = snap.rounds.some((r) => r.playerId === snap.me && todayInGameTz(new Date(r.createdAt)) === snap.today);
   const sheet = document.createElement('div');
   sheet.className = 'summary';
   sheet.innerHTML = `
     <div class="summary-card">
       ${crest(70, 'sum')}
       <p class="eyebrow">${esc(course.name)}</p>
-      ${opts.practice ? '<h1>Practice done</h1>' : `<h1>${total} <small>${toParLabel(toPar)}</small></h1>`}
+      ${opts.practice ? `<h1>Practice done</h1><p class="practice-score">${toParLabel(toPar)} · ${total} strokes</p>` : `<h1>${total} <small>${toParLabel(toPar)}</small></h1>`}
       ${best ? '<p class="stamp">Personal best</p>' : ''}
       ${opts.practice ? '' : `<table class="scorecard"><thead><tr>${course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('')}<th class="num">Tot</th></tr></thead>
         <tbody><tr class="par">${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num">${course.par}</td></tr>
         <tr>${course.holes.map((_, i) => scores[i]).map((s, i) => s === undefined ? '<td class="num">–</td>' : `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>`}
       ${
         opts.practice
-          ? hostChip(livePractice ? "Practice. Nobody is keeping score, least of all me. Tomorrow's card is where it counts." : 'Practice. Nobody is keeping score, least of all me. Come November it counts.', 'dry')
+          ? hostChip(!livePractice ? "Nobody's counting. It counts once it opens." : !cardsOn(snap.month) ? "Nobody's counting." : cardInToday ? "Nobody's counting. Tomorrow's card is the one." : "Nobody's counting. Today's card is still waiting.", 'dry')
           : preview
             ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry')
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
       ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
       ${bonusLine}
-      <p class="fine">${opts.practice ? 'Practice round, not counted.' : dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : "Couldn't post this round. Check your connection."}</p>
-      ${opts.practice ? `<button class="link share-practice" data-share-score>${canShare() ? 'Send it to the group, and see who else has practised' : 'Copy it for the group chat'}</button>` : `<button class="btn ghost share-score" data-share-score>${canShare() ? '📤 Share your score' : '📋 Copy your score'}</button>`}
-      <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : 'Play again'}</button><button class="btn ghost" data-back>${dry ? 'Back to the Committee Room' : 'Back to the club'}</button></div>
+      ${opts.practice ? '' : `<p class="fine">${dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : "Couldn't post this round. Check your connection."}</p>`}
+      ${opts.practice ? `<button class="link share-practice" data-share-score>${canShare() ? 'Send to the group' : 'Copy for the group chat'}</button>` : `<button class="btn ghost share-score" data-share-score>${canShare() ? '📤 Share your score' : '📋 Copy your score'}</button>`}
+      <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : opts.practice ? 'Practise again' : 'Play again'}</button><button class="btn ghost" data-back>${dry ? 'Back to the Committee Room' : 'Back to the club'}</button></div>
       ${
         asking
           ? `<form class="reg-ask" id="reg-ask">

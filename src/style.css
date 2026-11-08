@@ -1515,3 +1515,6 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .cn-practice .cn-go { color: var(--green); }
 .cn-practice:hover { border-color: var(--green); }
 .cn-cancel { justify-self: center; font-size: 14px; color: var(--muted); }
+
+/* the practice summary: the score under "Practice done" */
+.practice-score { margin: -6px 0 0; font-weight: 800; font-size: 15px; color: var(--muted); }
