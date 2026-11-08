@@ -847,6 +847,12 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .play-hero.coastal { position: relative; overflow: hidden; background: radial-gradient(90% 70% at 100% 105%, rgba(255, 170, 92, 0.75), transparent 62%), radial-gradient(60% 40% at 92% 70%, rgba(255, 214, 150, 0.45), transparent 70%), linear-gradient(170deg, #0b2c44, #11496a 55%, #1d6b86); box-shadow: 0 12px 34px -12px rgba(11, 44, 68, 0.55); }
 .play-hero.coastal::after { content: ''; position: absolute; left: -40px; right: -40px; bottom: 8px; height: 26px; pointer-events: none; opacity: 0.3; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='26' viewBox='0 0 120 26'%3E%3Cpath d='M0 9 Q15 2 30 9 T60 9 T90 9 T120 9' fill='none' stroke='white' stroke-width='1.6'/%3E%3Cpath d='M0 20 Q15 13 30 20 T60 20 T90 20 T120 20' fill='none' stroke='white' stroke-width='1.2' opacity='0.6'/%3E%3C/svg%3E") 0 0 / 120px 26px repeat-x; animation: swell 7s ease-in-out infinite; }
 .play-hero.coastal > * { position: relative; z-index: 1; }
+/* the Western Reserve: Ohio in October, burnt orange going to a low amber glow */
+.play-hero.autumn { background: radial-gradient(90% 70% at 100% 105%, rgba(240, 160, 60, 0.55), transparent 62%), linear-gradient(160deg, #3a1a08, #6b2f0e 55%, #9c4a16); box-shadow: 0 12px 34px -12px rgba(90, 40, 10, 0.55); }
+.play-hero.autumn .btn.big { background: #f0a03c; border-color: #f0a03c; color: #3a1a08; }
+.play-hero.autumn .btn.big:hover { background: #ffb85a; }
+.play-hero.autumn .play-main .eyebrow, .play-hero.autumn .play-reg b { color: #ffd39a; }
+.play-hero.autumn .play-main .muted { color: #f0d2b0; }
 @keyframes swell { 50% { transform: translateX(-30px) translateY(-2px); } }
 @media (prefers-reduced-motion: reduce) { .play-hero.coastal::after { animation: none; } }
 /* yesterday's Closest to the Pin winner, by their name for the day */
@@ -1135,6 +1141,9 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 /* the coast's board: deep Pacific blue */
 .board.coastal { --felt: #10364f; background: linear-gradient(160deg, #0d2f46, #10405c 60%, #154b68); border-color: #071c2b; }
 .board.coastal td.who em, .board.coastal .scorecard tr.par td { color: #a9c3d2; }
+/* the Western Reserve's board: the hero's orange, turned down */
+.board.autumn { --felt: #4a2812; background: linear-gradient(160deg, #3e2210, #4f2c14 60%, #613719); border-color: #26140a; }
+.board.autumn td.who em, .board.autumn .scorecard tr.par td { color: #d9b896; }
 /* the board's total and to-par sit after the name on phones (frozen with it), at the end on wider screens */
 .scorecard .m { display: none; }
 @media (max-width: 640px) {
@@ -1152,6 +1161,7 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 }
 /* the Caldera's countdown: a muted ember red, a shade off the board's */
 .countdown.volcanic { background: #6b2e22; color: #f6e6da; }
+.countdown.autumn { background: linear-gradient(90deg, #8a3d12, #c8692a); color: #fff2e2; }
 .countdown.coastal { background: linear-gradient(90deg, #1d5f7c, #c9805a); color: #fff4e6; }
 /* Reginald's word for a new champion, along the top for two days */
 .champ-word { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: #fbf4e4; border: 1px solid rgba(184, 149, 90, 0.55); font-size: 14px; line-height: 1.4; }
@@ -1518,3 +1528,5 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 
 /* the practice summary: the score under "Practice done" */
 .practice-score { margin: -6px 0 0; font-weight: 800; font-size: 15px; color: var(--muted); }
+.play-hero.autumn .card-going { border-left-color: #f0a03c; }
+.play-hero.autumn .play-main .card-line { color: #f0d2b0; }

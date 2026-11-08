@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 7, 2026 (handoff for Sunday; Sunday's card in Admin and the club's own dialogs).
+Last updated Nov 8, 2026 (the Western Reserve dressed for fall).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 7, 2026 (handoff for Sunday; Sunday's card in Admin and the clu
 
 | PR | What |
 |---|---|
+| #191 | The Western Reserve in fall colours: the Play tile, the board and its countdown go burnt orange with a maple leaf (🍁) on the tile's eyebrow and the board's title, the way the Caldera went ember red. |
 | #189 | The Open purse has a floor: $250 a player as before, but never less than $10,000 in a week anyone plays (`OPEN_FLOOR`, `open_purse_floor()`), so a 15-player week pays the winner about $3,000 (was about $1,100); past 40 players the $250 a head takes over. The countdown says "$10,000 guaranteed, more as the field grows" and the Pro Shop's How to earn explains it. Covers this week (Nov 8), since the purse is worked out when the week closes. |
 | #187 | A round started before midnight can't land on the new day: from the daily cards, `submit_round` only takes the card started that day on that course. A Caldera round finished after midnight tonight is turned away (it no longer goes on the Western Reserve's board with a Caldera score or uses up Sunday's card), and the round's summary says why instead of blaming the connection. |
 | #186 | The practice summary, tightened: "Practice done" with the score under it, one short line from Reginald (today's card still waiting, or tomorrow's is the one; the old "Come November it counts" is gone), no extra "not counted" line, "Send to the group" and "Practise again". |
