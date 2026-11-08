@@ -639,6 +639,11 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare me players := play_seat(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
 begin
   if cards_on() and card_in(me) then raise exception 'Your card for today is already in. Practise as much as you like.'; end if;
+  -- from the daily cards, a round only counts as the card started today on that course: a round begun before midnight
+  -- (last week's course, or yesterday's card) can't land on the new day's board or use up its card
+  if cards_on() and coalesce((card_of(me)).course, '') <> left(coalesce(p_course, ''), 40) then
+    raise exception 'That round started before midnight, so it can''t count now. Today''s card is waiting.';
+  end if;
   if n not between 1 and 9 or n <> coalesce(array_length(p_pars, 1), 0) then raise exception 'That round is not a full card.'; end if;
   if char_length(coalesce(p_course, '')) not between 1 and 40 then raise exception 'Unknown course.'; end if;
   for i in 1..n loop
