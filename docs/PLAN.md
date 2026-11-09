@@ -137,7 +137,7 @@ Last updated Nov 9, 2026 (who practised today under today's cards; the Season in
 
 ## Setup status
 
-- [ ] #221: apply `course_practice` after merge (`pr_221_practised_today`), then check anon can call it.
+- [x] #221: `course_practice` applied Nov 9 (`pr_221_practised_today`). Checked live: anon can call it; today it lists Robbie and Tyler.
 
 - [x] #219: the new `season_standings` (adds career earnings) and `golfer_card` applied Nov 9 (`pr_219_season_tab`). Checked live: anon can call both; Marc leads on 500 with $7,944 career, matching his member card, and his card shows 2 club titles.
 
