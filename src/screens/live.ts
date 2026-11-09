@@ -16,6 +16,7 @@ export const liveCards = () => `<section class="lv-panel" id="live-cards" hidden
 
 type Tab = 'open' | 'club';
 let field: FieldRow[] | null = null;
+let practised: { playerId: string; name: string; club: string; mine: boolean }[] | null = null;
 let open: OpenRow[] | null = null;
 let tab: Tab = 'open';
 let detail = false;
@@ -45,9 +46,10 @@ export async function bindLive(snap: Snapshot, course: Course) {
 async function fetchLive() {
   if (!ctx) return;
   const s = requireSession();
-  const [f, o] = await Promise.all([api.courseField(s, ctx.course.id).catch(() => field), api.openBoard(s).catch(() => open)]);
+  const [f, o, pr] = await Promise.all([api.courseField(s, ctx.course.id).catch(() => field), api.openBoard(s).catch(() => open), api.coursePractice(s).catch(() => practised)]);
   field = f;
   open = o;
+  practised = pr;
   draw();
 }
 
@@ -82,23 +84,26 @@ function draw() {
     out.innerHTML = names.length ? `<span class="lv-dot"></span>${esc(list)} ${names.length > 1 ? 'are' : 'is'} out on the course` : '';
   }
 
-  // today's cards, newest first
+  // today's cards, newest first, and under them a quiet line of who practised the course today
   const done = (field ?? []).filter((r) => !r.going).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  const prac = practised ?? [];
   const cards = document.getElementById('live-cards');
   if (cards) {
-    cards.hidden = !done.length;
+    cards.hidden = !done.length && !prac.length;
     const before = seen;
     seen = new Set(done.map((r) => r.playerId));
-    cards.innerHTML = done.length
-      ? `<h3>Today's cards <small>${done.length} in today</small></h3>
+    const names = prac.slice(0, 8).map((r) => `<span${r.mine ? ' class="me"' : ''}>${r.mine ? 'You' : esc(r.name)}</span>`).join(' · ');
+    const practice = prac.length ? `<p class="lv-practice"><b>⛳ Practised today</b> ${names}${prac.length > 8 ? ` · +${prac.length - 8} more` : ''}</p>` : '';
+    cards.innerHTML = !done.length
+      ? practice
+      : `<h3>Today's cards <small>${done.length} in today</small></h3>
         <div class="lv-cards">${done
           .map((r) => {
             const t = toParOf(course, r.holes);
             return `<div class="lv-card${r.mine ? ' me' : ''}${before && !before.has(r.playerId) ? ' new' : ''}"><span class="lv-tp ${t < 0 ? 'under' : t > 0 ? 'over' : ''}">${toParLabel(t)}</span><b>${who(r)}${tag(r)}</b><small>${r.holes.reduce((a, b) => a + b, 0)} · ${ago(r.at)}</small>
               <span class="lv-sq">${r.holes.map((s, i) => `<i class="${sq(s, course.holes[i]?.par ?? 4)}"></i>`).join('')}</span></div>`;
           })
-          .join('')}</div>`
-      : '';
+          .join('')}</div>${practice}`;
   }
 
   drawBoard();

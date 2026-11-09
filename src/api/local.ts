@@ -846,6 +846,23 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     });
   },
 
+  async coursePractice(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const today = todayInGameTz();
+    const out = new Map<string, { playerId: string; name: string; club: string; mine: boolean; at: string }>();
+    for (const x of [...(db.practice ?? [])].sort((a, b) => b.startedAt.localeCompare(a.startedAt))) {
+      if (x.kind !== 'course' || todayInGameTz(new Date(x.startedAt)) !== today || !(x.shots > 0 || !x.endedAt)) continue;
+      const p = db.players.find((y) => y.id === x.playerId);
+      if (!p) continue;
+      const k = `${p.name.toLowerCase()}|${p.pin}`;
+      if (out.has(k)) continue;
+      const home = homeOf(db, p);
+      out.set(k, { playerId: home.id, name: p.name, club: Object.values(db.groups).find((g) => g.id === home.groupId)?.name ?? '?', mine: k === `${me.name.toLowerCase()}|${me.pin}`, at: x.startedAt });
+    }
+    return [...out.values()].map(({ at: _, ...r }) => r);
+  },
+
   // as admin_today does on the server, from what local mode keeps (no visits, so "in" means did something today)
   async adminToday(session): Promise<AdminToday> {
     const db = load();

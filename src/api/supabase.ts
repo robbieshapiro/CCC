@@ -136,6 +136,7 @@ export const supabaseApi: Api = {
   adminTrend: (s) => rpc<TrendDay[]>('admin_trend', { p_token: s.token }),
   adminToday: (s) => rpc<AdminToday>('admin_today', { p_token: s.token }),
   courseField: (s, course) => rpc<FieldRow[]>('course_field', { p_token: s.token, p_course: course }),
+  coursePractice: (s) => rpc<{ playerId: string; name: string; club: string; mine: boolean }[]>('course_practice', { p_token: s.token }),
   courseRecords: (s) => rpc<CourseRecord[]>('course_records', { p_token: s.token }),
   seasonStandings: (s) => rpc<Season>('season_standings', { p_token: s.token }),
   golferCard: (s, id) => rpc<GolferCard | null>('golfer_card', { p_token: s.token, p_player: id }),
