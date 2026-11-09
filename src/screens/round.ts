@@ -12,6 +12,7 @@ import { inPoly, isWater, surfaceAt } from '../golf3d/terrain';
 import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus } from '../bonus';
 import type { CardToday, RoundShot, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
+import { conditionsFor } from '../golf3d/conditions';
 import { shoutSheet } from './shoutouts';
 import { store } from '../storage';
 import { hostChip, REGINALD } from '../host';
@@ -634,8 +635,11 @@ export function testHole(snap: Snapshot, hole: Hole, back: () => void) {
   void go();
 }
 
-// The bar's weekly contests: the six holes of haunted mini golf, or three swings off the range tee. The week's best
-// counts; play as often as you like.
+// The week's long drive tee: the longest hole on the week's course (The Gorge on the Western Reserve)
+export const driveHole = (course: Course) => [...course.holes].sort((a, b) => Math.hypot(b.cup.x - b.tee.x, b.cup.y - b.tee.y) - Math.hypot(a.cup.x - a.tee.x, a.cup.y - a.tee.y))[0];
+
+// The bar's weekly contests: the six holes of haunted mini golf, or three swings off the tee of the week's longest hole
+// (the last two with a fireball). The week's best counts; play as often as you like.
 export function barRound(snap: Snapshot, kind: BarGame) {
   closeRound();
   const me = snap.players.find((p) => p.id === snap.me)!;
@@ -685,17 +689,25 @@ export function barRound(snap: Snapshot, kind: BarGame) {
       if (game === g) window.setTimeout(() => void barSummary(kind, score, again, back), 600);
     })();
   } else {
+    // off the tee of the week's longest hole, in today's wind: the first swing as you are, the last two with a fireball
+    // (the overswing is live: only a perfect strike with the wind behind carries 375)
+    const hole = driveHole(courseFor(snap.month));
     let best: number | null = null;
     let n = 0;
-    g.practiceArea(range, {
+    g.starter = `${hole.name}, ${me.name}. Three swings. Reginald's pouring the fireballs for the last two.`;
+    g.pour(null);
+    g.practiceArea(hole, {
       title: 'Long drive',
-      eyebrow: 'The Nineteenth Hole',
-      stations: [{ name: `${DRIVES} swings, longest in play`, at: range.tee }],
-      tag: () => `Swing ${n + 1} of ${DRIVES}`,
+      eyebrow: `The Nineteenth Hole · ${hole.name}`,
+      wind: conditionsFor(hole, todayInGameTz()),
+      stations: [{ name: `${DRIVES} swings, longest in play`, at: hole.tee }],
+      tag: () => `Swing ${n + 1} of ${DRIVES}${n >= DRIVES - 2 ? ' · Fireball' : ''}`,
       report: (r) => (r.lost ? 'Out of play' : `${driveYards(r.from, r.end)} yd`),
       onResult: (r) => {
         n++;
         if (!r.lost) best = Math.max(best ?? 0, driveYards(r.from, r.end));
+        // the last two swings come with a fireball
+        g.pour(n >= DRIVES - 2 && n < DRIVES ? 'fireball' : null);
         if (n < DRIVES) return true;
         const done = () => window.setTimeout(() => void barSummary('drive', best, again, back), 1200);
         if (best === null) done();

@@ -978,6 +978,12 @@ export class Course3D {
   }
   private calloutTimer = 0;
 
+  // a drink handed over with no cart (the long drive's fireballs): good for the next swing; null clears it
+  pour(kind: Drink | null) {
+    this.drink = kind ? { kind, shots: 1 } : null;
+    this.showDrink();
+  }
+
   private showDrink() {
     const el = this.overlay.querySelector('[data-drink]') as HTMLElement | null;
     if (!el) return;
