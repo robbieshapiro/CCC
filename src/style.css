@@ -1623,8 +1623,8 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 
 /* Home, live (live.ts): who's in the Play banner's line, on the course now, today's cards, and the Open as a list */
 .play-main .who-out { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.16); font-size: 13px; color: inherit; opacity: 0.9; }
-.lv-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: #4fd36a; box-shadow: 0 0 6px rgba(79, 211, 106, 0.8); animation: dot-blink 1.2s ease-in-out infinite; }
-.lv-dot.still { animation: none; }
+.lv-dot { display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+.play-main .who-out .lv-dot { background: #f3d98a; }
 .lv-panel { margin-bottom: 14px; padding: 14px 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); animation: rise 0.45s ease-out both; }
 .lv-panel h3 { margin: 0 0 10px; display: flex; align-items: center; gap: 8px; font: 700 22px/1.1 var(--serif); color: var(--green); }
 .lv-panel h3 small { margin-left: auto; font: 600 12px var(--font); color: var(--muted); }
@@ -1639,8 +1639,8 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .lv-av svg, .lv-av img { width: 36px; height: 36px; display: block; }
 .lv-holes { display: flex !important; gap: 3px; margin-top: 4px; }
 .lv-holes i { width: 16px; height: 5px; border-radius: 3px; background: var(--line); }
-.lv-holes i.done { background: #3f9b5a; }
-.lv-holes i.now { background: #4fd36a; }
+.lv-holes i.done { background: var(--green); }
+.lv-holes i.now { background: var(--gold); }
 .lv-club { display: inline-block; margin-left: 5px; padding: 0 4px; border: 1px solid #c9ad80; border-radius: 4px; font: 800 9px var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: #8a6a3e; vertical-align: 2px; }
 .lv-cards { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; }
 .lv-card { flex: none; width: 132px; scroll-snap-align: start; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid var(--line); }
@@ -1655,7 +1655,7 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .lv-sq i.b { background: #3f9b5a; }
 .lv-sq i.o { background: #e0a43a; }
 .lv-sq i.d { background: #c4533c; }
-.lv-card.new { animation: feed-in 0.6s ease-out, card-glow 4s ease-out; }
+.lv-card.new { animation: card-glow 4s ease-out; }
 @keyframes card-glow { 0% { box-shadow: 0 0 0 3px rgba(240, 196, 106, 0.7); } 100% { box-shadow: 0 0 0 0 rgba(240, 196, 106, 0); } }
 .lv-board { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
 .lv-board td { padding: 8px 4px; border-top: 1px solid rgba(243, 236, 220, 0.14); vertical-align: middle; }
@@ -1667,7 +1667,7 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .lv-board .nm b, .lv-board .nm small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lv-board .nm b { font-size: 15px; color: #fff; }
 .lv-board .nm small { font-size: 11px; opacity: 0.75; }
-.lv-board .lv-on { color: #b9ecc0; font-weight: 700; }
+.lv-board .lv-on { color: #f3d98a; font-weight: 700; }
 .lv-board .pay { width: 62px; text-align: right; font-size: 12px; color: #f3d98a; font-weight: 800; }
 .lv-board .tp { width: 44px; text-align: right; font: 800 16px var(--font); color: #fff; }
 .lv-board tr.me td { background: rgba(240, 196, 106, 0.12); }
