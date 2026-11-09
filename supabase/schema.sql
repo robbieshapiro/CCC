@@ -935,6 +935,28 @@ begin
 end $$;
 grant execute on function course_field(uuid, text) to anon;
 
+-- Who practised the week's course today, every club, each person once (newest first): a quiet line under today's cards
+-- on home. A practice round counts once it has a shot in it, or while it's still going.
+create or replace function course_practice(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); t0 timestamptz := game_today()::timestamp at time zone 'America/New_York';
+begin
+  return coalesce((
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.group_id as home_group
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+    ), went as (
+      select pe.home_id, max(ps.started_at) as at
+      from practice_sessions ps join players p on p.id = ps.player_id join people pe on lower(p.name) = pe.k and p.pin_hash = pe.h
+      where ps.kind = 'course' and ps.started_at >= t0 and (ps.shots > 0 or ps.ended_at is null)
+      group by pe.home_id
+    )
+    select json_agg(json_build_object('playerId', w.home_id, 'name', pe.name, 'club', g.name, 'mine', lower(me.name) = pe.k and me.pin_hash = pe.h) order by w.at desc)
+    from (select * from went order by at desc limit 40) w join people pe on pe.home_id = w.home_id join groups g on g.id = pe.home_group
+  ), '[]');
+end $$;
+grant execute on function course_practice(uuid) to anon;
+
 -- Classic courses: the courses of weeks gone by (the Highlands, the Caldera) stay open to play any time, for the course
 -- record. A free round never counts toward the Open, a title, the purse or a bonus; it's kept here for the records.
 create table if not exists free_rounds (

@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 9, 2026 (the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
+Last updated Nov 9, 2026 (who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 9, 2026 (the Season in the Clubhouse with anyone's card; Closes
 
 | PR | What |
 |---|---|
+| #221 | Home's Today's cards gets a quiet line underneath: "⛳ Practised today" and the names of everyone, every club, who played a practice round of the week's course today (once each, newest first, up to 8 then "+N more"). It shows on its own before any card is in. A practice round counts once it has a shot in it or while it's still going. New `course_practice`. |
 | #219 | The Season moves into the Clubhouse as a tab between Pro Shop and Bar, replacing Clubs: the 2026 FedEx Cup style standings across every club with each golfer's Open wins, career earnings and points (banked plus this week's projected). Tap anyone, from any club, for their card: golfer on the turntable, rank, club(s), member since, Open wins, club titles, career earnings, each Open week this season (place, to par, points and their best card), career rounds, best and average, and their trophy cabinet. The home link and the old `#/season` and `#/clubhouse/clubs` links land on the tab. `season_standings` now returns `earnings`; new `golfer_card`. |
 | #218 | Closest to the Pin plays on the week's course, like the long drive: from today (Nov 9) the day's hole, pin, wind and spot come from the course that's open that week (the Western Reserve now), and it moves on with each new course. Days before Nov 9 stay on the Caldera. |
 | #216 | The Season: FedEx Cup style points from every week's Open finish (1st 500, 2nd 300, 3rd 190 down to 25 for 20th, 20 for everyone else who posts a card; ties share), banked when a week closes and shown as projected until then. A Season page (`#/season`: standings with weeks, wins, top 10s, banked and projected points, and the scale), linked under the Open on home ("🏆 2026 Season · you're 4th, 400 pts"). Each week's Open is named like a tour event: "The 2026 Western Reserve Open". New `season_points` and `season_standings`; `src/season.ts`. The weeks' rounds, shots and games are all kept, ready for a year-end Wrapped. |
@@ -135,6 +136,8 @@ Last updated Nov 9, 2026 (the Season in the Clubhouse with anyone's card; Closes
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #221: apply `course_practice` after merge (`pr_221_practised_today`), then check anon can call it.
 
 - [x] #219: the new `season_standings` (adds career earnings) and `golfer_card` applied Nov 9 (`pr_219_season_tab`). Checked live: anon can call both; Marc leads on 500 with $7,944 career, matching his member card, and his card shows 2 club titles.
 

@@ -1647,6 +1647,10 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .lv-card.me { border-color: var(--gold); }
 .lv-card b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lv-card small { font-size: 11px; color: var(--muted); }
+.lv-practice { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.lv-practice b { color: var(--green); font-weight: 700; margin-right: 4px; }
+.lv-practice .me { color: var(--ink, inherit); font-weight: 600; }
+.lv-cards + .lv-practice { padding-top: 8px; border-top: 1px solid var(--line); }
 .lv-tp { font: 700 30px/1 var(--serif); color: var(--green); }
 .lv-tp.under { color: #2f7a4a; }
 .lv-tp.over { color: #a3442e; }

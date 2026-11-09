@@ -265,6 +265,8 @@ export interface Api {
   adminTrend(session: Session): Promise<TrendDay[]>;
   adminToday(session: Session): Promise<AdminToday>;
   courseField(session: Session, course: string): Promise<FieldRow[]>;
+  // who practised the week's course today, every club, each person once, newest first
+  coursePractice(session: Session): Promise<{ playerId: string; name: string; club: string; mine: boolean }[]>;
   courseRecords(session: Session): Promise<CourseRecord[]>;
   seasonStandings(session: Session): Promise<Season>;
   golferCard(session: Session, playerId: string): Promise<GolferCard | null>;
