@@ -21,6 +21,7 @@ import { briefSection, chartSections, courseSections, kpiSections, loadBrief, lo
 import { ask, copyBox, tell } from '../dialog';
 import { bindSundayCard, sundayCardSection } from './adminCard';
 import { loadToday, todaySections } from './adminToday';
+import { askSection, bindAsk } from './adminAsk';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -61,7 +62,7 @@ export function admin(snap: Snapshot) {
           <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
         </details>
       </div>
-      <div class="adm-pane" data-pane="reginald" hidden>${briefSection()}</div>
+      <div class="adm-pane" data-pane="reginald" hidden>${askSection()}${briefSection()}</div>
       <div class="adm-pane" data-pane="course" hidden>
         ${sundayCardSection(snap)}
         ${courseSections()}
@@ -94,6 +95,7 @@ export function admin(snap: Snapshot) {
     </main>`);
   bindTabs();
   bindSundayCard(snap);
+  bindAsk();
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
     b.onclick = () => {
       const open = document.querySelector<HTMLElement>(`[data-panel="${b.dataset.tool}"]`)!;
@@ -495,7 +497,7 @@ function draw() {
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'reginald', label: "Reginald's read" },
+  { id: 'reginald', label: 'Ask Reginald' },
   { id: 'course', label: 'Course' },
   { id: 'members', label: 'Members' },
   { id: 'activity', label: 'Activity' },
