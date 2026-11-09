@@ -5,8 +5,8 @@ import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz } from '../day';
-import { REGINALD } from '../host';
 import { bindOpen } from './open';
+import { bindLive, liveCards, liveNow } from './live';
 import { bindDaily, dailyCard } from './daily';
 import { bindCardNote, cardTile, tileState } from './cardnote';
 import { bindNotices, noticesStrip } from './notices';
@@ -99,25 +99,11 @@ export function home(snap: Snapshot) {
   // from Nov 8 the Open pays: the club board shows each member's Open money once it has loaded (see bindOpen below)
   const openMoney = openPurseOn(snap.month);
   const pay = openMoney ? new Map<string, { place: number; tied: boolean; payout: number }>() : purse.pay;
-  const played = rows.filter((r) => r.best);
   const mine = myBest(snap);
-  const me = rows.find((r) => r.playerId === snap.me)!; // absent when you only run this club
   const host = !!snap.players.find((p) => p.id === snap.me)?.host;
   // daily cards: one counts a day; once today's is in, the course is open for practice
   const cards = cardsOn(snap.month) && !host;
   const cardIn = cards && snap.rounds.some((r) => r.playerId === snap.me && todayInGameTz(new Date(r.createdAt)) === snap.today);
-
-  let line = REGINALD.course(course.name, course.holes.length, course.par, span(snap.month));
-  if (!played.length) line = `${line} ${REGINALD.nobody(snap.today)}`;
-  else if (!mine) line = REGINALD.notYet(played.length);
-  else if (me && me.toPar === played[0].toPar) {
-    line = REGINALD.leading(toParLabel(me.toPar), snap.today);
-  } else {
-    const top = played[0];
-    line = played.length > 2 ? REGINALD.others(player(top.playerId)!.name, toParLabel(top.toPar)) : REGINALD.behind(player(top.playerId)!.name, toParLabel(top.toPar), me.toPar - top.toPar);
-  }
-
-  if (host) line = REGINALD.host(snap.groupName, snap.homeName ?? 'your club');
 
   const head = course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('');
   const body = rows
@@ -163,15 +149,19 @@ export function home(snap: Snapshot) {
               ? `<a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>`
               : `<div id="card-tile">${cardTile(cardIn ? 'in' : 'fresh', course, null, CARD_LINKS)}</div>`
           }
+          <p class="who-out" id="who-out" hidden></p>
         </div>
       </section>
+      ${liveNow()}
+      ${liveCards()}
       <section class="board${look(course)}">
         ${countdown(snap.month, course, purse.field, openMoney)}
-        <div class="board-head"><h2>${leaf(course)}The Board</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
+        <div class="board-head"><h2>${leaf(course)}The Open</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist">
-          <button role="tab" data-tab="open" aria-selected="true">Open</button><span aria-hidden="true">·</span><button role="tab" data-tab="club" aria-selected="false">My club</button>
+          <button role="tab" data-tab="open" aria-selected="true">All clubs</button><span aria-hidden="true">·</span><button role="tab" data-tab="club" aria-selected="false">My club</button>
         </div>
-        <div id="board-open"><p class="muted">Loading the Open…</p></div>
+        <div id="board-list"><p class="muted">Loading the Open…</p></div>
+        <div id="board-open" hidden></div>
         <div id="board-club" hidden><div class="table-wrap"><table class="scorecard">
           <thead><tr><th></th><th>Member</th><th class="num m">Tot</th><th class="num m">±</th>${head}<th class="num d">Tot</th><th class="num d">±</th></tr></thead>
           <tbody>
@@ -179,6 +169,7 @@ export function home(snap: Snapshot) {
             ${body}
           </tbody>
         </table></div></div>
+        <button class="link board-more" id="board-more" hidden>See hole by hole</button>
       </section>
       ${previewBand(snap.month)}
       <div class="tiles">
@@ -196,7 +187,8 @@ export function home(snap: Snapshot) {
 
   tickCountdown();
   freezeBoard();
-  void bindOpen(snap, line, host).then((open) => {
+  void bindLive(snap, course);
+  void bindOpen(snap).then((open) => {
     if (!openMoney || !open) return;
     // the Open purse, the same figures on the countdown, the Open and the club board
     const cd = document.querySelector('.cd-purse');
@@ -206,8 +198,6 @@ export function home(snap: Snapshot) {
       if (won) el.insertAdjacentHTML('beforeend', `<b class="pay">${money(won)}</b> · `);
     });
   });
-  // the club board starts hidden behind the Open: set its frozen columns once it's on show
-  document.querySelector('[data-tab="club"]')?.addEventListener('click', () => requestAnimationFrame(() => freezeBoard()));
   // the note before a fresh card; and a card started and cut short shows where it stands, with Continue
   bindCardNote(document, CARD_LINKS, navigate);
   if (cards && !cardIn)

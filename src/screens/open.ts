@@ -7,7 +7,6 @@ import { portrait } from '../avatar';
 import { GAME_TZ, openPurseOn, periodName } from '../day';
 import { money, openPurse } from '../purse';
 import { courseFor } from '../golf3d/courses';
-import { REGINALD } from '../host';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc } from '../ui';
@@ -49,53 +48,17 @@ function table(snap: Snapshot, rows: ReturnType<typeof ranked>, pay?: ReturnType
   </table></div>`;
 }
 
-// Reginald on the Open: who leads it, and where you stand
-function openLine(rows: ReturnType<typeof ranked>, today: string) {
-  if (!rows.length) return REGINALD.openNobody();
-  const top = rows[0];
-  const me = rows.find((r) => r.mine);
-  // level at the top counts as leading: you share it
-  if (top.mine || me?.rank === 1) return REGINALD.openLeading(toParLabel(top.toPar), today);
-  return REGINALD.openLeads(top.name, toParLabel(top.toPar), me ? me.rank : null, rows.length);
-}
-
-// Called after the home page draws. If the Open isn't available (the SQL isn't run yet, or offline), nothing
-// changes: the club board stays as it always was.
-// pinned: Reginald's line stays put whichever tab is showing (a club you only run)
+// Called after the home page draws: fills the Open's hole-by-hole scorecard (behind "See hole by hole") and the plaque.
 // Returns the Open purse once it's drawn (from Nov 8), so the page can show the same money everywhere
-export async function bindOpen(snap: Snapshot, clubLine: string, pinned = false): Promise<ReturnType<typeof openPurse> | null> {
+export async function bindOpen(snap: Snapshot): Promise<ReturnType<typeof openPurse> | null> {
   const s = requireSession();
   const [rows, champs] = await Promise.all([api.openBoard(s).catch(() => null), api.openChampions(s).catch(() => [] as OpenChampion[])]);
-  const tabs = document.getElementById('board-tabs');
   const openPane = document.getElementById('board-open');
-  const clubPane = document.getElementById('board-club');
-  const say = document.querySelector<HTMLElement>('#reg-line');
-  if (!tabs || !openPane || !clubPane) return null;
-  // the Open couldn't load: the club's own board is all there is
-  if (!rows) {
-    openPane.hidden = true;
-    clubPane.hidden = false;
-    tabs.hidden = true;
-    return null;
-  }
+  if (!openPane || !rows) return null;
+  // the hole-by-hole scorecard, a tap away under the list (live.ts shows the list and handles the tabs)
   const list = ranked(rows);
   const purse = openPurseOn(snap.month) ? openPurse(list) : null;
   openPane.innerHTML = table(snap, list, purse?.pay);
-  const lineOpen = `<b>Reginald</b> ${openLine(list, snap.today)}`;
-  const lineClub = `<b>Reginald</b> ${clubLine}`;
-  const show = (tab: 'open' | 'club') => {
-    openPane.hidden = tab !== 'open';
-    clubPane.hidden = tab !== 'club';
-    tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-    // Reginald's own line for you today (from Claude) stays whichever board is showing
-    if (say && !pinned && !say.dataset.ai) say.innerHTML = tab === 'open' ? lineOpen : lineClub;
-  };
-  tabs.hidden = false;
-  tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {
-    b.onclick = () => show(b.dataset.tab as 'open' | 'club');
-  });
-  // the Open always comes first: every member, every club, one board
-  show('open');
 
   // the plaque: each month's Open champion beside the club's own
   const plaque = document.querySelector('.plaque ol');

@@ -204,7 +204,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       .courseField(requireSession(), course.id)
       .then((rows) =>
         g.setGhosts(
-          rows.map((r) => ({ id: r.localId ?? undefined, pid: r.localId ?? undefined, name: r.name, avatar: r.avatar, spots: r.spots, holes: r.holes, club: r.club, away: !r.localId, going: r.going })),
+          rows.filter((r) => !r.mine).map((r) => ({ id: r.localId ?? undefined, pid: r.localId ?? undefined, name: r.name, avatar: r.avatar, spots: r.spots, holes: r.holes, club: r.club, away: !r.localId, going: r.going })),
         ),
       )
       .catch(() => {});
