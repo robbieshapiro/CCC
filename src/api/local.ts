@@ -10,14 +10,14 @@ import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[] };
+type Db = { free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[] };
 
 const KEY = 'ccc-local-db';
 
@@ -713,6 +713,28 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       d = next.toISOString().slice(0, 10);
     }
     return out;
+  },
+
+  // classic courses, as on the server: free rounds kept for the records, never counted
+  async submitFreeRound(session, course, holes, pars) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    (db.free ??= []).push({ playerId: me.id, course, holes, total: holes.reduce((a, b) => a + b, 0), par: pars.reduce((a, b) => a + b, 0), createdAt: new Date().toISOString() });
+    save(db);
+  },
+  async courseRecords(session): Promise<CourseRecord[]> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const all = [...db.rounds.map((r) => ({ playerId: r.playerId, course: r.course, tp: r.total - r.par })), ...(db.free ?? []).map((f) => ({ playerId: f.playerId, course: f.course, tp: f.total - f.par }))];
+    const courses = [...new Set(all.map((r) => r.course))];
+    const club = (id: string) => Object.values(db.groups).find((g) => g.id === id)?.name ?? '?';
+    return courses.map((course) => {
+      const here = all.filter((r) => r.course === course);
+      const tp = Math.min(...here.map((r) => r.tp));
+      const holders = [...new Set(here.filter((r) => r.tp === tp).map((r) => r.playerId))].map((id) => db.players.find((p) => p.id === id)!).map((p) => ({ name: p.name, club: club(p.groupId) }));
+      const mine = here.filter((r) => r.playerId === me.id).map((r) => r.tp);
+      return { course, toPar: tp, holders, mine: mine.length ? Math.min(...mine) : null, rounds: here.length, champions: [] };
+    });
   },
 
   // as course_field does on the server: today's finished rounds on the course with their spots, every club (local mode

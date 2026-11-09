@@ -7,7 +7,8 @@ import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz } from '../day';
 import { bindOpen } from './open';
 import { bindLive, liveCards, liveNow } from './live';
-import { bindDaily, dailyCard } from './daily';
+import { bindPlayTiles, playTiles } from './playtiles';
+import { bindDaily } from './daily';
 import { bindCardNote, cardTile, tileState } from './cardnote';
 import { bindNotices, noticesStrip } from './notices';
 import { bindShoutouts, shoutStrip } from './shoutouts';
@@ -171,12 +172,8 @@ export function home(snap: Snapshot) {
         </table></div></div>
         <button class="link board-more" id="board-more" hidden>See hole by hole</button>
       </section>
+      ${playTiles(snap)}
       ${previewBand(snap.month)}
-      <div class="tiles">
-        ${dailyCard()}
-        <a class="tile" href="#/clubhouse/bar"><i>🍺</i><b>The bar</b><span>Long drive · Members' Course</span></a>
-        <a class="tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
-      </div>
       ${honoursPane(snap)}
       <section class="plaque">
         <h2>Past Champions</h2>
@@ -188,6 +185,7 @@ export function home(snap: Snapshot) {
   tickCountdown();
   freezeBoard();
   void bindLive(snap, course);
+  void bindPlayTiles(snap);
   void bindOpen(snap).then((open) => {
     if (!openMoney || !open) return;
     // the Open purse, the same figures on the countdown, the Open and the club board

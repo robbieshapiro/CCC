@@ -121,6 +121,8 @@ export type OpenRow = { playerId: string; name: string; club: string; mine: bool
 // Today's field on a course, every club (course_field): a card in, or the holes so far of one in progress
 // playerId: the person as the Open names them; mine: you; at: when the card went in, or was started
 export type FieldRow = { playerId: string; name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; at: string; mine: boolean; localId: string | null };
+// A course's record over every round ever played on it, every club (course_records): free play on a classic course counts
+export type CourseRecord = { course: string; toPar: number; holders: { name: string; club: string }[] | null; mine: number | null; rounds: number; champions: { name: string; club: string; toPar: number }[] };
 export type OpenChampion = { month: string; names: string[]; total: number; par: number };
 // The admin tab: every club the admin runs, on one page.
 export type AdminWindow = 'week' | 'month' | 'all';
@@ -256,7 +258,9 @@ export interface Api {
   periodHonors(session: Session, period: string): Promise<Honors>;
   adminTrend(session: Session): Promise<TrendDay[]>;
   adminToday(session: Session): Promise<AdminToday>;
-  courseField(session: Session, course: string): Promise<FieldRow[]>; // today's golfers on the course, every club
+  courseField(session: Session, course: string): Promise<FieldRow[]>;
+  courseRecords(session: Session): Promise<CourseRecord[]>;
+  submitFreeRound(session: Session, course: string, holes: number[], pars: number[]): Promise<void>; // a classic course: never counts // today's golfers on the course, every club
   adminKpis(session: Session): Promise<AdminKpis>;
   // a counted round's start, how far it got, and whether it finished
   // card: today's card (the same one all day, so a card cut short picks up where it left off)

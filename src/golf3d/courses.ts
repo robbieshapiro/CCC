@@ -106,4 +106,10 @@ export function nextCourse(period: string): Course | undefined {
 }
 
 // Courses not yet being played: anything still a draft, or on the calendar for a later period. The admin can play them.
+// Classic courses: the ones of weeks gone by, newest first, open to anyone any time for the course record
+export const classics = (period: string) => {
+  const now = courseFor(period);
+  return COURSES.filter((c) => !c.draft && c.opens < now.opens).sort((a, b) => b.opens.localeCompare(a.opens));
+};
+
 export const upcoming = (period: string) => COURSES.filter((c) => c.draft || c.opens > period);

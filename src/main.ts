@@ -15,7 +15,7 @@ import { playoff } from './screens/playoff';
 import { clubhouse, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
-import { courseById, courseFor, nextCourse } from './golf3d/courses';
+import { classics, courseById, courseFor, nextCourse } from './golf3d/courses';
 import { leaveMember, member } from './screens/member';
 import { checkIn } from './screens/activity';
 import { onSnapshot, refresh, startPolling } from './state';
@@ -96,6 +96,13 @@ async function router() {
       const c = courseById(arg ?? '');
       // any course, this week's included: the Committee rehearses before members play
       if (s.admin && c) return round(s, { course: c });
+      location.hash = '#/';
+      return;
+    }
+    // a classic course, any member, any time: free play for the course record
+    if (page === 'classic') {
+      const c = classics(s.month).find((x) => x.id === arg);
+      if (c) return round(s, { course: c, classic: true });
       location.hash = '#/';
       return;
     }

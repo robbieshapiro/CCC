@@ -139,7 +139,8 @@ export function dryToday(course: string): CardToday {
 export const dryForget = () => store.set(DRY_CARD, '');
 const drySave = (c: CardToday) => store.set(DRY_CARD, JSON.stringify({ ...c, day: todayInGameTz() }));
 
-export async function round(snap: Snapshot, opts: { course?: Course; holes?: number; practice?: boolean; dry?: boolean } = {}) {
+// classic: free play on a course of weeks gone by, for the course record (posted to free_rounds, never counted)
+export async function round(snap: Snapshot, opts: { course?: Course; holes?: number; practice?: boolean; dry?: boolean; classic?: boolean } = {}) {
   closeRound();
   const preview = !!opts.course;
   // the Committee rehearsing a member's card (see dryToday)
@@ -211,7 +212,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       .catch(() => {});
   }
   // the rehearsal puts a few of the club's members out on the course, as Sunday's field would look
-  else if (!opts.practice) game.setGhosts(sampleField(snap, course));
+  else if (!opts.practice && !opts.classic) game.setGhosts(sampleField(snap, course));
   // tap another member out on the course: their card, and a kudos or a chirp to send them
   game.onGhostTap = (g) => shoutSheet(el, g, course, snap.players.find((p) => p.id === g.pid), g.club ?? snap.groupName);
   if (!store.get('ccc-shout-tip') && (preview ? !opts.practice : todaysField(snap).length)) {
@@ -253,7 +254,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const shotLog: RoundShot[] = [];
   let holeAt = 0;
   // the Committee's preview is a rehearsal of next week: the reward moments fire as they will on a card, but nothing's paid
-  const rehearsal = preview && !opts.practice;
+  const rehearsal = preview && !opts.practice && !opts.classic;
   const pops = card || rehearsal;
   const unpaid = dry ? 'rehearsal, not paid' : rehearsal ? 'preview, not paid' : '';
   const holeShots = new Map<number, number>();
@@ -295,7 +296,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
           };
   // the admin's preview can jump to any hole, or start the one they're on over
   let jump: ((i: number) => void) | null = null;
-  if (preview && !opts.practice && !dry) game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
+  if (preview && !opts.practice && !dry && !opts.classic) game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
   for (let i = scores.length; i < course.holes.length; ) {
     const h = course.holes[i];
     holeAt = i;
@@ -342,6 +343,20 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       // a round begun before midnight can't count on the new day: say so, rather than blame the connection
       if (/before midnight/i.test((err as Error).message)) notPosted = (err as Error).message;
     }
+  // a classic course: the round goes in for the course record, and the record says where it stands
+  let classicLine = '';
+  if (opts.classic) {
+    const records = await api
+      .submitFreeRound(requireSession(), course.id, scores, course.holes.map((h) => h.par))
+      .then(() => api.courseRecords(requireSession()))
+      .catch(() => null);
+    const rec = records?.find((r) => r.course === course.id);
+    if (rec)
+      classicLine =
+        toPar <= rec.toPar && rec.holders?.some((h) => h.name === snap.players.find((p) => p.id === snap.me)?.name)
+          ? `<p class="purse-line"><b>${toPar < rec.toPar ? 'Course record' : 'Ties the course record'}</b><span>${toParLabel(toPar)} on ${esc(course.name)}. ${rec.rounds} rounds ever played on it.</span></p>`
+          : `<p class="purse-line"><b>Course record ${toParLabel(rec.toPar)}</b><span>${(rec.holders ?? []).map((h) => esc(h.name)).join(' & ')}${rec.mine !== null ? ` · your best ${toParLabel(rec.mine)}` : ''}</span></p>`;
+  }
   sfx(best ? 'cheer' : 'ooh');
   // the club bonus this round earned: the day's first finished round pays, with its birdies or better (src/bonus.ts).
   // The Committee's rehearsal shows it as a card would earn it, not paid.
@@ -388,8 +403,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
       ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
-      ${bonusLine}
-      ${opts.practice ? '' : `<p class="fine">${dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : esc(notPosted)}</p>`}
+      ${bonusLine}${classicLine}
+      ${opts.practice ? '' : `<p class="fine">${opts.classic ? 'Free play on a classic course. It counts for the course record, never the Open or a title.' : dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : esc(notPosted)}</p>`}
       ${opts.practice ? `<button class="link share-practice" data-share-score>${canShare() ? 'Send to the group' : 'Copy for the group chat'}</button>` : `<button class="btn ghost share-score" data-share-score>${canShare() ? '📤 Share your score' : '📋 Copy your score'}</button>`}
       <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : opts.practice ? 'Practise again' : 'Play again'}</button><button class="btn ghost" data-back>${dry ? 'Back to the Committee Room' : 'Back to the club'}</button></div>
       ${

@@ -935,6 +935,83 @@ begin
 end $$;
 grant execute on function course_field(uuid, text) to anon;
 
+-- Classic courses: the courses of weeks gone by (the Highlands, the Caldera) stay open to play any time, for the course
+-- record. A free round never counts toward the Open, a title, the purse or a bonus; it's kept here for the records.
+create table if not exists free_rounds (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  course text not null,
+  holes int[] not null,
+  total int not null,
+  par int not null,
+  created_at timestamptz not null default now()
+);
+alter table free_rounds enable row level security;
+create index if not exists free_rounds_course on free_rounds (course);
+
+create or replace function submit_free_round(p_token uuid, p_course text, p_holes int[], p_pars int[]) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0;
+begin
+  if me.id is null then raise exception 'Not a member.'; end if;
+  if n not between 1 and 9 or n <> coalesce(array_length(p_pars, 1), 0) then raise exception 'That round is not a full card.'; end if;
+  if char_length(coalesce(p_course, '')) not between 1 and 40 then raise exception 'Unknown course.'; end if;
+  -- a fair cap: twenty free rounds a day each
+  if (select count(*) from free_rounds where player_id = me.id and created_at > now() - interval '1 day') >= 20 then
+    raise exception 'That''s plenty of rounds for one day.';
+  end if;
+  for i in 1..n loop
+    if p_pars[i] not between 2 and 6 then raise exception 'Bad par on hole %.', i; end if;
+    clean := clean || greatest(1, least(p_pars[i] + 3, p_holes[i]));
+    par := par + p_pars[i];
+  end loop;
+  insert into free_rounds (player_id, course, holes, total, par) values (me.id, left(p_course, 40), clean, (select sum(x) from unnest(clean) x), par);
+end $$;
+grant execute on function submit_free_round(uuid, text, int[], int[]) to anon;
+
+-- Each course's record, every club and every round ever played on it (its own week's rounds and free play since), each
+-- person once: the record to par, who holds it (the earliest to reach it first), your own best, how many rounds, and
+-- the champions of the week it was played (each club's, and the Open's).
+create or replace function course_records(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.group_id as home_group
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+    ), seat as (
+      select p.id, pe.home_id from players p join people pe on lower(p.name) = pe.k and p.pin_hash = pe.h
+    ), played as (
+      select r.course, s.home_id, r.total, r.par, r.created_at from rounds r join seat s on s.id = r.player_id
+        where not exists (select 1 from players h where h.id = r.player_id and h.host_only)
+      union all
+      select f.course, s.home_id, f.total, f.par, f.created_at from free_rounds f join seat s on s.id = f.player_id
+    ), best as (
+      select distinct on (course, home_id) course, home_id, total - par as tp, total, created_at from played order by course, home_id, total - par, created_at
+    ), rec as (
+      select course, min(tp) as tp from best group by course
+    ), periods as (
+      select distinct course, month from rounds
+    ), champs as (
+      select pr.course, p.name, gr.name as club, c.total - c.par as tp
+      from groups gr cross join lateral period_champs(gr.id) c join periods pr on pr.month = c.month join players p on p.id = c.player_id
+      where c.how <> 'playoff'
+    )
+    select json_agg(json_build_object(
+      'course', rc.course,
+      'toPar', rc.tp,
+      'holders', (select json_agg(json_build_object('name', pe.name, 'club', g.name) order by b.created_at)
+        from best b join people pe on pe.home_id = b.home_id join groups g on g.id = pe.home_group where b.course = rc.course and b.tp = rc.tp),
+      'mine', (select b.tp from best b join people pe on pe.home_id = b.home_id where b.course = rc.course and pe.k = lower(me.name) and pe.h = me.pin_hash),
+      'rounds', (select count(*) from played pl where pl.course = rc.course),
+      'champions', (select coalesce(json_agg(json_build_object('name', ch.name, 'club', ch.club, 'toPar', ch.tp) order by ch.tp, ch.club), '[]') from champs ch where ch.course = rc.course)
+    ))
+    from rec rc
+  ), '[]');
+end $$;
+grant execute on function course_records(uuid) to anon;
+
 -- Past Open champions: the lowest best round of each finished month across every club. Ties share it.
 create or replace function open_champions(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$

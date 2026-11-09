@@ -1676,3 +1676,27 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .board-more { display: block; margin: 10px auto 0; color: #f3d98a; font-size: 13px; }
 #board-open:not([hidden]), #board-club:not([hidden]) { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) { .lv-dot, .lv-card.new, .lv-panel { animation: none; } }
+
+/* Home, under the Open: more to play, as big tiles, then the classic courses with their records (playtiles.ts) */
+.play-more { display: grid; gap: 10px; margin-bottom: 18px; }
+.pm-head { margin: 6px 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font: 700 24px/1.1 var(--serif); color: var(--green); }
+.pm-head small { font: 700 11px var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
+.pm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pm-grid .tile { min-height: 132px; align-content: start; gap: 4px; padding: 16px 14px; }
+.pm-grid .tile i { font-size: 30px; }
+.pm-grid .tile b { font-size: 20px; }
+.pm-grid .tile em { font-style: normal; font-size: 12px; font-weight: 700; color: #8a6514; }
+.pm-classics { display: grid; gap: 10px; }
+.pm-classic { position: relative; display: grid; gap: 3px; padding: 16px 16px 14px; border-radius: 12px; color: var(--cream); text-decoration: none; background: linear-gradient(160deg, #1d4a37, var(--green)); box-shadow: 0 10px 26px -16px rgba(22, 59, 44, 0.7); }
+.pm-classic.volcanic { background: linear-gradient(160deg, #2a0f08, #4a1a0c 60%, #7a2c10); }
+.pm-classic.coastal { background: linear-gradient(160deg, #0b2c44, #1d6b86); }
+.pm-classic.autumn { background: linear-gradient(160deg, #3a1a08, #6b2f0e 55%, #9c4a16); }
+.pm-ic { position: absolute; top: 14px; right: 16px; font-size: 26px; }
+.pm-classic b { font: 700 24px/1.1 var(--serif); color: #fff; padding-right: 40px; }
+.pm-meta { font-size: 12px; opacity: 0.75; }
+.pm-rec { margin-top: 6px; font-size: 14px; }
+.pm-rec b { color: #f3d98a; font-size: 16px; }
+.pm-rec small { opacity: 0.75; font-size: 12px; }
+.pm-champ { font-size: 13px; opacity: 0.9; }
+.pm-champ small { opacity: 0.7; font-size: 11px; }
+.pm-go { justify-self: start; margin-top: 8px; padding: 6px 12px; border-radius: 999px; background: #f3d98a; color: var(--green); font: 800 12px var(--font); letter-spacing: 0.06em; text-transform: uppercase; }
