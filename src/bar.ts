@@ -1,7 +1,8 @@
 // The Nineteenth Hole's games, on the wall behind Mo's bar. Two weekly contests (Monday to Sunday, Eastern), best
 // score of the week counts, play as often as you like:
 //   Mini golf: the six holes of Hollow Hills, putter only. Fewest strokes wins.
-//   Long drive: three swings off the range tee. Longest ball that stays in play.
+//   Long drive: three swings off the tee of the week's longest hole, in the day's wind, the last two with a fireball.
+//   Longest ball that stays in play.
 import { SCALE } from './golf3d/clubs';
 import { HOLLOW_HILLS_PAR } from './golf3d/minigolf';
 import type { V2 } from './golf3d/types';
