@@ -79,7 +79,7 @@ function draw() {
     const names = going.filter((r) => !r.mine).map((r) => r.name);
     out.hidden = !names.length;
     const list = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0] ?? '';
-    out.innerHTML = names.length ? `<span class="lv-dot still"></span>${esc(list)} ${names.length > 1 ? 'are' : 'is'} out on the course` : '';
+    out.innerHTML = names.length ? `<span class="lv-dot"></span>${esc(list)} ${names.length > 1 ? 'are' : 'is'} out on the course` : '';
   }
 
   // today's cards, newest first
@@ -135,7 +135,7 @@ function drawBoard() {
           const tied = rows.filter((x) => x.total - x.par === tp).length > 1;
           const won = pay.get(r.playerId)?.payout;
           const link = r.mine ? '#/locker' : r.localId ? `#/member/${r.localId}` : '';
-          const name = `<b>${esc(r.name)}</b><small>${tab === 'open' ? `${esc(r.club)} · ` : ''}${r.rounds} ${r.rounds === 1 ? 'card' : 'cards'}${out.has(r.playerId) ? ' · <span class="lv-on">● on the course</span>' : ''}</small>`;
+          const name = `<b>${esc(r.name)}</b><small>${tab === 'open' ? `${esc(r.club)} · ` : ''}${r.rounds} ${r.rounds === 1 ? 'card' : 'cards'}${out.has(r.playerId) ? ' · <span class="lv-on">on the course</span>' : ''}</small>`;
           return `<tr class="${r.mine ? 'me ' : ''}${place === 1 ? 'lead' : ''}"><td class="pos">${tied ? 'T' : ''}${place}</td><td class="nm">${link ? `<a href="${link}">${name}</a>` : name}</td><td class="pay">${won ? money(won) : ''}</td><td class="tp">${toParLabel(tp)}</td></tr>`;
         })
         .join('')}</tbody></table>`
