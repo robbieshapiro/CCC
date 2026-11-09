@@ -129,7 +129,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #209: the new `course_field` (`pr_209_course_field_home`).
+- [x] #209: the new `course_field` applied Nov 9 (`pr_209_course_field_home`). Checked live: anon can call it; for Robbie it lists his own card (mine), Marc, Eli G and Hunter in, and Kevin and Kushol on the course.
 
 - [x] #207: the `admin_asks` table applied Nov 9 (`pr_207_admin_asks`); checked: row security on, empty, production deployment READY. `api/ask.ts` uses the ANTHROPIC_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY already set in Vercel.
 
