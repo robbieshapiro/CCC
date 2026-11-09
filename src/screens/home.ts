@@ -5,9 +5,8 @@ import type { Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
 import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz } from '../day';
-import { REGINALD, reginaldSvg, type Mood } from '../host';
+import { REGINALD } from '../host';
 import { bindOpen } from './open';
-import { askReginald, championWord } from '../reginald';
 import { bindDaily, dailyCard } from './daily';
 import { bindCardNote, cardTile, tileState } from './cardnote';
 import { bindNotices, noticesStrip } from './notices';
@@ -34,36 +33,6 @@ const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { 
 export const SEEN_PERIOD = 'ccc-seen-period';
 // (from the Caldera challenge on: the months before it just open on the home page as they always did)
 export const newPeriod = (snap: Snapshot) => snap.month >= CALDERA_START && store.get(SEEN_PERIOD) !== snap.month;
-
-// Reginald's word for the club's new champion, along the top for the two days after the title is won: a scripted line
-// at once, then his own (api/reginald.ts) when it comes
-function championDays(snap: Snapshot) {
-  const last = snap.champions[0];
-  if (!last || last.how === 'playoff') return null;
-  const won = periodClosesAt(last.month).toLocaleDateString('en-CA', { timeZone: GAME_TZ });
-  const days = Math.round((Date.parse(`${snap.today}T12:00:00Z`) - Date.parse(`${won}T12:00:00Z`)) / 86400000);
-  return days >= 0 && days <= 1 ? last : null;
-}
-
-function championStrip(snap: Snapshot) {
-  const last = championDays(snap);
-  if (!last) return '';
-  const names = last.playerIds.map((id) => esc(snap.players.find((p) => p.id === id)?.name ?? 'a former member'));
-  return `<p class="champ-word" id="champ-word"><span class="host-face">${reginaldSvg('pleased', 30)}</span><span><b>🏆 ${names.join(' & ')}</b>, ${esc(periodName(last.month))} champion at ${toParLabel(last.total - last.par)}. <em data-word>Our congratulations.</em></span></p>`;
-}
-
-// Under the course name, until you've played the new period: how the last one ended
-function lastWord(snap: Snapshot) {
-  const last = snap.champions[0];
-  if (!last || snap.month < CALDERA_START) return '';
-  const names = last.playerIds.map((id) => esc(snap.players.find((p) => p.id === id)?.name ?? 'a former member'));
-  const at = toParLabel(last.total - last.par);
-  const text =
-    last.how === 'playoff'
-      ? `${esc(periodName(last.month))} closed in a tie at <b>${at}</b>. <b>${names.join(' and ')}</b> play off today.`
-      : `${esc(periodName(last.month))} has closed. <b>${names.join(' & ')}</b> ${names.length > 1 ? 'share' : last.how === 'playoff-won' ? 'wins a playoff for' : 'takes'} the title at <b>${at}</b>.`;
-  return `<p class="play-news">${text}</p>`;
-}
 
 // The honours for the period that last closed, filled in once the server answers: champion, the Open, runner-up,
 // most rounds, aces, the steadiest average and the honest card.
@@ -139,28 +108,14 @@ export function home(snap: Snapshot) {
   const cardIn = cards && snap.rounds.some((r) => r.playerId === snap.me && todayInGameTz(new Date(r.createdAt)) === snap.today);
 
   let line = REGINALD.course(course.name, course.holes.length, course.par, span(snap.month));
-  let mood: Mood = 'dry';
   if (!played.length) line = `${line} ${REGINALD.nobody(snap.today)}`;
   else if (!mine) line = REGINALD.notYet(played.length);
   else if (me && me.toPar === played[0].toPar) {
     line = REGINALD.leading(toParLabel(me.toPar), snap.today);
-    mood = 'pleased';
   } else {
     const top = played[0];
     line = played.length > 2 ? REGINALD.others(player(top.playerId)!.name, toParLabel(top.toPar)) : REGINALD.behind(player(top.playerId)!.name, toParLabel(top.toPar), me.toPar - top.toPar);
   }
-  // the board as it stands, in plain words, always from this snapshot: it goes under Reginald's own line for the day
-  const standing = (() => {
-    if (!played.length) return 'No rounds on the board yet.';
-    const lead = played.filter((r) => r.toPar === played[0].toPar);
-    const names = lead.map((r) => (r.playerId === snap.me ? 'You' : player(r.playerId)!.name));
-    const at = toParLabel(played[0].toPar);
-    const top = lead.length === 1 ? `${esc(names[0])} ${names[0] === 'You' ? 'lead' : 'leads'} at <b>${at}</b>` : `${esc(names.join(' & '))} share the lead at <b>${at}</b>`;
-    if (!mine || !me?.best) return `${top}. You haven’t posted yet.`;
-    if (me.toPar === played[0].toPar) return `${top}.`;
-    const gap = me.toPar - played[0].toPar;
-    return `${top}. You’re ${placeLabel(played.filter((r) => r.toPar < me.toPar).length + 1, played.filter((r) => r.toPar === me.toPar).length > 1)} at ${toParLabel(me.toPar)}, ${gap} back.`;
-  })();
 
   if (host) line = REGINALD.host(snap.groupName, snap.homeName ?? 'your club');
 
@@ -195,17 +150,14 @@ export function home(snap: Snapshot) {
   render(`
     ${header(snap.groupName, 'play')}
     <main>
-      ${championStrip(snap)}
       ${playoffCard()}
       ${noticesStrip()}
       ${shoutStrip()}
       <section class="play-hero${look(course)}">
-        <div class="play-reg"><span class="host-face big">${reginaldSvg(mood, 72)}</span><p id="reg-line"><b>Reginald</b> ${line}</p></div>
         <div class="play-main">
           <p class="eyebrow">${leaf(course)}${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
-          ${mine ? '' : lastWord(snap)}
           ${
             !cards
               ? `<a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>`
@@ -213,7 +165,6 @@ export function home(snap: Snapshot) {
           }
         </div>
       </section>
-      ${previewBand(snap.month)}
       <section class="board${look(course)}">
         ${countdown(snap.month, course, purse.field, openMoney)}
         <div class="board-head"><h2>${leaf(course)}The Board</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
@@ -229,6 +180,7 @@ export function home(snap: Snapshot) {
           </tbody>
         </table></div></div>
       </section>
+      ${previewBand(snap.month)}
       <div class="tiles">
         ${dailyCard()}
         <a class="tile" href="#/clubhouse/bar"><i>🍺</i><b>The bar</b><span>Long drive · Members' Course</span></a>
@@ -256,15 +208,6 @@ export function home(snap: Snapshot) {
   });
   // the club board starts hidden behind the Open: set its frozen columns once it's on show
   document.querySelector('[data-tab="club"]')?.addEventListener('click', () => requestAnimationFrame(() => freezeBoard()));
-  // today's line, written for you by Reginald (Claude): it takes over from the scripted one when it arrives
-  if (!host)
-    void askReginald('daily', course, snap.today).then((text) => {
-      const say = document.querySelector<HTMLElement>('#reg-line');
-      if (!text || !say) return;
-      say.dataset.ai = '1';
-      say.classList.add('reg-fresh');
-      say.innerHTML = `<b>Reginald</b> ${esc(text)}${host ? '' : ` <span class="reg-board">${standing}</span>`}`;
-    });
   // the note before a fresh card; and a card started and cut short shows where it stands, with Continue
   bindCardNote(document, CARD_LINKS, navigate);
   if (cards && !cardIn)
@@ -281,12 +224,6 @@ export function home(snap: Snapshot) {
   void bindDaily(snap.today, snap.crown);
   void bindHonours(snap);
   void bindPlayoff();
-  const champ = championDays(snap);
-  if (champ)
-    void championWord(champ.month).then((text) => {
-      const el = document.querySelector('#champ-word [data-word]');
-      if (text && el) el.textContent = text;
-    });
   if (newPeriod(snap)) store.set(SEEN_PERIOD, snap.month);
   // in a club you only run, play from your own club: that's where it counts
   document.querySelector<HTMLAnchorElement>('[data-play-home]')?.addEventListener('click', (e) => {
@@ -310,7 +247,7 @@ function countdown(month: string, course: Course, field: number, open = false) {
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
     <small>${
       open
-        ? `<em class="cd-purse">💰 ${money(OPEN_FLOOR)} Open purse</em> · top 10 on the Open paid · guaranteed, and more as the field grows`
+        ? `<em class="cd-purse">💰 ${money(OPEN_FLOOR)} Open purse</em> · top 10 paid`
         : `<em class="cd-purse">💰 ${money(purseOf(field))} purse</em> · top 10 paid${field ? '' : ' · $1,000 in with every player'}`
     } · champion crowned midnight ET, ${day}</small>
   </div>`;
