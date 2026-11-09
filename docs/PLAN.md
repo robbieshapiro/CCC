@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome).
+Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 | PR | What |
 |---|---|
+| #207 | Ask Reginald, in the Committee Room (the tab that was "Reginald's read"): a chat where Robbie asks anything about the club and Reginald answers from the numbers read fresh for each question (today, the week's and all-time members, the Open, feedback, invites). Starter questions, Enter to send, the conversation kept on the device for the session. `api/ask.ts` (Claude, admin only via `admin_kpis`), capped at 60 questions a day, each kept in `admin_asks`; roughly 5 cents a question, so a few dollars on the busiest day. The Overview's feed is livelier: a pulsing LIVE pill, blinking green dots on anyone on the course (listed first, lit green), times that count up, new events sliding in lit gold, coloured edges by kind, the "in today" number pulsing when it changes, a 30-second refresh, and a feed that drifts slowly down on its own (stops while touched; off under reduced motion). |
 | #206 | The loading sheet into a round has a plain spinner instead of the rolling ball. |
 | #205 | Into a round without a stall back on home: picking Play or Practise in the card note (and any Practice, Continue or preview link) holds a "Heading to the first tee" / "Opening the practice round" sheet with a rolling ball until the course is up. And Admin, Tools has "Preview a new member's welcome": the invitation envelope, letter and foil with a made-up code, then the tour, with nothing used or saved, ending back in the Committee Room. |
 | #204 | A simpler home page: the Play banner is just the week, the course, its holes and par, and the Play button; the board (the Open first) sits right under it. Reginald's paragraph and the board-in-words line, the champion notice along the top, and the "has closed" line under the course name are gone (the champion is in Past Champions and the Clubhouse), and so is the daily Reginald AI call on home. Next week's course band moved below the board. The countdown's purse line is now "$10,000 Open purse · top 10 paid". |
@@ -126,6 +127,8 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #207: the `admin_asks` table (`pr_207_admin_asks`). `api/ask.ts` uses the ANTHROPIC_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY already set in Vercel.
 
 - [x] #202: `course_field` applied Nov 8 (`pr_202_course_field`). Checked live: anon can call it; from Kellogg the field shows Marc, Kevin and Kushol, plus Hunter and Eli G from The Clergy.
 

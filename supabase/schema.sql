@@ -1411,6 +1411,18 @@ create table if not exists admin_insights (
 );
 alter table admin_insights enable row level security;
 
+-- Ask Reginald, in the Committee Room (api/ask.ts): each question the Committee asks and his answer, kept for the daily
+-- cap and a look back. Only the server reads and writes it.
+create table if not exists admin_asks (
+  id bigserial primary key,
+  player_id uuid references players on delete set null,
+  question text not null,
+  answer text,
+  created_at timestamptz not null default now()
+);
+alter table admin_asks enable row level security;
+create index if not exists admin_asks_recent on admin_asks (created_at);
+
 -- Rounds started and not finished: every counted round logs its start and the furthest hole it reached, and is
 -- marked finished when the card goes in. The admin sees started vs finished, where people stop, and who.
 create table if not exists round_starts (

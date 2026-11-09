@@ -1570,3 +1570,53 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 /* the Committee's preview of a new member's invitation */
 .preview-bar { position: sticky; top: 0; z-index: 5; margin: 0; padding: 8px 14px; background: #1b3a2b; color: #f3ecdc; font-size: 13px; text-align: center; }
 .preview-bar a { color: #f0c46a; font-weight: 700; margin-left: 6px; }
+
+/* The live feed: a pulsing LIVE pill, blinking dots for anyone on the course, new events sliding in lit up */
+.live-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 7px; border-radius: 999px; background: #fbe3dc; color: #b2352a; font: 800 11px var(--font); letter-spacing: 0.14em; text-transform: uppercase; vertical-align: 3px; }
+.live-pill i { width: 8px; height: 8px; border-radius: 50%; background: #e0412f; animation: live-pulse 1.6s ease-out infinite; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(224, 65, 47, 0.6); } 70% { box-shadow: 0 0 0 7px rgba(224, 65, 47, 0); } 100% { box-shadow: 0 0 0 0 rgba(224, 65, 47, 0); } }
+.dot { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: #4fd36a; vertical-align: 2px; animation: dot-blink 1.2s ease-in-out infinite; box-shadow: 0 0 6px rgba(79, 211, 106, 0.8); }
+.dot.soft { background: #e6cf9f; box-shadow: none; animation-duration: 2.4s; }
+@keyframes dot-blink { 50% { opacity: 0.25; } }
+.tw-live { white-space: nowrap; }
+.tw-who li.going { background: linear-gradient(90deg, rgba(79, 211, 106, 0.12), transparent 70%); border-radius: 6px; padding-left: 6px; padding-right: 6px; }
+.tw-hero > b.bump { animation: bump 0.9s ease-out; }
+@keyframes bump { 0% { transform: scale(1); } 30% { transform: scale(1.18); color: #ffe7a8; } 100% { transform: scale(1); } }
+.live-box { max-height: 420px; overflow-y: auto; scroll-behavior: auto; }
+.live-feed li { border-left: 3px solid transparent; padding-left: 8px; }
+.live-feed li.k-round { border-left-color: #3f9b5a; }
+.live-feed li.k-start { border-left-color: #e0a43a; }
+.live-feed li.k-practice { border-left-color: #7d9bc7; }
+.live-feed li.k-daily { border-left-color: #c8692a; }
+.live-feed li.k-playoff { border-left-color: #d4a72c; }
+.live-feed li.k-join { border-left-color: #8a6a3e; }
+.live-feed li.k-feedback { border-left-color: #a35ab0; }
+.live-feed li.new { animation: feed-in 0.6s ease-out, feed-glow 4s ease-out; }
+@keyframes feed-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes feed-glow { 0% { background: rgba(240, 196, 106, 0.45); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .live-pill i, .dot, .tw-hero > b.bump, .live-feed li.new { animation: none; } }
+
+/* Ask Reginald: a chat in the Committee Room */
+.adm-ask h2 .host-face { width: 30px; height: 30px; }
+.ask-log { display: grid; gap: 10px; max-height: 460px; overflow-y: auto; margin: 4px 0 12px; padding: 2px; }
+.ask-msg { max-width: 88%; padding: 10px 13px; border-radius: 12px; font-size: 15px; line-height: 1.45; animation: feed-in 0.3s ease-out; }
+.ask-msg p { margin: 0 0 8px; }
+.ask-msg p:last-child, .ask-msg ul:last-child { margin-bottom: 0; }
+.ask-msg ul { margin: 0 0 8px; padding-left: 18px; }
+.ask-msg.me { justify-self: end; background: var(--green); color: var(--cream); border-bottom-right-radius: 4px; white-space: pre-wrap; }
+.ask-msg.reg { justify-self: start; background: #f3ecdc; border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.ask-msg.thinking { display: flex; gap: 5px; padding: 14px 16px; }
+.ask-msg.thinking span { width: 7px; height: 7px; border-radius: 50%; background: #8a6a3e; animation: dot-blink 1s ease-in-out infinite; }
+.ask-msg.thinking span:nth-child(2) { animation-delay: 0.2s; }
+.ask-msg.thinking span:nth-child(3) { animation-delay: 0.4s; }
+.ask-starters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.ask-chip { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 13px; cursor: pointer; text-align: left; }
+.ask-chip:hover { border-color: var(--gold); }
+.ask-form { display: flex; gap: 8px; align-items: flex-end; }
+.ask-form textarea { flex: 1; min-height: 44px; max-height: 160px; resize: none; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: 15px; }
+.ask-form .btn { flex: none; }
+.ask-note { margin: 0; font-size: 13px; color: var(--muted); }
+.ask-foot { margin: 8px 0 0; }
+.adm-ask + .adm-brief { margin-top: 12px; }
+.tw-hero small .tw-live { display: inline; font: inherit; letter-spacing: 0; text-transform: none; color: #b9ecc0; }
+.ask-sub { margin: -4px 0 10px; }
