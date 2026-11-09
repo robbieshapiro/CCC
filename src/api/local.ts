@@ -1,4 +1,5 @@
 // Browser-only backend for playing without Supabase. Mirrors supabase/schema.sql.
+import { seasonPoints } from '../season';
 import { STOCK_BUDDIES } from '../buddies';
 import { cardsOn, GAME_TZ, openPurseOn, periodOf, todayInGameTz } from '../day';
 import { courseById, courseFor } from '../golf3d/courses';
@@ -10,7 +11,7 @@ import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
@@ -713,6 +714,41 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       d = next.toISOString().slice(0, 10);
     }
     return out;
+  },
+
+  // season points, as on the server: the week's best per person ranked, ties sharing, closed weeks banked
+  async seasonStandings(session): Promise<Season> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const now = periodOf(todayInGameTz());
+    const year = Number(now.slice(0, 4));
+    const best = new Map<string, Map<string, number>>(); // week -> person -> best to par
+    for (const r of db.rounds) {
+      if (r.month < '2026-11-08' || r.month.slice(0, 4) !== String(year)) continue;
+      const w = best.get(r.month) ?? new Map<string, number>();
+      w.set(r.playerId, Math.min(w.get(r.playerId) ?? Infinity, r.total - r.par));
+      best.set(r.month, w);
+    }
+    const rows = new Map<string, SeasonRow>();
+    for (const [week, people] of best) {
+      const list = [...people.entries()];
+      for (const [id, tp] of list) {
+        const place = list.filter(([, x]) => x < tp).length + 1;
+        const k = list.filter(([, x]) => x === tp).length;
+        const pts = Array.from({ length: k }, (_, i) => seasonPoints(place + i)).reduce((a, b) => a + b, 0) / k;
+        const p = db.players.find((x) => x.id === id)!;
+        const row = rows.get(id) ?? { playerId: id, name: p.name, club: Object.values(db.groups).find((g) => g.id === p.groupId)?.name ?? '?', mine: id === me.id, points: 0, projected: 0, events: 0, wins: 0, top10s: 0, best: null };
+        if (week < now) {
+          row.points += Math.round(pts);
+          row.events++;
+          if (place === 1) row.wins++;
+          if (place <= 10) row.top10s++;
+          row.best = row.best === null ? place : Math.min(row.best, place);
+        } else row.projected += Math.round(pts);
+        rows.set(id, row);
+      }
+    }
+    return { year, standings: [...rows.values()].sort((a, b) => b.points + b.projected - (a.points + a.projected) || b.points - a.points || a.name.localeCompare(b.name)) };
   },
 
   // classic courses, as on the server: free rounds kept for the records, never counted

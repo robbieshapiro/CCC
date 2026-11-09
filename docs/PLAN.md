@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 | PR | What |
 |---|---|
+| #216 | The Season: FedEx Cup style points from every week's Open finish (1st 500, 2nd 300, 3rd 190 down to 25 for 20th, 20 for everyone else who posts a card; ties share), banked when a week closes and shown as projected until then. A Season page (`#/season`: standings with weeks, wins, top 10s, banked and projected points, and the scale), linked under the Open on home ("🏆 2026 Season · you're 4th, 400 pts"). Each week's Open is named like a tour event: "The 2026 Western Reserve Open". New `season_points` and `season_standings`; `src/season.ts`. The weeks' rounds, shots and games are all kept, ready for a year-end Wrapped. |
 | #215 | Everything you can play, as big tiles on home under the Open: Closest to the Pin, the long drive and the Members' Course (each with the week's leader and your best), and Practice. Then "Classic courses": the Caldera and the Highlands open to anyone any time (`#/classic/<id>`), each tile with its course record (every round ever played on it, every club, free play included), who holds it, your best, and the champions of its week. A free round goes to `free_rounds` (20 a day each) and never counts toward the Open, a title, the purse or a bonus; the round's summary says where it stands against the record. New `submit_free_round` and `course_records`. |
 | #214 | The long drive moves off the range to the tee of the week's longest hole (The Gorge on the Western Reserve), in the day's wind: three swings, the last two with one of Reginald's fireballs (+15%, overswing live), so a perfect strike with the wind behind carries 375+. Longest ball in play wins the week. `engine.pour()` hands over a drink with no cart. |
 | #213 | Home's live sections in the club's own colours, nothing blinking: a still gold dot by "On the course now" and the line in the Play banner, holes played in club green with the current one in gold, "on the course" on the board in gold, and a new card only glows gold briefly. The blinking green stays in Admin. |
@@ -133,7 +134,9 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #215: `free_rounds`, `submit_free_round` and `course_records` (`pr_215_classic_courses`).
+- [ ] #216: `season_points` and `season_standings` (`pr_216_season`).
+
+- [x] #215: `free_rounds`, `submit_free_round` and `course_records` applied Nov 9 (`pr_215_classic_courses`). Checked live: row security on, anon can call both; the Caldera record is -9 (Marc), the Highlands -6 (Marc), each with its week's champions.
 
 - [x] #211: `course_field` applied Nov 9 (`pr_211_on_course_from_open`). Checked live: on the course shows Kevin (hole 2), Kushol (hole 4) and Eric (hole 1), as Admin does.
 
