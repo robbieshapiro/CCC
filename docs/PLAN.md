@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 9, 2026 (wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
+Last updated Nov 10, 2026 (pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 9, 2026 (wedges get out of steep bunker faces; who practised to
 
 | PR | What |
 |---|---|
+| #224 | Pick each week's course from the Committee Room (Course tab, "The weeks ahead"): the next four weeks, each with every course in a dropdown (drafts included). A pick takes effect for everyone at once with no deploy, and carries on until the next pick or the next course to open; only weeks still to come can change. Kept on each device too, so a failed fetch can't switch a member's course mid-week. Also the Hole Lab: single test holes in new looks (`lab: true`), listed in the same tab for the admin to play. New `course_schedule` table, `course_schedule` and `set_course_schedule`. |
 | #223 | Fix: a wedge or chip from a bunker could hit the sand inches away and stop, however hard it was swung (Marc, hole 1 on Nov 9: a 96% wedge moved 1 ft and cost him a stroke). The Western Reserve's greenside faces are about 60 degrees and heavy sand holds a ball up them, but the wedge launches at 52, so the ball flew into the face. Out of sand a wedge or chip now opens the face, launching just steeply enough to clear what's in front with the same carry (`escapeLoft`), and rides over the lip's little steps for its first 1.5 ft. Shots toward the flag from every bunker spot: stuck shots on the Western Reserve fell from 11 to 19% a hole to 0 to 2% (only balls under a maple's crown, which can catch by design); other courses barely change. The aim arc shows the opened face. |
 | #221 | Home's Today's cards gets a quiet line underneath: "⛳ Practised today" and the names of everyone, every club, who played a practice round of the week's course today (once each, newest first, up to 8 then "+N more"). It shows on its own before any card is in. A practice round counts once it has a shot in it or while it's still going. New `course_practice`. |
 | #219 | The Season moves into the Clubhouse as a tab between Pro Shop and Bar, replacing Clubs: the 2026 FedEx Cup style standings across every club with each golfer's Open wins, career earnings and points (banked plus this week's projected). Tap anyone, from any club, for their card: golfer on the turntable, rank, club(s), member since, Open wins, club titles, career earnings, each Open week this season (place, to par, points and their best card), career rounds, best and average, and their trophy cabinet. The home link and the old `#/season` and `#/clubhouse/clubs` links land on the tab. `season_standings` now returns `earnings`; new `golfer_card`. |
@@ -137,6 +138,8 @@ Last updated Nov 9, 2026 (wedges get out of steep bunker faces; who practised to
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #224: apply `course_schedule` (table and both functions) after merge (`pr_224_course_schedule`), then check it reads `{}`. Then pick Nov 15's course in Admin: the Pacific Bluffs is still a draft, so without a pick Nov 15 carries on with the Western Reserve.
 
 - [x] #221: `course_practice` applied Nov 9 (`pr_221_practised_today`). Checked live: anon can call it; today it lists Robbie and Tyler.
 

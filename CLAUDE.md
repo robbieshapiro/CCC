@@ -35,7 +35,8 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
 - Data access goes through the `Api` interface in `src/api/types.ts`. Add a method to both `src/api/supabase.ts` and `src/api/local.ts` so local mode keeps working with no keys.
 - All SQL lives in `supabase/schema.sql` and must be safe to re-run (`create table if not exists`, `create or replace function`, `add column if not exists`). See "Applying SQL" below for how it reaches the live database.
 - AI calls are server-side only, in `api/*.ts`, each with a per-member daily cap. Keep a cap on anything new and note the expected cost in the plan.
-- New weekly courses: hole files in `src/golf3d/holes/`, then an entry in `COURSES` in `src/golf3d/courses.ts` with `opens` set to its Sunday (`'2026-11-15'`) and a `playoff` (the hole a tie is played off on, and a fairway spot for the shot at the pin). Weeks run Sunday to Saturday.
+- New weekly courses: hole files in `src/golf3d/holes/`, then an entry in `COURSES` in `src/golf3d/courses.ts` with `opens` set to its Sunday (`'2026-11-15'`) and a `playoff` (the hole a tie is played off on, and a fairway spot for the shot at the pin). Weeks run Sunday to Saturday. Robbie can override any future week from Admin > Course > "The weeks ahead" (`course_schedule`, read by `courseFor`); a pick wins over `opens`, and an unpicked week carries on with the latest course.
+- Hole Lab: a test hole in a new look is a one-hole `Course` with `lab: true` (never on the calendar; only the admin plays it, from Admin > Course).
 - The game period lives in a field still called `month` (rounds, the snapshot, champions): `'YYYY-MM'` for the old months, `'2026-10-30'` for the Caldera challenge (Oct 30 to Nov 7), then the week's Sunday `'YYYY-MM-DD'` from Nov 8 2026. Use the helpers in `src/day.ts` (`periodOf`, `periodClosesAt`, `periodName`, `span`), never slice a date to get a month.
 - Words members see: short, warm, plain. No em dashes.
 

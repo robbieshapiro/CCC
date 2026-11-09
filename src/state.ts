@@ -1,6 +1,8 @@
 import { api, dropSession, getSession, listSessions, setSession } from './api';
 import type { DailyCrown, Session, Snapshot } from './api/types';
 import { processSnapshot } from './nudges';
+import { setSchedule } from './golf3d/courses';
+import { store } from './storage';
 
 let current: Snapshot | null = null;
 const listeners = new Set<(s: Snapshot) => void>();
@@ -28,12 +30,27 @@ export async function refresh(): Promise<Snapshot> {
   }
   const [snap, crown] = got;
   snap.crown = crown;
+  await loadSchedule(session);
   // a club renamed since this device signed in: keep the saved name (and the club switcher) up to date
   if (snap.groupName && snap.groupName !== session.groupName) setSession({ ...session, groupName: snap.groupName });
   current = snap;
   processSnapshot(snap);
   for (const fn of listeners) fn(snap);
   return snap;
+}
+
+// The Committee's course picks, before anything draws a course. Kept on the device too, so a failed fetch can't put a
+// member on the wrong course mid-week.
+async function loadSchedule(session: Session) {
+  const fresh = await api.courseSchedule(session).catch(() => null);
+  if (fresh) store.set('ccc-schedule', JSON.stringify(fresh));
+  let cached: Record<string, string> | null = null;
+  try {
+    cached = JSON.parse(store.get('ccc-schedule') ?? 'null');
+  } catch {
+    cached = null;
+  }
+  setSchedule(fresh ?? cached);
 }
 
 export function onSnapshot(fn: (s: Snapshot) => void): () => void {

@@ -26,8 +26,8 @@ export function periodOf(day: string): string {
   return day >= CALDERA_START ? CALDERA_START : day.slice(0, 7);
 }
 
-// The day the next period starts.
-function nextStart(period: string): string {
+// The day the next period starts (its key, from the weeks on).
+export function nextStart(period: string): string {
   if (period === CALDERA_START) return FIRST_WEEK;
   if (isWeek(period)) return addDays(period, 7);
   const [y, m] = period.split('-').map(Number);
