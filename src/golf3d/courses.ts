@@ -19,6 +19,11 @@ import { thegorge } from './holes/thegorge';
 import { theledges } from './holes/theledges';
 import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
+import { herons } from './holes/lab/herons';
+import { hoodoogap } from './holes/lab/hoodoogap';
+import { oldkeep } from './holes/lab/oldkeep';
+import { summitrun } from './holes/lab/summitrun';
+import { theloop } from './holes/lab/theloop';
 import type { Hole, V2 } from './types';
 import { isWeek, nextStart } from '../day';
 
@@ -95,6 +100,16 @@ const COURSES: Course[] = [
     par: par([creekbend, theledges, maplelake, thequarry, thegorge]),
     playoff: { hole: thegorge, from: { x: -4, y: 720 }, label: 'Up from the river' },
   },
+  // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------
+  ...(
+    [
+      ['lab-florida', 'Lab · Heron Bay', 'Gulf coast Florida: lakes, white waste sand, palms, gators and a pink sunset.', herons],
+      ['lab-city', 'Lab · The Loop', 'Downtown: through the towers, under the el, over the river to the ballpark.', theloop],
+      ['lab-canyon', 'Lab · Hoodoo Gap', 'Red rock canyon: all carry over the slot to a green between two hoodoos.', hoodoogap],
+      ['lab-alpine', 'Lab · Summit Run', 'Ski resort in peak season: 90 feet down the run to the lodge, deep snow either side.', summitrun],
+      ['lab-links', 'Lab · The Old Keep', 'Irish links: dunes, pot bunkers, a stone wall and a ruined castle by the sea.', oldkeep],
+    ] as [string, string, string, Hole][]
+  ).map(([id, name, tagline, hole]): Course => ({ id, opens: '2099-01-01', draft: true, lab: true, name, tagline, holes: [hole], par: hole.par })),
 ];
 
 // The Committee's schedule (course_schedule in supabase/schema.sql): a week's course picked in the Committee Room,

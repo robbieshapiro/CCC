@@ -19,6 +19,7 @@ import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
 import { accuracyError, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, stretched, stretchRate, type MeterStyle } from './swing';
 import type { Hole, Shot, V2 } from './types';
+import { KITS } from './kits';
 
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
@@ -102,7 +103,7 @@ export function planVisits(n: number, r: () => number = Math.random): (Visit | u
   return plan;
 }
 
-type Look = 'day' | 'night' | 'links' | 'desert' | 'autumn' | 'coastal' | 'storm' | 'tempest';
+type Look = string;
 const LOOKS: Record<Look, { sky: string; ground: string; hemi: number; sunColor: string; sun: number; fog: string; near: number; far: number; env: number }> = {
   day: { sky: '#d6e8f5', ground: '#46612f', hemi: 1.25, sunColor: '#ffeccc', sun: 2.6, fog: '#e3ebe2', near: 420, far: 1300, env: 1 },
   night: { sky: '#6f63a8', ground: '#231a33', hemi: 1.1, sunColor: '#aebcff', sun: 1.5, fog: '#24163a', near: 90, far: 620, env: 0.35 },
@@ -115,6 +116,8 @@ const LOOKS: Record<Look, { sky: string; ground: string; hemi: number; sunColor:
   storm: { sky: '#b4bcc2', ground: '#5a5236', hemi: 1.15, sunColor: '#d9dde0', sun: 1.1, fog: '#a9b0b3', near: 160, far: 820, env: 0.6 },
   // the California coast at golden hour: warm low light, a soft sea haze, and you can see a long way out
   coastal: { sky: '#d9eaf4', ground: '#7a7444', hemi: 1.4, sunColor: '#ffd6a0', sun: 3.0, fog: '#f3e2c8', near: 650, far: 2100, env: 1.15 },
+  // the look kits bring their own (src/golf3d/kits.ts)
+  ...Object.fromEntries(Object.entries(KITS).map(([k, kit]) => [k, kit.light])),
 };
 
 // a soft round glow, for the moon's halo
@@ -197,7 +200,7 @@ export class Course3D {
   private hemi = new THREE.HemisphereLight('#d6e8f5', '#46612f', 1.25);
   // the sky for each kind of country: day (the courses), night (the haunted mini golf), an overcast links and a hot
   // desert: sky, sun or moon, light and fog
-  private skies: Record<Look, THREE.Object3D[]> = { day: [], night: [], links: [], desert: [], autumn: [], coastal: [], storm: [], tempest: [] };
+  private skies: Record<Look, THREE.Object3D[]> = {};
   private look: Look | null = null;
   private night = false;
   private world: World | null = null;
@@ -448,7 +451,7 @@ export class Course3D {
     this.sharpen(!!hole.tour);
     // the Caldera challenge's last days: a storm over the volcano (see tempestOn)
     const tempest = tempestOn(hole);
-    const look: Look = tempest ? 'tempest' : hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? (hole.wet ? 'storm' : 'autumn') : hole.theme === 'coastal' ? 'coastal' : 'day';
+    const look: Look = tempest ? 'tempest' : hole.theme && KITS[hole.theme] ? hole.theme : hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? (hole.wet ? 'storm' : 'autumn') : hole.theme === 'coastal' ? 'coastal' : 'day';
     if (this.look !== look) this.setLook(look);
     this.fitShadows();
     this.petalsFor(hole);
@@ -530,6 +533,22 @@ export class Course3D {
     // tempest: black overhead, bruised grey lower down, the volcano's red glow along the horizon
     const tempest = this.skyMesh(1, ['#474c57', '#6c717d', '#86685f']);
     this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot], autumn: [autumn, low], coastal: [coastal, evening], storm: [storm], tempest: [tempest] };
+    // each look kit's sky, and its sun with a glow if it has one
+    for (const [k, kit] of Object.entries(KITS)) {
+      const objs: THREE.Object3D[] = [this.skyMesh(1, kit.skyColors)];
+      if (kit.sun) {
+        const g = new THREE.Group();
+        g.add(new THREE.Mesh(new THREE.SphereGeometry(kit.sun.size, 20, 12), new THREE.MeshBasicMaterial({ color: kit.sun.color, fog: false })));
+        if (kit.sun.glow) {
+          const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(kit.sun.glow), transparent: true, opacity: 0.85, fog: false, depthWrite: false }));
+          halo.scale.setScalar(kit.sun.size * 12);
+          g.add(halo);
+        }
+        g.position.set(...kit.sun.at);
+        objs.push(g);
+      }
+      this.skies[k] = objs;
+    }
     for (const o of Object.values(this.skies).flat()) this.scene.add(o);
     this.setLook('day');
   }
@@ -540,7 +559,7 @@ export class Course3D {
     this.look = look;
     this.night = look === 'night';
     for (const [k, objs] of Object.entries(this.skies)) objs.forEach((o) => (o.visible = k === look));
-    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links' || look === 'autumn' || look === 'coastal' || look === 'storm'));
+    this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links' || look === 'autumn' || look === 'coastal' || look === 'storm' || !!KITS[look]?.clouds));
     const L = LOOKS[look];
     this.hemi.color.set(L.sky);
     this.hemi.groundColor.set(L.ground);
