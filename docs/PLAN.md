@@ -136,7 +136,7 @@ Last updated Nov 9, 2026 (the Season in the Clubhouse with anyone's card; Closes
 
 ## Setup status
 
-- [ ] #219: apply the new `season_standings` (adds career earnings) and `golfer_card` after merge (`pr_219_season_tab`), then check anon can call both.
+- [x] #219: the new `season_standings` (adds career earnings) and `golfer_card` applied Nov 9 (`pr_219_season_tab`). Checked live: anon can call both; Marc leads on 500 with $7,944 career, matching his member card, and his card shows 2 club titles.
 
 - [x] #216: `season_points` and `season_standings` applied Nov 9 (`pr_216_season`). Checked live: anon can call it; this week projects Marc 500, Eli G 300, Robbie 190, Hunter 135.
 
