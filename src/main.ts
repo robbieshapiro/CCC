@@ -1,6 +1,7 @@
 import './style.css';
 import { inject, pageview } from '@vercel/analytics';
 import { getSession, listSessions, switchClub } from './api';
+import { holdSheet } from './dialog';
 import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
 import { home, newPeriod } from './screens/home';
@@ -68,7 +69,8 @@ async function router() {
     // refresh would redraw the home page over the top of it
     if (page === 'welcome' || (me && !me.avatar.onboarded && page !== 'card')) {
       route = 'welcome';
-      return welcome(s);
+      // #/welcome/preview: the Committee watching the tour from Admin; nothing is saved
+      return welcome(s, page === 'welcome' && arg === 'preview');
     }
     // the first open of a new period lands on the home page, where the new course and last period's champion are
     if (page && page !== 'round' && newPeriod(s)) {
@@ -127,6 +129,14 @@ async function router() {
 // Live-update the home page as polls come in; never interrupt a shot.
 onSnapshot((s) => {
   if (route === 'home' && !routing) home(s);
+});
+
+// Any way into a round (Practice round, Practise first, Continue today's card): hold a "heading out" sheet until the
+// course is up. A fresh card's Play button opens the note first, which does the same once a choice is made.
+document.addEventListener('click', (e) => {
+  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#/round"], a[href^="#/practice/"], a[href^="#/rehearse"], a[href^="#/preview/"]');
+  if (!a || a.hasAttribute('data-card-note') || e.defaultPrevented) return;
+  holdSheet(/practi|preview/.test(a.getAttribute('href')!) ? 'Opening the practice round' : 'Heading to the first tee', 'Setting out the course. It can take a few seconds.');
 });
 
 // "Go to Kellogg": today's card is at another of the member's clubs, so take them there

@@ -13,6 +13,8 @@ export function esc(s: string): string {
 
 export function render(html: string) {
   app().innerHTML = html;
+  // the next screen is up: any "heading out" sheet (dialog.ts holdSheet) has done its job
+  document.querySelectorAll('[data-hold]').forEach((x) => x.remove());
 }
 
 export function navigate(hash: string) {

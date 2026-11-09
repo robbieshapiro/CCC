@@ -11,8 +11,11 @@ import { ask, copyBox } from '../dialog';
 
 export const inviteLink = (id: string) => `${location.origin}${location.pathname}#/invite/${id}`;
 
+// #/invite/preview: the Committee's look at what a new member gets, from Admin. A made-up invitation (nothing is used),
+// and Accept goes on to the tour in preview (nothing saved), then back to the Committee Room.
 export async function invite(id: string) {
-  const inv = id ? await api.peekInvite(id).catch(() => null) : null;
+  const preview = id === 'preview' && !!getSession();
+  const inv = preview ? { name: snapshot()?.players.find((p) => p.id === snapshot()?.me)?.name ?? 'Alex', code: 'PREVIEW', groupName: '', used: false } : id ? await api.peekInvite(id).catch(() => null) : null;
   if (!inv || inv.used) {
     render(`
       <main class="invite">
@@ -27,6 +30,7 @@ export async function invite(id: string) {
   }
   const dear = inv.name;
   render(`
+    ${preview ? '<p class="preview-bar">Preview of a new member\'s invitation and tour. Nothing is used or saved. <a href="#/admin">Back to the Committee Room</a></p>' : ''}
     <main class="invite">
       <button class="envelope" id="envelope" aria-label="Open your invitation">
         <span class="env-back"></span>
@@ -51,7 +55,7 @@ export async function invite(id: string) {
           <span class="host-face">${reginaldSvg('pleased', 52)}</span>
           <p>Yours most cordially,<b>Reginald</b><small>Club Steward</small></p>
         </div>
-        <a class="btn accept" id="accept" href="#/join/${encodeURIComponent(inv.code)}/${encodeURIComponent(inv.name)}" hidden>Accept membership</a>
+        <a class="btn accept" id="accept" href="${preview ? '#/welcome/preview' : `#/join/${encodeURIComponent(inv.code)}/${encodeURIComponent(inv.name)}`}" hidden>Accept membership</a>
         <p class="fine accept-note" id="accept-note" hidden>Next you'll choose a four-digit PIN. That's your password from then on: members sign in with their name and PIN.</p>
       </article>
     </main>`);

@@ -283,7 +283,7 @@ const teeTime = () => {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
 };
 
-export async function welcome(snap0: Snapshot) {
+export async function welcome(snap0: Snapshot, preview = false) {
   closeWelcome();
   let snap = snap0;
   if (!useSupabase && snap.players.length < 2) {
@@ -448,6 +448,11 @@ export async function welcome(snap0: Snapshot) {
     void suitUp(true);
   };
   async function finishTour(to: boolean | string) {
+    // a preview from Admin saves nothing and goes back there
+    if (preview) {
+      closeWelcome();
+      return navigate('#/admin');
+    }
     const avatar: Avatar = { ...me.avatar, golfer: spec, onboarded: true };
     try {
       await api.saveAvatar(requireSession(), avatar);
