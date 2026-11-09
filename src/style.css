@@ -1700,3 +1700,25 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .pm-champ { font-size: 13px; opacity: 0.9; }
 .pm-champ small { opacity: 0.7; font-size: 11px; }
 .pm-go { justify-self: start; margin-top: 8px; padding: 6px 12px; border-radius: 999px; background: #f3d98a; color: var(--green); font: 800 12px var(--font); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* The Season: FedEx Cup style points (season.ts) */
+.season-page { max-width: 720px; margin: 0 auto; padding: 18px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px; }
+.season-page h1 { margin: 0; font: 700 clamp(32px, 8vw, 44px)/1.05 var(--serif); color: var(--green); }
+.season-back { justify-self: start; font-size: 14px; }
+.season-sub { margin: 0 0 6px; }
+.season-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.season-table th { text-align: left; font: 800 11px var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 0 6px 8px; }
+.season-table td { padding: 9px 6px; border-top: 1px solid var(--line); vertical-align: middle; }
+.season-table .num { text-align: right; }
+.season-table .pos { width: 28px; font-weight: 800; color: var(--gold); }
+.season-table .nm b { display: block; }
+.season-table .nm small, .season-table .pts small { display: block; font-size: 11px; color: var(--muted); }
+.season-table .pts b { font-size: 17px; color: var(--green); }
+.season-table tr.me td { background: rgba(184, 149, 90, 0.12); }
+.season-scale { padding: 14px 16px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); }
+.season-scale h2 { margin: 0 0 6px; font: 700 22px var(--serif); color: var(--green); }
+.season-scale p { margin: 0 0 10px; font-size: 14px; }
+.scale { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.scale li { display: grid; justify-items: center; padding: 6px 2px; border-radius: 8px; background: #fff; border: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+.scale li b { font-size: 16px; color: var(--green); }
+.season-link { display: block; margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: rgba(243, 217, 138, 0.12); border: 1px solid rgba(243, 217, 138, 0.35); color: #f3d98a; font-size: 13px; font-weight: 700; text-align: center; }

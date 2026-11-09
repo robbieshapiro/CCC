@@ -8,6 +8,7 @@ import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodNam
 import { bindOpen } from './open';
 import { bindLive, liveCards, liveNow } from './live';
 import { bindPlayTiles, playTiles } from './playtiles';
+import { openName } from '../season';
 import { bindDaily } from './daily';
 import { bindCardNote, cardTile, tileState } from './cardnote';
 import { bindNotices, noticesStrip } from './notices';
@@ -157,7 +158,7 @@ export function home(snap: Snapshot) {
       ${liveCards()}
       <section class="board${look(course)}">
         ${countdown(snap.month, course, purse.field, openMoney)}
-        <div class="board-head"><h2>${leaf(course)}The Open</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
+        <div class="board-head"><h2>${leaf(course)}${openPurseOn(snap.month) ? esc(openName(course.name, snap.month)) : 'The Open'}</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist">
           <button role="tab" data-tab="open" aria-selected="true">All clubs</button><span aria-hidden="true">·</span><button role="tab" data-tab="club" aria-selected="false">My club</button>
         </div>
@@ -171,6 +172,7 @@ export function home(snap: Snapshot) {
           </tbody>
         </table></div></div>
         <button class="link board-more" id="board-more" hidden>See hole by hole</button>
+        ${openPurseOn(snap.month) ? `<a class="season-link" href="#/season" id="season-link">🏆 ${snap.month.slice(0, 4)} Season standings</a>` : ''}
       </section>
       ${playTiles(snap)}
       ${previewBand(snap.month)}
@@ -186,6 +188,15 @@ export function home(snap: Snapshot) {
   freezeBoard();
   void bindLive(snap, course);
   void bindPlayTiles(snap);
+  // where you stand in the season, on the link under the Open
+  if (openPurseOn(snap.month))
+    void api.seasonStandings(requireSession()).then((s) => {
+      const el = document.getElementById('season-link');
+      const i = s.standings.findIndex((r) => r.mine);
+      if (!el || i < 0) return;
+      const pts = s.standings[i].points + s.standings[i].projected;
+      el.textContent = `🏆 ${s.year} Season · you're ${placeLabel(i + 1, false)}, ${pts.toLocaleString('en-US')} pts`;
+    }).catch(() => {});
   void bindOpen(snap).then((open) => {
     if (!openMoney || !open) return;
     // the Open purse, the same figures on the countdown, the Open and the club board

@@ -4,6 +4,7 @@ import { getSession, listSessions, switchClub } from './api';
 import { holdSheet } from './dialog';
 import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
+import { season } from './screens/season';
 import { home, newPeriod } from './screens/home';
 import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
@@ -99,6 +100,8 @@ async function router() {
       location.hash = '#/';
       return;
     }
+    // the Season: FedEx Cup style points from every week's Open
+    if (page === 'season') return season(s);
     // a classic course, any member, any time: free play for the course record
     if (page === 'classic') {
       const c = classics(s.month).find((x) => x.id === arg);

@@ -1012,6 +1012,49 @@ begin
 end $$;
 grant execute on function course_records(uuid) to anon;
 
+-- Season points, FedEx Cup style: every week's Open finish earns points (src/season.ts SEASON_POINTS, the same scale), ties
+-- sharing the places they cover, from the first Open (open_purse_from) through the calendar year. Each person once, at
+-- their home club. Closed weeks are banked; this week's place shows as projected points until it closes.
+create or replace function season_points(p_place int) returns numeric language sql immutable as $$
+  select coalesce((array[500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25]::numeric[])[p_place], 20)
+$$;
+
+create or replace function season_standings(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); yr text := left(game_month(), 4);
+begin
+  return json_build_object('year', yr::int, 'standings', coalesce((
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.group_id as home_group
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+    ), best as (
+      select distinct on (rd.month, pe.home_id) rd.month, pe.home_id, rd.total - rd.par as tp
+      from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
+      join rounds rd on rd.player_id = p.id
+      where rd.month >= open_purse_from() and left(rd.month, 4) = yr and not p.host_only
+      order by rd.month, pe.home_id, rd.total - rd.par, rd.created_at
+    ), ranked as (
+      select b.*, rank() over (partition by b.month order by b.tp)::int as r, count(*) over (partition by b.month, b.tp)::int as k from best b
+    ), pts as (
+      select r.*, (select avg(season_points(i)) from generate_series(r.r, r.r + r.k - 1) i) as pts, r.month < game_month() as banked from ranked r
+    ), tot as (
+      select home_id,
+        round(sum(pts) filter (where banked))::int as points,
+        round(sum(pts) filter (where not banked))::int as projected,
+        count(*) filter (where banked)::int as events,
+        count(*) filter (where banked and r = 1)::int as wins,
+        count(*) filter (where banked and r <= 10)::int as top10s,
+        min(r) filter (where banked) as best
+      from pts group by home_id
+    )
+    select json_agg(json_build_object('playerId', t.home_id, 'name', pe.name, 'club', g.name, 'mine', pe.k = lower(me.name) and pe.h = me.pin_hash,
+        'points', coalesce(t.points, 0), 'projected', coalesce(t.projected, 0), 'events', t.events, 'wins', t.wins, 'top10s', t.top10s, 'best', t.best)
+      order by coalesce(t.points, 0) + coalesce(t.projected, 0) desc, coalesce(t.points, 0) desc, pe.name)
+    from tot t join people pe on pe.home_id = t.home_id join groups g on g.id = pe.home_group
+  ), '[]'));
+end $$;
+grant execute on function season_standings(uuid) to anon;
+
 -- Past Open champions: the lowest best round of each finished month across every club. Ties share it.
 create or replace function open_champions(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
