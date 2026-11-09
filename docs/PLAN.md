@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
+Last updated Nov 9, 2026 (Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 | PR | What |
 |---|---|
+| #218 | Closest to the Pin plays on the week's course, like the long drive: from today (Nov 9) the day's hole, pin, wind and spot come from the course that's open that week (the Western Reserve now), and it moves on with each new course. Days before Nov 9 stay on the Caldera. |
 | #216 | The Season: FedEx Cup style points from every week's Open finish (1st 500, 2nd 300, 3rd 190 down to 25 for 20th, 20 for everyone else who posts a card; ties share), banked when a week closes and shown as projected until then. A Season page (`#/season`: standings with weeks, wins, top 10s, banked and projected points, and the scale), linked under the Open on home ("🏆 2026 Season · you're 4th, 400 pts"). Each week's Open is named like a tour event: "The 2026 Western Reserve Open". New `season_points` and `season_standings`; `src/season.ts`. The weeks' rounds, shots and games are all kept, ready for a year-end Wrapped. |
 | #215 | Everything you can play, as big tiles on home under the Open: Closest to the Pin, the long drive and the Members' Course (each with the week's leader and your best), and Practice. Then "Classic courses": the Caldera and the Highlands open to anyone any time (`#/classic/<id>`), each tile with its course record (every round ever played on it, every club, free play included), who holds it, your best, and the champions of its week. A free round goes to `free_rounds` (20 a day each) and never counts toward the Open, a title, the purse or a bonus; the round's summary says where it stands against the record. New `submit_free_round` and `course_records`. |
 | #214 | The long drive moves off the range to the tee of the week's longest hole (The Gorge on the Western Reserve), in the day's wind: three swings, the last two with one of Reginald's fireballs (+15%, overswing live), so a perfect strike with the wind behind carries 375+. Longest ball in play wins the week. `engine.pour()` hands over a drink with no cart. |

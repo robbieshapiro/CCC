@@ -1,15 +1,17 @@
 // The Daily Shot: one shot a day, the same for every member of every club. Seeded by the date: a hole from the
-// Caldera, a pin, the wind, and a spot to play from (the tee on a par 3, a fairway approach on the others).
+// week's course (the Caldera until Nov 8 2026), a pin, the wind, and a spot to play from (the tee on a par 3, a fairway approach on the others).
 // Three tries; the best counts. Closest to the pin wins, holed beats everything.
 import { conditionsFor, type Conditions } from './golf3d/conditions';
 import { SCALE } from './golf3d/clubs';
-import { courseById } from './golf3d/courses';
+import { courseById, courseFor } from './golf3d/courses';
+import { periodOf } from './day';
 import { gradAt, isWater, surfaceAt } from './golf3d/terrain';
 import type { Hole, V2 } from './golf3d/types';
 import { makeRng } from './seed';
 
 export const DAILY_TRIES = 3;
 const FIRST = '2026-10-28'; // Daily Shot #1
+const WEEKLY = '2026-11-09'; // from this day the shot is on the week's course, like the long drive; before it, the Caldera
 
 export type DailyShot = { day: string; number: number; hole: Hole; from: V2; wind: Conditions; yards: number; label: string };
 
@@ -17,7 +19,7 @@ const dayNumber = (day: string) => Math.round((Date.parse(`${day}T12:00:00Z`) - 
 
 export function dailyShot(day: string): DailyShot {
   const rng = makeRng(`daily:${day}`);
-  const holes = courseById('caldera')!.holes;
+  const holes = (day >= WEEKLY ? courseFor(periodOf(day)) : courseById('caldera')!).holes;
   const base = holes[Math.floor(rng.next() * holes.length)];
   const pins = base.pins?.length ? base.pins : [base.cup];
   const pin = pins[Math.floor(rng.next() * pins.length)];
