@@ -20,6 +20,7 @@ import { theledges } from './holes/theledges';
 import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
 import type { Hole, V2 } from './types';
+import { isWeek, nextStart } from '../day';
 
 // previewHoles: before it opens, members can practise this many of its holes (all of them if unset); the admin can
 // play them all. whatsNew: a few short lines shown before that practice starts.
@@ -35,6 +36,8 @@ export type Course = {
   previewHoles?: number;
   whatsNew?: string[];
   playoff?: { hole: Hole; from: V2; label: string };
+  // the Hole Lab: a test hole in a new look, never on the calendar; only the admin plays it, from the Committee Room
+  lab?: boolean;
 };
 
 const par = (holes: Hole[]) => holes.reduce((a, h) => a + h.par, 0);
@@ -94,22 +97,61 @@ const COURSES: Course[] = [
   },
 ];
 
-export function courseFor(period: string): Course {
-  const sorted = COURSES.filter((c) => !c.draft).sort((a, b) => a.opens.localeCompare(b.opens));
+// The Committee's schedule (course_schedule in supabase/schema.sql): a week's course picked in the Committee Room,
+// period -> course id. A picked week plays that course whatever the calendar says; the rest follow `opens`.
+let schedule: Record<string, string> = {};
+export const setSchedule = (s: Record<string, string> | null | undefined) => {
+  schedule = s ?? {};
+};
+export const scheduleOf = () => schedule;
+
+const playable = () => COURSES.filter((c) => !c.lab);
+// the calendar alone: the latest course (not a draft) to open by this period
+export function calendarFor(period: string): Course {
+  const sorted = playable()
+    .filter((c) => !c.draft)
+    .sort((a, b) => a.opens.localeCompare(b.opens));
   return [...sorted].reverse().find((c) => c.opens <= period) ?? sorted[0];
 }
 
-export const courseById = (id: string) => COURSES.find((c) => c.id === id);
-// The next course on the calendar after this period's, if there is one: members can practise its first holes.
-export function nextCourse(period: string): Course | undefined {
-  return COURSES.filter((c) => !c.draft && c.opens > period).sort((a, b) => a.opens.localeCompare(b.opens))[0];
+// A week plays its pick, or else carries on with the latest course to start by then: the last pick or the last
+// course to open on the calendar, whichever came later. own: false leaves out this week's own pick (what the week
+// would play without one).
+export function courseFor(period: string, own = true): Course {
+  const cal = calendarFor(period);
+  const key = Object.keys(schedule)
+    .filter((k) => (own ? k <= period : k < period) && playable().some((c) => c.id === schedule[k]))
+    .sort()
+    .pop();
+  return key && key >= cal.opens ? playable().find((c) => c.id === schedule[key])! : cal;
 }
 
-// Courses not yet being played: anything still a draft, or on the calendar for a later period. The admin can play them.
+export const courseById = (id: string) => COURSES.find((c) => c.id === id);
+// Next week's course, if it's a different one: members can practise its first holes. Without a pick for next week,
+// the next course to open on the calendar.
+export function nextCourse(period: string): Course | undefined {
+  const now = courseFor(period);
+  if (isWeek(period)) {
+    const next = courseFor(nextStart(period));
+    if (next.id !== now.id) return next;
+  }
+  return playable()
+    .filter((c) => !c.draft && c.opens > period && c.id !== now.id)
+    .sort((a, b) => a.opens.localeCompare(b.opens))[0];
+}
+
 // Classic courses: the ones of weeks gone by, newest first, open to anyone any time for the course record
 export const classics = (period: string) => {
   const now = courseFor(period);
-  return COURSES.filter((c) => !c.draft && c.opens < now.opens).sort((a, b) => b.opens.localeCompare(a.opens));
+  const past = new Set(Object.entries(schedule).filter(([p]) => p < period).map(([, id]) => id));
+  return playable()
+    .filter((c) => c.id !== now.id && ((!c.draft && c.opens < period) || past.has(c.id)))
+    .sort((a, b) => b.opens.localeCompare(a.opens));
 };
 
-export const upcoming = (period: string) => COURSES.filter((c) => c.draft || c.opens > period);
+// Courses not yet being played: anything still a draft, or on the calendar for a later period. The admin can play them.
+export const upcoming = (period: string) => playable().filter((c) => c.id !== courseFor(period).id && (c.draft || c.opens > period || Object.values(schedule).includes(c.id)));
+// Every course a week can play (not the lab's test holes), oldest first
+export const tourCourses = () => playable().sort((a, b) => a.opens.localeCompare(b.opens));
+// The Hole Lab's test holes
+export const labHoles = () => COURSES.filter((c) => c.lab);

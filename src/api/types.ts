@@ -261,6 +261,10 @@ export interface Api {
   membersCourse(session: Session): Promise<MembersHole[]>; // Reginald's weekly letters to your club, newest first // every club this month: members, leader, best
   openChampions(session: Session): Promise<OpenChampion[]>;
   dailyCrown(session: Session): Promise<DailyCrown | null>;
+  // the Committee's picks for the weeks ahead (and gone by): period -> course id (course_schedule)
+  courseSchedule(session: Session): Promise<Record<string, string>>;
+  // the admin picks a future week's course; null puts it back on the calendar
+  setCourseSchedule(session: Session, period: string, course: string | null): Promise<void>;
   periodHonors(session: Session, period: string): Promise<Honors>;
   adminTrend(session: Session): Promise<TrendDay[]>;
   adminToday(session: Session): Promise<AdminToday>;

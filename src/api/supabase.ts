@@ -127,6 +127,8 @@ export const supabaseApi: Api = {
   membersCourse: (s) => rpc<MembersHole[]>('members_course', { p_token: s.token }),
   openChampions: (s) => rpc<OpenChampion[]>('open_champions', { p_token: s.token }),
   dailyCrown: (s) => rpc<DailyCrown | null>('daily_crown', { p_token: s.token }),
+  courseSchedule: (s) => rpc<Record<string, string>>('course_schedule', { p_token: s.token }),
+  setCourseSchedule: (s, period, course) => rpc<void>('set_course_schedule', { p_token: s.token, p_period: period, p_course: course }),
   periodHonors: (s, period) => rpc<Honors>('period_honors', { p_token: s.token, p_period: period }),
   startRound: (s, course, card) => rpc<number | null>('start_round', card ? { p_token: s.token, p_course: course, p_card: true } : { p_token: s.token, p_course: course }),
   // a database without daily cards yet reads as no cards

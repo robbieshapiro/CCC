@@ -2430,3 +2430,40 @@ grant execute on function my_shoutouts(uuid) to anon;
 grant execute on function seen_shoutouts(uuid, bigint[]) to anon;
 grant execute on function admin_shoutouts(uuid) to anon;
 grant execute on function remove_shoutout(uuid, bigint) to anon;
+
+-- The Committee's course picks: which course a week plays, chosen in the Committee Room (src/golf3d/courses.ts
+-- setSchedule). A week without a pick follows the calendar in the code. Only future weeks can be picked or changed,
+-- so a week's board never changes course under it.
+create table if not exists course_schedule (
+  period text primary key check (period ~ '^\d{4}-\d{2}-\d{2}$'),
+  course text not null check (char_length(course) between 1 and 40),
+  set_by uuid references players on delete set null,
+  set_at timestamptz not null default now()
+);
+alter table course_schedule enable row level security;
+
+create or replace function course_schedule(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((select json_object_agg(period, course) from course_schedule), '{}'::json);
+end $$;
+grant execute on function course_schedule(uuid) to anon;
+
+create or replace function set_course_schedule(p_token uuid, p_period text, p_course text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can pick the course.'; end if;
+  if coalesce(p_period, '') !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'A week starts on a Sunday.'; end if;
+  if extract(dow from p_period::date) <> 0 then raise exception 'A week starts on a Sunday.'; end if;
+  if p_period <= game_month() then raise exception 'That week has already started.'; end if;
+  if nullif(p_course, '') is null then
+    delete from course_schedule where period = p_period;
+  else
+    if char_length(p_course) > 40 then raise exception 'Unknown course.'; end if;
+    insert into course_schedule (period, course, set_by) values (p_period, p_course, me.id)
+    on conflict (period) do update set course = excluded.course, set_by = excluded.set_by, set_at = now();
+  end if;
+end $$;
+grant execute on function set_course_schedule(uuid, text, text) to anon;
