@@ -134,7 +134,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #216: `season_points` and `season_standings` (`pr_216_season`).
+- [x] #216: `season_points` and `season_standings` applied Nov 9 (`pr_216_season`). Checked live: anon can call it; this week projects Marc 500, Eli G 300, Robbie 190, Hunter 135.
 
 - [x] #215: `free_rounds`, `submit_free_round` and `course_records` applied Nov 9 (`pr_215_classic_courses`). Checked live: row security on, anon can call both; the Caldera record is -9 (Marc), the Highlands -6 (Marc), each with its week's champions.
 
