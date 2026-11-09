@@ -130,7 +130,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #211: `course_field` (`pr_211_on_course_from_open`).
+- [x] #211: `course_field` applied Nov 9 (`pr_211_on_course_from_open`). Checked live: on the course shows Kevin (hole 2), Kushol (hole 4) and Eric (hole 1), as Admin does.
 
 - [x] #209: the new `course_field` applied Nov 9 (`pr_209_course_field_home`). Checked live: anon can call it; for Robbie it lists his own card (mine), Marc, Eli G and Hunter in, and Kevin and Kushol on the course.
 
