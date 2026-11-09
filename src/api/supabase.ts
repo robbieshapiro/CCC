@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
+import type { AdminKpis, AdminToday, CourseRecord, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -136,6 +136,8 @@ export const supabaseApi: Api = {
   adminTrend: (s) => rpc<TrendDay[]>('admin_trend', { p_token: s.token }),
   adminToday: (s) => rpc<AdminToday>('admin_today', { p_token: s.token }),
   courseField: (s, course) => rpc<FieldRow[]>('course_field', { p_token: s.token, p_course: course }),
+  courseRecords: (s) => rpc<CourseRecord[]>('course_records', { p_token: s.token }),
+  submitFreeRound: (s, course, holes, pars) => rpc<void>('submit_free_round', { p_token: s.token, p_course: course, p_holes: holes, p_pars: pars }),
   adminKpis: (s) => rpc<AdminKpis>('admin_kpis', { p_token: s.token }),
   playoffState: (s) => rpc<PlayoffState | null>('playoff_state', { p_token: s.token }),
   playoffStart: (s) => rpc<void>('playoff_start', { p_token: s.token }),
