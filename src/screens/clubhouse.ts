@@ -1,10 +1,10 @@
-// The Clubhouse: everything off the course, as tabs. Your club's members and standings (the default), the Pro Shop, the bar (its
-// games), Reginald's weekly Chronicle, every club this month, how the game works, and a note to the Committee. Each tab has its own link
+// The Clubhouse: everything off the course, as tabs. Your club's members and standings (the default), the Pro Shop, the
+// Season standings across every club, the bar (its games), Reginald's weekly Chronicle, how the game works, and a note to the Committee. Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
 import { cardsOn, periodName, span } from '../day';
 import { money } from '../purse';
 import { api } from '../api';
-import type { Chronicle, ClubRow, Snapshot } from '../api/types';
+import type { Chronicle, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor } from '../golf3d/courses';
 import { hostChip } from '../host';
@@ -13,15 +13,16 @@ import { requireSession } from '../state';
 import { esc, header, render } from '../ui';
 import { barPane, fillBar } from './bar';
 import { bindShop, shopPane } from './shop';
+import { fillSeason, seasonPane } from './season';
 import { badgeFor } from '../shop';
 
-export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'clubs' | 'how' | 'feedback';
+export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'season' | 'how' | 'feedback';
 const TABS: [ClubhouseTab, string][] = [
   ['members', 'Members'],
   ['shop', 'Pro Shop'],
+  ['season', 'Season'],
   ['bar', 'Bar'],
   ['chronicle', 'Chronicle'],
-  ['clubs', 'Clubs'],
   ['how', 'How to play'],
   ['feedback', 'Feedback'],
 ];
@@ -30,7 +31,7 @@ export const isClubhouseTab = (t: string | undefined): t is ClubhouseTab => TABS
 const topar = (n: number | null) => (n === null ? '–' : `<span class="${n < 0 ? 'under' : n > 0 ? 'over' : ''}">${toParLabel(n)}</span>`);
 
 export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: string) {
-  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, clubs, how, feedback }[tab](snap);
+  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, season: seasonPane, how, feedback }[tab](snap);
   render(`
     ${header(snap.groupName, 'clubhouse')}
     <main class="clubhouse">
@@ -40,7 +41,7 @@ export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: 
   document.querySelector('.ch-tabs .on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
   if (tab === 'shop') bindShop(snap);
   if (tab === 'bar') void fillBar(snap);
-  if (tab === 'clubs') void fillClubs();
+  if (tab === 'season') void fillSeason();
   if (tab === 'chronicle') void fillChronicle(snap, week);
   if (tab === 'feedback') bindFeedback();
 }
@@ -129,35 +130,6 @@ function thisSunday() {
   const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
   et.setDate(et.getDate() - et.getDay());
   return `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, '0')}-${String(et.getDate()).padStart(2, '0')}`;
-}
-
-// every club, this period: filled in once the server answers
-function clubs(snap: Snapshot) {
-  return `
-    <div class="ch-head"><h1>The clubs</h1><p class="muted">${periodName(snap.month)} · ${esc(courseFor(snap.month).name)}</p></div>
-    <div id="ch-clubs"><p class="muted">Loading…</p></div>`;
-}
-
-async function fillClubs() {
-  const list = await api.clubList(requireSession()).catch(() => null as ClubRow[] | null);
-  const el = document.getElementById('ch-clubs');
-  if (!el) return;
-  if (!list) {
-    el.innerHTML = '<p class="muted">The clubs table isn’t open yet. Check back soon.</p>';
-    return;
-  }
-  el.innerHTML = `<div class="table-wrap"><table class="ch-table">
-    <thead><tr><th>Club</th><th class="num">Members</th><th>Leader</th><th class="num">Best</th></tr></thead>
-    <tbody>${list
-      .map(
-        (c) => `<tr class="${c.mine ? 'me' : ''}">
-        <td><b>${esc(c.name)}</b>${c.mine ? ' <small>yours</small>' : ''}</td>
-        <td class="num">${c.members}</td>
-        <td>${c.leaders?.length ? esc(c.leaders.join(' & ')) : '<span class="muted">Nobody yet</span>'}</td>
-        <td class="num topar">${topar(c.best)}</td>
-      </tr>`,
-      )
-      .join('')}</tbody></table></div>`;
 }
 
 function how(snap: Snapshot) {

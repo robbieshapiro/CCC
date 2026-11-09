@@ -1046,14 +1046,74 @@ begin
         count(*) filter (where banked and r <= 10)::int as top10s,
         min(r) filter (where banked) as best
       from pts group by home_id
+    ), pay as (
+      -- career earnings, as on the member card: every purse that paid any of the person's seats, and their club bonuses
+      select pe.home_id, sum(pp.payout)::int as earned
+      from groups g cross join lateral period_payouts(g.id) pp join players s on s.id = pp.player_id
+      join people pe on lower(s.name) = pe.k and s.pin_hash = pe.h group by pe.home_id
     )
     select json_agg(json_build_object('playerId', t.home_id, 'name', pe.name, 'club', g.name, 'mine', pe.k = lower(me.name) and pe.h = me.pin_hash,
-        'points', coalesce(t.points, 0), 'projected', coalesce(t.projected, 0), 'events', t.events, 'wins', t.wins, 'top10s', t.top10s, 'best', t.best)
+        'points', coalesce(t.points, 0), 'projected', coalesce(t.projected, 0), 'events', t.events, 'wins', t.wins, 'top10s', t.top10s, 'best', t.best,
+        'earnings', coalesce(pay.earned, 0) + (person_bonus(hp)->>'total')::int)
       order by coalesce(t.points, 0) + coalesce(t.projected, 0) desc, coalesce(t.points, 0) desc, pe.name)
-    from tot t join people pe on pe.home_id = t.home_id join groups g on g.id = pe.home_group
+    from tot t join people pe on pe.home_id = t.home_id join groups g on g.id = pe.home_group join players hp on hp.id = t.home_id
+      left join pay on pay.home_id = t.home_id
   ), '[]'));
 end $$;
 grant execute on function season_standings(uuid) to anon;
+
+-- One golfer's card, from any club (tap a name on the Season standings): who they are, their home club and look, their
+-- Open weeks this season (place, to par, points), career rounds, titles, earnings and feats, across all their seats.
+create or replace function golfer_card(p_token uuid, p_player uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); p players; yr text := left(game_month(), 4);
+begin
+  select * into p from players where id = p_player;
+  if not found then return null; end if;
+  p := home_of(p);
+  return (
+    with seats as (select s.* from players s where lower(s.name) = lower(p.name) and s.pin_hash = p.pin_hash),
+    people as (
+      select distinct on (lower(x.name), x.pin_hash) lower(x.name) as k, x.pin_hash as h, x.id as home_id
+      from players x order by lower(x.name), x.pin_hash, x.host_only, x.created_at
+    ), best as (
+      select distinct on (rd.month, pe.home_id) rd.month, pe.home_id, rd.total - rd.par as tp, rd.course, rd.holes, rd.total, rd.par
+      from people pe join players x on lower(x.name) = pe.k and x.pin_hash = pe.h
+      join rounds rd on rd.player_id = x.id
+      where rd.month >= open_purse_from() and left(rd.month, 4) = yr and not x.host_only
+      order by rd.month, pe.home_id, rd.total - rd.par, rd.created_at
+    ), ranked as (
+      select b.*, rank() over (partition by b.month order by b.tp)::int as r, count(*) over (partition by b.month, b.tp)::int as k,
+        count(*) over (partition by b.month)::int as field from best b
+    ), mine as (
+      select r.*, round((select avg(season_points(i)) from generate_series(r.r, r.r + r.k - 1) i))::int as pts from ranked r
+      where r.home_id = (select pe.home_id from people pe where pe.k = lower(p.name) and pe.h = p.pin_hash)
+    ), pay as (
+      select coalesce(sum(pp.payout), 0)::int as earned, count(*) filter (where pp.payout > 0)::int as top10s
+      from (select distinct group_id from seats) g cross join lateral period_payouts(g.group_id) pp where pp.player_id in (select id from seats)
+    ), titles as (
+      select count(*)::int as n from (select distinct group_id from seats) g cross join lateral period_champs(g.group_id) c
+      where c.player_id in (select id from seats) and c.how <> 'playoff'
+    )
+    select json_build_object(
+      'playerId', p.id, 'name', p.name, 'avatar', p.avatar,
+      'club', (select name from groups where id = p.group_id),
+      'clubs', (select json_agg(distinct g.name) from seats s join groups g on g.id = s.group_id where not s.host_only),
+      'joined', (select min(created_at) from seats),
+      'mine', lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash,
+      'earnings', pay.earned + (person_bonus(p)->>'total')::int,
+      'top10s', pay.top10s,
+      'titles', titles.n,
+      'career', (select json_build_object('rounds', count(*), 'best', min(total - par), 'avg', round(avg(total - par), 1)) from rounds where player_id in (select id from seats)),
+      'feats', (select coalesce(json_agg(distinct f), '[]') from (
+          select unnest(feats) f from rounds where player_id in (select id from seats)
+          union select 'champion' where titles.n > 0) fs),
+      'weeks', (select coalesce(json_agg(json_build_object('week', m.month, 'course', m.course, 'place', m.r, 'tied', m.k > 1, 'field', m.field,
+          'toPar', m.tp, 'holes', m.holes, 'total', m.total, 'par', m.par, 'points', m.pts, 'banked', m.month < game_month()) order by m.month desc), '[]') from mine m)
+    ) from pay, titles
+  );
+end $$;
+grant execute on function golfer_card(uuid, uuid) to anon;
 
 -- Past Open champions: the lowest best round of each finished month across every club. Ties share it.
 create or replace function open_champions(p_token uuid) returns json

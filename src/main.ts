@@ -4,7 +4,7 @@ import { getSession, listSessions, switchClub } from './api';
 import { holdSheet } from './dialog';
 import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
-import { season } from './screens/season';
+import { golfer, leaveGolfer } from './screens/golfer';
 import { home, newPeriod } from './screens/home';
 import { invite } from './screens/invite';
 import { join, landing } from './screens/join';
@@ -46,6 +46,7 @@ async function router() {
   leaveCard();
   leaveShop();
   leaveMember();
+  leaveGolfer();
   closeWelcome();
   const hash = location.hash.replace(/^#\/?/, '');
   const [page, arg, extra] = hash.split('/');
@@ -84,7 +85,8 @@ async function router() {
     if (page === 'playoff') return playoff(s);
     if (page === 'bar') return arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
-    if (page === 'clubhouse') return clubhouse(s, isClubhouseTab(arg) ? arg : 'members', extra);
+    // the old Clubs tab became the Season
+    if (page === 'clubhouse') return clubhouse(s, arg === 'clubs' ? 'season' : isClubhouseTab(arg) ? arg : 'members', extra);
     // the admin's look at every hole of a course still to come
     // the Committee rehearses Sunday's card on next week's course: the member's card flow, nothing posted
     if (page === 'rehearse') {
@@ -100,8 +102,10 @@ async function router() {
       location.hash = '#/';
       return;
     }
-    // the Season: FedEx Cup style points from every week's Open
-    if (page === 'season') return season(s);
+    // the Season: FedEx Cup style points from every week's Open, a Clubhouse tab (the old page's link still lands there)
+    if (page === 'season') return clubhouse(s, 'season');
+    // any golfer's card, from any club, off the Season standings
+    if (page === 'golfer' && arg) return golfer(s, arg);
     // a classic course, any member, any time: free play for the course record
     if (page === 'classic') {
       const c = classics(s.month).find((x) => x.id === arg);

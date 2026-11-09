@@ -1,35 +1,34 @@
-// The Season: FedEx Cup style points from every week's Open finish, the year so far. Banked points from closed weeks,
-// with this week's place shown as projected until it closes. Linked from the Open on home.
+// The Season: FedEx Cup style points from every week's Open finish, the year so far, as a Clubhouse tab. Banked points
+// from closed weeks, with this week's place shown as projected until it closes. Each row shows the golfer's Open wins
+// and career earnings, and opens their card (golfer.ts), whatever club they're in.
 import { api } from '../api';
 import type { Season, Snapshot } from '../api/types';
 import { courseFor } from '../golf3d/courses';
 import { SEASON_FLOOR, SEASON_POINTS, openName } from '../season';
-import { placeLabel } from '../purse';
+import { money, placeLabel } from '../purse';
 import { requireSession } from '../state';
-import { esc, header, render } from '../ui';
+import { esc } from '../ui';
 
-export async function season(snap: Snapshot) {
-  render(`${header(snap.groupName, 'play')}
-    <main class="season-page">
-      <a class="link season-back" href="#/">‹ Back to the club</a>
-      <p class="eyebrow">The Season</p>
-      <h1 id="season-h">The ${snap.month.slice(0, 4)} Season</h1>
-      <p class="muted season-sub">Points from every week's Open, like the FedEx Cup. This week: ${esc(openName(courseFor(snap.month).name, snap.month))}.</p>
-      <section class="adm-card season-card" id="season-board"><p class="muted">Loading the standings…</p></section>
-      <section class="season-scale">
-        <h2>How points work</h2>
-        <p>Your best card of the week sets your place on the Open, across every club. The place earns points when the week closes on Saturday night; until then they show as projected.</p>
-        <ol class="scale">${SEASON_POINTS.slice(0, 10)
-          .map((p, i) => `<li><span>${placeLabel(i + 1, false)}</span><b>${p}</b></li>`)
-          .join('')}</ol>
-        <p class="fine">11th to 20th: ${SEASON_POINTS.slice(10).join(', ')}. Everyone else who posts a card that week: ${SEASON_FLOOR}. Ties share the points for the places they cover. At the end of the year, a Wrapped of everyone's season.</p>
-      </section>
-    </main>`);
+export function seasonPane(snap: Snapshot) {
+  return `
+    <div class="ch-head"><h1 id="season-h">The ${snap.month.slice(0, 4)} Season</h1><p class="muted">Points from every week's Open, like the FedEx Cup. This week: ${esc(openName(courseFor(snap.month).name, snap.month))}. Tap anyone for their card.</p></div>
+    <section class="season-card" id="season-board"><p class="muted">Loading the standings…</p></section>
+    <section class="season-scale">
+      <h2>How points work</h2>
+      <p>Your best card of the week sets your place on the Open, across every club. The place earns points when the week closes on Saturday night; until then they show as projected.</p>
+      <ol class="scale">${SEASON_POINTS.slice(0, 10)
+        .map((p, i) => `<li><span>${placeLabel(i + 1, false)}</span><b>${p}</b></li>`)
+        .join('')}</ol>
+      <p class="fine">11th to 20th: ${SEASON_POINTS.slice(10).join(', ')}. Everyone else who posts a card that week: ${SEASON_FLOOR}. Ties share the points for the places they cover. Wins are Open wins. Earnings are career: every purse and club bonus.</p>
+    </section>`;
+}
+
+export async function fillSeason() {
   const s: Season | null = await api.seasonStandings(requireSession()).catch(() => null);
   const el = document.getElementById('season-board');
   if (!el) return;
   if (!s) {
-    el.innerHTML = '<p class="muted">The standings show up once their SQL has been run in Supabase.</p>';
+    el.innerHTML = '<p class="muted">The standings aren’t open yet. Check back soon.</p>';
     return;
   }
   const h = document.getElementById('season-h');
@@ -41,11 +40,14 @@ export async function season(snap: Snapshot) {
   const total = (r: Season['standings'][number]) => r.points + r.projected;
   let place = 0;
   el.innerHTML = `<div class="table-wrap"><table class="season-table">
-    <thead><tr><th></th><th>Member</th><th class="num">Wks</th><th class="num">Wins</th><th class="num">Points</th></tr></thead>
+    <thead><tr><th></th><th>Member</th><th class="num">Wins</th><th class="num">Earnings</th><th class="num">Points</th></tr></thead>
     <tbody>${s.standings
       .map((r, i) => {
         if (i === 0 || total(r) !== total(s.standings[i - 1])) place = i + 1;
-        return `<tr class="${r.mine ? 'me' : ''}"><td class="pos">${place}</td><td class="nm"><b>${esc(r.name)}</b><small>${esc(r.club)}${r.top10s ? ` · ${r.top10s} top 10${r.top10s === 1 ? '' : 's'}` : ''}</small></td><td class="num">${r.events}</td><td class="num">${r.wins}</td><td class="num pts"><b>${total(r).toLocaleString('en-US')}</b>${r.projected ? `<small>${r.points ? `${r.points} + ` : ''}${r.projected} this week</small>` : ''}</td></tr>`;
+        const sub = [esc(r.club), r.events ? `${r.events} wk${r.events === 1 ? '' : 's'}` : '', r.top10s ? `${r.top10s} top 10${r.top10s === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ');
+        return `<tr class="${r.mine ? 'me' : ''}" data-href="#/golfer/${r.playerId}"><td class="pos">${place}</td><td class="nm"><a href="#/golfer/${r.playerId}"><b>${esc(r.name)}${r.mine ? ' <small class="you">you</small>' : ''}</b></a><small>${sub}</small></td><td class="num">${r.wins || ''}</td><td class="num earn">${money(r.earnings ?? 0)}</td><td class="num pts"><b>${total(r).toLocaleString('en-US')}</b>${r.projected ? `<small>${r.points ? `${r.points} + ` : ''}${r.projected} this week</small>` : ''}</td></tr>`;
       })
       .join('')}</tbody></table></div>`;
+  // the whole row opens the card, not just the name
+  el.querySelectorAll<HTMLTableRowElement>('tr[data-href]').forEach((tr) => tr.addEventListener('click', () => (location.hash = tr.dataset.href!)));
 }
