@@ -106,7 +106,7 @@ export function copyBox(title: string, text: string): Promise<void> {
   });
 }
 
-// "Heading out": a sheet with a spinner that stays up while the next screen loads (a round can take a few seconds), so
+// "Heading out": a sheet with a plain spinner that stays up while the next screen loads (a round can take a few seconds), so
 // a tap doesn't drop you back on the page you left. Gone as soon as the next screen draws (see ui.ts render), or after
 // a minute whatever happens.
 export function holdSheet(title: string, line = '') {
