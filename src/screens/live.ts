@@ -68,7 +68,7 @@ function draw() {
           .map((r) => {
             const n = r.holes.length;
             return `<div class="lv-golfer"><span class="lv-av">${portrait(r.avatar, 36)}</span><div><b>${who(r)}${tag(r)}</b><span>On hole ${Math.min(n + 1, course.holes.length)} of ${course.holes.length}</span>
-              <span class="lv-holes">${course.holes.map((_, i) => `<i class="${i < n ? 'done' : i === n ? 'now' : ''}"></i>`).join('')}</span></div><em>${toParLabel(toParOf(course, r.holes))}</em></div>`;
+              <span class="lv-holes">${course.holes.map((_, i) => `<i class="${i < n ? 'done' : i === n ? 'now' : ''}"></i>`).join('')}</span></div><em>${n ? toParLabel(toParOf(course, r.holes)) : '–'}</em></div>`;
           })
           .join('')}</div>`
       : '';

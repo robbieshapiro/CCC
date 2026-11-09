@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 | PR | What |
 |---|---|
+| #211 | "On the course now" on home counts anyone who opened today's card and hasn't posted it, from the moment they open it (it needed a finished hole before), so it matches Admin; someone who hasn't finished a hole shows on hole 1 with a dash for the score. `course_field`. |
 | #209 | A live home page for members, from every club: under the Play banner (now with a line naming who else is out on the course), "On the course now" (each golfer's face, the hole they're on as a row of bars, and their score so far) and "Today's cards" (a swipeable row: score to par, a square per hole, how long ago, a new card sliding in lit gold). Each shows only once there's someone in it. The board is now the Open as a simple list: place, name, club, cards, money and to par, your row highlighted, "● on the course" on anyone still out, with All clubs / My club and the hole-by-hole scorecards behind "See hole by hole". Refreshes every 30 seconds. `course_field` now includes you (flagged `mine`, left out of the golfers in a round) with `playerId` and `at`. |
 | #207 | Ask Reginald, in the Committee Room (the tab that was "Reginald's read"): a chat where Robbie asks anything about the club and Reginald answers from the numbers read fresh for each question (today, the week's and all-time members, the Open, feedback, invites). Starter questions, Enter to send, the conversation kept on the device for the session. `api/ask.ts` (Claude, admin only via `admin_kpis`), capped at 60 questions a day, each kept in `admin_asks`; roughly 5 cents a question, so a few dollars on the busiest day. The Overview's feed is livelier: a pulsing LIVE pill, blinking green dots on anyone on the course (listed first, lit green), times that count up, new events sliding in lit gold, coloured edges by kind, the "in today" number pulsing when it changes, a 30-second refresh, and a feed that drifts slowly down on its own (stops while touched; off under reduced motion). |
 | #206 | The loading sheet into a round has a plain spinner instead of the rolling ball. |
@@ -128,6 +129,8 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 | #75 | The repo runs itself for agents: `CLAUDE.md` rules, this plan in `docs/`, a warning when a session starts behind main, and a PR template. |
 
 ## Setup status
+
+- [ ] #211: `course_field` (`pr_211_on_course_from_open`).
 
 - [x] #209: the new `course_field` applied Nov 9 (`pr_209_course_field_home`). Checked live: anon can call it; for Robbie it lists his own card (mine), Marc, Eli G and Hunter in, and Kevin and Kushol on the course.
 

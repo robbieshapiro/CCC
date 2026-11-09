@@ -914,10 +914,11 @@ begin
       where jsonb_typeof(rd.spots) = 'array'
       order by pe.home_id, rd.total - rd.par, rd.created_at
     ), going as (
-      select distinct on (pe.home_id) pe.home_id, rs.scores as holes, rs.spots, true as going, rs.started_at as at
+      -- anyone who opened today's card and hasn't posted it counts as out on the course, from the moment they open it
+      select distinct on (pe.home_id) pe.home_id, coalesce(rs.scores, '{}') as holes,
+        case when jsonb_typeof(rs.spots) = 'array' then rs.spots else '[]'::jsonb end as spots, true as going, rs.started_at as at
       from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
       join round_starts rs on rs.player_id = p.id and rs.card and not rs.finished and rs.course = p_course and rs.started_at >= t0
-      where coalesce(array_length(rs.scores, 1), 0) > 0 and jsonb_typeof(rs.spots) = 'array'
       order by pe.home_id, rs.started_at desc
     ), field as (
       select * from done union all select * from going g where not exists (select 1 from done d where d.home_id = g.home_id)
