@@ -4,6 +4,7 @@ import type { CardToday } from '../api/types';
 import type { Course } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { esc } from '../ui';
+import { holdSheet } from '../dialog';
 
 // "Hole 3 of 5 · +1 through 2 · 2 strokes in"
 export function cardStatus(course: Course, scores: number[], here = 0): string {
@@ -80,6 +81,8 @@ export function cardNote(): Promise<'card' | 'practice' | null> {
     const done = (v: 'card' | 'practice' | null) => {
       window.removeEventListener('keydown', key, true);
       back.remove();
+      // picked: a sheet that holds until the course is up, rather than a moment back on home
+      if (v) holdSheet(v === 'card' ? 'Heading to the first tee' : 'Opening the practice round', 'Setting out the course. It can take a few seconds.');
       resolve(v);
     };
     const key = (e: KeyboardEvent) => {

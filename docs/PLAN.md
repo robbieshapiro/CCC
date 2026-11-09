@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page).
+Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 | PR | What |
 |---|---|
+| #205 | Into a round without a stall back on home: picking Play or Practise in the card note (and any Practice, Continue or preview link) holds a "Heading to the first tee" / "Opening the practice round" sheet with a rolling ball until the course is up. And Admin, Tools has "Preview a new member's welcome": the invitation envelope, letter and foil with a made-up code, then the tour, with nothing used or saved, ending back in the Committee Room. |
 | #204 | A simpler home page: the Play banner is just the week, the course, its holes and par, and the Play button; the board (the Open first) sits right under it. Reginald's paragraph and the board-in-words line, the champion notice along the top, and the "has closed" line under the course name are gone (the champion is in Past Champions and the Clubhouse), and so is the daily Reginald AI call on home. Next week's course band moved below the board. The countdown's purse line is now "$10,000 Open purse · top 10 paid". |
 | #202 | Everyone out on the course, from every club: the golfers standing where their tee shots finished now include members of other clubs who played the course today (each person once, your own club first, up to 30), and a card still being played shows the holes so far ("Through 3" when tapped). Tapping someone from another club shows their card and club; kudos and chirps stay within a club. New `course_field`. |
 | #200 | The Committee Room's Overview is built around today: a big "in today" number (cards in, on the course, the rest; against the same day last week), who's in today (each person once, with their card in and score, or on the course and the hole, plus practice and the Daily Shot), and a live feed of today that refreshes every minute. Came back, purse, new members, AI calls and the charts fold away under "More numbers"; rounds per player and the "Needs you" box are gone (unread feedback is a count on the Activity tab). New `admin_today`. |

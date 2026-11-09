@@ -105,3 +105,17 @@ export function copyBox(title: string, text: string): Promise<void> {
     };
   });
 }
+
+// "Heading out": a sheet with a spinner that stays up while the next screen loads (a round can take a few seconds), so
+// a tap doesn't drop you back on the page you left. Gone as soon as the next screen draws (see ui.ts render), or after
+// a minute whatever happens.
+export function holdSheet(title: string, line = '') {
+  open?.();
+  const back = document.createElement('div');
+  back.className = 'dlg-back in dlg-hold';
+  back.dataset.hold = '1';
+  back.innerHTML = `<div class="dlg hold" role="status" aria-live="polite"><span class="hold-ball" aria-hidden="true"></span><h2>${esc(title)}</h2>${line ? `<p class="dlg-body">${esc(line)}</p>` : ''}</div>`;
+  document.body.appendChild(back);
+  window.setTimeout(() => back.remove(), 60_000);
+}
+export const dropHold = () => document.querySelectorAll('[data-hold]').forEach((x) => x.remove());

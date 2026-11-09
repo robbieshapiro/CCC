@@ -83,6 +83,7 @@ export function admin(snap: Snapshot) {
             <button class="btn" data-tool="notice">📣 Post a notice</button>
             <button class="btn" data-tool="invite">✉️ Invite someone</button>
             <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
+            <a class="btn ghost" href="#/invite/preview">👀 Preview a new member's welcome</a>
           </div>
           <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
           <div class="adm-tool" data-panel="invite" hidden>${inviteTool()}</div>
