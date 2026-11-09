@@ -83,6 +83,31 @@ export function lieFactor(h: Hole, from: V2, club: Shot['club']) {
   return 1;
 }
 
+// Out of a bunker a wedge or chip opens the face: it launches steeply enough to clear the face in front of it, the
+// way a real splash shot does, with the same carry. Without this a ball resting up a bunker's steep face (the
+// greenside ones are about 60 degrees) flew straight into the sand a few inches away and stopped, however hard it
+// was hit (Marc, Creek Bend, Nov 9). Nothing changes where the club's own loft already clears what's in front.
+export function escapeLoft(h: Hole, from: V2, shot: Shot): number | undefined {
+  if ((shot.club !== 'wedge' && shot.club !== 'chip') || surfaceAt(h, from) !== 'sand') return undefined;
+  const base = CLUBS[shot.club].loft;
+  const carry = carryOf(shot.club, shot.power, (shot.boost ?? 1) * lieFactor(h, from, shot.club));
+  const z0 = heightAt(h, from.x, from.y);
+  const dx = Math.sin(shot.angle);
+  const dy = Math.cos(shot.angle);
+  const reach = Math.min(12, carry * 0.6);
+  for (let deg = base; deg <= 78; deg += 2) {
+    const l = (deg * Math.PI) / 180;
+    const vh = Math.sqrt((carry * G) / Math.sin(2 * l)) * Math.cos(l);
+    let clear = true;
+    for (let d = 0.25; d <= reach && clear; d += 0.25) {
+      const z = z0 + d * Math.tan(l) - (G * d * d) / (2 * vh * vh);
+      if (z < heightAt(h, from.x + dx * d, from.y + dy * d) + 0.1) clear = false;
+    }
+    if (clear) return deg === base ? undefined : deg;
+  }
+  return 78;
+}
+
 // Out of thick rough a shot can come off the face anywhere: r is a random number in [0, 1), and this is the extra swing
 // error it adds (the game draws r per shot; the checks draw it from their seed).
 export function lieScatter(h: Hole, from: V2, club: Shot['club'], r: number) {
@@ -120,7 +145,7 @@ export function launch(shot: Shot): { vx: number; vy: number; vz: number; ax: nu
   }
   // backspin climbs a touch higher and carries a touch less; topspin comes out low
   const spin = shot.spin ?? 0;
-  const loft = (club.loft * (1 + spin * (spin > 0 ? 0.08 : 0.1)) * Math.PI) / 180;
+  const loft = ((shot.loft ?? club.loft) * (1 + spin * (spin > 0 ? 0.08 : 0.1)) * Math.PI) / 180;
   const carry = carryOf(shot.club, shot.power, shot.boost) * (1 - 0.04 * Math.max(0, spin));
   // carry d on flat ground needs v² = d·g / sin(2·loft)
   const v = Math.sqrt((carry * G) / Math.sin(2 * loft));
@@ -167,13 +192,16 @@ export function windExposure(vz: number) {
 
 export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Result {
   let { x, y } = from;
-  const shotLaunch = launch({ ...shot, boost: (shot.boost ?? 1) * lieFactor(h, from, shot.club) });
+  const shotLaunch = launch({ ...shot, loft: shot.loft ?? escapeLoft(h, from, shot), boost: (shot.boost ?? 1) * lieFactor(h, from, shot.club) });
   let { vx, vy, vz } = shotLaunch;
   const exposure = h.windByHeight ? windExposure(vz) : 1;
   const club = CLUBS[shot.club];
   let z = heightAt(h, x, y);
   let air = shot.club !== 'putter';
   let flying = air; // still on the first flight, so the hook or slice is still working
+  // a splash out of a bunker takes the sand with it: for its first foot and a half the ball rides over the lip's little
+  // steps and ridges instead of stopping dead against them (escapeLoft handles the face itself)
+  const splash = (shot.club === 'wedge' || shot.club === 'chip') && surfaceAt(h, from) === 'sand';
   const statics = [...curbs(h), ...h.walls];
   const frames: Frame[] = [];
   const sounds: Sound[] = [];
@@ -247,7 +275,8 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         sounds.push({ t, s: 'wall' });
         return finish(false, true);
       }
-      if (z <= g2) {
+      if (z <= g2 && splash && flying && vz > 0 && Math.hypot(x - from.x, y - from.y) < 1.5) z = g2 + BALL_R;
+      else if (z <= g2) {
         z = g2;
         if (isWater(h, { x, y }, clock)) {
           sounds.push({ t, s: 'splash' });

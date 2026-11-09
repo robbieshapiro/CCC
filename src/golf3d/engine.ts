@@ -12,7 +12,7 @@ import { ReginaldTray } from './reginaldtray';
 import { conditionsFor, gusted, tempestOn, withPin, type Conditions } from './conditions';
 import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
 import { Golfer, HANK_SPEC, reactionFor, type Reaction } from './golfer';
-import { BALL_R, dropPoint, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Frame, type Result } from './physics';
+import { BALL_R, dropPoint, escapeLoft, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Frame, type Result } from './physics';
 import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
@@ -2023,7 +2023,9 @@ export class Course3D {
         // the flight arc and a landing ring sized to the club's spread
         // the ring shows where the plan carries: on tour courses that's the real plan, however short
         const power = this.hole.tour ? this.power : Math.max(this.power, 0.6);
-        const v = launch({ angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost() * lieFactor(this.hole, this.pos, this.club), spin: this.spin, shape: this.shape });
+        const plan = { angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost(), spin: this.spin, shape: this.shape };
+        // out of a bunker the arc shows the opened face the shot will really use
+        const v = launch({ ...plan, loft: escapeLoft(this.hole, this.pos, plan), boost: plan.boost * lieFactor(this.hole, this.pos, this.club) });
         const z0 = heightAt(this.hole, this.pos.x, this.pos.y);
         let landed: V2 | null = null;
         const T = (2 * v.vz) / G + 1;
