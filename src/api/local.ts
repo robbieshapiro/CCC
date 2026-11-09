@@ -11,7 +11,7 @@ import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
@@ -737,7 +737,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         const k = list.filter(([, x]) => x === tp).length;
         const pts = Array.from({ length: k }, (_, i) => seasonPoints(place + i)).reduce((a, b) => a + b, 0) / k;
         const p = db.players.find((x) => x.id === id)!;
-        const row = rows.get(id) ?? { playerId: id, name: p.name, club: Object.values(db.groups).find((g) => g.id === p.groupId)?.name ?? '?', mine: id === me.id, points: 0, projected: 0, events: 0, wins: 0, top10s: 0, best: null };
+        const row = rows.get(id) ?? { playerId: id, name: p.name, club: Object.values(db.groups).find((g) => g.id === p.groupId)?.name ?? '?', mine: id === me.id, points: 0, projected: 0, events: 0, wins: 0, top10s: 0, best: null, earnings: 0 };
         if (week < now) {
           row.points += Math.round(pts);
           row.events++;
@@ -748,7 +748,57 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         rows.set(id, row);
       }
     }
+    // career earnings, as on each person's own card
+    for (const row of rows.values()) row.earnings = (await this.golferCard(session, row.playerId))?.earnings ?? 0;
     return { year, standings: [...rows.values()].sort((a, b) => b.points + b.projected - (a.points + a.projected) || b.points - a.points || a.name.localeCompare(b.name)) };
+  },
+
+  // one golfer's card from any club: their home club's snapshot of them, and their Open weeks this season
+  async golferCard(session, playerId): Promise<GolferCard | null> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const seat = db.players.find((x) => x.id === playerId);
+    if (!seat) return null;
+    const home = homeOf(db, seat);
+    const club = db.groups[Object.keys(db.groups).find((k) => db.groups[k].id === home.groupId) ?? '']?.name ?? '?';
+    const snap = await this.snapshot({ token: home.token, playerId: home.id, groupId: home.groupId, groupName: club });
+    const p = snap.players.find((x) => x.id === home.id);
+    if (!p) return null;
+    const now = periodOf(todayInGameTz());
+    const same = (x: DbPlayer) => x.name.toLowerCase() === home.name.toLowerCase() && x.pin === home.pin;
+    const weeks: GolferWeek[] = [];
+    for (const week of [...new Set(db.rounds.filter((r) => r.month >= '2026-11-08' && r.month.slice(0, 4) === now.slice(0, 4)).map((r) => r.month))].sort().reverse()) {
+      const best = new Map<string, DbRound>();
+      for (const r of db.rounds.filter((x) => x.month === week)) {
+        const who = homeOf(db, db.players.find((x) => x.id === r.playerId)!).id;
+        const b = best.get(who);
+        if (!b || r.total - r.par < b.total - b.par) best.set(who, r);
+      }
+      const mine = best.get(home.id);
+      if (!mine) continue;
+      const tp = mine.total - mine.par;
+      const all = [...best.values()].map((r) => r.total - r.par);
+      const place = all.filter((x) => x < tp).length + 1;
+      const k = all.filter((x) => x === tp).length;
+      const points = Math.round(Array.from({ length: k }, (_, i) => seasonPoints(place + i)).reduce((a, b) => a + b, 0) / k);
+      weeks.push({ week, course: mine.course, place, tied: k > 1, field: all.length, toPar: tp, holes: mine.holes, total: mine.total, par: mine.par, points, banked: week < now });
+    }
+    const seats = db.players.filter(same);
+    return {
+      playerId: home.id,
+      name: home.name,
+      avatar: home.avatar,
+      club,
+      clubs: [...new Set(seats.filter((x) => !x.host).map((x) => Object.values(db.groups).find((g) => g.id === x.groupId)?.name ?? '?'))],
+      joined: seats.map((x) => x.joined).sort()[0],
+      mine: same(me),
+      earnings: earningsOf(p),
+      top10s: p.top10s ?? 0,
+      titles: p.wins ?? 0,
+      career: p.career ?? { rounds: 0, best: null, avg: null },
+      feats: p.feats,
+      weeks,
+    };
   },
 
   // classic courses, as on the server: free rounds kept for the records, never counted

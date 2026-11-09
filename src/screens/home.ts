@@ -172,7 +172,7 @@ export function home(snap: Snapshot) {
           </tbody>
         </table></div></div>
         <button class="link board-more" id="board-more" hidden>See hole by hole</button>
-        ${openPurseOn(snap.month) ? `<a class="season-link" href="#/season" id="season-link">🏆 ${snap.month.slice(0, 4)} Season standings</a>` : ''}
+        ${openPurseOn(snap.month) ? `<a class="season-link" href="#/clubhouse/season" id="season-link">🏆 ${snap.month.slice(0, 4)} Season standings</a>` : ''}
       </section>
       ${playTiles(snap)}
       ${previewBand(snap.month)}
