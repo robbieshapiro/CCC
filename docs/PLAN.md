@@ -128,7 +128,7 @@ Last updated Nov 8, 2026 (fall colours; one card a day per person; admin counts 
 
 ## Setup status
 
-- [ ] #207: the `admin_asks` table (`pr_207_admin_asks`). `api/ask.ts` uses the ANTHROPIC_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY already set in Vercel.
+- [x] #207: the `admin_asks` table applied Nov 9 (`pr_207_admin_asks`); checked: row security on, empty, production deployment READY. `api/ask.ts` uses the ANTHROPIC_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY already set in Vercel.
 
 - [x] #202: `course_field` applied Nov 8 (`pr_202_course_field`). Checked live: anon can call it; from Kellogg the field shows Marc, Kevin and Kushol, plus Hunter and Eli G from The Clergy.
 
