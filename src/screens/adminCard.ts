@@ -99,7 +99,7 @@ function labSection() {
       <h2>The Hole Lab</h2>
       <p class="muted">One test hole in each new look. Only you can play them. Pick the ones worth a whole course.</p>
       <div class="adm-lab-grid">${lab
-        .map((c) => `<a class="adm-lab-hole" href="#/preview/${c.id}"><b>${esc(c.name)}</b><span>${esc(c.tagline)}</span><small>Par ${c.par} · ${c.holes[0].yards ?? ''}${c.holes[0].yards ? ' yd' : ''}</small></a>`)
+        .map((c) => `<a class="adm-lab-hole" href="#/preview/${c.id}"><b>${esc(c.name.replace(/^Lab · /, ""))}</b><span>${esc(c.tagline)}</span><small>Par ${c.par} · ${c.holes[0].yards ?? ''}${c.holes[0].yards ? ' yd' : ''}</small></a>`)
         .join('')}</div>
     </section>`;
 }

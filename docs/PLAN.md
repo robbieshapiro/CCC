@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 10, 2026 (pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
+Last updated Nov 10, 2026 (five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 10, 2026 (pick each week's course from Admin, and the Hole Lab;
 
 | PR | What |
 |---|---|
+| #225 | The Hole Lab's first five test holes, one in each new look, for Robbie to play from Admin > Course: Heron Bay (Gulf coast Florida: lakes, a white waste area, sabal palms and live oaks with moss, gators and egrets, condos on the horizon, a pink and orange sunset), The Loop (downtown: a park fairway between towers whose walls bounce a ball back and whose roofs lose it, the el overhead, a river in front of the green and an old ballpark with an ivy wall behind it, the skyline and the lake), Hoodoo Gap (red rock canyon: a par 3 all carry over a slot canyon to a green between two hoodoos, buttes and arches beyond), Summit Run (a ski resort in peak season: 90 ft down the run to the lodge, deep snow that plays as the thickest rough, snow-loaded firs, a moving chairlift and skiers) and The Old Keep (Irish links: rumpled dunes, pot bunkers, gorse, a dry-stone wall across the fairway, sheep, a ruined castle and a grey Atlantic, wind every day). Each look is one file in `src/golf3d/looks/`, plugged in through a small look-kit hook (`kits.ts`: ground colours, light, sky and sun, its own posts, decor and backdrop). All five pass the hole checks (no secret-route checks yet: they're added when a hole is built out). |
 | #224 | Pick each week's course from the Committee Room (Course tab, "The weeks ahead"): the next four weeks, each with every course in a dropdown (drafts included). A pick takes effect for everyone at once with no deploy, and carries on until the next pick or the next course to open; only weeks still to come can change. Kept on each device too, so a failed fetch can't switch a member's course mid-week. Also the Hole Lab: single test holes in new looks (`lab: true`), listed in the same tab for the admin to play. New `course_schedule` table, `course_schedule` and `set_course_schedule`. |
 | #223 | Fix: a wedge or chip from a bunker could hit the sand inches away and stop, however hard it was swung (Marc, hole 1 on Nov 9: a 96% wedge moved 1 ft and cost him a stroke). The Western Reserve's greenside faces are about 60 degrees and heavy sand holds a ball up them, but the wedge launches at 52, so the ball flew into the face. Out of sand a wedge or chip now opens the face, launching just steeply enough to clear what's in front with the same carry (`escapeLoft`), and rides over the lip's little steps for its first 1.5 ft. Shots toward the flag from every bunker spot: stuck shots on the Western Reserve fell from 11 to 19% a hole to 0 to 2% (only balls under a maple's crown, which can catch by design); other courses barely change. The aim arc shows the opened face. |
 | #221 | Home's Today's cards gets a quiet line underneath: "⛳ Practised today" and the names of everyone, every club, who played a practice round of the week's course today (once each, newest first, up to 8 then "+N more"). It shows on its own before any card is in. A practice round counts once it has a shot in it or while it's still going. New `course_practice`. |
@@ -139,7 +140,9 @@ Last updated Nov 10, 2026 (pick each week's course from Admin, and the Hole Lab;
 
 ## Setup status
 
-- [ ] #224: apply `course_schedule` (table and both functions) after merge (`pr_224_course_schedule`), then check it reads `{}`. Then pick Nov 15's course in Admin: the Pacific Bluffs is still a draft, so without a pick Nov 15 carries on with the Western Reserve.
+- [x] #224: `course_schedule` (table and both functions) applied Nov 10 (`pr_224_course_schedule`). Checked live: row security on, anon can call both, it reads `{}`.
+- [ ] Pick Nov 15's course in Admin > Course > The weeks ahead. The Pacific Bluffs is still a draft, so without a pick Nov 15 carries on with the Western Reserve.
+- [ ] Play the five Hole Lab holes (Admin > Course > The Hole Lab) and say which looks to build into full courses.
 
 - [x] #221: `course_practice` applied Nov 9 (`pr_221_practised_today`). Checked live: anon can call it; today it lists Robbie and Tyler.
 

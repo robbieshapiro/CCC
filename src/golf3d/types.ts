@@ -16,10 +16,11 @@ export type Piece =
   // wobble: ft the width wanders in and out, so a coastline isn't ruler-straight
   | { kind: 'embankment'; pts: V2[]; h: number[]; width: number; edge: number; wobble?: number };
 
-export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' | 'iron' | 'crypt' | 'blade' | 'teeth' | 'barn' };
+export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' | 'iron' | 'crypt' | 'blade' | 'teeth' | 'barn' | 'hidden' };
 // soft: a tree crown. A ball flies through it, slowed and knocked about, and now and then it's caught and drops; only
 // the trunk (the lowest few feet) is solid.
-export type Post = { x: number; y: number; r: number; h: number; e?: number; soft?: boolean; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' | 'cactus' | 'gorse' | 'maple' | 'monterey' | 'torrey' | 'lighthouse' };
+export type Post = { x: number; y: number; r: number; h: number; e?: number; soft?: boolean; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' | 'cactus' | 'gorse' | 'maple' | 'monterey' | 'torrey' | 'lighthouse' | 'sabal' | 'cypressknee' | 'snowpine' | 'hoodoo' | 'tower' | 'streetlight' };
+export type Roof = { poly: V2[]; h: number; top?: number };
 export type Region = { poly: V2[]; surface: Surface };
 // A lake or creek: its outline and the flat height of its surface. Ground inside that sits under the surface is wet.
 // The sea can run a tide and lava can pulse: the level swings by `amp` either way over `period` seconds of the hole clock.
@@ -39,7 +40,8 @@ export type Push = {
   erupt?: (t: number) => { x: number; y: number; z: number } | null;
 };
 
-export type Decor = { kind: string; x: number; y: number; rot?: number; scale?: number; color?: string; label?: string };
+// size: width, depth and height, for things built to measure (a building)
+export type Decor = { kind: string; x: number; y: number; rot?: number; scale?: number; color?: string; label?: string; size?: [number, number, number] };
 
 export type Hole = {
   id: string;
@@ -64,7 +66,7 @@ export type Hole = {
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
   noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)
-  theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn' | 'coastal';
+  theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn' | 'coastal' | 'florida' | 'city' | 'canyon' | 'alpine' | 'linksland';
   blurb?: string; // a line for the hole's intro card during the flyover
   yards?: number; // the length shown on the intro card, if not the straight line from tee to cup
   putterOnly?: boolean; // mini golf: the putter is the only club
@@ -82,7 +84,7 @@ export type Hole = {
   pushes: Push[];
   // a ball that comes down on one is lost (penalty). top: the ridge, ft above the ground; a ball higher than that
   // sails over (a barn), where without it the roof reaches up for ever (a veranda under the clubhouse wall)
-  roofs?: { poly: V2[]; h: number; top?: number }[];
+  roofs?: Roof[];
   ceilings?: { poly: V2[]; h: number }[]; // a cave roof this far above the ground: a ball that rises into it clips it and drops
   // a hole in the rock: a ball that rolls into it drops down a tunnel and comes out at `to` a moment later, at rest
   portals?: { id: string; x: number; y: number; r: number; to: V2; delay?: number }[];
