@@ -894,9 +894,11 @@ begin
   ), '[]');
 end $$;
 
--- Today's field on a course, for the golfers out on it: everyone who played it today, in every club, each person once
--- (you left out): their card if it's in, or the holes played so far on a card in progress. Up to 30, your own club's
--- first. localId: their seat in your club, if they have one (kudos and chirps stay within a club).
+-- Today's field on a course: everyone who played it today, in every club, each person once: their card if it's in, or
+-- the holes played so far on a card in progress. Up to 30, your own club's first. For the golfers out on the course in a
+-- round (which leaves you out: mine) and home's "On the course now" and "Today's cards". playerId: the person, as the
+-- Open names them; localId: their seat in your club, if they have one (kudos and chirps stay within a club); at: when
+-- the card went in, or when it was started.
 create or replace function course_field(p_token uuid, p_course text) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); t0 timestamptz := game_today()::timestamp at time zone 'America/New_York';
@@ -920,13 +922,13 @@ begin
     ), field as (
       select * from done union all select * from going g where not exists (select 1 from done d where d.home_id = g.home_id)
     ), rows as (
-      select pe.name, gr.name as club, pe.avatar, f.holes, f.spots, f.going, f.at,
-        (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = pe.k and p2.pin_hash = pe.h and not p2.host_only) as local_id
+      select pe.home_id, pe.name, gr.name as club, pe.avatar, f.holes, f.spots, f.going, f.at,
+        (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = pe.k and p2.pin_hash = pe.h and not p2.host_only) as local_id,
+        lower(me.name) = pe.k and me.pin_hash = pe.h as mine
       from field f join people pe on pe.home_id = f.home_id join groups gr on gr.id = pe.home_group
-      where not (lower(me.name) = pe.k and me.pin_hash = pe.h)
     )
-    select json_agg(json_build_object('name', r.name, 'club', r.club, 'avatar', r.avatar, 'holes', r.holes, 'spots', r.spots,
-        'going', r.going, 'localId', r.local_id) order by r.local_id is null, r.at desc)
+    select json_agg(json_build_object('playerId', r.home_id, 'name', r.name, 'club', r.club, 'avatar', r.avatar, 'holes', r.holes,
+        'spots', r.spots, 'going', r.going, 'at', r.at, 'mine', r.mine, 'localId', r.local_id) order by r.local_id is null, r.at desc)
     from (select * from rows order by local_id is null, at desc limit 30) r
   ), '[]');
 end $$;

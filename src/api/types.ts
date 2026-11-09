@@ -119,7 +119,8 @@ export type MemberActivity = { name: string; lastSeen: string | null; days: numb
 // localId: their member id in the viewer's club, if they're in it.
 export type OpenRow = { playerId: string; name: string; club: string; mine: boolean; localId: string | null; avatar: Avatar; holes: number[]; total: number; par: number; rounds: number; last: string; createdAt: string };
 // Today's field on a course, every club (course_field): a card in, or the holes so far of one in progress
-export type FieldRow = { name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; localId: string | null };
+// playerId: the person as the Open names them; mine: you; at: when the card went in, or was started
+export type FieldRow = { playerId: string; name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; at: string; mine: boolean; localId: string | null };
 export type OpenChampion = { month: string; names: string[]; total: number; par: number };
 // The admin tab: every club the admin runs, on one page.
 export type AdminWindow = 'week' | 'month' | 'all';

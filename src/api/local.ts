@@ -715,7 +715,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return out;
   },
 
-  // as course_field does on the server: today's finished rounds on the course with their spots, every club, you left out
+  // as course_field does on the server: today's finished rounds on the course with their spots, every club (local mode
+  // keeps no cards in progress, so nobody shows as out on the course)
   async courseField(session, course): Promise<FieldRow[]> {
     const db = load();
     const me = playerByToken(db, session.token);
@@ -725,7 +726,6 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     for (const r of db.rounds) {
       const p = db.players.find((x) => x.id === r.playerId);
       if (!p || !r.spots || r.course !== course || todayInGameTz(new Date(r.createdAt)) !== today) continue;
-      if (p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin) continue;
       const k = `${p.name.toLowerCase()}|${p.pin}`;
       const b = best.get(k);
       if (!b || r.total - r.par < b.total - b.par) best.set(k, r);
@@ -733,7 +733,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return [...best.values()].map((r) => {
       const p = db.players.find((x) => x.id === r.playerId)!;
       const local = db.players.find((x) => x.groupId === me.groupId && x.name.toLowerCase() === p.name.toLowerCase() && x.pin === p.pin);
-      return { name: p.name, club: club(p.groupId), avatar: p.avatar, holes: r.holes, spots: r.spots!, going: false, localId: local?.id ?? null };
+      const mine = p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin;
+      return { playerId: p.id, name: p.name, club: club(p.groupId), avatar: p.avatar, holes: r.holes, spots: r.spots!, going: false, at: r.createdAt, mine, localId: local?.id ?? null };
     });
   },
 

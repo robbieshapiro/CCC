@@ -1620,3 +1620,59 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .adm-ask + .adm-brief { margin-top: 12px; }
 .tw-hero small .tw-live { display: inline; font: inherit; letter-spacing: 0; text-transform: none; color: #b9ecc0; }
 .ask-sub { margin: -4px 0 10px; }
+
+/* Home, live (live.ts): who's in the Play banner's line, on the course now, today's cards, and the Open as a list */
+.play-main .who-out { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.16); font-size: 13px; color: inherit; opacity: 0.9; }
+.lv-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: #4fd36a; box-shadow: 0 0 6px rgba(79, 211, 106, 0.8); animation: dot-blink 1.2s ease-in-out infinite; }
+.lv-dot.still { animation: none; }
+.lv-panel { margin-bottom: 14px; padding: 14px 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); animation: rise 0.45s ease-out both; }
+.lv-panel h3 { margin: 0 0 10px; display: flex; align-items: center; gap: 8px; font: 700 22px/1.1 var(--serif); color: var(--green); }
+.lv-panel h3 small { margin-left: auto; font: 600 12px var(--font); color: var(--muted); }
+.lv-now { display: grid; gap: 4px; }
+.lv-golfer { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.lv-golfer:first-child { border-top: 0; }
+.lv-golfer > div { min-width: 0; }
+.lv-golfer b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-golfer span { display: block; font-size: 12px; color: var(--muted); }
+.lv-golfer em { font: 800 15px var(--font); font-style: normal; font-variant-numeric: tabular-nums; }
+.lv-av { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; display: block; }
+.lv-av svg, .lv-av img { width: 36px; height: 36px; display: block; }
+.lv-holes { display: flex !important; gap: 3px; margin-top: 4px; }
+.lv-holes i { width: 16px; height: 5px; border-radius: 3px; background: var(--line); }
+.lv-holes i.done { background: #3f9b5a; }
+.lv-holes i.now { background: #4fd36a; }
+.lv-club { display: inline-block; margin-left: 5px; padding: 0 4px; border: 1px solid #c9ad80; border-radius: 4px; font: 800 9px var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: #8a6a3e; vertical-align: 2px; }
+.lv-cards { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; }
+.lv-card { flex: none; width: 132px; scroll-snap-align: start; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid var(--line); }
+.lv-card.me { border-color: var(--gold); }
+.lv-card b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-card small { font-size: 11px; color: var(--muted); }
+.lv-tp { font: 700 30px/1 var(--serif); color: var(--green); }
+.lv-tp.under { color: #2f7a4a; }
+.lv-tp.over { color: #a3442e; }
+.lv-sq { display: flex; gap: 2px; margin-top: 3px; }
+.lv-sq i { width: 12px; height: 12px; border-radius: 2px; background: #d8cdb4; }
+.lv-sq i.b { background: #3f9b5a; }
+.lv-sq i.o { background: #e0a43a; }
+.lv-sq i.d { background: #c4533c; }
+.lv-card.new { animation: feed-in 0.6s ease-out, card-glow 4s ease-out; }
+@keyframes card-glow { 0% { box-shadow: 0 0 0 3px rgba(240, 196, 106, 0.7); } 100% { box-shadow: 0 0 0 0 rgba(240, 196, 106, 0); } }
+.lv-board { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.lv-board td { padding: 8px 4px; border-top: 1px solid rgba(243, 236, 220, 0.14); vertical-align: middle; }
+.lv-board tr:first-child td { border-top: 0; }
+.lv-board .pos { width: 34px; font-weight: 800; opacity: 0.75; }
+.lv-board tr.lead .pos { color: #f3d98a; opacity: 1; }
+.lv-board .nm { overflow: hidden; }
+.lv-board .nm a { display: block; color: inherit; }
+.lv-board .nm b, .lv-board .nm small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-board .nm b { font-size: 15px; color: #fff; }
+.lv-board .nm small { font-size: 11px; opacity: 0.75; }
+.lv-board .lv-on { color: #b9ecc0; font-weight: 700; }
+.lv-board .pay { width: 62px; text-align: right; font-size: 12px; color: #f3d98a; font-weight: 800; }
+.lv-board .tp { width: 44px; text-align: right; font: 800 16px var(--font); color: #fff; }
+.lv-board tr.me td { background: rgba(240, 196, 106, 0.12); }
+.lv-board tr.me .nm b::after { content: ' · you'; font-weight: 600; font-size: 12px; color: #f3d98a; }
+.lv-empty { margin: 4px 0; }
+.board-more { display: block; margin: 10px auto 0; color: #f3d98a; font-size: 13px; }
+#board-open:not([hidden]), #board-club:not([hidden]) { margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .lv-dot, .lv-card.new, .lv-panel { animation: none; } }
