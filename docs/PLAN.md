@@ -142,7 +142,7 @@ Last updated Nov 10, 2026 (Robbie shows as the Committee; The Windy City, a Chic
 
 ## Setup status
 
-- [ ] #227: apply `club_label` and the updated `open_board`, `course_field`, `course_practice`, `course_records`, `season_standings`, `golfer_card`, `daily_state`, `daily_crown` and `get_snapshot` after merge (`pr_227_committee_label`).
+- [x] #227: `club_label` and the nine updated functions applied Nov 10 (`pr_227_committee_label`; the live copies matched `schema.sql` apart from line endings and `get_snapshot`'s comments). Checked live: the Season and the Open show Robbie as Committee and Marc as Kellogg; in The Clergy Robbie is still `away` (purse unchanged) and flagged `committee`; members can't call `club_label`.
 
 - [x] #224: `course_schedule` (table and both functions) applied Nov 10 (`pr_224_course_schedule`). Checked live: row security on, anon can call both, it reads `{}`.
 - [ ] Pick Nov 15's course in Admin > Course > The weeks ahead. The Pacific Bluffs is still a draft, so without a pick Nov 15 carries on with the Western Reserve.
