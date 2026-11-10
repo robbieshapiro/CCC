@@ -146,7 +146,7 @@ function how(snap: Snapshot) {
   const course = courseFor(snap.month);
   const per = span(snap.month);
   const rows: [string, string, string][] = [
-    ['⛳', `One course a ${per}`, cardsOn(snap.month) ? `${esc(course.name)} this ${per}. One card a day counts, and your best card is your score. It locks at your first swing; if you're cut off, it picks up where you left off. Practise as much as you like.` : `${esc(course.name)} this ${per}. Play as often as you like. Your best round counts.`],
+    ['⛳', `One course a ${per}`, cardsOn(snap.month) ? `${esc(course.name)} this ${per}. Two cards a day count: warm up with one, go at it with the other, and the better one is your score for the day. Your best card of the week is your score. Each locks at its first swing; if you're cut off, it picks up where you left off. The club bonus pays on the day's first card. Practise as much as you like.` : `${esc(course.name)} this ${per}. Play as often as you like. Your best round counts.`],
     ['🏆', `Win the ${per}`, `Lowest round in your club when the ${per} closes goes on the plaque. Midnight ET, ${per === 'week' ? 'Saturday night' : 'last day'}.`],
     ['🌍', 'The Open', 'Every club on one board. Same round, bigger field.'],
     ['🎯', 'Closest to the Pin', 'One shot, three tries, new every day.'],

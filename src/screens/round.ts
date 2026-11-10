@@ -7,7 +7,7 @@ import type { Snapshot } from '../api/types';
 import { crest } from '../brand';
 import { sfx } from '../fx/sound';
 import { Course3D, planVisits, scoreName, type Ghost } from '../golf3d/engine';
-import { cardsOn, openPurseOn, todayInGameTz } from '../day';
+import { CARDS_A_DAY, cardsOn, openPurseOn, todayInGameTz } from '../day';
 import { inPoly, isWater, surfaceAt } from '../golf3d/terrain';
 import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus, shotName } from '../bonus';
 import type { CardToday, RoundShot, Spot } from '../api/types';
@@ -103,14 +103,14 @@ function practiceShare(course: Course, scores: number[], total: number, toPar: n
   return `⛳ Practised ${name}: ${total} (${toParLabel(toPar)})\n${course.holes.map((h, i) => sq(scores[i], h.par)).join('')}\n${dig}\n${location.origin}`;
 }
 
-// Today's card is already in: practise as much as you like. In the Committee's rehearsal, the same screen, with a way
+// Both of today's cards are in: practise as much as you like. In the Committee's rehearsal, the same screen, with a way
 // to deal a fresh card and go again.
 function cardIn(snap: Snapshot, dry?: Course, at?: CardToday) {
   const away = at?.club ? elsewhereLine(at) : null;
   render(`<main class="narrow card-in">
     <p class="eyebrow">${esc((dry ?? courseFor(snap.month)).name)}${dry ? ' · rehearsal' : ''}</p>
-    <h1>${away ? away.head : "Today's card is in"}</h1>
-    ${hostChip(away ? 'One card a day, whichever club you play it in. Practice here is open, and nobody counts it.' : 'One card a day, and yours is on the board. The course is open for practice until midnight. Nobody counts those.', 'dry')}
+    <h1>${away ? away.head : "Both of today's cards are in"}</h1>
+    ${hostChip(away ? 'Two cards a day, whichever clubs you play them in. Practice here is open, and nobody counts it.' : 'Two cards a day, and your better one is on the board. The course is open for practice until midnight. Nobody counts those.', 'dry')}
     ${away && !at!.done ? `<div class="summary-actions"><a class="btn" href="#/" data-go-club="${esc(at!.clubId ?? '')}">${away.go}</a></div>` : ''}
     <div class="summary-actions"><a class="btn" href="${dry ? `#/preview/${dry.id}` : '#/round/practice'}">Practice round</a><a class="btn ghost" href="${dry ? '#/admin' : '#/'}">${dry ? 'Back to the Committee Room' : 'Back to the club'}</a></div>
     ${dry ? '<p class="fine">This is what a member sees after their card on Sunday. Nothing was posted. <button class="link" data-dry-reset>Deal a fresh card and rehearse again</button></p>' : ''}
@@ -164,7 +164,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       try {
         cardId = await api.startRound(requireSession(), full.id, true);
       } catch (err) {
-        if (/already in|going at/i.test((err as Error).message)) return cardIn(snap);
+        if (/already in|cards are in|going at/i.test((err as Error).message)) return cardIn(snap);
       }
     }
   }
@@ -293,7 +293,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         ? { title: 'Leave for now?', body: "<p>You haven't swung yet, so today's card hasn't started. It'll be here when you come back.</p>", ok: 'Leave', cancel: 'Keep playing' }
         : {
             title: 'Leave for now?',
-            body: `<p class="dlg-card">${esc(cardStatus(course, scores, here))}</p><p>Your card is saved. Come back and finish it <b>before midnight ET</b>, or it's forfeited and today doesn't count.</p>`,
+            body: `<p class="dlg-card">${esc(cardStatus(course, scores, here))}</p><p>Your card is saved. Come back and finish it <b>before midnight ET</b>, or this card is forfeited.</p>`,
             ok: 'Leave for now',
             cancel: 'Keep playing',
           };
@@ -387,7 +387,12 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   // a counted round ends on Reginald's one question; the answer goes in with the rest of the feedback
   const asking = !opts.practice && !preview && posted;
   // a practice round of the week's course: is today's card in yet? (Reginald's line says which card is next)
-  const cardInToday = snap.rounds.some((r) => r.playerId === snap.me && todayInGameTz(new Date(r.createdAt)) === snap.today);
+  const cardsInToday = snap.rounds.filter((r) => r.playerId === snap.me && r.month === snap.month && todayInGameTz(new Date(r.createdAt)) === snap.today).length;
+  const cardInToday = cardsInToday >= CARDS_A_DAY;
+  // a card just posted: which of today's it was, and the better of them so far
+  const cardNo = (today?.n ?? 0) + 1;
+  const dayBest = Math.min(today?.best ?? Infinity, toPar);
+  const another = card && posted && !rehearsal && cardNo < (today?.of ?? CARDS_A_DAY);
   const sheet = document.createElement('div');
   sheet.className = 'summary';
   sheet.innerHTML = `
@@ -401,7 +406,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         <tr>${course.holes.map((_, i) => scores[i]).map((s, i) => s === undefined ? '<td class="num">–</td>' : `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>`}
       ${
         opts.practice
-          ? hostChip(!livePractice ? "Nobody's counting. It counts once it opens." : !cardsOn(snap.month) ? "Nobody's counting." : cardInToday ? "Nobody's counting. Tomorrow's card is the one." : "Nobody's counting. Today's card is still waiting.", 'dry')
+          ? hostChip(!livePractice ? "Nobody's counting. It counts once it opens." : !cardsOn(snap.month) ? "Nobody's counting." : cardInToday ? "Nobody's counting. Today's cards are in; tomorrow brings two more." : cardsInToday ? "Nobody's counting. Your second card is still waiting." : "Nobody's counting. Today's cards are still waiting.", 'dry')
           : preview
             ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry')
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
@@ -411,8 +416,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         ${bonusLine}${classicLine}
         ${!preview && posted && !opts.practice ? row('Trophies', '', 'trophy-line', true) : ''}
       </dl>
-      ${opts.practice ? '' : `<p class="fine">${opts.classic ? 'Free play on a classic course: it counts for the course record only.' : dry ? 'A rehearsal: nothing posted or paid.' : rehearsal ? 'A rehearsal of the card: nothing posted or paid.' : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted. That's today's card." : 'Posted to the board.') : esc(notPosted)}</p>`}
-      <div class="summary-actions pair"><button class="btn" data-back>Done</button><button class="btn ghost" data-again>${card ? 'Practice' : opts.practice ? 'Again' : 'Play again'}</button></div>
+      ${opts.practice ? '' : `<p class="fine">${opts.classic ? 'Free play on a classic course: it counts for the course record only.' : dry ? 'A rehearsal: nothing posted or paid.' : rehearsal ? 'A rehearsal of the card: nothing posted or paid.' : preview ? 'Preview round, not counted.' : posted ? (card ? (another ? `Card ${cardNo} of ${today?.of ?? CARDS_A_DAY} posted. One more today: your better card counts.` : `Card ${cardNo} of ${today?.of ?? CARDS_A_DAY} posted. Your better card counts today: ${toParLabel(dayBest)}.`) : 'Posted to the board.') : esc(notPosted)}</p>`}
+      <div class="summary-actions pair"><button class="btn" data-back>Done</button><button class="btn ghost" data-again>${another ? `Card ${cardNo + 1}` : card ? 'Practice' : opts.practice ? 'Again' : 'Play again'}</button></div>
       <p class="sum-links"><button class="link" data-share-score>${opts.practice ? (canShare() ? 'Send to the group' : 'Copy for the group chat') : canShare() ? 'Share score' : 'Copy score'}</button><span aria-hidden="true">·</span>${asking ? '<button class="link" data-reg-open>Tell Reginald how it played</button>' : '<button class="link" data-feedback>Leave feedback</button>'}</p>
       ${
         asking
@@ -494,7 +499,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const shareBtn = sheet.querySelector<HTMLButtonElement>('[data-share-score]');
   if (shareBtn) shareBtn.onclick = () => void share(opts.practice ? practiceShare(course, scores, total, toPar, livePractice) : scoreShare(course, scores, total, toPar, card, rehearsal), shareBtn);
   // after today's card, play again is practice on the same course
-  sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => (dry ? navigate('#/rehearse') : card ? navigate('#/round/practice') : round(await refresh(), opts));
+  sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = async () => (dry ? navigate('#/rehearse') : another ? round(await refresh(), opts) : card ? navigate('#/round/practice') : round(await refresh(), opts));
   const context = `After a ${total} (${toParLabel(toPar)}) on ${course.name}`;
   const fb = sheet.querySelector<HTMLButtonElement>('[data-feedback]');
   if (fb) fb.onclick = () => openFeedback(context, el);

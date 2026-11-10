@@ -121,7 +121,8 @@ export type MemberActivity = { name: string; lastSeen: string | null; days: numb
 export type OpenRow = { playerId: string; name: string; club: string; mine: boolean; localId: string | null; avatar: Avatar; holes: number[]; total: number; par: number; rounds: number; last: string; createdAt: string };
 // Today's field on a course, every club (course_field): a card in, or the holes so far of one in progress
 // playerId: the person as the Open names them; mine: you; at: when the card went in, or was started
-export type FieldRow = { playerId: string; name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; at: string; mine: boolean; localId: string | null };
+// best: their better card in today (also while they're out on another); cards: how many of today's cards they've posted
+export type FieldRow = { best?: number[] | null; bestAt?: string | null; cards?: number; playerId: string; name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; at: string; mine: boolean; localId: string | null };
 // A course's record over every round ever played on it, every club (course_records): free play on a classic course counts
 export type CourseRecord = { course: string; toPar: number; holders: { name: string; club: string }[] | null; mine: number | null; rounds: number; champions: { name: string; club: string; toPar: number }[] };
 // Season points, FedEx Cup style (season_standings): banked from closed weeks, projected from this week's place
@@ -183,7 +184,7 @@ export type AdminOverview = {
 };
 // The Daily Shot: one shot a day for everyone, three tries, best counts (see daily.ts)
 // The Committee Room's Today (admin_today): everyone in today, each person once, and today's feed
-export type AdminTodayPerson = { id?: string; name: string; club: string; last: string | null; card: 'in' | 'going' | null; toPar: number | null; total: number | null; hole: number | null; practice: number; daily: boolean; dailyFt: number | null };
+export type AdminTodayPerson = { cards?: number; id?: string; name: string; club: string; last: string | null; card: 'in' | 'going' | null; toPar: number | null; total: number | null; hole: number | null; practice: number; daily: boolean; dailyFt: number | null };
 export type AdminTodayEvent = { id?: string; at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback' | 'classic'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
 export type AdminToday = { today: string; in: number; cardsIn: number; onCourse: number; people: AdminTodayPerson[]; feed: AdminTodayEvent[] };
 export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: boolean };
@@ -214,8 +215,9 @@ export type HoleReport = {
 };
 // Today's card: whether it's in, and where one in progress stands (holes done, strokes on the hole being played)
 export type CardProgress = { scores: number[]; shots: number; spots: (Spot | null)[]; feats: string[] };
-// club/clubId: set when today's card is in, or going, at another of the member's clubs (one card a day per person)
-export type CardToday = CardProgress & { done: boolean; id: number | null; course: string | null; club?: string | null; clubId?: string | null };
+// club/clubId: set when a card is going at another of the member's clubs, or all of today's cards are in there (two a day per person)
+// done: all of today's cards are in; n: how many are in; of: cards a day; best: the better card's to-par so far
+export type CardToday = CardProgress & { done: boolean; n?: number; of?: number; best?: number | null; id: number | null; course: string | null; club?: string | null; clubId?: string | null };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {

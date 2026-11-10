@@ -84,8 +84,11 @@ function draw() {
     out.innerHTML = names.length ? `<span class="lv-dot"></span>${esc(list)} ${names.length > 1 ? 'are' : 'is'} out on the course` : '';
   }
 
-  // today's cards, newest first, and under them a quiet line of who practised the course today
-  const done = (field ?? []).filter((r) => !r.going).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  // today's cards (each person's better card, also while they're out on their second), newest first, and under them a
+  // quiet line of who practised the course today
+  const done = (field ?? [])
+    .flatMap((r) => (!r.going ? [r] : r.best?.length ? [{ ...r, going: false, holes: r.best, at: r.bestAt ?? r.at }] : []))
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const prac = practised ?? [];
   const cards = document.getElementById('live-cards');
   if (cards) {
@@ -100,7 +103,7 @@ function draw() {
         <div class="lv-cards">${done
           .map((r) => {
             const t = toParOf(course, r.holes);
-            return `<div class="lv-card${r.mine ? ' me' : ''}${before && !before.has(r.playerId) ? ' new' : ''}"><span class="lv-tp ${t < 0 ? 'under' : t > 0 ? 'over' : ''}">${toParLabel(t)}</span><b>${who(r)}${tag(r)}</b><small>${r.holes.reduce((a, b) => a + b, 0)} · ${ago(r.at)}</small>
+            return `<div class="lv-card${r.mine ? ' me' : ''}${before && !before.has(r.playerId) ? ' new' : ''}"><span class="lv-tp ${t < 0 ? 'under' : t > 0 ? 'over' : ''}">${toParLabel(t)}</span><b>${who(r)}${tag(r)}</b><small>${r.holes.reduce((a, b) => a + b, 0)} · ${ago(r.at)}${(r.cards ?? 1) > 1 ? ' · better of 2' : ''}</small>
               <span class="lv-sq">${r.holes.map((s, i) => `<i class="${sq(s, course.holes[i]?.par ?? 4)}"></i>`).join('')}</span></div>`;
           })
           .join('')}</div>${practice}`;

@@ -15,7 +15,10 @@ export const FIRST_WEEK = '2026-11-08';
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const weekday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay(); // 0 Sunday
 
-// Daily cards from the first week: one round a day counts (see cards_on in supabase/schema.sql)
+// Two cards a day (from Nov 10): one to warm up, one to go at it. The better card is the day's score (cards_a_day() in SQL)
+export const CARDS_A_DAY = 2;
+
+// Daily cards from the first week (see cards_on in supabase/schema.sql); two a day count from Nov 10 (CARDS_A_DAY)
 export const cardsOn = (period: string) => period >= FIRST_WEEK;
 // One purse across every club from the first week: the Open pays (see open_payouts in supabase/schema.sql)
 export const openPurseOn = (period: string) => period >= FIRST_WEEK;
