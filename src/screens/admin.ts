@@ -21,25 +21,20 @@ import { ask, copyBox, tell } from '../dialog';
 import { bindSundayCard, sundayCardSection } from './adminCard';
 import { loadToday, todaySections } from './adminToday';
 
-const WINDOWS: { id: AdminWindow; label: string }[] = [
-  { id: 'week', label: '7 days' },
-  { id: 'month', label: 'Month' },
-  { id: 'all', label: 'All time' },
-];
-const WINDOW_KEY = 'ccc-admin-window';
+// Members and History always cover the last 7 days: with a course a week, that's the week (all-time numbers are on
+// each golfer's card)
+const WINDOW: AdminWindow = 'week';
 
 type Members = AdminOverview['members'];
-type SortKey = 'lastSeen' | 'name' | 'club' | 'days' | 'rounds' | 'unfinished' | 'best' | 'practice' | 'lockers';
+type SortKey = 'lastSeen' | 'name' | 'club' | 'days' | 'rounds' | 'unfinished' | 'best' | 'practice';
 const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: 'name', label: 'Member' },
   { key: 'club', label: 'Club' },
-  { key: 'lastSeen', label: 'Last in' },
   { key: 'days', label: 'Days', num: true },
-  { key: 'rounds', label: 'Rounds', num: true },
-  { key: 'unfinished', label: 'Unfinished', num: true },
+  { key: 'rounds', label: 'Rds', num: true },
+  { key: 'unfinished', label: 'Quit', num: true },
   { key: 'best', label: 'Best', num: true },
-  { key: 'practice', label: 'Practice', num: true },
-  { key: 'lockers', label: 'Lockers', num: true },
+  { key: 'practice', label: 'Prac', num: true },
 ];
 
 export function admin(snap: Snapshot) {
@@ -68,10 +63,9 @@ export function admin(snap: Snapshot) {
       <div class="adm-pane" data-pane="course" hidden>
         ${sundayCardSection(snap)}
         ${courseSections()}
+        <section class="adm-card" id="adm-holes" hidden></section>
       </div>
       <div class="adm-pane" data-pane="members" hidden>
-        <div class="seg adm-window" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
-        <section class="adm-card" id="adm-holes" hidden></section>
       </div>
       <div class="adm-pane" data-pane="tools" hidden>
         <section class="adm-card adm-do">
@@ -280,21 +274,19 @@ function bindSend(root: HTMLElement) {
 let state: {
   data: AdminOverview | null;
   daily: DailyDay[] | null;
-  window: AdminWindow;
   sort: SortKey;
   desc: boolean;
   club: string;
 } = {
   data: null,
   daily: null,
-  window: 'week',
   sort: 'lastSeen',
   desc: true,
   club: '',
 };
 
 // Weekly Players at the top: members who posted a round in the last 7 days, the change on a week ago, and the trend
-// day by day for the window picked (7 days, this month, or since launch). Refreshes every minute while you're here.
+// day by day since launch. Refreshes every minute while you're here.
 let trend: TrendDay[] | null = null;
 let trendTimer = 0;
 
@@ -322,8 +314,7 @@ function drawTrend() {
   const before = trend.length > 7 ? trend[trend.length - 8] : null;
   const change = before ? now.players - before.players : null;
   const pct = now.members ? Math.round((now.players / now.members) * 100) : 0;
-  const today = now.day;
-  const days = state.window === 'week' ? trend.slice(-7) : state.window === 'month' ? trend.filter((d) => d.day.slice(0, 7) === today.slice(0, 7)) : trend;
+  const days = trend;
   const W = 600;
   const H = 150;
   const top = Math.max(1, ...days.map((d) => d.members));
@@ -348,23 +339,10 @@ function drawTrend() {
 }
 
 async function load() {
-  const saved = store.get(WINDOW_KEY) as AdminWindow | null;
-  state = {
-    ...state,
-    window: saved && WINDOWS.some((w) => w.id === saved) ? saved : state.window,
-  };
-  const seg = document.getElementById('adm-window');
-  seg?.querySelectorAll<HTMLButtonElement>('[data-window]').forEach((b) => {
-    b.classList.toggle('on', b.dataset.window === state.window);
-    b.onclick = () => {
-      store.set(WINDOW_KEY, b.dataset.window!);
-      void load().then(drawTrend);
-    };
-  });
   const body = document.getElementById('adm-body');
   if (!body) return;
   body.classList.add('loading');
-  const [data, daily] = await Promise.all([api.adminOverview(requireSession(), state.window).catch(() => null), api.dailyAdmin(requireSession()).catch(() => null)]);
+  const [data, daily] = await Promise.all([api.adminOverview(requireSession(), WINDOW).catch(() => null), api.dailyAdmin(requireSession()).catch(() => null)]);
   state.daily = daily;
   if (!document.getElementById('adm-body')) return; // left the page
   body.classList.remove('loading');
@@ -384,7 +362,6 @@ function draw() {
   const sum = (k: 'members' | 'active' | 'rounds' | 'practice' | 'newMembers') => d.totals?.[k] ?? d.clubs.reduce((a, c) => a + c[k], 0);
   const guests = d.clubs.reduce((a, c) => a + (c.guests ?? 0), 0);
   const many = d.clubs.length > 1;
-  const win = WINDOWS.find((w) => w.id === state.window)!.label.toLowerCase();
   // rounds started and left unfinished, across the members shown (the Unfinished column has them one by one)
   const unfinished = d.members.reduce((a, m) => a + m.unfinished, 0);
   const todo = document.getElementById('adm-todo');
@@ -414,9 +391,9 @@ function draw() {
   body.innerHTML = `
     <section class="adm-card" data-goes="members">
       <div class="adm-head"><h2>Members</h2>${many ? `<div class="adm-chips">${['', ...d.clubs.map((c) => c.name)].map((c) => `<button data-club="${esc(c)}" class="${state.club === c ? 'on' : ''}">${c ? esc(c) : 'All'}</button>`).join('')}</div>` : ''}</div>
-      <p class="adm-sum">${sum('members')} members · ${sum('active')} active ${win === 'all time' ? 'ever' : win === 'month' ? 'this month' : `in the last ${win}`} · ${sum('rounds')} rounds${unfinished ? ` (${unfinished} unfinished)` : ''} · ${sum('practice')} practice sessions${sum('newMembers') ? ` · ${sum('newMembers')} new` : ''}</p>
+      <p class="adm-sum">${sum('members')} members · ${sum('active')} active in the last 7 days · ${sum('rounds')} rounds${unfinished ? ` (${unfinished} unfinished)` : ''} · ${sum('practice')} practice sessions${sum('newMembers') ? ` · ${sum('newMembers')} new` : ''}</p>
       ${memberTable(d.members, many)}
-      <p class="fine">Days: days in the window they opened the club, played or practised. Best: their best round to par in the window. Tap a name for their card.</p>
+      <p class="fine">Under each name, when they were last in. The last 7 days. Days: days they opened the club, played or practised. Rds: rounds posted. Quit: rounds started and left unfinished. Best: their best round to par. Prac: practice sessions. Tap a name for their card.</p>
     </section>
     <section class="adm-card" data-goes="members" id="adm-invites" ${d.invites.length ? '' : 'hidden'}>
       <h2>Invited, not joined yet <small>${d.invites.length}</small></h2>
@@ -431,7 +408,7 @@ function draw() {
               .join('')}</tbody></table></div>`
           : ''
       }
-      <p class="adm-sum">${d.feed.length >= 1000 ? 'The latest 1,000' : `${d.feed.length} ${d.feed.length === 1 ? 'event' : 'events'}`} · ${(WINDOWS.find((w) => w.id === state.window)?.label ?? '').toLowerCase().replace('month', 'this month')}</p>
+      <p class="adm-sum">${d.feed.length >= 1000 ? 'The latest 1,000' : `${d.feed.length} ${d.feed.length === 1 ? 'event' : 'events'}`} in the last 7 days</p>
       ${feed(d, many)}
     </section>`;
   const bars = document.getElementById('adm-daily-bars');
@@ -517,7 +494,7 @@ function drawNeeds() {
   if (!el) return;
   const items: [number, string, Tab, string][] = [
     [needs.feedback, needs.feedback === 1 ? 'piece of feedback' : 'pieces of feedback', 'today', 'adm-feedback-card'],
-    [needs.holes, needs.holes === 1 ? 'hole to review' : 'holes to review', 'members', 'adm-holes'],
+    [needs.holes, needs.holes === 1 ? 'hole to review' : 'holes to review', 'course', 'adm-holes'],
     [needs.unplayed, needs.unplayed === 1 ? 'new member yet to play' : 'new members yet to play', 'members', ''],
     [needs.invites, needs.invites === 1 ? 'invite not taken up' : 'invites not taken up', 'members', 'adm-invites'],
   ];
@@ -566,7 +543,7 @@ function memberTable(all: Members, many: boolean) {
     <tbody>${rows
       .map(
         (m) =>
-          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${nameLink(m.name, m.id)}</b></td>${many ? `<td><small>${esc(m.club)}${m.guestAt?.length ? `<br><span class="muted">guest at ${esc(m.guestAt.join(', '))}</span>` : ''}</small></td>` : ''}<td><small>${ago(m.lastSeen)}</small></td><td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num${m.unfinished ? ' warn' : ''}">${m.unfinished}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td><td class="num">${m.lockers}</td></tr>`,
+          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${nameLink(m.name, m.id)}</b><small class="adm-last">${ago(m.lastSeen)}</small></td>${many ? `<td><small>${esc(m.club)}${m.guestAt?.length ? `<br><span class="muted">guest at ${esc(m.guestAt.join(', '))}</span>` : ''}</small></td>` : ''}<td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num${m.unfinished ? ' warn' : ''}">${m.unfinished}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td></tr>`,
       )
       .join('')}</tbody></table></div>`;
 }
