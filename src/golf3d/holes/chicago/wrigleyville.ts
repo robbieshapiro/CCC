@@ -1,4 +1,5 @@
-// Hole 4, Wrigleyville (par 4, 390 yd): straight up a snowy side street to a green at the foot of Wrigley Field.
+// Hole 4, Wrigleyville (par 4, 390 yd): straight up Clark Street to a green at the foot of Wrigley Field, parked
+// cars along both curbs and a planted median of maples splitting the landing area.
 // Three-flats line both sides (a ball on a roof is gone), the red line's el runs the alley on the left with its trains
 // going by, one corner building pokes out into the street on the right, and the rooftop bleachers look down on the
 // green. The marquee's out by the corner gate.
@@ -31,7 +32,18 @@ const FLATS: [number, number, number, number, boolean][] = [
 const blocks = FLATS.map(([x, y, w, d, top], i) => building(x, y, w, d, 40, i + 60, top ? 'rooftop' : 'flat'));
 const GANGWAY = rect(-54, 238, -30, 292);
 
-const posts: Post[] = [[-46, 30], [-46, 170], [-46, 300], [46, 30], [46, 170], [46, 360]].map(([x, y]) => ({ x, y, r: 0.4, h: 16, look: 'streetlight' as const }));
+// cars parked along both curbs, in play: their sides are walls a ball bounces off
+const CARS: [number, number][] = [[-35, 60], [-35, 110], [-35, 190], [-35, 300], [-35, 380], [35, 80], [35, 150], [35, 230], [35, 340], [35, 420]];
+const carWalls = CARS.flatMap(([x, y]) => {
+  const c = [{ x: x - 2.2, y: y - 4.5 }, { x: x + 2.2, y: y - 4.5 }, { x: x + 2.2, y: y + 4.5 }, { x: x - 2.2, y: y + 4.5 }];
+  return c.map((a, i) => ({ a, b: c[(i + 1) % 4], h: 5, look: 'hidden' as const }));
+});
+// a planted median down the middle of the street, maples on a raised bed, splitting the landing area in two
+const MEDIAN = rect(-6, 200, 6, 290);
+const posts: Post[] = [
+  ...[[-46, 30], [-46, 170], [-46, 300], [46, 30], [46, 170], [46, 360]].map(([x, y]) => ({ x, y, r: 0.4, h: 16, look: 'streetlight' as const })),
+  ...[210, 245, 280].map((y, i) => ({ x: 0, y, r: 6, h: 24 + i * 3, soft: true, look: 'maple' as const })),
+];
 
 export const wrigleyville: Hole = {
   id: 'wrigleyville',
@@ -45,7 +57,7 @@ export const wrigleyville: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.03,
   yards: 390,
-  blurb: 'Up a snowy side street to the foot of Wrigley Field. Three-flats both sides, the red line rattling past on the left.',
+  blurb: 'Up Clark Street to the foot of Wrigley Field. Parked cars both sides, a planted median, the red line rattling past.',
   tee: { x: 0, y: 0 },
   cup: { x: 8, y: 522 },
   pins: [{ x: 8, y: 522 }, { x: -6, y: 514 }, { x: 22, y: 526 }, { x: 4, y: 532 }],
@@ -65,8 +77,10 @@ export const wrigleyville: Hole = {
   regions: [
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the street: a strip of turf down the middle, sidewalks either side
-    { poly: blob(-4, 250, 28, 200, 1, 0.04), surface: 'fairway' },
-    { poly: blob(4, 460, 26, 26, 2, 0.06), surface: 'fairway' },
+    // the street's turf: narrow, split by the median
+    { poly: blob(-2, 250, 22, 200, 1, 0.04), surface: 'fairway' },
+    { poly: blob(4, 460, 22, 24, 2, 0.06), surface: 'fairway' },
+    { poly: MEDIAN, surface: 'rough' },
     { poly: rect(-54, -40, -42, 460), surface: 'path' },
     { poly: rect(42, -40, 54, 460), surface: 'path' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
@@ -79,12 +93,14 @@ export const wrigleyville: Hole = {
     // the street's crown: a little higher down the middle, so a ball drifts to the gutters
     { kind: 'ramp', x0: -54, y0: -50, x1: 0, y1: 460, axis: 'x', h0: -0.8, h1: 0, op: 'add' },
     { kind: 'ramp', x0: 0, y0: -50, x1: 54, y1: 460, axis: 'x', h0: 0, h1: -0.8, op: 'add' },
+    // the median's raised bed
+    { kind: 'box', x0: -6, y0: 200, x1: 6, y1: 290, h: 1.2, edge: 1, op: 'add' },
     // the gangway's apron, tipping back toward the street
     { kind: 'ramp', x0: -54, y0: 238, x1: -30, y1: 292, axis: 'x', h0: 1.4, h1: 0, op: 'add' },
     ...chiGreen(GREEN, LAND, [0.5, -0.5], [[-8, -5, 6, 0.25], [9, 5, 5, -0.2]]),
     ...traps.flatMap((t) => t.pieces),
   ],
-  walls: blocks.flatMap((b) => b.walls),
+  walls: [...blocks.flatMap((b) => b.walls), ...carWalls],
   roofs: blocks.map((b) => b.roof),
   posts,
   movers: [],
@@ -100,6 +116,7 @@ export const wrigleyville: Hole = {
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     ...blocks.map((b) => b.decor),
+    ...CARS.map(([x, y]) => ({ kind: 'car', x, y, rot: Math.PI / 2 + (x < 0 ? Math.PI : 0) })),
     { kind: 'el', x: -112, y: 260, rot: Math.PI / 2, scale: 600, label: 'red' },
     { kind: 'wrigley', x: 8, y: 618, rot: 0 },
     { kind: 'walkers', x: -48, y: 220, rot: Math.PI / 2, scale: 420, size: [12, 0, 0] },

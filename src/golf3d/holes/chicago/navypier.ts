@@ -13,7 +13,10 @@ import { CHI_TURF, chiGreen } from './common';
 const DECK = 6;
 const GREEN = { x: 0, y: 770, rx: 24, ry: 18 };
 const traps = [greenside(GREEN, -34, 764, 8, 9, 1, 3, 0), greenside(GREEN, 32, 790, 8, 7, 2, 3, 0)];
-const HALL = building(48, 430, 30, 160, 34, 90, 'flat');
+const HALL = building(48, 250, 30, 160, 34, 90, 'flat');
+// a boat slip cut into the pier from the right where the second shot wants to land: carry it, or squeeze past on the
+// boardwalk side
+const SLIP = { x0: -14, y0: 400, x1: 80, y1: 446 };
 const BOARDWALK = band([{ x: -52, y: 120 }, { x: -52, y: 700 }], 4);
 const WHEEL = { x: 46, y: 610 };
 
@@ -53,7 +56,9 @@ export const navypier: Hole = {
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the lawn at the foot of the pier, then the pier itself, its boardwalk, and the end
     { poly: blob(0, 40, 60, 40, 1, 0.05), surface: 'fairway' },
-    { poly: rect(-30, 100, 30, 740), surface: 'fairway' },
+    // a narrow strip down the pier, broken by the slip
+    { poly: rect(-20, 100, 20, SLIP.y0), surface: 'fairway' },
+    { poly: rect(-20, SLIP.y1, 20, 740), surface: 'fairway' },
     { poly: BOARDWALK, surface: 'wood' },
     { poly: rect(56, 100, 66, 740), surface: 'stone' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
@@ -67,6 +72,7 @@ export const navypier: Hole = {
     { kind: 'box', x0: -120, y0: -50, x1: 120, y1: 90, h: DECK, edge: 1, op: 'set' },
     { kind: 'box', x0: -58, y0: 80, x1: 68, y1: 740, h: DECK, edge: 1, op: 'set' },
     { kind: 'box', x0: -60, y0: 730, x1: 60, y1: 808, h: DECK, edge: 1, op: 'set' },
+    { kind: 'box', x0: SLIP.x0, y0: SLIP.y0, x1: SLIP.x1, y1: SLIP.y1, h: -6, edge: 1, op: 'set' },
     ...chiGreen(GREEN, DECK, [0.4, 0.5], [[-8, -6, 7, 0.25], [10, 6, 6, -0.2]]),
     ...traps.flatMap((t) => t.pieces),
   ],
