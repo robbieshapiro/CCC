@@ -1,4 +1,5 @@
-// Hole 1, The Lakefront (par 4, 420 yd): north along Lake Michigan with the whole skyline ahead. Lake Shore Drive and its
+// Hole 1, The Lakefront (par 4, 420 yd): a beach hole, north along Lake Michigan with the whole skyline ahead. Off the
+// fairways and a sliver of rough it's all sand, down to the water and up to the street. Lake Shore Drive and its
 // traffic are out of bounds all down the left, maples line the lakefront trail, and the lake runs the whole right side.
 // Halfway up, the harbour cuts deep into the right of the fairway, so the hole bends left round it and back right to a
 // green out on a point, water right and long.
@@ -37,7 +38,7 @@ export const lakefront: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.03,
   yards: 420,
-  blurb: 'North along Lake Michigan. The harbour bites into the right halfway up; Lake Shore Drive is out of bounds left.',
+  blurb: 'A beach hole on Lake Michigan. Miss the fairway and you are in the sand; the harbour bites in right, the Drive is out left.',
   tee: { x: 0, y: 0 },
   cup: { x: 38, y: 570 },
   pins: [{ x: 38, y: 570 }, { x: 24, y: 562 }, { x: 52, y: 574 }, { x: 34, y: 580 }],
@@ -49,8 +50,15 @@ export const lakefront: Hole = {
     { x: 166, y: 656 },
     { x: -60, y: 656 },
   ],
-  base: 'rough',
+  // a beach: everything off the turf is sand (it plays as a waste bunker), down to the water and up to the street
+  base: 'sand',
   regions: [
+    // a sliver of rough round the tee, the fairways and the green, then the beach
+    { poly: rect(-18, -18, 18, 18), surface: 'rough' },
+    { poly: blob(-12, 190, 28, 116, 1, 0.05), surface: 'rough' },
+    { poly: blob(-18, 400, 22, 66, 2, 0.06), surface: 'rough' },
+    { poly: blob(14, 500, 32, 28, 3, 0.06), surface: 'rough' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 10, GREEN.ry + 10, 3, 0.06), surface: 'rough' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // a narrow first leg up the left-centre, squeezed between the trail's maples and the harbour
     { poly: blob(-12, 190, 22, 110, 1, 0.05), surface: 'fairway' },

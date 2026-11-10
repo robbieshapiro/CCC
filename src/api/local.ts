@@ -742,7 +742,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const year = Number(now.slice(0, 4));
     const best = new Map<string, Map<string, number>>(); // week -> person -> best to par
     for (const r of db.rounds) {
-      if (r.month < '2026-11-08' || r.month.slice(0, 4) !== String(year)) continue;
+      if (r.month < '2026-10' || r.month.slice(0, 4) !== String(year)) continue; // the season counts from October
       const w = best.get(r.month) ?? new Map<string, number>();
       w.set(r.playerId, Math.min(w.get(r.playerId) ?? Infinity, r.total - r.par));
       best.set(r.month, w);
@@ -768,7 +768,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     }
     // career earnings, as on each person's own card
     for (const row of rows.values()) row.earnings = (await this.golferCard(session, row.playerId))?.earnings ?? 0;
-    return { year, standings: [...rows.values()].sort((a, b) => b.points + b.projected - (a.points + a.projected) || b.points - a.points || a.name.localeCompare(b.name)) };
+    return { year, standings: [...rows.values()].sort((a, b) => b.points - a.points || b.projected - a.projected || a.name.localeCompare(b.name)) };
   },
 
   // one golfer's card from any club: their home club's snapshot of them, and their Open weeks this season
@@ -785,7 +785,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const now = periodOf(todayInGameTz());
     const same = (x: DbPlayer) => x.name.toLowerCase() === home.name.toLowerCase() && x.pin === home.pin;
     const weeks: GolferWeek[] = [];
-    for (const week of [...new Set(db.rounds.filter((r) => r.month >= '2026-11-08' && r.month.slice(0, 4) === now.slice(0, 4)).map((r) => r.month))].sort().reverse()) {
+    for (const week of [...new Set(db.rounds.filter((r) => r.month >= '2026-10' && r.month.slice(0, 4) === now.slice(0, 4)).map((r) => r.month))].sort().reverse()) {
       const best = new Map<string, DbRound>();
       for (const r of db.rounds.filter((x) => x.month === week)) {
         const who = homeOf(db, db.players.find((x) => x.id === r.playerId)!).id;
