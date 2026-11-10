@@ -26,7 +26,7 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
   - start it with `su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/tmp/pg/data -o '-p 5433 -k /var/tmp/pg' -l /var/tmp/pg/log start"`;
   - connect with `PGOPTIONS='-c search_path=public,extensions' psql -h /var/tmp/pg -p 5433`;
   - pipe files in with `cat file | su postgres -c "psql ..."`, because the postgres user can't read the scratchpad.
-- **Live SQL approvals can time out.** If the Supabase `apply_migration` prompt times out, send Robbie the SQL file to paste in the SQL editor, then verify it with a read-only select.
+- **Live SQL: use the `live-sql` skill** (`.claude/skills/live-sql/`) for anything touching the live database: applying a PR's SQL, one-off data fixes, and reading live data. Writes need Robbie's approval in the app within about 60 seconds; if the prompt times out, nothing ran: stop, tell him, and either resend once when he says go or give him the SQL to paste.
 - **The Architect can review a PR.** Fire its scheduled task (`fire_trigger`) with extra text saying "review, don't build", naming the PR and the checks to run. It posts one comment on the PR, and takes 30 to 60 minutes.
 
 ## Conventions
@@ -41,6 +41,8 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
 - Words members see: short, warm, plain. No em dashes.
 
 ## Applying SQL (since Nov 4, 2026)
+
+The `live-sql` skill has the full steps; the short version:
 
 Claude applies database changes itself through the Supabase connector (project "CCC", id `xixfekrwgyknbzttyrtp`); Robbie approves each live run in the tool's prompt. Robbie no longer pastes SQL.
 
