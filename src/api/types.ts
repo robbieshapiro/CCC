@@ -176,15 +176,15 @@ export type AdminOverview = {
   // across all the clubs, each person once (a guest in two clubs is one member)
   totals?: { members: number; active: number; rounds: number; practice: number; newMembers: number };
   // one row a person, under their home club; guestAt: the other clubs they play in as a guest
-  members: { club: string; guestAt?: string[]; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; unfinished: number; best: number | null; practice: number; lockers: number }[];
-  feed: { at: string; kind: 'round' | 'quit' | 'practice' | 'join' | 'feedback' | 'classic'; club: string; name: string; course: string | null; total: number | null; par: number | null; what: string | null; shots: number | null }[];
+  members: { id?: string; club: string; guestAt?: string[]; name: string; joined: string; lastSeen: string | null; days: number; rounds: number; unfinished: number; best: number | null; practice: number; lockers: number }[];
+  feed: { id?: string | null; at: string; kind: 'round' | 'quit' | 'practice' | 'join' | 'feedback' | 'classic'; club: string; name: string; course: string | null; total: number | null; par: number | null; what: string | null; shots: number | null }[];
   feedback: { id: number; club: string; from: string | null; body: string; context: string | null; createdAt: string }[];
   invites: { id: string; club: string; name: string; code: string; createdAt: string }[];
 };
 // The Daily Shot: one shot a day for everyone, three tries, best counts (see daily.ts)
 // The Committee Room's Today (admin_today): everyone in today, each person once, and today's feed
-export type AdminTodayPerson = { name: string; club: string; last: string | null; card: 'in' | 'going' | null; toPar: number | null; total: number | null; hole: number | null; practice: number; daily: boolean; dailyFt: number | null };
-export type AdminTodayEvent = { at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback' | 'classic'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
+export type AdminTodayPerson = { id?: string; name: string; club: string; last: string | null; card: 'in' | 'going' | null; toPar: number | null; total: number | null; hole: number | null; practice: number; daily: boolean; dailyFt: number | null };
+export type AdminTodayEvent = { id?: string; at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback' | 'classic'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
 export type AdminToday = { today: string; in: number; cardsIn: number; onCourse: number; people: AdminTodayPerson[]; feed: AdminTodayEvent[] };
 export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: boolean };
 export type DailyRow = { playerId?: string; name: string; club: string; ft: number | null; holed: boolean; holedTry?: number | null; tries: number; mine: boolean };

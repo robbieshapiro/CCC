@@ -1328,25 +1328,25 @@ begin
     ),
     feed as (
       select * from (
-        select r.created_at as at, 'round' as kind, g.name as club, p.name, r.course, r.total, r.par, null::text as what, null::int as shots
+        select r.created_at as at, 'round' as kind, g.name as club, p.name, r.course, r.total, r.par, null::text as what, null::int as shots, p.id as pid
           from rounds r join players p on p.id = r.player_id join g on g.id = r.group_id where p.role <> 'admin'
         union all
-        select s.started_at, 'practice', g.name, p.name, null, null, null, s.kind, s.shots
+        select s.started_at, 'practice', g.name, p.name, null, null, null, s.kind, s.shots, p.id
           from practice_sessions s join players p on p.id = s.player_id join g on g.id = s.group_id where p.role <> 'admin'
         union all
-        select p.created_at, 'join', g.name, p.name, null, null, null, case when (home_of(p)).id <> p.id then 'guest' end, null
+        select p.created_at, 'join', g.name, p.name, null, null, null, case when (home_of(p)).id <> p.id then 'guest' end, null, p.id
           from players p join g on g.id = p.group_id where p.role <> 'admin'
         union all
         -- a round started and not finished (shots: the hole they got to)
-        select rs.started_at, 'quit', g.name, p.name, rs.course, null, null, null, rs.hole
+        select rs.started_at, 'quit', g.name, p.name, rs.course, null, null, null, rs.hole, p.id
           from round_starts rs join players p on p.id = rs.player_id join g on g.id = rs.group_id
           where p.role <> 'admin' and round_abandoned(rs)
         union all
         -- free play on a classic course (the Highlands, the Caldera): it counts only for the course record
-        select f.created_at, 'classic', g.name, p.name, f.course, f.total, f.par, null, null
+        select f.created_at, 'classic', g.name, p.name, f.course, f.total, f.par, null, null, p.id
           from free_rounds f join players p on p.id = f.player_id join g on g.id = p.group_id where p.role <> 'admin'
         union all
-        select f.created_at, 'feedback', g.name, coalesce(p.name, 'A member'), null, null, null, left(f.body, 80), null
+        select f.created_at, 'feedback', g.name, coalesce(p.name, 'A member'), null, null, null, left(f.body, 80), null, p.id
           from feedback f join g on g.id = f.group_id left join players p on p.id = f.player_id
       ) e where at >= since order by at desc limit 1000
     )
@@ -1369,13 +1369,13 @@ begin
         'practice', (select coalesce(sum(practice), 0) from people),
         'newMembers', (select count(*) from m where m.id = m.who and m.created_at >= since)),
       'members', coalesce((select json_agg(json_build_object(
-          'club', coalesce(s.hclub, s.club), 'guestAt', s.guest_at, 'name', coalesce(s.hname, s.name), 'joined', s.created_at,
+          'id', s.who, 'club', coalesce(s.hclub, s.club), 'guestAt', s.guest_at, 'name', coalesce(s.hname, s.name), 'joined', s.created_at,
           'lastSeen', s.last_seen, 'days', s.days, 'rounds', s.rounds, 'unfinished', s.unfinished, 'best', s.best,
           'practice', s.practice, 'lockers', s.lockers
         ) order by s.last_seen desc nulls last, s.name) from people s), '[]'),
       'feed', coalesce((select json_agg(json_build_object(
           'at', e.at, 'kind', e.kind, 'club', e.club, 'name', e.name, 'course', e.course, 'total', e.total,
-          'par', e.par, 'what', e.what, 'shots', e.shots
+          'par', e.par, 'what', e.what, 'shots', e.shots, 'id', e.pid
         ) order by e.at desc) from feed e), '[]'),
       'feedback', coalesce((select json_agg(json_build_object(
           'id', f.id, 'club', g.name, 'from', p.name, 'body', f.body, 'context', f.context, 'createdAt', f.created_at
@@ -1506,10 +1506,10 @@ begin
       'in', (select count(*) from people),
       'cardsIn', (select count(*) from people where card = 'in'),
       'onCourse', (select count(*) from people where card = 'going'),
-      'people', coalesce((select json_agg(json_build_object('name', p.name, 'club', p.club, 'last', p.last, 'card', p.card,
+      'people', coalesce((select json_agg(json_build_object('id', p.who, 'name', p.name, 'club', p.club, 'last', p.last, 'card', p.card,
           'toPar', p.to_par, 'total', p.total, 'hole', p.hole, 'practice', p.practice, 'daily', p.daily, 'dailyFt', p.daily_ft)
         order by p.last desc nulls last, p.name) from people p), '[]'),
-      'feed', coalesce((select json_agg(json_build_object('at', e.at, 'kind', e.kind, 'name', e.name, 'club', e.club,
+      'feed', coalesce((select json_agg(json_build_object('id', e.who, 'at', e.at, 'kind', e.kind, 'name', e.name, 'club', e.club,
           'what', e.course, 'total', e.total, 'par', e.par, 'n', e.n, 'ft', e.ft) order by e.at desc) from ev e), '[]')
     )
   );
