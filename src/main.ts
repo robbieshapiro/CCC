@@ -81,7 +81,7 @@ async function router() {
     if (page === 'round') return arg === 'practice' ? round(s, { course: courseFor(s.month), practice: true }) : round(s);
     if (page === 'daily') return dailyRound(s);
     if (page === 'playoff') return playoff(s);
-    if (page === 'bar') return arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');
+    if (page === 'bar') return arg === 'drive' || arg === 'members' || arg === 'midway' ? barRound(s, arg) : clubhouse(s, 'bar');
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     // the old Clubs tab became the Season
     if (page === 'clubhouse') return isAboutPart(arg) ? clubhouse(s, 'about', arg) : clubhouse(s, arg === 'clubs' ? 'season' : isClubhouseTab(arg) ? arg : 'members', extra);

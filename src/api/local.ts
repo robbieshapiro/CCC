@@ -18,7 +18,7 @@ type DbRound = Round & { groupId: string; shots?: RoundShot[] };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[] };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[] };
 
 const KEY = 'ccc-local-db';
 
@@ -1243,7 +1243,10 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
   async submitBar(session, game, score) {
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
-    (db.bar ??= []).push({ playerId: me.id, game, week: weekOf(todayInGameTz()), score });
+    const today = todayInGameTz();
+    if (game === 'midway' && (db.bar ?? []).some((x) => x.game === 'midway' && x.playerId === me.id && x.at && todayInGameTz(new Date(x.at)) === today))
+      throw new Error('Your Midway round for today is in. Back tomorrow.');
+    (db.bar ??= []).push({ playerId: me.id, game, week: weekOf(today), score, at: new Date().toISOString() });
     save(db);
   },
 
@@ -1260,7 +1263,9 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       if (!b || r.score > b.score) best.set(key(p), { playerId: p.id, name: p.name, score: r.score });
     }
     const board = [...best.entries()].map(([k, v]) => ({ ...v, mine: k === key(me) })).sort((a, b) => b.score - a.score);
-    return { week, board, mine: board.find((r) => r.mine)?.score ?? null, players: board.length };
+    const home = homeOf(db, me);
+    const playedToday = (db.bar ?? []).some((x) => x.game === game && x.playerId === home.id && !!x.at && todayInGameTz(new Date(x.at)) === todayInGameTz());
+    return { week, board, mine: board.find((r) => r.mine)?.score ?? null, players: board.length, playedToday };
   },
 
   async dailyAdmin(session): Promise<DailyDay[]> {

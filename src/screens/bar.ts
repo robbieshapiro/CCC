@@ -30,6 +30,7 @@ export function barPane(snap: Snapshot) {
       </section>
       <div class="bar-games">
         <a class="bar-game" href="#/daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
+        <a class="bar-game midway" href="#/bar/midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game members" href="#/bar/members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
@@ -40,11 +41,12 @@ export function barPane(snap: Snapshot) {
 export async function fillBar(snap: Snapshot) {
   const s = requireSession();
   // (Hollow Hills mini golf is closed for now: its course and code stay, ready to come back)
-  const [daily, drive, members, course] = await Promise.all([
+  const [daily, drive, members, course, midway] = await Promise.all([
     api.dailyState(s, snap.today).catch(() => null as DailyState | null),
     api.barBoard(s, 'drive').catch(() => null as BarBoard | null),
     api.barBoard(s, 'members').catch(() => null as BarBoard | null),
     api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => [] as MembersHole[]),
+    api.barBoard(s, 'midway').catch(() => null as BarBoard | null),
   ]);
   // the Members' Course: how many holes this week, and until there are any, a way to build the first
   const card = document.querySelector<HTMLAnchorElement>('[data-members]');
@@ -63,29 +65,31 @@ export async function fillBar(snap: Snapshot) {
     const best = bestTry(daily.mine);
     put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ playerId: r.playerId, name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
   }
-  for (const [game, b] of [['drive', drive], ['members', members]] as [BarGame, BarBoard | null][]) {
+  for (const [game, b] of [['drive', drive], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
-    put(game, b.mine === null ? 'Not played this week' : `You: ${scoreLabel(game, b.mine)}`, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
+    const today = game === 'midway' ? (b.playedToday ? " · today's round is in" : ' · today’s round is waiting') : '';
+    put(game, (b.mine === null ? 'Not played this week' : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
   }
 }
 
 // after a go: how it went, the week's board, and again or back to the bar
-export async function barSummary(game: BarGame, score: number | null, again: () => void, back: () => void) {
+export async function barSummary(game: BarGame, score: number | null, again: () => void, back: () => void, fun = false) {
   const b = await api.barBoard(requireSession(), game).catch(() => null);
   const sheet = document.createElement('div');
   sheet.className = 'practice-notes daily-summary';
   sheet.innerHTML = `
     <div class="notes-card">
       <div class="notes-body">
-        <p class="eyebrow">${gameName(game)} · this week</p>
+        <p class="eyebrow">${gameName(game)} · ${fun ? 'for fun' : 'this week'}</p>
         <h2>${score === null ? 'No score' : esc(scoreLabel(game, score))}</h2>
+        ${game === 'midway' ? `<p class="fine">${fun ? "Just for fun: today's round is already in. Back tomorrow for another that counts." : 'That was today’s round. Any more today are for fun.'}</p>` : ''}
         ${b && b.mine !== null ? `<p>Your best this week: <b>${esc(scoreLabel(game, b.mine))}</b></p>` : ''}
         ${b ? `<ol class="daily-board">${b.board
           .slice(0, 10)
           .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span><b>${esc(r.name)}</b><small></small><em>${esc(scoreLabel(game, r.score))}</em></li>`)
           .join('')}</ol>` : ''}
       </div>
-      <div class="notes-foot daily-foot"><button class="btn" data-again>Play again</button><button class="btn ghost" data-back>Back to the bar</button></div>
+      <div class="notes-foot daily-foot"><button class="btn" data-again>${game === 'midway' ? 'Again, for fun' : 'Play again'}</button><button class="btn ghost" data-back>Back to the bar</button></div>
     </div>`;
   document.body.appendChild(sheet);
   sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = () => {

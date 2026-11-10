@@ -1943,25 +1943,32 @@ grant execute on function daily_admin(uuid) to anon;
 create table if not exists bar_scores (
   id bigserial primary key,
   player_id uuid not null references players on delete cascade,
-  game text not null check (game in ('putting', 'drive', 'minigolf', 'members')),
+  game text not null check (game in ('putting', 'drive', 'minigolf', 'members', 'midway')),
   week date not null,
   score numeric(8, 1) not null,
   created_at timestamptz not null default now()
 );
 alter table bar_scores enable row level security;
 create index if not exists bar_scores_week on bar_scores (game, week);
+-- the games on the wall (the Midway joined on Nov 10)
 alter table bar_scores drop constraint if exists bar_scores_game_check;
-alter table bar_scores add constraint bar_scores_game_check check (game in ('putting', 'drive', 'minigolf', 'members'));
+alter table bar_scores add constraint bar_scores_game_check check (game in ('putting', 'drive', 'minigolf', 'members', 'midway'));
 
 create or replace function submit_bar(p_token uuid, p_game text, p_score numeric) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token));
 begin
-  if p_game not in ('minigolf', 'drive', 'members') then raise exception 'No such game.'; end if;
-  -- a long drive is 0 to 450 yd; mini golf and the Members' Course are minus the strokes (up to nine holes)
+  if p_game not in ('minigolf', 'drive', 'members', 'midway') then raise exception 'No such game.'; end if;
+  -- a long drive is 0 to 450 yd; mini golf, the Members' Course and the Midway are minus the strokes
   if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'minigolf' and p_score not between -60 and -6)
-    or (p_game = 'members' and p_score not between -90 and -1) then
+    or (p_game = 'members' and p_score not between -90 and -1) or (p_game = 'midway' and p_score not between -40 and -3) then
     raise exception 'That score doesn''t look right.';
+  end if;
+  -- the Midway: one counting round a day (any more are for fun, and never sent)
+  if p_game = 'midway' and exists (select 1 from bar_scores b join players p on p.id = b.player_id
+      where b.game = 'midway' and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash
+        and (b.created_at at time zone 'America/New_York')::date = game_today()) then
+    raise exception 'Your Midway round for today is in. Back tomorrow.';
   end if;
   insert into bar_scores (player_id, game, week, score)
     values (me.id, p_game, date_trunc('week', now() at time zone 'America/New_York')::date, p_score);
@@ -1985,7 +1992,11 @@ begin
       'board', coalesce((select json_agg(json_build_object('playerId', pe.home_id, 'name', pe.name, 'score', b.score, 'mine', b.k = lower(me.name) and b.h = me.pin_hash)
         order by b.score desc, b.first_at) from best b join people pe on pe.k = b.k and pe.h = b.h), '[]'),
       'mine', (select score from best where k = lower(me.name) and h = me.pin_hash),
-      'players', (select count(*) from best)
+      'players', (select count(*) from best),
+      -- whether you've played this game today (the Midway counts one round a day)
+      'playedToday', exists (select 1 from bar_scores b join players p on p.id = b.player_id
+        where b.game = p_game and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash
+          and (b.created_at at time zone 'America/New_York')::date = game_today())
     )
   );
 end $$;
