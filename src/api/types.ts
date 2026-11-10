@@ -218,6 +218,7 @@ export type CardProgress = { scores: number[]; shots: number; spots: (Spot | nul
 // club/clubId: set when a card is going at another of the member's clubs, or all of today's cards are in there (two a day per person)
 // done: all of today's cards are in; n: how many are in; of: cards a day; best: the better card's to-par so far
 export type CardToday = CardProgress & { done: boolean; n?: number; of?: number; best?: number | null; id: number | null; course: string | null; club?: string | null; clubId?: string | null };
+export type PowerupState = { locker: { id: number; kind: string }[] };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -232,6 +233,10 @@ export interface Api {
   recordDesignPlay(session: Session, design: number): Promise<boolean>;
   saveAvatar(session: Session, avatar: Avatar): Promise<void>;
   buyItem(session: Session, item: string): Promise<void>; // the Pro Shop: checks rank and balance, then it's yours
+  // the Midway's Prize Counter: buy a power-up (checks the balance and the locker), see your locker, use one on a tee
+  buyPowerup(session: Session, kind: string): Promise<void>;
+  powerupState(session: Session): Promise<PowerupState>;
+  usePowerup(session: Session, id: number): Promise<string>;
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
   listInvites(session: Session): Promise<Invite[]>;
   deleteInvite(session: Session, id: string): Promise<void>;

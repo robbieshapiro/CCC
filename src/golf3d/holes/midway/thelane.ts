@@ -42,6 +42,8 @@ export const thelane: Hole = {
   ],
   base: 'rough',
   wallBounce: 0.9,
+  // the Express Lane (a power-up): a tee shot that finishes in this circle goes to the front of the green
+  express: { x: 0, y: 236, r: 12, to: { x: 92, y: 416 } },
   regions: [
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the lane itself, then the turn at the wheel
@@ -81,6 +83,7 @@ export const thelane: Hole = {
     { kind: 'teebox', x: 0, y: 0 },
     ...BOOTHS.map(([x, y, w]) => ({ kind: 'booth', x, y, rot: x < 0 ? Math.PI / 2 : -Math.PI / 2, scale: w })),
     { kind: 'ferris', x: WHEEL.x, y: WHEEL.y, rot: Math.PI / 2 },
+    { kind: 'lanering', x: 0, y: 236, scale: 12 },
     { kind: 'bigtop', x: -110, y: 420, scale: 30 },
   ],
 };

@@ -1856,3 +1856,16 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .adm-members tr.group th { padding-bottom: 0; font-size: 10px; color: var(--gold); border-bottom: 0; }
 .adm-members .all { border-left: 1px solid var(--line); }
 @media (max-width: 520px) { .adm-members th, .adm-members td { padding-inline: 3px; font-size: 13px; } .adm-members th { font-size: 10px; letter-spacing: 0.02em; } .adm-members td b { font-size: 14px; } }
+
+/* the Midway's Prize Counter and the tee-time power-up pick */
+.prize-sheet .notes-body { display: grid; gap: 10px; }
+.prize-bank { margin: 0; color: var(--muted); }
+.prize-bank b { color: var(--green); font-family: var(--serif); font-size: 20px; }
+.prize-note { margin: 0; padding: 8px 10px; border-radius: 6px; background: #fbf4e0; font-size: 14px; }
+.prize-sheet .prize-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.prize-list li { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.prize-list li i { font-style: normal; font-size: 24px; text-align: center; }
+.prize-list li b { display: block; font-family: var(--serif); font-size: 17px; color: var(--green); }
+.prize-list li span { font-size: 13px; color: var(--muted); }
+.prize-sheet .notes-foot { display: flex; justify-content: flex-end; padding: 0; }
+button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer; background: none; }

@@ -708,7 +708,7 @@ begin
         -- the money list and the Pro Shop follow the person across their clubs
         'earnings', coalesce(pay.earned, 0) + (person_away_earned(pl)->>'earned')::int,
         'top10s', coalesce(pay.top10s, 0) + (person_away_earned(pl)->>'top10s')::int,
-        'spent', (select coalesce(sum(price), 0) from purchases where player_id in (select person_seats(pl))),
+        'spent', person_spent(pl),
         'owned', (select coalesce(json_agg(distinct item), '[]') from purchases where player_id in (select person_seats(pl))),
         -- the side money (club bonuses): counts toward career earnings and rank, not the board's purse column
         'bonus', person_bonus(pl),
@@ -2416,7 +2416,7 @@ begin
     from (select distinct s.group_id from players s where s.id in (select person_seats(me))) g
     cross join lateral period_payouts(g.group_id) pp where pp.player_id in (select person_seats(me));
   earned := earned + (person_bonus(me)->>'total')::int;
-  select coalesce(sum(price), 0) into spent from purchases where player_id in (select person_seats(me));
+  spent := person_spent(me);
   -- the Club Legend rack also needs a weekly title, at any of their clubs
   if it.rack = 'legend' and not exists (
     select 1 from (select distinct s.group_id from players s where s.id in (select person_seats(me))) g
@@ -2431,6 +2431,78 @@ begin
   insert into purchases (player_id, item, price) values (me.id, p_item, it.price);
 end $$;
 grant execute on function buy_item(uuid, text) to anon;
+
+-- The Midway's power-ups (Eli's game, from Nov 10): bought at the Prize Counter with the same money as the Pro Shop,
+-- held in your locker (three at most), and used on a Midway tee, one a hole. The Magnet: a ball that stops on the green
+-- within 6 ft drops. The Express Lane: a tee shot into the painted circle on the Lane goes straight to the front of the
+-- green. (Curses, the Pickpocket, the Prenup and Pass It On come next; the ledger already has room for them.)
+create table if not exists powerups (
+  id bigserial primary key,
+  owner_id uuid not null references players on delete cascade,
+  kind text not null,
+  price int not null default 0,
+  status text not null default 'held' check (status in ('held', 'used', 'stolen', 'blocked', 'pending', 'landed', 'passed')),
+  from_id uuid references players on delete set null,
+  target_id uuid references players on delete set null,
+  created_at timestamptz not null default now(),
+  used_at timestamptz
+);
+alter table powerups enable row level security;
+create index if not exists powerups_owner on powerups (owner_id, status);
+
+-- what each costs at the Prize Counter (null: not for sale)
+create or replace function powerup_price(p_kind text) returns int language sql immutable as $$
+  select case p_kind when 'magnet' then 400 when 'express' then 500 end
+$$;
+
+-- what a person has spent, across their seats: the Pro Shop and the Prize Counter
+create or replace function person_spent(me players) returns int
+language sql stable security definer set search_path = public, extensions as $$
+  select (coalesce((select sum(price) from purchases where player_id in (select person_seats(me))), 0)
+    + coalesce((select sum(price) from powerups where owner_id in (select person_seats(me))), 0))::int
+$$;
+revoke all on function person_spent(players) from public, anon, authenticated;
+
+create or replace function buy_powerup(p_token uuid, p_kind text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); cost int := powerup_price(p_kind); earned int;
+begin
+  if cost is null then raise exception 'That isn''t at the Prize Counter.'; end if;
+  if (select count(*) from powerups where owner_id in (select person_seats(me)) and status = 'held') >= 3 then
+    raise exception 'Your locker holds three. Use one first.';
+  end if;
+  select coalesce(sum(pp.payout), 0) into earned
+    from (select distinct s.group_id from players s where s.id in (select person_seats(me))) g
+    cross join lateral period_payouts(g.group_id) pp where pp.player_id in (select person_seats(me));
+  earned := earned + (person_bonus(me)->>'total')::int;
+  if earned - person_spent(me) < cost then raise exception 'Not enough in the bank for that.'; end if;
+  insert into powerups (owner_id, kind, price) values (me.id, p_kind, cost);
+end $$;
+grant execute on function buy_powerup(uuid, text) to anon;
+
+-- your locker at the Midway
+create or replace function powerup_state(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token));
+begin
+  return json_build_object(
+    'locker', coalesce((select json_agg(json_build_object('id', pu.id, 'kind', pu.kind) order by pu.created_at)
+      from powerups pu where pu.owner_id in (select person_seats(me)) and pu.status = 'held'), '[]'));
+end $$;
+grant execute on function powerup_state(uuid) to anon;
+
+-- use one from your locker on a Midway tee: it's spent whatever happens on the hole
+create or replace function use_powerup(p_token uuid, p_id bigint) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); k text;
+begin
+  update powerups set status = 'used', used_at = now()
+    where id = p_id and owner_id in (select person_seats(me)) and status = 'held'
+    returning kind into k;
+  if k is null then raise exception 'That power-up isn''t in your locker.'; end if;
+  return k;
+end $$;
+grant execute on function use_powerup(uuid, bigint) to anon;
 
 
 -- Kudos and chirps: tap another member out on the course, see their card, and send them a kudos or a chirp (one of

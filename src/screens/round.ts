@@ -30,6 +30,7 @@ import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
 import { HOLLOW_HILLS } from '../golf3d/minigolf';
 import { MIDWAY } from '../golf3d/midway';
+import { pickPower } from './prizecounter';
 import { buildHole } from '../designer/hole';
 import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
@@ -718,13 +719,27 @@ export function barRound(snap: Snapshot, kind: BarGame) {
       const holes = kind === 'minigolf' ? HOLLOW_HILLS : kind === 'midway' ? MIDWAY : await membersHoles();
       // the Midway counts one round a day: after that it's for fun, and nothing is sent
       const fun = kind === 'midway' && !!(await api.barBoard(requireSession(), 'midway').catch(() => null))?.playedToday;
+      // the day's counting Midway round: the locker's power-ups, offered on each tee
+      let locker = kind === 'midway' && !fun ? (await api.powerupState(requireSession()).catch(() => ({ locker: [] }))).locker : [];
       if (game !== g) return;
       if (!holes.length) return back();
       const scores: number[] = [];
       const sum = () => scores.reduce((a, b) => a + b, 0);
       for (let i = 0; i < holes.length; i++) {
         const par = holes.slice(0, i).reduce((a, h) => a + h.par, 0);
+        g.mods = {};
+        if (locker.length) {
+          const pick = await pickPower(locker, holes[i]);
+          if (game !== g) return;
+          if (pick) {
+            const used = await api.usePowerup(requireSession(), pick.id).catch(() => null);
+            locker = locker.filter((l) => l.id !== pick.id);
+            if (used === 'magnet') g.mods = { magnet: true };
+            if (used === 'express' && holes[i].express) g.mods = { express: holes[i].express };
+          }
+        }
         const r = await g.play(holes[i], i + 1, { strokes: sum(), par }, { of: holes.length });
+        g.mods = {};
         if (game !== g) return; // they left
         scores.push(r.strokes);
         if (r.strokes === 1) sfx('cackle');

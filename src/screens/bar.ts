@@ -9,6 +9,7 @@ import { bestTry, dailyShot, resultLabel } from '../daily';
 import { MO, staffChip } from '../staff';
 import { requireSession } from '../state';
 import { esc, golferHref } from '../ui';
+import { openPrizeCounter } from './prizecounter';
 
 const top3 = (rows: { playerId?: string; name: string; label: string; mine: boolean }[]) =>
   rows.length
@@ -34,12 +35,15 @@ export function barPane(snap: Snapshot) {
         <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game members" href="#/bar/members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
+      <button class="desk-cta prize-cta" data-prize><i>🎟️</i><div><b>The Prize Counter</b><span>Power-ups for the Midway, bought with your club money</span></div><em>›</em></button>
       <a class="desk-cta" href="#/design"><i>✏️</i><div><b>Design a hole</b><span>Describe a golf hole. The architect builds it, you play it</span></div><em>›</em></a>
     </div>`;
 }
 
 export async function fillBar(snap: Snapshot) {
   const s = requireSession();
+  const prize = document.querySelector<HTMLButtonElement>('[data-prize]');
+  if (prize) prize.onclick = () => void openPrizeCounter();
   // (Hollow Hills mini golf is closed for now: its course and code stay, ready to come back)
   const [daily, drive, members, course, midway] = await Promise.all([
     api.dailyState(s, snap.today).catch(() => null as DailyState | null),

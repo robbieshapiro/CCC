@@ -110,6 +110,17 @@ export const carnival: Kit = {
     if (d.kind === 'bigtop') return bigTop(d.scale ?? 30, Math.round(d.x * 7 + d.y));
     if (d.kind === 'booth') return booth(d.scale ?? 16, Math.round(d.x * 3 + d.y));
     if (d.kind === 'ferris') return ferrisWheel(anim);
+    if (d.kind === 'lanering') {
+      // the Express Lane's circle, painted on the fairway: a yellow ring with a red one inside
+      const g = new THREE.Group();
+      for (const [r, c] of [[d.scale ?? 12, '#f2c230'], [(d.scale ?? 12) * 0.55, '#d8342c']] as [number, string][]) {
+        const ring = mesh(new THREE.TorusGeometry(r, 0.45, 4, 40), mat(c, { emissive: c }), false);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 0.15;
+        g.add(ring);
+      }
+      return g;
+    }
     return null;
   },
   frame(h: Hole, root, anim, floor) {
