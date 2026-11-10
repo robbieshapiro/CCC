@@ -35,6 +35,7 @@ export type Player = {
   owned?: string[]; // the Pro Shop items they own (earnings, spent and owned follow the person across their clubs)
   bonus?: Bonus; // the side money (src/bonus.ts): rounds, streaks, Closest to the Pin, birdies and better
   away?: boolean; // playing here from another club: on the board and in for the title, but their home club pays them
+  committee?: boolean; // runs the clubs: shown as the Committee, never tagged a guest (display only)
 };
 
 // Where a tee shot came to rest, in course feet. Null if it found the water or went out.

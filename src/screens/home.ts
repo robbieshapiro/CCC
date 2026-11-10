@@ -98,6 +98,8 @@ export function home(snap: Snapshot) {
   // the week's purse, and what each of the top ten would take if it ended now
   // members playing from another club are paid at home, so the purse here goes round without them
   const purse = clubPurse(rows, (id) => !!player(id)?.away);
+  // the Guest tag: a member playing from another club, but never whoever runs the clubs (they're the Committee)
+  const guest = (p: { away?: boolean; committee?: boolean }) => !!p.away && !p.committee;
   // from Nov 8 the Open pays: the club board shows each member's Open money once it has loaded (see bindOpen below)
   const openMoney = openPurseOn(snap.month);
   const pay = openMoney ? new Map<string, { place: number; tied: boolean; payout: number }>() : purse.pay;
@@ -116,7 +118,7 @@ export function home(snap: Snapshot) {
         <td class="num topar ${where} ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>`;
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${openMoney ? `<span data-pay-for="${p.id}">${p.away ? `<b class="pay away">Guest</b> · ` : ''}</span>` : p.away ? `<b class="pay away">Guest</b> · ` : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
+        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${openMoney ? `<span data-pay-for="${p.id}">${guest(p) ? `<b class="pay away">Guest</b> · ` : ''}</span>` : guest(p) ? `<b class="pay away">Guest</b> · ` : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
         ${score('m')}${cells}${score('d')}
       </tr>`;
     })
