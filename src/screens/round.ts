@@ -37,6 +37,7 @@ import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
 import { canShare, dailySummary, share } from './daily';
 import { cardStatus, elsewhereLine } from './cardnote';
+import { earned, plaques } from '../trophies';
 
 let game: Course3D | null = null;
 
@@ -175,6 +176,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const course: Course = { ...full, holes, par: holes.reduce((a, h) => a + h.par, 0) };
   const me = snap.players.find((p) => p.id === snap.me)!;
   const before = myBest(snap);
+  // the Trophy Room as it stood before this round, so the summary can say what the round unlocked
+  const shelfBefore = !preview && !opts.practice ? api.trophyProgress(requireSession()).catch(() => null) : Promise.resolve(null);
   render(`<div class="g3" id="g3"></div>`);
   document.body.classList.add('court-open');
   const el = document.getElementById('g3')!;
@@ -343,6 +346,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       // a round begun before midnight can't count on the new day: say so, rather than blame the connection
       if (/before midnight/i.test((err as Error).message)) notPosted = (err as Error).message;
     }
+  // the summary's ledger: one plain row each for the Open, the bonus, the record and any new plaques
+  const row = (k: string, v: string, id = '', hidden = false) => `<div class="sl-row"${id ? ` id="${id}"` : ''}${hidden ? ' hidden' : ''}><dt>${k}</dt><dd>${v}</dd></div>`;
   // a classic course: the round goes in for the course record, and the record says where it stands
   let classicLine = '';
   if (opts.classic) {
@@ -354,8 +359,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     if (rec)
       classicLine =
         toPar <= rec.toPar && rec.holders?.some((h) => h.name === snap.players.find((p) => p.id === snap.me)?.name)
-          ? `<p class="purse-line"><b>${toPar < rec.toPar ? 'Course record' : 'Ties the course record'}</b><span>${toParLabel(toPar)} on ${esc(course.name)}. ${rec.rounds} rounds ever played on it.</span></p>`
-          : `<p class="purse-line"><b>Course record ${toParLabel(rec.toPar)}</b><span>${(rec.holders ?? []).map((h) => esc(h.name)).join(' & ')}${rec.mine !== null ? ` · your best ${toParLabel(rec.mine)}` : ''}</span></p>`;
+          ? row('Record', `<b>${toPar < rec.toPar ? 'New course record' : 'Ties the record'}</b> <small>${rec.rounds} rounds ever played on it</small>`)
+          : row('Record', `<b>${toParLabel(rec.toPar)}</b> <small>${(rec.holders ?? []).map((h) => esc(h.name)).join(' & ')}${rec.mine !== null ? ` · your best ${toParLabel(rec.mine)}` : ''}</small>`);
   }
   // the club bonus this round earned: the day's first finished round pays, with its birdies or better (src/bonus.ts).
   // The Committee's rehearsal shows it as a card would earn it, not paid.
@@ -376,7 +381,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     });
     const parts = [`round ${money(BONUS.round)}`, ...[...kinds].map(([k, x]) => `${x.n > 1 ? `${x.n} ${k}s` : `${k}`} ${money(x.v)}`)];
     const sum = BONUS.round + [...kinds.values()].reduce((a, x) => a + x.v, 0);
-    return { sum, line: `<p class="purse-line bonus-line"><b>+${money(sum)}</b><span>Club bonus${rehearsal ? ' (preview, not paid)' : ''} · ${parts.join(' · ')}</span></p>` };
+    return { sum, line: row('Bonus', `<b>+${money(sum)}</b> <small>${parts.join(' · ')}${rehearsal ? ' · preview, not paid' : ''}</small>`) };
   })();
   const bonusLine = bonusSum.line;
   // a counted round ends on Reginald's one question; the answer goes in with the rest of the feedback
@@ -387,10 +392,10 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   sheet.className = 'summary';
   sheet.innerHTML = `
     <div class="summary-card">
-      ${crest(70, 'sum')}
-      <p class="eyebrow">${esc(course.name)}</p>
-      ${opts.practice ? `<h1>Practice done</h1><p class="practice-score">${toParLabel(toPar)} · ${total} strokes</p>` : `<h1>${total} <small>${toParLabel(toPar)}</small></h1>`}
-      ${best ? '<p class="stamp">Personal best</p>' : ''}
+      ${crest(44, 'sum')}
+      <p class="eyebrow">${esc(course.name)}${opts.practice ? ' · practice' : ''}</p>
+      <h1>${total} <small>${toParLabel(toPar)}</small></h1>
+      ${best ? '<p class="pb">Personal best</p>' : ''}
       ${opts.practice ? '' : `<table class="scorecard"><thead><tr>${course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('')}<th class="num">Tot</th></tr></thead>
         <tbody><tr class="par">${course.holes.map((h) => `<td class="num">${h.par}</td>`).join('')}<td class="num">${course.par}</td></tr>
         <tr>${course.holes.map((_, i) => scores[i]).map((s, i) => s === undefined ? '<td class="num">–</td>' : `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>`}
@@ -401,25 +406,40 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
             ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry')
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
       }
-      ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
-      ${bonusLine}${classicLine}
-      ${opts.practice ? '' : `<p class="fine">${opts.classic ? 'Free play on a classic course. It counts for the course record, never the Open or a title.' : dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : esc(notPosted)}</p>`}
-      ${opts.practice ? `<button class="link share-practice" data-share-score>${canShare() ? 'Send to the group' : 'Copy for the group chat'}</button>` : `<button class="btn ghost share-score" data-share-score>${canShare() ? '📤 Share your score' : '📋 Copy your score'}</button>`}
-      <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : opts.practice ? 'Practise again' : 'Play again'}</button><button class="btn ghost" data-back>${dry ? 'Back to the Committee Room' : 'Back to the club'}</button></div>
+      <dl class="sum-ledger">
+        ${!preview && posted ? row('Open', '', 'purse-line', true) : ''}
+        ${bonusLine}${classicLine}
+        ${!preview && posted && !opts.practice ? row('Trophies', '', 'trophy-line', true) : ''}
+      </dl>
+      ${opts.practice ? '' : `<p class="fine">${opts.classic ? 'Free play on a classic course: it counts for the course record only.' : dry ? 'A rehearsal: nothing posted or paid.' : rehearsal ? 'A rehearsal of the card: nothing posted or paid.' : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted. That's today's card." : 'Posted to the board.') : esc(notPosted)}</p>`}
+      <div class="summary-actions pair"><button class="btn" data-back>Done</button><button class="btn ghost" data-again>${card ? 'Practice' : opts.practice ? 'Again' : 'Play again'}</button></div>
+      <p class="sum-links"><button class="link" data-share-score>${opts.practice ? (canShare() ? 'Send to the group' : 'Copy for the group chat') : canShare() ? 'Share score' : 'Copy score'}</button><span aria-hidden="true">·</span>${asking ? '<button class="link" data-reg-open>Tell Reginald how it played</button>' : '<button class="link" data-feedback>Leave feedback</button>'}</p>
       ${
         asking
-          ? `<form class="reg-ask" id="reg-ask">
+          ? `<form class="reg-ask" id="reg-ask" hidden>
         <label for="reg-ask-body"><b>Reginald</b> How did that one play? What would you change?</label>
         <textarea id="reg-ask-body" maxlength="2000" rows="3" required placeholder="Say what you like."></textarea>
         <p class="error" id="reg-ask-err" role="alert"></p>
         <button class="btn" type="submit">Send</button>
       </form>`
-          : '<button class="link" data-feedback>Leave feedback</button>'
+          : ''
       }
     </div>`;
   el.appendChild(sheet);
-  // the round's bonus lands with a burst of coins
-  if (bonusSum.sum) window.setTimeout(() => coinPop(el, bonusSum.sum, 'Club bonus', rehearsal ? 'preview, not paid' : "today's card"), 700);
+  // any plaque this round unlocked, named quietly under the card
+  if (!preview && posted && !opts.practice)
+    void shelfBefore
+      .then(async (was) => {
+        if (!was) return;
+        const now = await api.trophyProgress(requireSession());
+        if (!now) return;
+        const fresh = plaques().filter((pl) => !earned(pl, was) && earned(pl, now));
+        const line = sheet.querySelector<HTMLElement>('#trophy-line');
+        if (!line || !fresh.length) return;
+        line.querySelector('dd')!.innerHTML = `<a href="#/clubhouse/trophies"><b>${fresh.map((pl) => esc(pl.name)).join(' · ')}</b> <small>new ›</small></a>`;
+        line.hidden = false;
+      })
+      .catch(() => {});
   // where this leaves you on the board, and what the purse would pay you if the week ended now
   if (!preview && posted)
     void refresh()
@@ -432,9 +452,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
           const line = sheet.querySelector<HTMLElement>('#purse-line');
           const mine = meRow && purse.pay.get(meRow.playerId);
           if (!line || !mine) return;
-          line.innerHTML = mine.payout
-            ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${open.length} on the Open if the week ended now · Open purse ${money(openPurseOf(purse.field))}</span>`
-            : `<b>${placeLabel(mine.place, mine.tied)} of ${open.length} on the Open</b><span>Top 10 get paid. Open purse ${money(openPurseOf(purse.field))}</span>`;
+          line.querySelector('dd')!.innerHTML = `<b>${placeLabel(mine.place, mine.tied)} of ${open.length}</b> <small>${mine.payout ? `${money(mine.payout)} if it ended now` : `top 10 paid from ${money(openPurseOf(purse.field))}`}</small>`;
           line.hidden = false;
           return;
         }
@@ -449,14 +467,14 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
           const me = rows.find((r) => r.playerId === s.me);
           if (!me) return;
           const at = rows.filter((r) => r.toPar < me.toPar).length + 1;
-          line.innerHTML = `<b>${placeLabel(at, rows.filter((r) => r.toPar === me.toPar).length > 1)} of ${rows.length}</b><span>Paid at ${esc(s.homeName ?? 'your home club')}, your home club. Purse here ${money(purseOf(purse.field))}, for its own members</span>`;
+          line.querySelector('dt')!.textContent = 'Here';
+          line.querySelector('dd')!.innerHTML = `<b>${placeLabel(at, rows.filter((r) => r.toPar === me.toPar).length > 1)} of ${rows.length}</b> <small>paid at ${esc(s.homeName ?? 'your home club')}</small>`;
           line.hidden = false;
           return;
         }
         if (!mine) return;
-        line.innerHTML = mine.payout
-          ? `<b>💰 ${money(mine.payout)}</b><span>${placeLabel(mine.place, mine.tied)} of ${rows.length} if the week ended now · purse ${money(purseOf(purse.field))}</span>`
-          : `<b>${placeLabel(mine.place, mine.tied)} of ${rows.length}</b><span>Top 10 get paid. Purse ${money(purseOf(purse.field))}</span>`;
+        line.querySelector('dt')!.textContent = 'Club';
+        line.querySelector('dd')!.innerHTML = `<b>${placeLabel(mine.place, mine.tied)} of ${rows.length}</b> <small>${mine.payout ? `${money(mine.payout)} if it ended now` : `top 10 paid from ${money(purseOf(purse.field))}`}</small>`;
         line.hidden = false;
       })
       .catch(() => {});
@@ -481,6 +499,14 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const fb = sheet.querySelector<HTMLButtonElement>('[data-feedback]');
   if (fb) fb.onclick = () => openFeedback(context, el);
   const ask = sheet.querySelector<HTMLFormElement>('#reg-ask');
+  // Reginald's question stays folded until they ask for it
+  const askOpen = sheet.querySelector<HTMLButtonElement>('[data-reg-open]');
+  if (ask && askOpen)
+    askOpen.onclick = () => {
+      ask.hidden = false;
+      askOpen.disabled = true;
+      sheet.querySelector<HTMLTextAreaElement>('#reg-ask-body')!.focus();
+    };
   if (ask)
     ask.onsubmit = async (e) => {
       e.preventDefault();
