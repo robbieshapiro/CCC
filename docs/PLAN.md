@@ -156,7 +156,7 @@ Last updated Nov 10, 2026 (a simpler Committee Room; board names link to cards; 
 
 ## Setup status
 
-- [ ] #244: apply the updated `admin_overview` and `admin_today` after merge (`pr_244_admin_ids`), then check feed and member rows carry an `id`.
+- [x] #244: applied `pr_244_admin_ids` on Nov 10; all 1,000 feed rows, 46 members and today's people carry an `id`.
 - [x] #242: applied `pr_242_board_ids` on Nov 10; every row on the day's Closest to the Pin and long drive boards has a `playerId`.
 - [x] #238: applied `pr_238_activity_classic` on Nov 10; Tyler's four Highlands rounds show in the feed.
 
