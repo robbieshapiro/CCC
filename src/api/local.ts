@@ -1204,7 +1204,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       const b = best(ts);
       const holedTry = ts.filter((t) => t.holed).map((t) => t.try).sort()[0] ?? null;
       const fts = ts.map((t) => (t.holed ? 0 : t.lost ? null : t.ft)).sort((x, y) => (x ?? Infinity) - (y ?? Infinity));
-      board.push({ name: ps[0].name, club: club(ps[0].groupId), ft: b?.ft ?? null, holed: !!b?.holed, holedTry, tries: ts.length, mine: k === key(me), fts } as DailyRow & { fts: (number | null)[] });
+      board.push({ playerId: ps[0].id, name: ps[0].name, club: club(ps[0].groupId), ft: b?.ft ?? null, holed: !!b?.holed, holedTry, tries: ts.length, mine: k === key(me), fts } as DailyRow & { fts: (number | null)[] });
     }
     // as on the server: holed first, holed sooner first, then nearest, then the next-best try
     const by = (r: DailyRow) => r as DailyRow & { fts: (number | null)[] };
@@ -1243,12 +1243,12 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const me = playerByToken(db, session.token);
     const week = weekOf(todayInGameTz());
     const key = (p: DbPlayer) => `${p.name.toLowerCase()}|${p.pin}`;
-    const best = new Map<string, { name: string; score: number }>();
+    const best = new Map<string, { playerId: string; name: string; score: number }>();
     for (const r of (db.bar ?? []).filter((x) => x.game === game && x.week === week)) {
       const p = db.players.find((x) => x.id === r.playerId);
       if (!p) continue;
       const b = best.get(key(p));
-      if (!b || r.score > b.score) best.set(key(p), { name: p.name, score: r.score });
+      if (!b || r.score > b.score) best.set(key(p), { playerId: p.id, name: p.name, score: r.score });
     }
     const board = [...best.entries()].map(([k, v]) => ({ ...v, mine: k === key(me) })).sort((a, b) => b.score - a.score);
     return { week, board, mine: board.find((r) => r.mine)?.score ?? null, players: board.length };

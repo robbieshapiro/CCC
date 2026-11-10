@@ -1839,3 +1839,4 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .ab-part { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); scroll-margin-top: 12px; }
 .ab-part .ch-head { margin: 0; }
 .ab-h { margin: 0; font-size: 26px; }
+.bar-top b a, .daily-board b a { color: inherit; text-decoration: none; }

@@ -187,11 +187,11 @@ export type AdminTodayPerson = { name: string; club: string; last: string | null
 export type AdminTodayEvent = { at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback' | 'classic'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
 export type AdminToday = { today: string; in: number; cardsIn: number; onCourse: number; people: AdminTodayPerson[]; feed: AdminTodayEvent[] };
 export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: boolean };
-export type DailyRow = { name: string; club: string; ft: number | null; holed: boolean; holedTry?: number | null; tries: number; mine: boolean };
+export type DailyRow = { playerId?: string; name: string; club: string; ft: number | null; holed: boolean; holedTry?: number | null; tries: number; mine: boolean };
 export type DailyState = { mine: DailyTry[]; board: DailyRow[]; players: number; streak: number };
 export type DailyDay = { day: string; players: number; tries: number };
 // The Nineteenth Hole's weekly contests (see bar.ts): best score of the week, higher is better
-export type BarBoard = { week: string; board: { name: string; score: number; mine: boolean }[]; mine: number | null; players: number };
+export type BarBoard = { week: string; board: { playerId?: string; name: string; score: number; mine: boolean }[]; mine: number | null; players: number };
 export type ClubRow = { id: string; name: string; mine: boolean; members: number; played: number; best: number | null; leaders: string[] | null };
 export type Chronicle = { week: string; body: { headline: string; dek: string; items: { title: string; body: string }[]; signoff: string } };
 export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';

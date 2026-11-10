@@ -53,15 +53,20 @@ async function bindHonours(snap: Snapshot) {
     api.openChampions(session).catch(() => []),
   ]);
   if (!h || !document.getElementById('honours')) return; // no SQL yet, or left the page
-  const names = (xs: string[]) => xs.map(esc).join(' & ');
+  // the honours are this club's, by name: each name links to its member's card
+  const link = (n: string) => {
+    const p = snap.players.find((x) => x.name === n);
+    return p ? `<a href="${golferHref(p.id, p.id === snap.me)}">${esc(n)}</a>` : esc(n);
+  };
+  const names = (xs: string[]) => xs.map(link).join(' & ');
   const open = opens.find((o) => o.month === last.month);
   const per = span(last.month);
   const rows: [string, string, string][] = [
-    ['🏆', 'Champion', !h.champions.length ? '' : h.champions[0].how === 'playoff' ? `${h.champions.map((c) => esc(c.name)).join(' v ')} · playoff today` : `${names(h.champions.map((c) => c.name))} · ${toParLabel(h.champions[0].toPar)}${h.champions[0].how === 'playoff-won' ? ', won in a playoff' : ''}`],
+    ['🏆', 'Champion', !h.champions.length ? '' : h.champions[0].how === 'playoff' ? `${h.champions.map((c) => link(c.name)).join(' v ')} · playoff today` : `${names(h.champions.map((c) => c.name))} · ${toParLabel(h.champions[0].toPar)}${h.champions[0].how === 'playoff-won' ? ', won in a playoff' : ''}`],
     ['🌍', 'The Open', open ? `${names(open.names)} · ${toParLabel(open.total - open.par)}` : ''],
     ['🥈', 'Runner-up', h.runnersUp.length ? `${names(h.runnersUp.map((c) => c.name))} · ${toParLabel(h.runnersUp[0].toPar)}` : ''],
     ['🔁', 'Iron Man', h.mostRounds ? `${names(h.mostRounds.names)} · ${h.mostRounds.count} rounds` : ''],
-    ['⛳', `Ace of the ${per}`, h.aces.length ? h.aces.map((a) => `${esc(a.name)}${a.count > 1 ? ` ×${a.count}` : ''}`).join(' & ') : ''],
+    ['⛳', `Ace of the ${per}`, h.aces.length ? h.aces.map((a) => `${link(a.name)}${a.count > 1 ? ` ×${a.count}` : ''}`).join(' & ') : ''],
     ['📊', 'Steadiest hand', h.lowestAverage ? `${names(h.lowestAverage.names)} · ${toParLabel(h.lowestAverage.avg!)} average` : ''],
     ['🫡', 'The Honest Card', h.highestScore ? `${names(h.highestScore.names)} · ${toParLabel(h.highestScore.toPar!)}, posted all the same` : ''],
   ];
