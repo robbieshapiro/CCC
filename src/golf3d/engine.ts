@@ -260,9 +260,10 @@ export class Course3D {
   private strokes = 0;
   private zones = new Set<string>();
   private drink: { kind: Drink; shots: number } | null = null;
-  // the Midway's power-ups for the hole being played (set by the round before each hole): the Magnet drops a ball that
-  // stops on the green within MAGNET_FT; the Express Lane sends a tee shot that finishes in its circle to the green
-  mods: { magnet?: boolean; express?: { x: number; y: number; r: number; to: V2 } } = {};
+  // the Midway's power-ups and curses for the hole being played (set by the round before each hole): the Magnet drops
+  // a ball that stops on the green within MAGNET_FT; the Express Lane sends a tee shot that finishes in its circle to the
+  // green; the Short Pour caps the power; Irons Only takes the driver and wood out of the bag
+  mods: { magnet?: boolean; express?: { x: number; y: number; r: number; to: V2 }; powerCap?: number; noWoods?: boolean } = {};
   // settle: when the ball has as good as stopped (the last creep down a slope isn't worth waiting for)
   // slow: the slow-motion window on a pure strike, in shot time
   private shot: {
@@ -1356,7 +1357,8 @@ export class Course3D {
   // upward and the club goes back with it, then the needle and the club come down together to the strike.
   // the clubs in the bag: tour courses and the practice facility carry the wood as well
   private get bag() {
-    return bagFor(!!this.hole.tour || !!this.drill);
+    const bag = bagFor(!!this.hole.tour || !!this.drill);
+    return this.mods.noWoods ? bag.filter((c) => c !== 'driver' && c !== 'wood') : bag;
   }
 
   // the swing meter: the vertical one on tour courses, or wherever it's asked for (the members' own holes play the
@@ -1415,6 +1417,8 @@ export class Course3D {
     const m = this.meter;
     if (m.phase === 'power') {
       const drink = this.drink ? DRINKS[this.drink.kind] : null;
+      // the Short Pour (a Midway curse): however far you take it back, it's capped
+      if (this.mods.powerCap && this.club !== 'putter') m.p = Math.min(m.p, this.mods.powerCap);
       m.phase = 'accuracy';
       const fire = (drink?.boost ?? 1) > 1;
       m.half = goldHalf(this.club, m.p, drink?.sweet ?? 1, this.style(), fire);

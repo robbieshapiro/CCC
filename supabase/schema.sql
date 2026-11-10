@@ -1477,6 +1477,12 @@ begin
       union all
       select m.who, m.name, m.club, f.created_at, 'feedback', left(f.body, 80), null, null, null, null
         from feedback f join mem m on m.id = f.player_id where f.created_at >= t0
+      union all
+      -- the Midway: curses sent and pockets picked (what: status:kind:their target)
+      select m.who, m.name, m.club, coalesce(pu.used_at, pu.created_at), 'midway',
+          pu.status || ':' || pu.kind || ':' || coalesce((select x.name from players x where x.id = pu.target_id), ''), null, null, null, null
+        from powerups pu join mem m on m.id = pu.owner_id
+        where pu.target_id is not null and pu.status <> 'stolen' and coalesce(pu.used_at, pu.created_at) >= t0
     ),
     -- who's in: anyone with an event today, or who opened the club today
     ins as (
@@ -2452,8 +2458,13 @@ create index if not exists powerups_owner on powerups (owner_id, status);
 
 -- what each costs at the Prize Counter (null: not for sale)
 create or replace function powerup_price(p_kind text) returns int language sql immutable as $$
-  select case p_kind when 'magnet' then 400 when 'express' then 500 end
+  select case p_kind when 'magnet' then 400 when 'express' then 500 when 'prenup' then 200 when 'passon' then 250
+    when 'pickpocket' then 350
+    when 'goggles' then 200 when 'shortpour' then 300 when 'lid' then 300 when 'ironsonly' then 250 when 'bouncer' then 350 end
 $$;
+-- the ones you keep in your locker (three at most), and the curses you send
+create or replace function powerup_held(p_kind text) returns boolean language sql immutable as $$ select p_kind in ('magnet', 'express', 'prenup', 'passon') $$;
+create or replace function powerup_curse(p_kind text) returns boolean language sql immutable as $$ select p_kind in ('goggles', 'shortpour', 'lid', 'ironsonly', 'bouncer') $$;
 
 -- what a person has spent, across their seats: the Pro Shop and the Prize Counter
 create or replace function person_spent(me players) returns int
@@ -2467,7 +2478,7 @@ create or replace function buy_powerup(p_token uuid, p_kind text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token)); cost int := powerup_price(p_kind); earned int;
 begin
-  if cost is null then raise exception 'That isn''t at the Prize Counter.'; end if;
+  if cost is null or not powerup_held(p_kind) then raise exception 'That isn''t at the Prize Counter.'; end if;
   if (select count(*) from powerups where owner_id in (select person_seats(me)) and status = 'held') >= 3 then
     raise exception 'Your locker holds three. Use one first.';
   end if;
@@ -2480,15 +2491,162 @@ begin
 end $$;
 grant execute on function buy_powerup(uuid, text) to anon;
 
--- your locker at the Midway
+-- what's left in a person's bank: everything earned less everything spent
+create or replace function person_bank(me players) returns int
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare earned int;
+begin
+  select coalesce(sum(pp.payout), 0) into earned
+    from (select distinct s.group_id from players s where s.id in (select person_seats(me))) g
+    cross join lateral period_payouts(g.group_id) pp where pp.player_id in (select person_seats(me));
+  return earned + (person_bonus(me)->>'total')::int - person_spent(me);
+end $$;
+revoke all on function person_bank(players) from public, anon, authenticated;
+
+-- your locker at the Midway, how many curses are waiting for your next round (not what or who: that's the surprise),
+-- and the last week's news: pockets picked, curses sent and landed, Prenups that held
 create or replace function powerup_state(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token));
+  wk timestamptz := date_trunc('week', now() at time zone 'America/New_York') at time zone 'America/New_York';
 begin
   return json_build_object(
     'locker', coalesce((select json_agg(json_build_object('id', pu.id, 'kind', pu.kind) order by pu.created_at)
-      from powerups pu where pu.owner_id in (select person_seats(me)) and pu.status = 'held'), '[]'));
+      from powerups pu where pu.owner_id in (select person_seats(me)) and pu.status = 'held'), '[]'),
+    'waiting', (select count(*) from powerups pu where pu.target_id in (select person_seats(me)) and pu.status = 'pending')::int,
+    'sentThisWeek', (select count(*) from powerups pu where pu.owner_id in (select person_seats(me)) and powerup_curse(pu.kind) and pu.price > 0 and pu.created_at >= wk)::int,
+    'news', coalesce((select json_agg(n order by n.at desc) from (
+        select pu.kind, pu.status, pu.owner_id in (select person_seats(me)) as mine,
+          (select x.name from players x where x.id = case when pu.owner_id in (select person_seats(me)) then pu.target_id else pu.owner_id end) as who,
+          coalesce(pu.used_at, pu.created_at) as at
+        from powerups pu
+        where coalesce(pu.used_at, pu.created_at) > now() - interval '7 days'
+          and pu.target_id is not null
+          and (pu.owner_id in (select person_seats(me)) or pu.target_id in (select person_seats(me)))
+          -- what happened to you, and what came of what you sent (a curse still waiting stays a surprise; a pocket picked
+          -- shows once, as the power-up that went)
+          and not (pu.status = 'pending' and pu.target_id in (select person_seats(me)))
+          and not (pu.kind = 'pickpocket' and pu.status = 'used')
+        order by coalesce(pu.used_at, pu.created_at) desc limit 12
+      ) n), '[]'));
 end $$;
+
+-- a member to aim at: anyone in one of your clubs but you, as their home seat
+create or replace function powerup_target(me players, p_target uuid) returns players
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare t players;
+begin
+  select * into t from players where id = p_target;
+  if t.id is null or not exists (select 1 from players s where s.id in (select person_seats(me)) and s.group_id = t.group_id) then
+    raise exception 'Pick a member of your club.';
+  end if;
+  t := home_of(t);
+  if lower(t.name) = lower(me.name) and t.pin_hash = me.pin_hash then raise exception 'Not yourself. Pick someone else.'; end if;
+  return t;
+end $$;
+revoke all on function powerup_target(players, uuid) from public, anon, authenticated;
+
+-- the target's Prenup, if they're holding one: it's used up stopping this
+create or replace function prenup_holds(t players) returns boolean
+language plpgsql security definer set search_path = public, extensions as $$
+declare n bigint;
+begin
+  update powerups set status = 'used', used_at = now()
+    where id = (select id from powerups where owner_id in (select person_seats(t)) and kind = 'prenup' and status = 'held' order by created_at limit 1)
+    returning id into n;
+  return n is not null;
+end $$;
+revoke all on function prenup_holds(players) from public, anon, authenticated;
+
+-- send a curse: it waits for their next counting Midway round (one hole each; the Bouncer, their power-ups that round).
+-- Three a week from you, two waiting on anyone at once. A Prenup stops it, and you've still paid.
+create or replace function send_curse(p_token uuid, p_kind text, p_target uuid) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); t players; cost int := powerup_price(p_kind);
+  wk timestamptz := date_trunc('week', now() at time zone 'America/New_York') at time zone 'America/New_York';
+begin
+  if cost is null or not powerup_curse(p_kind) then raise exception 'That isn''t a curse.'; end if;
+  t := powerup_target(me, p_target);
+  if (select count(*) from powerups where owner_id in (select person_seats(me)) and powerup_curse(kind) and price > 0 and created_at >= wk) >= 3 then
+    raise exception 'Three curses a week. Save some malice for next week.';
+  end if;
+  if (select count(*) from powerups where target_id in (select person_seats(t)) and status = 'pending') >= 2 then
+    raise exception '% already has two curses waiting. Let them suffer those first.', t.name;
+  end if;
+  if person_bank(me) < cost then raise exception 'Not enough in the bank for that.'; end if;
+  if prenup_holds(t) then
+    insert into powerups (owner_id, kind, price, status, target_id, used_at) values (me.id, p_kind, cost, 'blocked', t.id, now());
+    return 'blocked';
+  end if;
+  insert into powerups (owner_id, kind, price, status, target_id) values (me.id, p_kind, cost, 'pending', t.id);
+  return 'sent';
+end $$;
+grant execute on function send_curse(uuid, text, uuid) to anon;
+
+-- the Pickpocket: take one power-up at random from a member's locker (a Prenup stops it, and you've still paid)
+create or replace function pick_pocket(p_token uuid, p_target uuid) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); t players; cost int := powerup_price('pickpocket'); got powerups;
+begin
+  t := powerup_target(me, p_target);
+  if not exists (select 1 from powerups where owner_id in (select person_seats(t)) and status = 'held') then
+    raise exception '%''s locker is empty. Nothing to pick.', t.name;
+  end if;
+  if (select count(*) from powerups where owner_id in (select person_seats(me)) and status = 'held') >= 3 then
+    raise exception 'Your locker holds three. Use one first.';
+  end if;
+  if person_bank(me) < cost then raise exception 'Not enough in the bank for that.'; end if;
+  if prenup_holds(t) then
+    insert into powerups (owner_id, kind, price, status, target_id, used_at) values (me.id, 'pickpocket', cost, 'blocked', t.id, now());
+    return 'blocked';
+  end if;
+  select * into got from powerups where owner_id in (select person_seats(t)) and status = 'held' order by random() limit 1;
+  -- theirs is gone (they paid for it), and a copy lands in your locker for nothing
+  update powerups set status = 'stolen', target_id = me.id, used_at = now() where id = got.id;
+  insert into powerups (owner_id, kind, price, status, from_id) values (me.id, got.kind, 0, 'held', t.id);
+  insert into powerups (owner_id, kind, price, status, target_id, used_at) values (me.id, 'pickpocket', cost, 'used', t.id, now());
+  return got.kind;
+end $$;
+grant execute on function pick_pocket(uuid, uuid) to anon;
+
+-- at the start of your counting Midway round: the curses waiting for you land, and you see who sent what
+create or replace function land_curses(p_token uuid) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); out json;
+begin
+  select coalesce(json_agg(json_build_object('id', pu.id, 'kind', pu.kind, 'from', (select name from players where id = coalesce(pu.from_id, pu.owner_id)),
+      'via', case when pu.from_id is not null then (select name from players where id = pu.owner_id) end) order by pu.created_at), '[]')
+    into out from powerups pu where pu.target_id in (select person_seats(me)) and pu.status = 'pending';
+  update powerups set status = 'landed', used_at = now() where target_id in (select person_seats(me)) and status = 'pending';
+  return out;
+end $$;
+grant execute on function land_curses(uuid) to anon;
+
+-- Pass It On: a curse that just landed on you goes to someone else instead (your Pass It On is used up). It waits for
+-- their next round, under the same caps; their Prenup stops it.
+create or replace function pass_curse(p_token uuid, p_curse bigint, p_target uuid) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); t players; c powerups; pass bigint;
+begin
+  select * into c from powerups where id = p_curse and target_id in (select person_seats(me)) and status = 'landed' and used_at > now() - interval '1 hour';
+  if c.id is null then raise exception 'That curse can''t be passed on now.'; end if;
+  t := powerup_target(me, p_target);
+  if (select count(*) from powerups where target_id in (select person_seats(t)) and status = 'pending') >= 2 then
+    raise exception '% already has two curses waiting.', t.name;
+  end if;
+  update powerups set status = 'used', used_at = now()
+    where id = (select id from powerups where owner_id in (select person_seats(me)) and kind = 'passon' and status = 'held' order by created_at limit 1)
+    returning id into pass;
+  if pass is null then raise exception 'You need a Pass It On in your locker.'; end if;
+  update powerups set status = 'passed' where id = c.id;
+  if prenup_holds(t) then
+    insert into powerups (owner_id, kind, price, status, target_id, from_id, used_at) values (me.id, c.kind, 0, 'blocked', t.id, c.owner_id, now());
+    return 'blocked';
+  end if;
+  insert into powerups (owner_id, kind, price, status, target_id, from_id) values (me.id, c.kind, 0, 'pending', t.id, c.owner_id);
+  return 'passed';
+end $$;
+grant execute on function pass_curse(uuid, bigint, uuid) to anon;
 grant execute on function powerup_state(uuid) to anon;
 
 -- use one from your locker on a Midway tee: it's spent whatever happens on the hole

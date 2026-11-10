@@ -1869,3 +1869,16 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .prize-list li span { font-size: 13px; color: var(--muted); }
 .prize-sheet .notes-foot { display: flex; justify-content: flex-end; padding: 0; }
 button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer; background: none; }
+
+/* the Midway's curses and the counter's extras */
+.g3.goggles canvas { filter: blur(2.4px) saturate(1.35); animation: goggles 3.2s ease-in-out infinite; }
+@keyframes goggles { 0%, 100% { transform: rotate(0deg) scale(1.02); } 50% { transform: rotate(1.2deg) scale(1.05) translateX(6px); } }
+@media (prefers-reduced-motion: reduce) { .g3.goggles canvas { animation: none; } }
+.prize-sheet h3 { margin: 6px 0 0; font-family: var(--serif); color: var(--green); }
+.prize-warn { margin: 0; padding: 8px 10px; border-radius: 6px; background: #f6e3dc; color: #7a2d1c; font-size: 14px; }
+.prize-news summary { cursor: pointer; font-weight: 700; color: var(--green); }
+.prize-news ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.prize-aim { display: flex; gap: 6px; margin-top: 6px; align-items: center; flex-wrap: wrap; }
+.prize-who { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: #fff; max-width: 100%; }
+.prize-who.need { border-color: #b0442e; }
+.prize-list li .prize-aim { grid-column: 2 / 4; }

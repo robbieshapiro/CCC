@@ -9,7 +9,8 @@ export const CUP_R = 0.65;
 const CUP_DEPTH = 0.42;
 // Tour greens: a smaller cup, quicker greens, and a putt has to be dying to drop.
 export const TOUR_CUP_R = 0.6;
-export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R);
+// cupScale: the Midway's Lid curse halves it
+export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R) * (h.cupScale ?? 1);
 // the fastest a ball can roll over the dead centre of a tour cup and still drop (ft/s); it's slower toward the edge
 export const DROP_SPEED = 9.5;
 export const TOUR_GREEN = 3;

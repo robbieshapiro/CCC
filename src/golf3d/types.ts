@@ -53,7 +53,8 @@ export type Hole = {
   pins?: V2[]; // where the pin can be cut; one is picked each day
   chipDrop?: number; // tour holes: share of the usual speed a shot from off the green can drop at, so a chip must die at the hole
   greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
-  express?: { x: number; y: number; r: number; to: V2 }; // the Midway: the Express Lane's circle, and where it sends a tee shot
+  express?: { x: number; y: number; r: number; to: V2 };
+  cupScale?: number; // the cup's size against the usual (the Midway's Lid curse: 0.5) // the Midway: the Express Lane's circle, and where it sends a tee shot
   wallBounce?: number; // how lively this hole's walls are (0.72 usually): a city's stone and glass give a ball back more
   // Tougher turf (the Western Reserve). roughKeep: share of its pace a ball keeps landing in the rough (the usual is
   // 0.58). roughDrag: how much harder the rough grabs a rolling ball. roughLie: share of the distance a full club gets

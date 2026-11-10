@@ -10,6 +10,7 @@ import { courseById } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc, golferHref } from '../ui';
+import { powerOf } from '../powerups';
 
 export const todaySections = () => `<section class="adm-today" id="adm-today"><p class="muted">Loading today…</p></section>
   <section class="adm-card adm-live" id="adm-live"><h2><span class="live-pill"><i></i>Live</span> Today's feed <small id="live-sub"></small></h2><div class="adm-feed-box live-box" id="live-box"><p class="muted">Loading…</p></div></section>`;
@@ -92,9 +93,18 @@ function line(e: AdminTodayEvent) {
   if (e.kind === 'daily') return e.ft === 0 ? 'holed the Daily Shot!' : `took the Daily Shot${e.ft !== null ? `, best ${e.ft} ft` : ''}${e.n && e.n > 1 ? ` (${e.n} tries)` : ''}`;
   if (e.kind === 'playoff') return `played the playoff in ${e.total ?? '?'}${e.ft !== null ? `, ${e.ft} ft from the pin` : ''}`;
   if (e.kind === 'join') return e.what === 'guest' ? `joined ${esc(e.club)} as a guest` : 'joined the club';
+  if (e.kind === 'midway') {
+    // status:kind:target, from the Midway's power-ups
+    const [status, kind, who] = (e.what ?? '').split(':');
+    const p = esc(powerOf(kind)?.name ?? kind);
+    const them = esc(who || 'someone');
+    if (kind === 'pickpocket') return status === 'blocked' ? `tried to pick ${them}’s pocket at the Midway; their Prenup held` : `picked ${them}’s pocket at the Midway`;
+    if (status === 'passed') return `sent ${them} ${p}; they passed it on`;
+    return status === 'blocked' ? `sent ${them} ${p}; their Prenup stopped it` : status === 'landed' ? `sent ${them} ${p}, and it landed` : `sent ${them} ${p} at the Midway`;
+  }
   return `sent feedback: “${esc(e.what ?? '')}”`;
 }
-const ICON: Record<AdminTodayEvent['kind'], string> = { round: '✅', start: '⛳', practice: '🎯', daily: '📍', playoff: '🏆', join: '👋', feedback: '✉️', classic: '🏛️' };
+const ICON: Record<AdminTodayEvent['kind'], string> = { round: '✅', start: '⛳', practice: '🎯', daily: '📍', playoff: '🏆', join: '👋', feedback: '✉️', classic: '🏛️', midway: '🎡' };
 
 function draw() {
   const top = document.getElementById('adm-today');

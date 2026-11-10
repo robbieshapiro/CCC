@@ -52,6 +52,9 @@ export async function fillBar(snap: Snapshot) {
     api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => [] as MembersHole[]),
     api.barBoard(s, 'midway').catch(() => null as BarBoard | null),
   ]);
+  // curses waiting for your next Midway round: the count, not who or what
+  const waiting = (await api.powerupState(s).catch(() => null))?.waiting ?? 0;
+
   // the Members' Course: how many holes this week, and until there are any, a way to build the first
   const card = document.querySelector<HTMLAnchorElement>('[data-members]');
   const count = document.querySelector('[data-members-count]');
@@ -71,7 +74,7 @@ export async function fillBar(snap: Snapshot) {
   }
   for (const [game, b] of [['drive', drive], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
-    const today = game === 'midway' ? (b.playedToday ? " · today's round is in" : ' · today’s round is waiting') : '';
+    const today = game === 'midway' ? (b.playedToday ? " · today's round is in" : ' · today’s round is waiting') + (waiting ? ` · ${waiting === 1 ? 'a curse is' : `${waiting} curses are`} waiting for you` : '') : '';
     put(game, (b.mine === null ? 'Not played this week' : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
   }
 }

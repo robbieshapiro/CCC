@@ -11,15 +11,16 @@ import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { LOCKER_MAX, powerOf } from '../powerups';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { CURSES_A_WEEK, LOCKER_MAX, powerOf } from '../powerups';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type Snapshot, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
 type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | null; createdBy?: string };
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: { id: number; ownerId: string; kind: string; price: number; status: string }[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[] };
+type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[] };
 
 const KEY = 'ccc-local-db';
 
@@ -35,6 +36,36 @@ function load(): Db {
 
 function save(db: Db) {
   store.set(KEY, JSON.stringify(db));
+}
+
+// the Midway's power-ups: a person's seats, what's in their locker, a member to aim at, a Prenup used up, the bank
+const seatsOf = (db: Db, p: DbPlayer) => new Set(db.players.filter((x) => x.name.toLowerCase() === p.name.toLowerCase() && x.pin === p.pin).map((x) => x.id));
+const heldBy = (db: Db, p: DbPlayer) => {
+  const seats = seatsOf(db, p);
+  return (db.powerups ?? []).filter((x) => seats.has(x.ownerId) && x.status === 'held');
+};
+const pushPower = (db: Db, x: Omit<DbPower, 'id' | 'at'>) => {
+  const list = (db.powerups ??= []);
+  list.push({ id: list.length + 1, at: new Date().toISOString(), ...x });
+};
+function targetOf(db: Db, me: DbPlayer, id: string): DbPlayer {
+  const t = db.players.find((x) => x.id === id);
+  const mine = seatsOf(db, me);
+  if (!t || !db.players.some((s) => mine.has(s.id) && s.groupId === t.groupId)) throw new Error('Pick a member of your club.');
+  const home = homeOf(db, t);
+  if (home.name.toLowerCase() === me.name.toLowerCase() && home.pin === me.pin) throw new Error('Not yourself. Pick someone else.');
+  return home;
+}
+function prenupHolds(db: Db, t: DbPlayer) {
+  const pre = heldBy(db, t).find((x) => x.kind === 'prenup');
+  if (!pre) return false;
+  Object.assign(pre, { status: 'used', usedAt: new Date().toISOString() });
+  return true;
+}
+async function bankOf(api: { snapshot(s: { token: string }): Promise<Snapshot> }, session: { token: string }, me: DbPlayer) {
+  const snap = await api.snapshot(session);
+  const p = snap.players.find((x) => x.name.toLowerCase() === me.name.toLowerCase());
+  return p ? balanceOf(p) : 0;
 }
 
 const uid = () => crypto.randomUUID();
@@ -298,36 +329,118 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     save(db);
   },
 
-  // the Midway's Prize Counter, as on the server
+  // the Midway's Prize Counter, curses and theft, as on the server (buy_powerup, send_curse, pick_pocket, land_curses,
+  // pass_curse): the same rules, kept in db.powerups
   async buyPowerup(session, kind) {
-    const snap = await this.snapshot(session);
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
     const power = powerOf(kind);
-    if (!power) throw new Error('That isn’t at the Prize Counter.');
-    const seats = new Set(db.players.filter((x) => x.name.toLowerCase() === me.name.toLowerCase() && x.pin === me.pin).map((x) => x.id));
-    if ((db.powerups ?? []).filter((x) => seats.has(x.ownerId) && x.status === 'held').length >= LOCKER_MAX) throw new Error('Your locker holds three. Use one first.');
-    const p = snap.players.find((x) => seats.has(x.id));
-    if (!p || balanceOf(p) < power.price) throw new Error('Not enough in the bank for that.');
-    const list = (db.powerups ??= []);
-    list.push({ id: list.length + 1, ownerId: me.id, kind, price: power.price, status: 'held' });
+    if (!power || power.group !== 'mine') throw new Error('That isn’t at the Prize Counter.');
+    if (heldBy(db, me).length >= LOCKER_MAX) throw new Error('Your locker holds three. Use one first.');
+    if ((await bankOf(this, session, me)) < power.price) throw new Error('Not enough in the bank for that.');
+    pushPower(db, { ownerId: me.id, kind, price: power.price, status: 'held' });
     save(db);
   },
   async powerupState(session) {
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
-    const seats = new Set(db.players.filter((x) => x.name.toLowerCase() === me.name.toLowerCase() && x.pin === me.pin).map((x) => x.id));
-    return { locker: (db.powerups ?? []).filter((x) => seats.has(x.ownerId) && x.status === 'held').map((x) => ({ id: x.id, kind: x.kind })) };
+    const seats = seatsOf(db, me);
+    const all = db.powerups ?? [];
+    const name = (id?: string) => db.players.find((x) => x.id === id)?.name ?? null;
+    const week = Date.parse(`${weekOf(todayInGameTz())}T05:00:00Z`);
+    return {
+      locker: heldBy(db, me).map((x) => ({ id: x.id, kind: x.kind })),
+      waiting: all.filter((x) => x.targetId && seats.has(x.targetId) && x.status === 'pending').length,
+      sentThisWeek: all.filter((x) => seats.has(x.ownerId) && powerOf(x.kind)?.group === 'curse' && x.price > 0 && Date.parse(x.at ?? '') >= week).length,
+      news: all
+        .filter((x) => x.targetId && (seats.has(x.ownerId) || seats.has(x.targetId)) && !(x.status === 'pending' && seats.has(x.targetId)) && !(x.kind === 'pickpocket' && x.status === 'used'))
+        .map((x) => ({ kind: x.kind, status: x.status, mine: seats.has(x.ownerId), who: name(seats.has(x.ownerId) ? x.targetId : x.ownerId), at: x.usedAt ?? x.at ?? '' }))
+        .reverse()
+        .slice(0, 12),
+    };
   },
   async usePowerup(session, id) {
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
-    const seats = new Set(db.players.filter((x) => x.name.toLowerCase() === me.name.toLowerCase() && x.pin === me.pin).map((x) => x.id));
-    const pu = (db.powerups ?? []).find((x) => x.id === id && seats.has(x.ownerId) && x.status === 'held');
+    const pu = heldBy(db, me).find((x) => x.id === id);
     if (!pu) throw new Error('That power-up isn’t in your locker.');
     pu.status = 'used';
+    pu.usedAt = new Date().toISOString();
     save(db);
     return pu.kind;
+  },
+  async sendCurse(session, kind, target) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const power = powerOf(kind);
+    if (!power || power.group !== 'curse') throw new Error('That isn’t a curse.');
+    const t = targetOf(db, me, target);
+    const week = Date.parse(`${weekOf(todayInGameTz())}T05:00:00Z`);
+    const seats = seatsOf(db, me);
+    if ((db.powerups ?? []).filter((x) => seats.has(x.ownerId) && powerOf(x.kind)?.group === 'curse' && x.price > 0 && Date.parse(x.at ?? '') >= week).length >= CURSES_A_WEEK)
+      throw new Error('Three curses a week. Save some malice for next week.');
+    if ((db.powerups ?? []).filter((x) => x.targetId && seatsOf(db, t).has(x.targetId) && x.status === 'pending').length >= 2) throw new Error(`${t.name} already has two curses waiting. Let them suffer those first.`);
+    if ((await bankOf(this, session, me)) < power.price) throw new Error('Not enough in the bank for that.');
+    const blocked = prenupHolds(db, t);
+    pushPower(db, { ownerId: me.id, kind, price: power.price, status: blocked ? 'blocked' : 'pending', targetId: t.id, usedAt: blocked ? new Date().toISOString() : undefined });
+    save(db);
+    return blocked ? 'blocked' : 'sent';
+  },
+  async pickPocket(session, target) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const t = targetOf(db, me, target);
+    const theirs = heldBy(db, t);
+    if (!theirs.length) throw new Error(`${t.name}’s locker is empty. Nothing to pick.`);
+    if (heldBy(db, me).length >= LOCKER_MAX) throw new Error('Your locker holds three. Use one first.');
+    const cost = powerOf('pickpocket')!.price;
+    if ((await bankOf(this, session, me)) < cost) throw new Error('Not enough in the bank for that.');
+    const now = new Date().toISOString();
+    if (prenupHolds(db, t)) {
+      pushPower(db, { ownerId: me.id, kind: 'pickpocket', price: cost, status: 'blocked', targetId: t.id, usedAt: now });
+      save(db);
+      return 'blocked';
+    }
+    const got = theirs[Math.floor(Math.random() * theirs.length)];
+    Object.assign(got, { status: 'stolen', targetId: me.id, usedAt: now });
+    pushPower(db, { ownerId: me.id, kind: got.kind, price: 0, status: 'held', fromId: t.id });
+    pushPower(db, { ownerId: me.id, kind: 'pickpocket', price: cost, status: 'used', targetId: t.id, usedAt: now });
+    save(db);
+    return got.kind;
+  },
+  async landCurses(session) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const seats = seatsOf(db, me);
+    const name = (id?: string) => db.players.find((x) => x.id === id)?.name ?? null;
+    const now = new Date().toISOString();
+    const out = (db.powerups ?? [])
+      .filter((x) => x.targetId && seats.has(x.targetId) && x.status === 'pending')
+      .map((x) => {
+        x.status = 'landed';
+        x.usedAt = now;
+        return { id: x.id, kind: x.kind, from: name(x.fromId ?? x.ownerId), via: x.fromId ? name(x.ownerId) : null };
+      });
+    save(db);
+    return out;
+  },
+  async passCurse(session, curse, target) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const seats = seatsOf(db, me);
+    const c = (db.powerups ?? []).find((x) => x.id === curse && x.targetId && seats.has(x.targetId) && x.status === 'landed');
+    if (!c) throw new Error('That curse can’t be passed on now.');
+    const t = targetOf(db, me, target);
+    if ((db.powerups ?? []).filter((x) => x.targetId && seatsOf(db, t).has(x.targetId) && x.status === 'pending').length >= 2) throw new Error(`${t.name} already has two curses waiting.`);
+    const pass = heldBy(db, me).find((x) => x.kind === 'passon');
+    if (!pass) throw new Error('You need a Pass It On in your locker.');
+    const now = new Date().toISOString();
+    Object.assign(pass, { status: 'used', usedAt: now });
+    c.status = 'passed';
+    const blocked = prenupHolds(db, t);
+    pushPower(db, { ownerId: me.id, kind: c.kind, price: 0, status: blocked ? 'blocked' : 'pending', targetId: t.id, fromId: c.ownerId, usedAt: blocked ? now : undefined });
+    save(db);
+    return blocked ? 'blocked' : 'passed';
   },
 
   async saveAvatar(session, avatar) {
