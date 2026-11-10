@@ -7,7 +7,7 @@ export const BONUS = {
   streak3: 100, // the third day running at the club (opened the app, played or practised)
   streak7: 250, // every seventh day running
   ctp: 150, // the day's Closest to the Pin winner, across every club
-  birdie: 100, // birdies and better pay on the day's first finished round only (raised from 25 on Nov 10, paid back)
+  birdie: 100, // birdies and better pay on the day's first finished round only (raised from 25 for holes from Nov 10; not paid back)
   eagle: 500, // was 100
   albatross: 1000, // three under on a hole (was paid as an eagle)
   ace: 2500, // was 500
@@ -24,7 +24,11 @@ export const MONSTER_PUTT_FT = 60;
 // every hole's secret route, by its zone (secret_feats in supabase/schema.sql)
 export const SECRET_FEATS = ['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch', 'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk'];
 
-export type Bonus = { rounds: number; streaks: number; ctp: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; total: number };
+export type Bonus = { rounds: number; streaks: number; ctp: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; grants?: number; total: number };
+
+// before Nov 10 2026 great holes paid the old rates (person_bonus in supabase/schema.sql)
+export const RAISE_FROM = '2026-11-10';
+export const oldShotBonus = (strokes: number, par: number) => (strokes === 1 ? 500 : strokes <= par - 2 ? 100 : strokes === par - 1 ? 25 : 0);
 
 // what a holed putt from this far is worth on a card
 export const puttBonus = (ft: number) => (ft >= MONSTER_PUTT_FT ? BONUS.monsterPutt : ft >= LONG_PUTT_FT ? BONUS.longPutt : 0);
@@ -51,11 +55,11 @@ export function streakBonus(days: string[]) {
   return total;
 }
 
-export function bonusOf(o: { roundDays: string[]; days: string[]; ctpWins: number; holes: [number, number][]; putts?: number; chipins?: number; secrets?: number; designs?: number }): Bonus {
+export function bonusOf(o: { roundDays: string[]; days: string[]; ctpWins: number; holes: [number, number, boolean?][]; putts?: number; chipins?: number; secrets?: number; designs?: number }): Bonus {
   const rounds = new Set(o.roundDays).size * BONUS.round;
   const streaks = streakBonus(o.days);
   const ctp = o.ctpWins * BONUS.ctp;
-  const shots = o.holes.reduce((a, [s, p]) => a + shotBonus(s, p), 0);
+  const shots = o.holes.reduce((a, [s, p, old]) => a + (old ? oldShotBonus(s, p) : shotBonus(s, p)), 0);
   const extra = { putts: o.putts ?? 0, chipins: o.chipins ?? 0, secrets: o.secrets ?? 0, designs: o.designs ?? 0 };
   return { rounds, streaks, ctp, shots, ...extra, total: rounds + streaks + ctp + shots + extra.putts + extra.chipins + extra.secrets + extra.designs };
 }

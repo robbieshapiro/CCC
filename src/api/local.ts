@@ -3,7 +3,7 @@ import { seasonPoints } from '../season';
 import { STOCK_BUDDIES } from '../buddies';
 import { cardsOn, GAME_TZ, openPurseOn, periodOf, todayInGameTz } from '../day';
 import { courseById, courseFor } from '../golf3d/courses';
-import { BONUS, bonusOf, puttBonus, SECRET_FEATS } from '../bonus';
+import { BONUS, bonusOf, puttBonus, RAISE_FROM, SECRET_FEATS } from '../bonus';
 import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
@@ -209,7 +209,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         // birdies and better pay on the day's first finished round only
         holes: rs.filter((r, i) => !rs.slice(0, i).some((x) => todayInGameTz(new Date(x.createdAt)) === todayInGameTz(new Date(r.createdAt)))).flatMap((r) => {
           const pars = courseById(r.course)?.holes.map((h) => h.par);
-          return pars?.length === r.holes.length ? r.holes.map((s, i): [number, number] => [s, pars[i]]) : [];
+          const old = todayInGameTz(new Date(r.createdAt)) < RAISE_FROM;
+          return pars?.length === r.holes.length ? r.holes.map((s, i): [number, number, boolean] => [s, pars[i], old]) : [];
         }),
         // as person_bonus does: the moments on daily cards (from Nov 8), secrets found, and plays of their holes
         ...(() => {
