@@ -357,7 +357,6 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
           ? `<p class="purse-line"><b>${toPar < rec.toPar ? 'Course record' : 'Ties the course record'}</b><span>${toParLabel(toPar)} on ${esc(course.name)}. ${rec.rounds} rounds ever played on it.</span></p>`
           : `<p class="purse-line"><b>Course record ${toParLabel(rec.toPar)}</b><span>${(rec.holders ?? []).map((h) => esc(h.name)).join(' & ')}${rec.mine !== null ? ` · your best ${toParLabel(rec.mine)}` : ''}</span></p>`;
   }
-  sfx(best ? 'cheer' : 'ooh');
   // the club bonus this round earned: the day's first finished round pays, with its birdies or better (src/bonus.ts).
   // The Committee's rehearsal shows it as a card would earn it, not paid.
   const bonus = (() => {
@@ -593,15 +592,14 @@ export async function dailyRound(snap: Snapshot) {
 }
 
 // The Members' Course: the approved holes from the Design Desk, each flying its designer's name on the flag
-// A coin burst over the course: the money, what it was for, a sound. It floats up and goes.
+// The money a moment earned: a small note under the hole title.
 export function coinPop(host: HTMLElement, amount: number, title: string, sub = '') {
+  // quiet: a small note under the hole title, the money and what it was for, in and gone (no coins, no sound)
   const el = document.createElement('div');
-  el.className = 'coin-pop';
-  el.innerHTML = `<span class="coins" aria-hidden="true">${'<i>🪙</i>'.repeat(5)}</span><b>+${money(amount)}</b><span>${esc(title)}${sub ? ` · ${esc(sub)}` : ''}</span>`;
+  el.className = 'money-note';
+  el.innerHTML = `<b>+${money(amount)}</b><span>${esc(title)}${sub ? ` · ${esc(sub)}` : ''}</span>`;
   host.appendChild(el);
-  sfx('board');
-  window.setTimeout(() => sfx('cheer'), 180);
-  window.setTimeout(() => el.remove(), 3200);
+  window.setTimeout(() => el.remove(), 3600);
 }
 
 async function membersHoles(): Promise<Hole[]> {
