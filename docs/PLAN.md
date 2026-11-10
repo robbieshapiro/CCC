@@ -164,7 +164,7 @@ Last updated Nov 10, 2026 (Midway curses and theft; the Midway's Prize Counter; 
 
 ## Setup status
 
-- [ ] #254: apply the curses SQL after merge (`pr_254_midway_curses`), then check `powerup_state` has `waiting` and `news`, and `admin_today` still answers.
+- [x] #254: applied `pr_254_midway_curses`; `powerup_state` answers with `waiting`, `sentThisWeek` and `news`, and `admin_today` answers (9 in today).
 - [x] #253: applied `pr_253_prize_counter`; `powerup_state` answers and every member's `spent` is unchanged (Hunter 350, Marc 7,200, Robbie 5,000, Tyler 3,650).
 - [x] #252: applied `pr_252_midway`; `bar_board(...,'midway')` answers with `playedToday`, and the game check takes 'midway'.
 - [x] #250: applied `pr_250_two_cards` on Nov 10; the five members with a card in today (Eli G, Charlie, Hunter, Marc, Pato) each show 1 of 2 with their second open.
