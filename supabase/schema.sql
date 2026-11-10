@@ -626,7 +626,9 @@ end $$;
 -- src/golf3d/holes): recorded on the card, and worth $150 the first time a member finds each one (person_bonus)
 create or replace function secret_feats() returns text[] language sql immutable as $$
   select array['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch',
-    'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk']
+    'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk',
+    -- the Windy City
+    'breakwater', 'plaza', 'lowerwacker', 'gangway', 'boardwalk']
 $$;
 
 -- Daily cards, from the week of Sun Nov 8: one round a day counts, the day's card. It locks at the first swing; if it's
@@ -2520,3 +2522,82 @@ begin
   end if;
 end $$;
 grant execute on function set_course_schedule(uuid, text, text) to anon;
+
+-- The Trophy Room (src/trophies.ts has the plaques and their thresholds): one person's progress, across all their seats,
+-- from what's already recorded. p_player: anyone's card (a seat in any club); null for your own.
+create or replace function trophy_progress(p_token uuid, p_player uuid default null) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); p players;
+begin
+  if p_player is null then p := home_of(me);
+  else
+    select * into p from players where id = p_player;
+    if not found then return null; end if;
+    p := home_of(p);
+  end if;
+  return (
+    with seats as (select id, group_id from players where lower(name) = lower(p.name) and pin_hash = p.pin_hash),
+    rd as (
+      select r.*, coalesce(r.pars, cp.pars) as hp from rounds r left join course_pars cp on cp.course = r.course
+      where r.player_id in (select id from seats)
+    ),
+    holes as (
+      select rd.id, rd.course, i as n, rd.holes[i] as s, rd.hp[i] as par from rd cross join lateral generate_subscripts(rd.holes, 1) i
+      where array_length(rd.hp, 1) = array_length(rd.holes, 1)
+    ),
+    strokes as (
+      select x.id, (e->>'c') as c, coalesce((e->>'i')::int, 0) as i, e->>'l' as l,
+        row_number() over (partition by x.id, e->>'h' order by k) as nth,
+        sqrt(power(coalesce((e->'f'->>0)::numeric, 0) - coalesce((e->'t'->>0)::numeric, 0), 2) + power(coalesce((e->'f'->>1)::numeric, 0) - coalesce((e->'t'->>1)::numeric, 0), 2)) as d
+      from rd x cross join lateral jsonb_array_elements(case when jsonb_typeof(x.shots) = 'array' then x.shots else '[]'::jsonb end) with ordinality a(e, k)
+    ),
+    days as (
+      select distinct d from (
+        select md.day as d from member_days md where md.player_id in (select id from seats)
+        union select (x.created_at at time zone 'America/New_York')::date from rounds x where x.player_id in (select id from seats)
+        union select (ps.started_at at time zone 'America/New_York')::date from practice_sessions ps where ps.player_id in (select id from seats)
+      ) u
+    ),
+    runs as (select count(*)::int as n from (select d - (row_number() over (order by d))::int as grp from days) z group by grp),
+    people as (
+      select distinct on (lower(x.name), x.pin_hash) lower(x.name) as k, x.pin_hash as h, x.id as home_id
+      from players x order by lower(x.name), x.pin_hash, x.host_only, x.created_at
+    ),
+    obest as (
+      select distinct on (r.month, pe.home_id) r.month, pe.home_id, r.total - r.par as tp
+      from people pe join players x on lower(x.name) = pe.k and x.pin_hash = pe.h join rounds r on r.player_id = x.id
+      where r.month >= open_purse_from() and r.month < game_month() and not x.host_only
+      order by r.month, pe.home_id, r.total - r.par, r.created_at
+    ),
+    open_ranked as (select o.*, rank() over (partition by o.month order by o.tp)::int as r from obest o),
+    mine_open as (select * from open_ranked where home_id = p.id),
+    birdie_holes as (select course, json_agg(distinct n order by n) as ns from holes where s <= par - 1 group by course)
+    select json_build_object(
+      'playerId', p.id,
+      'name', p.name,
+      'birdies', (select count(*) from holes where s = par - 1 and s <> 1),
+      'eagles', (select count(*) from holes where s <= par - 2 and s <> 1),
+      'albatross', (select count(*) from holes where s <= par - 3 and s <> 1),
+      'aces', (select count(*) from holes where s = 1),
+      'cards', (select count(*) from rd),
+      'underpar', (select count(*) from rd where total < par),
+      'bogeyfree', (select count(*) from (select id from holes group by id having bool_and(s <= par)) b),
+      'putts30', (select count(*) from strokes where c = 'putter' and i = 1 and d >= 30),
+      'putts60', (select count(*) from strokes where c = 'putter' and i = 1 and d >= 60),
+      'chipins', (select count(*) from strokes where c <> 'putter' and i = 1 and coalesce(l, '') <> 'green' and nth > 1),
+      'pinseeker', (select count(*) from daily_shots s where s.player_id in (select id from seats) and (s.holed or s.ft <= 3)),
+      'longdrive', (select coalesce(max(score), 0) from bar_scores b where b.player_id in (select id from seats) and b.game = 'drive'),
+      'streak', (select coalesce(max(n), 0) from runs),
+      'ctpwins', (select count(*) from ctp_winners() w where w.k = lower(p.name) and w.h = p.pin_hash),
+      'designplayers', (select count(distinct dp.player_id) from design_plays dp join designs d on d.id = dp.design_id
+        where d.player_id in (select id from seats) and dp.player_id not in (select id from seats)),
+      'titles', (select count(*) from (select distinct group_id from seats) g cross join lateral period_champs(g.group_id) c
+        where c.player_id in (select id from seats) and c.how <> 'playoff'),
+      'openwins', (select count(*) from mine_open where r = 1),
+      'opentop10', (select count(*) from mine_open where r <= 10),
+      'secrets', (select coalesce(json_agg(distinct f), '[]') from rd cross join lateral unnest(rd.feats) f where f = any (secret_feats())),
+      'birdieHoles', (select coalesce(json_object_agg(course, ns), '{}') from birdie_holes)
+    )
+  );
+end $$;
+grant execute on function trophy_progress(uuid, uuid) to anon;

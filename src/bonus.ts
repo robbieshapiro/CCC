@@ -22,7 +22,7 @@ export const BONUS = {
 export const LONG_PUTT_FT = 30;
 export const MONSTER_PUTT_FT = 60;
 // every hole's secret route, by its zone (secret_feats in supabase/schema.sql)
-export const SECRET_FEATS = ['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch', 'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk'];
+export const SECRET_FEATS = ['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch', 'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk', 'breakwater', 'plaza', 'lowerwacker', 'gangway', 'boardwalk'];
 
 export type Bonus = { rounds: number; streaks: number; ctp: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; grants?: number; total: number };
 

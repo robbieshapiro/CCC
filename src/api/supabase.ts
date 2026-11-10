@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, CourseRecord, Season, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
+import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -141,6 +141,7 @@ export const supabaseApi: Api = {
   coursePractice: (s) => rpc<{ playerId: string; name: string; club: string; mine: boolean }[]>('course_practice', { p_token: s.token }),
   courseRecords: (s) => rpc<CourseRecord[]>('course_records', { p_token: s.token }),
   seasonStandings: (s) => rpc<Season>('season_standings', { p_token: s.token }),
+  trophyProgress: (s, id) => rpc<TrophyProgress | null>('trophy_progress', { p_token: s.token, p_player: id ?? null }),
   golferCard: (s, id) => rpc<GolferCard | null>('golfer_card', { p_token: s.token, p_player: id }),
   submitFreeRound: (s, course, holes, pars) => rpc<void>('submit_free_round', { p_token: s.token, p_course: course, p_holes: holes, p_pars: pars }),
   adminKpis: (s) => rpc<AdminKpis>('admin_kpis', { p_token: s.token }),

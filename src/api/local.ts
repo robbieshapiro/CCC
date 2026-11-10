@@ -11,7 +11,7 @@ import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
-import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
+import { MAX_OVER_PAR, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
@@ -769,6 +769,50 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     // career earnings, as on each person's own card
     for (const row of rows.values()) row.earnings = (await this.golferCard(session, row.playerId))?.earnings ?? 0;
     return { year, standings: [...rows.values()].sort((a, b) => b.points - a.points || b.projected - a.projected || a.name.localeCompare(b.name)) };
+  },
+
+  // the Trophy Room's counts, as trophy_progress works them out on the server (from what local mode keeps)
+  async trophyProgress(session, playerId): Promise<TrophyProgress | null> {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const who = playerId ? db.players.find((x) => x.id === playerId) : me;
+    if (!who) return null;
+    const home = homeOf(db, who);
+    const ids = new Set(db.players.filter((x) => x.name.toLowerCase() === home.name.toLowerCase() && x.pin === home.pin).map((x) => x.id));
+    const rs = db.rounds.filter((r) => ids.has(r.playerId));
+    const holes = rs.flatMap((r) => {
+      const pars = courseById(r.course)?.holes.map((h) => h.par);
+      return pars?.length === r.holes.length ? r.holes.map((s, n) => ({ course: r.course, n: n + 1, s, par: pars[n], round: r })) : [];
+    });
+    const strokes = rs.flatMap((r) => (r.shots ?? []).map((x, k, all) => ({ ...x, first: !all.slice(0, k).some((y) => y.h === x.h) })));
+    const dist = (x: RoundShot) => Math.hypot(x.t[0] - x.f[0], x.t[1] - x.f[1]);
+    const birdieHoles: Record<string, number[]> = {};
+    for (const h of holes) if (h.s <= h.par - 1) birdieHoles[h.course] = [...new Set([...(birdieHoles[h.course] ?? []), h.n])].sort((a, b) => a - b);
+    const card = await this.golferCard(session, home.id);
+    return {
+      playerId: home.id,
+      name: home.name,
+      birdies: holes.filter((h) => h.s === h.par - 1 && h.s !== 1).length,
+      eagles: holes.filter((h) => h.s <= h.par - 2 && h.s !== 1).length,
+      albatross: holes.filter((h) => h.s <= h.par - 3 && h.s !== 1).length,
+      aces: holes.filter((h) => h.s === 1).length,
+      cards: rs.length,
+      underpar: rs.filter((r) => r.total < r.par).length,
+      bogeyfree: rs.filter((r) => holes.filter((h) => h.round === r).length && holes.filter((h) => h.round === r).every((h) => h.s <= h.par)).length,
+      putts30: strokes.filter((x) => x.c === 'putter' && x.i && dist(x) >= 30).length,
+      putts60: strokes.filter((x) => x.c === 'putter' && x.i && dist(x) >= 60).length,
+      chipins: strokes.filter((x) => x.c !== 'putter' && x.i && x.l !== 'green' && !x.first).length,
+      pinseeker: (db.daily ?? []).filter((d) => ids.has(d.playerId) && (d.t.holed || (d.t.ft !== null && d.t.ft <= 3))).length,
+      longdrive: Math.max(0, ...(db.bar ?? []).filter((b) => ids.has(b.playerId) && b.game === 'drive').map((b) => b.score)),
+      streak: 0,
+      ctpwins: ctpWinners(db).filter((w) => w === `${home.name.toLowerCase()}|${home.pin}`).length,
+      designplayers: 0,
+      titles: card?.titles ?? 0,
+      openwins: card?.weeks.filter((w) => w.banked && w.place === 1 && w.week >= '2026-11-08').length ?? 0,
+      opentop10: card?.weeks.filter((w) => w.banked && w.place <= 10 && w.week >= '2026-11-08').length ?? 0,
+      secrets: [...new Set(rs.flatMap((r) => r.feats.filter((f) => SECRET_FEATS.includes(f))))],
+      birdieHoles,
+    };
   },
 
   // one golfer's card from any club: their home club's snapshot of them, and their Open weeks this season
