@@ -196,7 +196,7 @@ export function home(snap: Snapshot) {
       const el = document.getElementById('season-link');
       const i = s.standings.findIndex((r) => r.mine);
       if (!el || i < 0) return;
-      const pts = s.standings[i].points + s.standings[i].projected;
+      const pts = s.standings[i].points;
       el.textContent = `🏆 ${s.year} Season · you're ${placeLabel(i + 1, false)}, ${pts.toLocaleString('en-US')} pts`;
     }).catch(() => {});
   void bindOpen(snap).then((open) => {

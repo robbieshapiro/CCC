@@ -36,7 +36,7 @@ export async function golfer(snap: Snapshot, id: string) {
   }
   const since = g.joined ? new Date(g.joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '2026';
   const openWins = g.weeks.filter((w) => w.banked && w.place === 1).length;
-  const points = g.weeks.reduce((a, w) => a + w.points, 0);
+  const points = g.weeks.filter((w) => w.banked).reduce((a, w) => a + w.points, 0); // banked only, as the standings count
   const rank = rankOf(g.earnings, g.titles);
   const clubs = g.clubs?.length ? g.clubs : [g.club];
   const got = FEATS.filter((f) => g.feats.includes(f.id));

@@ -11,11 +11,11 @@ import { esc } from '../ui';
 
 export function seasonPane(snap: Snapshot) {
   return `
-    <div class="ch-head"><h1 id="season-h">The ${snap.month.slice(0, 4)} Season</h1><p class="muted">Points from every week's Open, like the FedEx Cup. This week: ${esc(openName(courseFor(snap.month).name, snap.month))}. Tap anyone for their card.</p></div>
+    <div class="ch-head"><h1 id="season-h">The ${snap.month.slice(0, 4)} Season</h1><p class="muted">Points from every week since October, like the FedEx Cup: the Highlands, the Caldera challenge and every week's Open. This week: ${esc(openName(courseFor(snap.month).name, snap.month))}. Tap anyone for their card.</p></div>
     <section class="season-card" id="season-board"><p class="muted">Loading the standings…</p></section>
     <section class="season-scale">
       <h2>How points work</h2>
-      <p>Your best card of the week sets your place on the Open, across every club. The place earns points when the week closes on Saturday night; until then they show as projected.</p>
+      <p>Your best card of the week sets your place on the Open, across every club. The place earns points when the week closes on Saturday night; until then they show as projected and don't count in the standings. October (the Highlands) and the Caldera challenge count too, each ranked across every club.</p>
       <ol class="scale">${SEASON_POINTS.slice(0, 10)
         .map((p, i) => `<li><span>${placeLabel(i + 1, false)}</span><b>${p}</b></li>`)
         .join('')}</ol>
@@ -37,7 +37,8 @@ export async function fillSeason() {
     el.innerHTML = '<p class="muted">No points yet. The first card of the week starts the race.</p>';
     return;
   }
-  const total = (r: Season['standings'][number]) => r.points + r.projected;
+  // the standings are banked points only; this week's place shows as projected underneath
+  const total = (r: Season['standings'][number]) => r.points;
   let place = 0;
   el.innerHTML = `<div class="table-wrap"><table class="season-table">
     <thead><tr><th></th><th>Member</th><th class="num">Wins</th><th class="num">Earnings</th><th class="num">Points</th></tr></thead>
@@ -45,7 +46,7 @@ export async function fillSeason() {
       .map((r, i) => {
         if (i === 0 || total(r) !== total(s.standings[i - 1])) place = i + 1;
         const sub = [esc(r.club), r.events ? `${r.events} wk${r.events === 1 ? '' : 's'}` : '', r.top10s ? `${r.top10s} top 10${r.top10s === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ');
-        return `<tr class="${r.mine ? 'me' : ''}" data-href="#/golfer/${r.playerId}"><td class="pos">${place}</td><td class="nm"><a href="#/golfer/${r.playerId}"><b>${esc(r.name)}${r.mine ? ' <small class="you">you</small>' : ''}</b></a><small>${sub}</small></td><td class="num">${r.wins || ''}</td><td class="num earn">${money(r.earnings ?? 0)}</td><td class="num pts"><b>${total(r).toLocaleString('en-US')}</b>${r.projected ? `<small>${r.points ? `${r.points} + ` : ''}${r.projected} this week</small>` : ''}</td></tr>`;
+        return `<tr class="${r.mine ? 'me' : ''}" data-href="#/golfer/${r.playerId}"><td class="pos">${place}</td><td class="nm"><a href="#/golfer/${r.playerId}"><b>${esc(r.name)}${r.mine ? ' <small class="you">you</small>' : ''}</b></a><small>${sub}</small></td><td class="num">${r.wins || ''}</td><td class="num earn">${money(r.earnings ?? 0)}</td><td class="num pts"><b>${total(r).toLocaleString('en-US')}</b>${r.projected ? `<small>+${r.projected} projected this week</small>` : ''}</td></tr>`;
       })
       .join('')}</tbody></table></div>`;
   // the whole row opens the card, not just the name

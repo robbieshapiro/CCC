@@ -1052,6 +1052,10 @@ create or replace function season_points(p_place int) returns numeric language s
   select coalesce((array[500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25]::numeric[])[p_place], 20)
 $$;
 
+-- The season counts every period from October 2026 (the Highlands month and the Caldera challenge too), each ranked
+-- across every club as the Open is, though the Open itself only began on Nov 8
+create or replace function season_from() returns text language sql immutable as $$ select '2026-10' $$;
+
 create or replace function season_standings(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); yr text := left(game_month(), 4);
@@ -1064,7 +1068,7 @@ begin
       select distinct on (rd.month, pe.home_id) rd.month, pe.home_id, rd.total - rd.par as tp
       from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
       join rounds rd on rd.player_id = p.id
-      where rd.month >= open_purse_from() and left(rd.month, 4) = yr and not p.host_only
+      where rd.month >= season_from() and left(rd.month, 4) = yr and not p.host_only
       order by rd.month, pe.home_id, rd.total - rd.par, rd.created_at
     ), ranked as (
       select b.*, rank() over (partition by b.month order by b.tp)::int as r, count(*) over (partition by b.month, b.tp)::int as k from best b
@@ -1088,7 +1092,8 @@ begin
     select json_agg(json_build_object('playerId', t.home_id, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.home_group), 'mine', pe.k = lower(me.name) and pe.h = me.pin_hash,
         'points', coalesce(t.points, 0), 'projected', coalesce(t.projected, 0), 'events', t.events, 'wins', t.wins, 'top10s', t.top10s, 'best', t.best,
         'earnings', coalesce(pay.earned, 0) + (person_bonus(hp)->>'total')::int)
-      order by coalesce(t.points, 0) + coalesce(t.projected, 0) desc, coalesce(t.points, 0) desc, pe.name)
+      -- standings are banked points only; this week's place shows as projected but doesn't move anyone yet
+      order by coalesce(t.points, 0) desc, coalesce(t.projected, 0) desc, pe.name)
     from tot t join people pe on pe.home_id = t.home_id join groups g on g.id = pe.home_group join players hp on hp.id = t.home_id
       left join pay on pay.home_id = t.home_id
   ), '[]'));
@@ -1113,7 +1118,7 @@ begin
       select distinct on (rd.month, pe.home_id) rd.month, pe.home_id, rd.total - rd.par as tp, rd.course, rd.holes, rd.total, rd.par
       from people pe join players x on lower(x.name) = pe.k and x.pin_hash = pe.h
       join rounds rd on rd.player_id = x.id
-      where rd.month >= open_purse_from() and left(rd.month, 4) = yr and not x.host_only
+      where rd.month >= season_from() and left(rd.month, 4) = yr and not x.host_only
       order by rd.month, pe.home_id, rd.total - rd.par, rd.created_at
     ), ranked as (
       select b.*, rank() over (partition by b.month order by b.tp)::int as r, count(*) over (partition by b.month, b.tp)::int as k,
