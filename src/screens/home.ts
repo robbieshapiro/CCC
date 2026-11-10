@@ -179,7 +179,7 @@ export function home(snap: Snapshot) {
       </section>
       ${playTiles(snap)}
       ${previewBand(snap.month)}
-      <p class="course-idea">Want to feature next week's course? <button class="link" data-course-idea>Submit</button> an <button class="link" data-course-idea>idea</button> to Reginald for review.</p>
+      <p class="course-idea">Want to feature next week's course? <button class="link" data-course-idea>Submit an idea</button> to Reginald for review.</p>
       ${honoursPane(snap)}
       <section class="plaque">
         <h2>Past Champions</h2>
