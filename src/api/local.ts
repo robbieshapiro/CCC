@@ -742,7 +742,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const year = Number(now.slice(0, 4));
     const best = new Map<string, Map<string, number>>(); // week -> person -> best to par
     for (const r of db.rounds) {
-      if (r.month < '2026-10' || r.month.slice(0, 4) !== String(year)) continue; // the season counts from October
+      if (r.month < '2026-10' || r.month.slice(0, 4) !== String(year)) continue; // the season counts from the Highlands
       const w = best.get(r.month) ?? new Map<string, number>();
       w.set(r.playerId, Math.min(w.get(r.playerId) ?? Infinity, r.total - r.par));
       best.set(r.month, w);

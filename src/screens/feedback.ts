@@ -6,14 +6,15 @@ import { hostChip } from '../host';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 
-// A plain text box and a Submit button, over whatever is on screen. `context` says where it was sent from.
-export function openFeedback(context: string, host: HTMLElement = document.body) {
+// A plain text box and a Submit button, over whatever is on screen. `context` says where it was sent from. `o` dresses
+// it for something other than feedback (a course idea), landing in the same inbox.
+export function openFeedback(context: string, host: HTMLElement = document.body, o: { intro?: string; label?: string; placeholder?: string } = {}) {
   const sheet = document.createElement('div');
   sheet.className = 'feedback-sheet';
   sheet.innerHTML = `
     <form class="feedback-card" id="fb-form">
-      ${hostChip("The Committee welcomes your remarks. It may even read them.")}
-      <label for="fb-body">Your feedback <textarea id="fb-body" maxlength="2000" rows="6" required placeholder="What should we fix, add or change?"></textarea></label>
+      ${hostChip(o.intro ?? 'The Committee welcomes your remarks. It may even read them.')}
+      <label for="fb-body">${esc(o.label ?? 'Your feedback')} <textarea id="fb-body" maxlength="2000" rows="6" required placeholder="${esc(o.placeholder ?? 'What should we fix, add or change?')}"></textarea></label>
       <p class="error" id="fb-err" role="alert"></p>
       <div class="summary-actions"><button class="btn" type="submit">Submit</button><button class="btn ghost" type="button" data-close>Cancel</button></div>
     </form>`;

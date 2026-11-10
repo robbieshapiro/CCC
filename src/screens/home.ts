@@ -9,6 +9,7 @@ import { bindOpen } from './open';
 import { bindLive, liveCards, liveNow } from './live';
 import { bindPlayTiles, playTiles } from './playtiles';
 import { openName } from '../season';
+import { openFeedback } from './feedback';
 import { bindDaily } from './daily';
 import { bindCardNote, cardTile, tileState } from './cardnote';
 import { bindNotices, noticesStrip } from './notices';
@@ -178,6 +179,7 @@ export function home(snap: Snapshot) {
       </section>
       ${playTiles(snap)}
       ${previewBand(snap.month)}
+      <p class="course-idea">Want to feature next week's course? <button class="link" data-course-idea>Submit</button> an <button class="link" data-course-idea>idea</button> to Reginald for review.</p>
       ${honoursPane(snap)}
       <section class="plaque">
         <h2>Past Champions</h2>
@@ -211,6 +213,16 @@ export function home(snap: Snapshot) {
   });
   // the note before a fresh card; and a card started and cut short shows where it stands, with Continue
   bindCardNote(document, CARD_LINKS, navigate);
+  // a member's idea for a course, to Reginald (it lands in the Committee's feedback, marked as a course idea)
+  document.querySelectorAll<HTMLButtonElement>('[data-course-idea]').forEach(
+    (b) =>
+      (b.onclick = () =>
+        openFeedback('Course idea', document.body, {
+          intro: 'A course of your own devising? Do tell. The Committee reviews every one.',
+          label: 'Your course idea',
+          placeholder: 'Where is it, what is it like, and which holes would you play? A real place, a dream, anything.',
+        })),
+  );
   if (cards && !cardIn)
     void api.cardToday(requireSession()).then((t) => {
       const tile = document.getElementById('card-tile');
