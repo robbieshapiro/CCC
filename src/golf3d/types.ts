@@ -61,12 +61,12 @@ export type Hole = {
   turf?: { roughKeep: number; roughDrag: number; roughLie: number; roughScatter: number; fairwayRoll: number; greenRoll?: number; sandLie: number; sandScatter: number };
   windByHeight?: boolean; // wind scales with how high a shot climbs (none below 3 ft of apex, all of it from 23 ft), on its first flight only
   gusts?: boolean; // an exposed hole: a 10 to 15 mph wind every day, gusting from shot to shot (see conditions.ts)
-  weather?: 'storm'; // autumn storms: a stronger, gusting wind, and rain on some days (see conditions.ts)
+  weather?: 'storm' | 'gale'; // autumn storms: a stronger, gusting wind, and rain on some days. gale: Chicago in November, 15 to 30 mph off the lake, gusting (see conditions.ts)
   wet?: boolean; // raining today: greens and fairways run a little slower
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
   noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)
-  theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn' | 'coastal' | 'florida' | 'city' | 'canyon' | 'alpine' | 'linksland';
+  theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn' | 'coastal' | 'florida' | 'city' | 'canyon' | 'alpine' | 'linksland' | 'chicago';
   blurb?: string; // a line for the hole's intro card during the flyover
   yards?: number; // the length shown on the intro card, if not the straight line from tee to cup
   putterOnly?: boolean; // mini golf: the putter is the only club

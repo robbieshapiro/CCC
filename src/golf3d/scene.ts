@@ -388,7 +388,7 @@ function waterMesh(h: Hole, w: Water) {
         })
       : new THREE.MeshStandardMaterial({
           // the Pacific: clear enough near the rocks that the sandy bottom turns the shallows turquoise
-          color: look === 'sea' ? (h.theme === 'coastal' ? PACIFIC : '#2b6d84') : (kitOf(h)?.lake ?? '#3a6f80'),
+          color: look === 'sea' ? (h.theme === 'coastal' ? PACIFIC : (kitOf(h)?.sea ?? '#2b6d84')) : (kitOf(h)?.lake ?? '#3a6f80'),
           roughness: 0.05,
           metalness: 0.25,
           transparent: true,

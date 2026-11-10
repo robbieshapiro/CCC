@@ -19,6 +19,11 @@ import { thegorge } from './holes/thegorge';
 import { theledges } from './holes/theledges';
 import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
+import { lakefront } from './holes/chicago/lakefront';
+import { millennium } from './holes/chicago/millennium';
+import { navypier } from './holes/chicago/navypier';
+import { river } from './holes/chicago/river';
+import { wrigleyville } from './holes/chicago/wrigleyville';
 import { herons } from './holes/lab/herons';
 import { hoodoogap } from './holes/lab/hoodoogap';
 import { oldkeep } from './holes/lab/oldkeep';
@@ -99,6 +104,24 @@ const COURSES: Course[] = [
     holes: [creekbend, theledges, maplelake, thequarry, thegorge],
     par: par([creekbend, theledges, maplelake, thequarry, thegorge]),
     playoff: { hole: thegorge, from: { x: -4, y: 720 }, label: 'Up from the river' },
+  },
+  {
+    id: 'windycity',
+    // Chicago in late November, built from the Hole Lab's city: the week of Nov 22. A draft until Robbie has played
+    // it; he puts it on the calendar from Admin > Course > The weeks ahead.
+    opens: '2026-11-22',
+    draft: true,
+    whatsNew: [
+      'Chicago in November. Bring a coat.',
+      'The wind off the lake: 15 to 30 mph, and it gusts.',
+      'Buildings are in play. A roof keeps your ball.',
+      'Greens are flatter, with some break.',
+    ],
+    name: 'The Windy City',
+    tagline: 'Five holes through Chicago in November: the lakefront, Millennium Park, the river, Wrigleyville and Navy Pier.',
+    holes: [lakefront, millennium, river, wrigleyville, navypier],
+    par: par([lakefront, millennium, river, wrigleyville, navypier]),
+    playoff: { hole: navypier, from: { x: 0, y: 640 }, label: 'Off the end of the pier' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------
   ...(
