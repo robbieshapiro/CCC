@@ -8,12 +8,15 @@ import { city } from './looks/city';
 import { canyon } from './looks/canyon';
 import { alpine } from './looks/alpine';
 import { linksland } from './looks/linksland';
+import { chicago } from './looks/chicago';
 
 export type Anim = ((clock: number, dt: number) => void)[];
 export type Kit = {
   surface: Partial<Record<Surface, string>>;
   floor: string; // the ground beyond the course
   lake?: string; // the colour of its lakes and rivers, if not the usual
+  sea?: string; // the colour of its sea (or great lake), if not the usual
+  snow?: boolean; // snow flurries drifting down, blown by the day's wind
   // light: hemisphere sky and ground colours and strength, the sun's colour and strength, fog colour and distances,
   // and how much the environment shows in shiny things
   light: { sky: string; ground: string; hemi: number; sunColor: string; sun: number; fog: string; near: number; far: number; env: number };
@@ -26,5 +29,5 @@ export type Kit = {
   frame?(h: Hole, root: THREE.Group, anim: Anim, floor: number): void; // what lies beyond the grounds
 };
 
-export const KITS: Record<string, Kit> = { florida, city, canyon, alpine, linksland };
+export const KITS: Record<string, Kit> = { florida, city, canyon, alpine, linksland, chicago };
 export const kitOf = (h: Hole): Kit | undefined => (h.theme ? KITS[h.theme] : undefined);

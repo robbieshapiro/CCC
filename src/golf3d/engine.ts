@@ -455,6 +455,7 @@ export class Course3D {
     if (this.look !== look) this.setLook(look);
     this.fitShadows();
     this.petalsFor(hole);
+    this.snowFor(hole);
     this.rainFor(hole, tempest);
     this.hud(total);
     this.setStrokes();
@@ -629,6 +630,25 @@ export class Course3D {
 
   // Rain on a wet day: streaks falling in a box that travels with the camera, so it's always raining where you look
   private rain: THREE.LineSegments | null = null;
+  private snow: THREE.Points | null = null;
+
+  // Snow flurries (a look kit with snow): soft white flakes round the camera, drifting with the day's wind
+  private snowFor(h: Hole) {
+    if (this.snow) {
+      this.scene.remove(this.snow);
+      this.snow.geometry.dispose();
+      this.snow = null;
+    }
+    if (!(h.theme && KITS[h.theme]?.snow)) return;
+    const n = 1400;
+    const arr = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) arr.set([(Math.random() - 0.5) * 160, Math.random() * 70, (Math.random() - 0.5) * 160], i * 3);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    this.snow = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ffffff', size: 0.45, transparent: true, opacity: 0.85, depthWrite: false }));
+    this.snow.frustumCulled = false;
+    this.scene.add(this.snow);
+  }
   private rainHeavy = false;
   private rainFor(h: Hole, tempest = false) {
     if (this.rain) {
@@ -2323,6 +2343,25 @@ export class Course3D {
           arr[i + 1] += 60;
           arr[i + 4] += 60;
         }
+      }
+      a.needsUpdate = true;
+    }
+    if (this.snow) {
+      this.snow.position.set(this.camera.position.x, this.camera.position.y - 35, this.camera.position.z);
+      const a = this.snow.geometry.attributes.position as THREE.BufferAttribute;
+      const arr = a.array as Float32Array;
+      // the wind carries it: x is across the hole, three's z is down it (flipped)
+      const wx = (this.wind?.accel.x ?? 0) * 0.35;
+      const wz = -(this.wind?.accel.y ?? 0) * 0.35;
+      for (let i = 0; i < arr.length; i += 3) {
+        arr[i] += dt * (wx + Math.sin(this.clock * 1.3 + i) * 1.2);
+        arr[i + 1] -= dt * 4.5;
+        arr[i + 2] += dt * wz;
+        if (arr[i + 1] < 0) arr[i + 1] += 70;
+        if (arr[i] > 80) arr[i] -= 160;
+        else if (arr[i] < -80) arr[i] += 160;
+        if (arr[i + 2] > 80) arr[i + 2] -= 160;
+        else if (arr[i + 2] < -80) arr[i + 2] += 160;
       }
       a.needsUpdate = true;
     }
