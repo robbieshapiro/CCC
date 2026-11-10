@@ -712,6 +712,8 @@ begin
         'bonus', person_bonus(pl),
         -- playing here from another club: on the board and in for the title, but paid at home
         'away', (home_of(pl)).group_id <> pl.group_id,
+        -- runs the clubs: shown as the Committee, never as a guest (display only; away still decides the purse)
+        'committee', exists (select 1 from players s where s.id in (select person_seats(pl)) and s.role = 'admin'),
         'feats', (select coalesce(json_agg(distinct f), '[]') from (
             select unnest(feats) f from rounds where player_id = pl.id
             union select 'champion' where exists (select 1 from period_champs(me.group_id) c where c.player_id = pl.id and c.how <> 'playoff')
@@ -866,6 +868,15 @@ end $$;
 -- name with the same PIN hash (create_club copies it), shown under the club they joined first. Their best round
 -- this month across all their clubs counts; lowest to par, earliest breaks a tie, as on a club board.
 -- localId: their member id in the viewer's club, if they're in it (so the card can be opened); null otherwise.
+-- How a person's club is shown to members: their home club's name, or 'Committee' for whoever runs the clubs (an
+-- admin seat anywhere). Display only: where they play, and what counts and pays, is unchanged.
+create or replace function club_label(p_k text, p_h text, p_group uuid) returns text
+language sql stable security definer set search_path = public, extensions as $$
+  select case when exists (select 1 from players s where lower(s.name) = p_k and s.pin_hash = p_h and s.role = 'admin') then 'Committee'
+    else (select name from groups where id = p_group) end
+$$;
+revoke all on function club_label(text, text, uuid) from public, anon, authenticated;
+
 create or replace function open_board(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); m text := game_month();
@@ -884,7 +895,7 @@ begin
       select home_id, count(*) as n, max(created_at) as last from r group by home_id
     )
     select json_agg(json_build_object(
-        'playerId', b.home_id, 'name', b.name, 'club', g.name,
+        'playerId', b.home_id, 'name', b.name, 'club', club_label(b.k, b.h, b.home_group),
         'mine', lower(me.name) = b.k and me.pin_hash = b.h,
         'localId', (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = b.k and p2.pin_hash = b.h),
         'avatar', b.avatar, 'holes', b.holes, 'total', b.total, 'par', b.par,
@@ -923,7 +934,7 @@ begin
     ), field as (
       select * from done union all select * from going g where not exists (select 1 from done d where d.home_id = g.home_id)
     ), rows as (
-      select pe.home_id, pe.name, gr.name as club, pe.avatar, f.holes, f.spots, f.going, f.at,
+      select pe.home_id, pe.name, club_label(pe.k, pe.h, pe.home_group) as club, pe.avatar, f.holes, f.spots, f.going, f.at,
         (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = pe.k and p2.pin_hash = pe.h and not p2.host_only) as local_id,
         lower(me.name) = pe.k and me.pin_hash = pe.h as mine
       from field f join people pe on pe.home_id = f.home_id join groups gr on gr.id = pe.home_group
@@ -951,7 +962,7 @@ begin
       where ps.kind = 'course' and ps.started_at >= t0 and (ps.shots > 0 or ps.ended_at is null)
       group by pe.home_id
     )
-    select json_agg(json_build_object('playerId', w.home_id, 'name', pe.name, 'club', g.name, 'mine', lower(me.name) = pe.k and me.pin_hash = pe.h) order by w.at desc)
+    select json_agg(json_build_object('playerId', w.home_id, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.home_group), 'mine', lower(me.name) = pe.k and me.pin_hash = pe.h) order by w.at desc)
     from (select * from went order by at desc limit 40) w join people pe on pe.home_id = w.home_id join groups g on g.id = pe.home_group
   ), '[]');
 end $$;
@@ -1016,14 +1027,14 @@ begin
     ), periods as (
       select distinct course, month from rounds
     ), champs as (
-      select pr.course, p.name, gr.name as club, c.total - c.par as tp
+      select pr.course, p.name, club_label(lower(p.name), p.pin_hash, gr.id) as club, c.total - c.par as tp
       from groups gr cross join lateral period_champs(gr.id) c join periods pr on pr.month = c.month join players p on p.id = c.player_id
       where c.how <> 'playoff'
     )
     select json_agg(json_build_object(
       'course', rc.course,
       'toPar', rc.tp,
-      'holders', (select json_agg(json_build_object('name', pe.name, 'club', g.name) order by b.created_at)
+      'holders', (select json_agg(json_build_object('name', pe.name, 'club', club_label(pe.k, pe.h, pe.home_group)) order by b.created_at)
         from best b join people pe on pe.home_id = b.home_id join groups g on g.id = pe.home_group where b.course = rc.course and b.tp = rc.tp),
       'mine', (select b.tp from best b join people pe on pe.home_id = b.home_id where b.course = rc.course and pe.k = lower(me.name) and pe.h = me.pin_hash),
       'rounds', (select count(*) from played pl where pl.course = rc.course),
@@ -1074,7 +1085,7 @@ begin
       from groups g cross join lateral period_payouts(g.id) pp join players s on s.id = pp.player_id
       join people pe on lower(s.name) = pe.k and s.pin_hash = pe.h group by pe.home_id
     )
-    select json_agg(json_build_object('playerId', t.home_id, 'name', pe.name, 'club', g.name, 'mine', pe.k = lower(me.name) and pe.h = me.pin_hash,
+    select json_agg(json_build_object('playerId', t.home_id, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.home_group), 'mine', pe.k = lower(me.name) and pe.h = me.pin_hash,
         'points', coalesce(t.points, 0), 'projected', coalesce(t.projected, 0), 'events', t.events, 'wins', t.wins, 'top10s', t.top10s, 'best', t.best,
         'earnings', coalesce(pay.earned, 0) + (person_bonus(hp)->>'total')::int)
       order by coalesce(t.points, 0) + coalesce(t.projected, 0) desc, coalesce(t.points, 0) desc, pe.name)
@@ -1119,8 +1130,9 @@ begin
     )
     select json_build_object(
       'playerId', p.id, 'name', p.name, 'avatar', p.avatar,
-      'club', (select name from groups where id = p.group_id),
-      'clubs', (select json_agg(distinct g.name) from seats s join groups g on g.id = s.group_id where not s.host_only),
+      'club', club_label(lower(p.name), p.pin_hash, p.group_id),
+      'clubs', case when club_label(lower(p.name), p.pin_hash, p.group_id) = 'Committee' then json_build_array('Committee')
+        else (select json_agg(distinct g.name) from seats s join groups g on g.id = s.group_id where not s.host_only) end,
       'joined', (select min(created_at) from seats),
       'mine', lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash,
       'earnings', pay.earned + (person_bonus(p)->>'total')::int,
@@ -1834,7 +1846,7 @@ begin
       'mine', coalesce((select json_agg(json_build_object('try', t.try, 'ft', t.ft, 'holed', t.holed, 'lost', t.lost) order by t.try)
         from tries t where t.k = lower(me.name) and t.h = me.pin_hash), '[]'),
       -- ranked: holed beats everything, holed sooner beats later, then nearest, then the next-best try, then the earlier player
-      'board', coalesce((select json_agg(json_build_object('name', pe.name, 'club', g.name, 'ft', b.fts[1], 'holed', b.holed, 'holedTry', b.htry, 'tries', b.n,
+      'board', coalesce((select json_agg(json_build_object('name', pe.name, 'club', club_label(pe.k, pe.h, pe.group_id), 'ft', b.fts[1], 'holed', b.holed, 'holedTry', b.htry, 'tries', b.n,
           'mine', b.k = lower(me.name) and b.h = me.pin_hash)
         order by b.holed desc, b.htry asc nulls last, b.fts[1] asc nulls last, b.fts[2] asc nulls last, b.fts[3] asc nulls last, b.first_at)
         from best b join people pe on pe.k = b.k and pe.h = b.h join groups g on g.id = pe.group_id), '[]'),
@@ -1881,7 +1893,7 @@ begin
         min(t.created_at) as first_at
       from tries t group by t.k, t.h
     )
-    select json_build_object('day', d, 'name', pe.name, 'club', g.name, 'ft', b.fts[1], 'holed', b.holed,
+    select json_build_object('day', d, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.group_id), 'ft', b.fts[1], 'holed', b.holed,
       'ids', coalesce((select json_agg(p.id) from players p where p.group_id = me.group_id and lower(p.name) = b.k and p.pin_hash = b.h), '[]'))
     from best b join people pe on pe.k = b.k and pe.h = b.h join groups g on g.id = pe.group_id
     where b.holed or b.fts[1] is not null

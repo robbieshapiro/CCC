@@ -249,6 +249,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           career: career(mine.filter((r) => r.playerId === p.id)),
           ...money(p),
           away: homeOf(db, p).groupId !== p.groupId,
+          committee: seatsOf(p).some((x) => x.admin),
         })),
       rounds: mine.filter((r) => r.month === month).map(strip),
       champions,
