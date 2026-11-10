@@ -41,12 +41,15 @@ export async function fillSeason() {
   const total = (r: Season['standings'][number]) => r.points;
   let place = 0;
   el.innerHTML = `<div class="table-wrap"><table class="season-table">
-    <thead><tr><th></th><th>Member</th><th class="num">Wins</th><th class="num">Earnings</th><th class="num">Points</th></tr></thead>
+    <thead><tr><th></th><th>Member</th><th class="num wins">Wins</th><th class="num earn">Earnings</th><th class="num">Points</th></tr></thead>
     <tbody>${s.standings
       .map((r, i) => {
         if (i === 0 || total(r) !== total(s.standings[i - 1])) place = i + 1;
         const sub = [esc(r.club), r.events ? `${r.events} wk${r.events === 1 ? '' : 's'}` : '', r.top10s ? `${r.top10s} top 10${r.top10s === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ');
-        return `<tr class="${r.mine ? 'me' : ''}" data-href="#/golfer/${r.playerId}"><td class="pos">${place}</td><td class="nm"><a href="#/golfer/${r.playerId}"><b>${esc(r.name)}${r.mine ? ' <small class="you">you</small>' : ''}</b></a><small>${sub}</small></td><td class="num">${r.wins || ''}</td><td class="num earn">${money(r.earnings ?? 0)}</td><td class="num pts"><b>${total(r).toLocaleString('en-US')}</b>${r.projected ? `<small>+${r.projected} projected this week</small>` : ''}</td></tr>`;
+        const href = r.mine ? '#/locker' : `#/golfer/${r.playerId}`;
+        // on a phone the wins and earnings columns fold into the line under the name
+        const fold = [r.wins ? `${r.wins} ${r.wins === 1 ? 'win' : 'wins'}` : '', money(r.earnings ?? 0)].filter(Boolean).join(' · ');
+        return `<tr class="${r.mine ? 'me' : ''}" data-href="${href}"><td class="pos">${place}</td><td class="nm"><a href="${href}"><b>${esc(r.name)}${r.mine ? ' <small class="you">you</small>' : ''}</b></a><small>${sub}</small><small class="ph">${fold}</small></td><td class="num wins">${r.wins || ''}</td><td class="num earn">${money(r.earnings ?? 0)}</td><td class="num pts"><b>${total(r).toLocaleString('en-US')}</b>${r.projected ? `<small>+${r.projected} this week</small>` : ''}</td></tr>`;
       })
       .join('')}</tbody></table></div>`;
   // the whole row opens the card, not just the name

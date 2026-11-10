@@ -18,7 +18,7 @@ import { bindPlayoff, playoffCard } from './playoff';
 import { board, crownFor, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { store } from '../storage';
-import { esc, header, navigate, render } from '../ui';
+import { esc, golferHref, header, navigate, render } from '../ui';
 
 const CARD_LINKS = { play: '#/round', practice: '#/round/practice' };
 
@@ -67,7 +67,7 @@ async function bindHonours(snap: Snapshot) {
   ];
   // what the purse paid (from Nov 8, the whole Open's, with names from every club)
   const paid = (snap.payouts ?? []).filter((p) => p.month === last.month);
-  const who = (p: (typeof paid)[number]) => esc(p.name ?? snap.players.find((x) => x.id === p.playerId)?.name ?? '?');
+  const who = (p: (typeof paid)[number]) => `<a href="${golferHref(p.playerId, p.mine ?? p.playerId === snap.me)}">${esc(p.name ?? snap.players.find((x) => x.id === p.playerId)?.name ?? '?')}</a>`;
   const mine = (p: (typeof paid)[number]) => p.mine ?? p.playerId === snap.me;
   el.innerHTML = `<div class="board-head"><h2>${esc(periodName(last.month))} honours</h2><span>Your club</span></div>
     <ul>${rows.filter((r) => r[2]).map(([i, t, v]) => `<li><i>${i}</i><b>${t}</b><span>${v}</span></li>`).join('')}</ul>
@@ -119,7 +119,7 @@ export function home(snap: Snapshot) {
         <td class="num topar ${where} ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>`;
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="#/member/${p.id}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${openMoney ? `<span data-pay-for="${p.id}">${guest(p) ? `<b class="pay away">Guest</b> · ` : ''}</span>` : guest(p) ? `<b class="pay away">Guest</b> · ` : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
+        <td class="who"><a href="${golferHref(p.id, p.id === snap.me)}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${openMoney ? `<span data-pay-for="${p.id}">${guest(p) ? `<b class="pay away">Guest</b> · ` : ''}</span>` : guest(p) ? `<b class="pay away">Guest</b> · ` : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
         ${score('m')}${cells}${score('d')}
       </tr>`;
     })
@@ -129,7 +129,7 @@ export function home(snap: Snapshot) {
     ? snap.champions
         .slice(0, 6)
         .map((c) => {
-          const who = c.playerIds.map((id) => `<a href="#/member/${id}">${esc(player(id)?.name ?? '?')}</a>`);
+          const who = c.playerIds.map((id) => `<a href="${golferHref(id, id === snap.me)}">${esc(player(id)?.name ?? '?')}</a>`);
           const b = c.how === 'playoff' ? `Playoff: ${who.join(' v ')}` : who.join(' & ');
           return `<li><span>${periodName(c.month)}</span><b>${b}</b><em>${toParLabel(c.total - c.par)}${c.how === 'playoff-won' ? ' · won in a playoff' : ''}</em></li>`;
         })

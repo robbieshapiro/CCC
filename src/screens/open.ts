@@ -9,7 +9,7 @@ import { money, openPurse } from '../purse';
 import { courseFor } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
-import { esc } from '../ui';
+import { esc, golferHref } from '../ui';
 import { scoreClass } from './home';
 
 const lastPlayed = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: GAME_TZ });
@@ -32,7 +32,7 @@ function table(snap: Snapshot, rows: ReturnType<typeof ranked>, pay?: ReturnType
     .map((r) => {
       const crowned = snap.crown && snap.crown.name === r.name && snap.crown.club === r.club ? ` <span class="crown" title="Yesterday's Closest to the Pin">🎯</span>` : '';
       const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}${crowned}<em>${pay?.get(r.playerId)?.payout ? `<b class="pay">${money(pay.get(r.playerId)!.payout)}</b> · ` : ''}${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
-      const link = r.mine ? '#/locker' : r.localId ? `#/member/${r.localId}` : '';
+      const link = golferHref(r.playerId, r.mine);
       return `<tr class="${r.mine ? 'me' : ''}">
         <td class="rank">${r.rank}</td>
         <td class="who">${link ? `<a href="${link}">${who}</a>` : `<div>${who}</div>`}</td>
