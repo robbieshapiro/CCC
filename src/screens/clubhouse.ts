@@ -14,13 +14,15 @@ import { esc, header, render } from '../ui';
 import { barPane, fillBar } from './bar';
 import { bindShop, shopPane } from './shop';
 import { fillSeason, seasonPane } from './season';
+import { fillTrophies, trophyPane } from './trophyroom';
 import { badgeFor } from '../shop';
 
-export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'season' | 'how' | 'feedback';
+export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'season' | 'trophies' | 'how' | 'feedback';
 const TABS: [ClubhouseTab, string][] = [
   ['members', 'Members'],
   ['shop', 'Pro Shop'],
   ['season', 'Season'],
+  ['trophies', 'Trophies'],
   ['bar', 'Bar'],
   ['chronicle', 'Chronicle'],
   ['how', 'How to play'],
@@ -31,7 +33,7 @@ export const isClubhouseTab = (t: string | undefined): t is ClubhouseTab => TABS
 const topar = (n: number | null) => (n === null ? '–' : `<span class="${n < 0 ? 'under' : n > 0 ? 'over' : ''}">${toParLabel(n)}</span>`);
 
 export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: string) {
-  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, season: seasonPane, how, feedback }[tab](snap);
+  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, season: seasonPane, trophies: trophyPane, how, feedback }[tab](snap);
   render(`
     ${header(snap.groupName, 'clubhouse')}
     <main class="clubhouse">
@@ -42,6 +44,7 @@ export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: 
   if (tab === 'shop') bindShop(snap);
   if (tab === 'bar') void fillBar(snap);
   if (tab === 'season') void fillSeason();
+  if (tab === 'trophies') void fillTrophies();
   if (tab === 'chronicle') void fillChronicle(snap, week);
   if (tab === 'feedback') bindFeedback();
 }

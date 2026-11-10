@@ -130,6 +130,12 @@ export type SeasonRow = { playerId: string; name: string; club: string; mine: bo
 export type GolferWeek = { week: string; course: string; place: number; tied: boolean; field: number; toPar: number; holes: number[]; total: number; par: number; points: number; banked: boolean };
 export type GolferCard = { playerId: string; name: string; avatar: Avatar; club: string; clubs: string[] | null; joined: string; mine: boolean; earnings: number; top10s: number; titles: number; career: { rounds: number; best: number | null; avg: number | null }; feats: string[]; weeks: GolferWeek[] };
 export type Season = { year: number; standings: SeasonRow[] };
+// One person's Trophy Room progress (trophy_progress): counts from what's recorded; the plaques are in src/trophies.ts
+export type TrophyProgress = {
+  playerId: string; name: string; birdies: number; eagles: number; albatross: number; aces: number; cards: number; underpar: number; bogeyfree: number;
+  putts30: number; putts60: number; chipins: number; pinseeker: number; longdrive: number; streak: number; ctpwins: number; designplayers: number;
+  titles: number; openwins: number; opentop10: number; secrets: string[]; birdieHoles: Record<string, number[]>;
+};
 export type OpenChampion = { month: string; names: string[]; total: number; par: number };
 // The admin tab: every club the admin runs, on one page.
 export type AdminWindow = 'week' | 'month' | 'all';
@@ -274,6 +280,7 @@ export interface Api {
   coursePractice(session: Session): Promise<{ playerId: string; name: string; club: string; mine: boolean }[]>;
   courseRecords(session: Session): Promise<CourseRecord[]>;
   seasonStandings(session: Session): Promise<Season>;
+  trophyProgress(session: Session, playerId?: string): Promise<TrophyProgress | null>;
   golferCard(session: Session, playerId: string): Promise<GolferCard | null>;
   submitFreeRound(session: Session, course: string, holes: number[], pars: number[]): Promise<void>; // a classic course: never counts // today's golfers on the course, every club
   adminKpis(session: Session): Promise<AdminKpis>;

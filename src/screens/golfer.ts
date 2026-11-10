@@ -5,7 +5,6 @@ import { api } from '../api';
 import type { GolferCard, Snapshot } from '../api/types';
 import { portrait, specOf } from '../avatar';
 import { crest } from '../brand';
-import { FEATS } from '../feats';
 import { courseById } from '../golf3d/courses';
 import { money, placeLabel } from '../purse';
 import { badgeSvg, rankOf } from '../shop';
@@ -14,6 +13,7 @@ import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { GolferStage } from './locker';
 import { scoreClass } from './home';
+import { shelfHtml } from './trophyroom';
 import { esc, header, render } from '../ui';
 
 let closeGolfer: () => void = () => {};
@@ -39,7 +39,6 @@ export async function golfer(snap: Snapshot, id: string) {
   const points = g.weeks.filter((w) => w.banked).reduce((a, w) => a + w.points, 0); // banked only, as the standings count
   const rank = rankOf(g.earnings, g.titles);
   const clubs = g.clubs?.length ? g.clubs : [g.club];
-  const got = FEATS.filter((f) => g.feats.includes(f.id));
 
   const week = (w: GolferCard['weeks'][number]) => {
     const course = courseById(w.course);
@@ -94,9 +93,14 @@ export async function golfer(snap: Snapshot, id: string) {
           <div><b>${money(g.earnings)}</b><small>Earnings</small></div>
         </div>
       </section>
-      ${got.length ? `<h2>Trophy cabinet</h2><div class="shelf">${got.map((f) => `<div class="feat got" title="${f.how}"><span>${f.icon}</span><b>${f.name}</b><small>${f.how}</small></div>`).join('')}</div>` : ''}
+      <section class="panel tr-card-shelf" id="gc-shelf"><h2>Trophy shelf</h2><p class="muted">Loading…</p></section>
     </main>`);
 
+  // the trophy shelf, from the Trophy Room's own count
+  void api.trophyProgress(requireSession(), id).then((tp) => {
+    const shelf = document.getElementById('gc-shelf');
+    if (shelf) shelf.innerHTML = tp ? shelfHtml(tp) : '<h2>Trophy shelf</h2><p class="muted">Not open yet.</p>';
+  }).catch(() => {});
   let stage: GolferStage | null = null;
   try {
     stage = new GolferStage(document.getElementById('stage')!, specOf(g.avatar));
