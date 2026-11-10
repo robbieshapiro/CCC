@@ -1052,7 +1052,7 @@ create or replace function season_points(p_place int) returns numeric language s
   select coalesce((array[500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25]::numeric[])[p_place], 20)
 $$;
 
--- The season counts every period from October 2026 (the Highlands month and the Caldera challenge too), each ranked
+-- The season counts every course from the Highlands (October 2026) and the Caldera challenge on, each ranked
 -- across every club as the Open is, though the Open itself only began on Nov 8
 create or replace function season_from() returns text language sql immutable as $$ select '2026-10' $$;
 

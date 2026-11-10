@@ -11,11 +11,11 @@ import { esc } from '../ui';
 
 export function seasonPane(snap: Snapshot) {
   return `
-    <div class="ch-head"><h1 id="season-h">The ${snap.month.slice(0, 4)} Season</h1><p class="muted">Points from every week since October, like the FedEx Cup: the Highlands, the Caldera challenge and every week's Open. This week: ${esc(openName(courseFor(snap.month).name, snap.month))}. Tap anyone for their card.</p></div>
+    <div class="ch-head"><h1 id="season-h">The ${snap.month.slice(0, 4)} Season</h1><p class="muted">Points from every course, like the FedEx Cup: the Highlands, the Caldera, then every week's Open. This week: ${esc(openName(courseFor(snap.month).name, snap.month))}. Tap anyone for their card.</p></div>
     <section class="season-card" id="season-board"><p class="muted">Loading the standings…</p></section>
     <section class="season-scale">
       <h2>How points work</h2>
-      <p>Your best card of the week sets your place on the Open, across every club. The place earns points when the week closes on Saturday night; until then they show as projected and don't count in the standings. October (the Highlands) and the Caldera challenge count too, each ranked across every club.</p>
+      <p>Your best card of the week sets your place on the Open, across every club. The place earns points when the week closes on Saturday night; until then they show as projected and don't count in the standings. The Highlands and the Caldera count too, each ranked across every club.</p>
       <ol class="scale">${SEASON_POINTS.slice(0, 10)
         .map((p, i) => `<li><span>${placeLabel(i + 1, false)}</span><b>${p}</b></li>`)
         .join('')}</ol>

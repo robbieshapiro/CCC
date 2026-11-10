@@ -1748,3 +1748,7 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .adm-lab-hole b { color: var(--green); }
 .adm-lab-hole span { font-size: 12px; color: var(--muted); line-height: 1.35; }
 .adm-lab-hole small { font-size: 11px; color: var(--gold); font-weight: 700; }
+
+/* under the next-course band: an invitation to send Reginald a course idea */
+.course-idea { margin: 8px 2px 0; font-size: 13px; color: var(--muted); text-align: center; }
+.course-idea .link { padding: 0; font: inherit; color: var(--green); text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; cursor: pointer; }

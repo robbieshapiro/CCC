@@ -9,7 +9,7 @@ import { FEATS } from '../feats';
 import { courseById } from '../golf3d/courses';
 import { money, placeLabel } from '../purse';
 import { badgeSvg, rankOf } from '../shop';
-import { openName } from '../season';
+import { seasonEventName } from '../season';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { GolferStage } from './locker';
@@ -51,7 +51,7 @@ export async function golfer(snap: Snapshot, id: string) {
           <tr><td>${esc(g.name)}</td>${w.holes.map((s, i) => `<td class="num"><span class="sc ${scoreClass(s, pars[i])}">${s}</span></td>`).join('')}<td class="num tot">${w.total}</td></tr></tbody></table></div>`
         : '';
     return `<div class="gc-week">
-      <p class="gc-week-head"><b>${esc(openName(course?.name ?? w.course, w.week))}</b><span>${placeLabel(w.place, w.tied)} of ${w.field} · ${toParLabel(w.toPar)} · ${w.points} pts${w.banked ? '' : ' so far'}</span></p>
+      <p class="gc-week-head"><b>${esc(seasonEventName(course?.name ?? w.course, w.week))}</b><span>${placeLabel(w.place, w.tied)} of ${w.field} · ${toParLabel(w.toPar)} · ${w.points} pts${w.banked ? '' : ' so far'}</span></p>
       ${card}
     </div>`;
   };
