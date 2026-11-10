@@ -13,11 +13,10 @@ import { card, leaveCard } from './screens/card';
 import { leaveShop } from './screens/shop';
 import { barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { playoff } from './screens/playoff';
-import { clubhouse, isClubhouseTab } from './screens/clubhouse';
+import { clubhouse, isAboutPart, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
 import { classics, courseById, courseFor, nextCourse } from './golf3d/courses';
-import { leaveMember, member } from './screens/member';
 import { checkIn } from './screens/activity';
 import { onSnapshot, refresh, startPolling } from './state';
 import { store } from './storage';
@@ -45,7 +44,6 @@ async function router() {
   closeRound();
   leaveCard();
   leaveShop();
-  leaveMember();
   leaveGolfer();
   closeWelcome();
   const hash = location.hash.replace(/^#\/?/, '');
@@ -86,7 +84,7 @@ async function router() {
     if (page === 'bar') return arg === 'drive' || arg === 'members' ? barRound(s, arg) : clubhouse(s, 'bar');
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     // the old Clubs tab became the Season
-    if (page === 'clubhouse') return clubhouse(s, arg === 'clubs' ? 'season' : isClubhouseTab(arg) ? arg : 'members', extra);
+    if (page === 'clubhouse') return isAboutPart(arg) ? clubhouse(s, 'about', arg) : clubhouse(s, arg === 'clubs' ? 'season' : isClubhouseTab(arg) ? arg : 'members', extra);
     // the admin's look at every hole of a course still to come
     // the Committee rehearses Sunday's card on next week's course: the member's card flow, nothing posted
     if (page === 'rehearse') {
@@ -105,7 +103,7 @@ async function router() {
     // the Season: FedEx Cup style points from every week's Open, a Clubhouse tab (the old page's link still lands there)
     if (page === 'season') return clubhouse(s, 'season');
     // any golfer's card, from any club, off the Season standings
-    if (page === 'golfer' && arg) return golfer(s, arg);
+    if (page === 'golfer' && arg) return arg === s.me && extra !== 'view' ? card(s) : golfer(s, arg);
     // a classic course, any member, any time: free play for the course record
     if (page === 'classic') {
       const c = classics(s.month).find((x) => x.id === arg);
@@ -127,7 +125,8 @@ async function router() {
     }
     // the Locker (the old Member Card and Locker Room links still land there)
     if (page === 'locker' || page === 'card' || page === 'lockers' || (page === 'member' && arg === s.me)) return card(s);
-    if (page === 'member' && arg) return member(s, arg);
+    // the old member card links land on the golfer card, the one card for anyone
+    if (page === 'member' && arg) return golfer(s, arg);
     if (page === 'admin') {
       if (s.admin) return admin(s);
       location.hash = '#/';

@@ -62,5 +62,5 @@ export function builtPane() {
       <div><p class="hb-role">Does</p><ul>${DOES.map((x) => `<li>${x}</li>`).join('')}</ul></div>
       <div><p class="hb-role">Never</p><ul>${DOESNT.map((x) => `<li>${x}</li>`).join('')}</ul></div>
     </div>
-    <p class="muted ch-tip">Got an idea for the club or a course? <a class="link" href="#/clubhouse/feedback">Tell the Committee</a>.</p>`;
+    <p class="muted ch-tip">Got an idea for the club or a course? <a class="link" href="#/clubhouse/about/feedback">Tell the Committee</a>.</p>`;
 }

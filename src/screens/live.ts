@@ -8,7 +8,7 @@ import type { Course } from '../golf3d/courses';
 import { money, openPurse } from '../purse';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
-import { esc } from '../ui';
+import { esc, golferHref } from '../ui';
 
 // the sections home puts in place; they stay hidden until there's someone in them
 export const liveNow = () => `<section class="lv-panel" id="live-now" hidden></section>`;
@@ -57,7 +57,7 @@ function draw() {
   if (!ctx) return;
   const { snap, course } = ctx;
   const tag = (r: { club: string }) => (r.club !== snap.groupName ? `<span class="lv-club">${esc(r.club)}</span>` : '');
-  const who = (r: FieldRow) => (r.mine ? 'You' : esc(r.name));
+  const who = (r: FieldRow) => `<a class="lv-who" href="${golferHref(r.playerId, r.mine)}">${r.mine ? 'You' : esc(r.name)}</a>`;
 
   // out on the course: a card started today and not yet in
   const going = (field ?? []).filter((r) => r.going);
@@ -92,7 +92,7 @@ function draw() {
     cards.hidden = !done.length && !prac.length;
     const before = seen;
     seen = new Set(done.map((r) => r.playerId));
-    const names = prac.slice(0, 8).map((r) => `<span${r.mine ? ' class="me"' : ''}>${r.mine ? 'You' : esc(r.name)}</span>`).join(' · ');
+    const names = prac.slice(0, 8).map((r) => `<a class="lv-who${r.mine ? ' me' : ''}" href="${golferHref(r.playerId, r.mine)}">${r.mine ? 'You' : esc(r.name)}</a>`).join(' · ');
     const practice = prac.length ? `<p class="lv-practice"><b>⛳ Practised today</b> ${names}${prac.length > 8 ? ` · +${prac.length - 8} more` : ''}</p>` : '';
     cards.innerHTML = !done.length
       ? practice
@@ -139,7 +139,7 @@ function drawBoard() {
           if (i === 0 || tp !== shown[i - 1].total - shown[i - 1].par) place = i + 1;
           const tied = rows.filter((x) => x.total - x.par === tp).length > 1;
           const won = pay.get(r.playerId)?.payout;
-          const link = r.mine ? '#/locker' : r.localId ? `#/member/${r.localId}` : '';
+          const link = golferHref(r.playerId, r.mine);
           const name = `<b>${esc(r.name)}</b><small>${tab === 'open' ? `${esc(r.club)} · ` : ''}${r.rounds} ${r.rounds === 1 ? 'card' : 'cards'}${out.has(r.playerId) ? ' · <span class="lv-on">on the course</span>' : ''}</small>`;
           return `<tr class="${r.mine ? 'me ' : ''}${place === 1 ? 'lead' : ''}"><td class="pos">${tied ? 'T' : ''}${place}</td><td class="nm">${link ? `<a href="${link}">${name}</a>` : name}</td><td class="pay">${won ? money(won) : ''}</td><td class="tp">${toParLabel(tp)}</td></tr>`;
         })

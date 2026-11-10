@@ -26,12 +26,22 @@ const fmt = (n: number | null | undefined) => (n == null ? '–' : toParLabel(Ma
 
 export async function golfer(snap: Snapshot, id: string) {
   leaveGolfer();
-  const back = `<p><a class="link" href="#/clubhouse/season">‹ Season</a></p>`;
+  // back to wherever they came from (a name can be tapped from anywhere), or the members if they landed here cold
+  const back = `<p><a class="link" href="#/clubhouse/members" data-back>‹ Back</a></p>`;
+  const bindBack = () => document.querySelector<HTMLAnchorElement>('[data-back]')?.addEventListener('click', (e) => {
+    if (history.length > 1) {
+      e.preventDefault();
+      history.back();
+    }
+  });
   render(`${header(snap.groupName, 'clubhouse')}<main class="narrow">${back}<p class="muted">Loading their card…</p></main>`);
   const g: GolferCard | null = await api.golferCard(requireSession(), id).catch(() => null);
-  if (location.hash !== `#/golfer/${id}`) return; // they moved on while it loaded
+  if (!location.hash.startsWith(`#/golfer/${id}`) && !location.hash.startsWith(`#/member/${id}`)) return; // they moved on while it loaded
+  // your own card is your Locker, unless you asked to see it as others do (#/golfer/<you>/view, from the Locker)
+  if (g?.mine && !location.hash.endsWith('/view')) return void location.replace('#/locker');
   if (!g) {
     render(`${header(snap.groupName, 'clubhouse')}<main class="narrow">${back}<h1>No such golfer</h1><p class="muted">They may have resigned. It happens.</p></main>`);
+    bindBack();
     return;
   }
   const since = g.joined ? new Date(g.joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '2026';
@@ -101,6 +111,7 @@ export async function golfer(snap: Snapshot, id: string) {
     const shelf = document.getElementById('gc-shelf');
     if (shelf) shelf.innerHTML = tp ? shelfHtml(tp) : '<h2>Trophy shelf</h2><p class="muted">Not open yet.</p>';
   }).catch(() => {});
+  bindBack();
   let stage: GolferStage | null = null;
   try {
     stage = new GolferStage(document.getElementById('stage')!, specOf(g.avatar));

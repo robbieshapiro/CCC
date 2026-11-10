@@ -1,5 +1,5 @@
 // The Clubhouse: everything off the course, as tabs. Your club's members and standings (the default), the Pro Shop, the
-// Season standings across every club, the bar (its games), Reginald's weekly Chronicle, how the game works, how the club is built, and a note to the Committee. Each tab has its own link
+// Season standings across every club, the bar (its games), Reginald's weekly Chronicle, and About (how the game works, a note to the Committee, how the club is built). Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
 import { cardsOn, periodName, span } from '../day';
 import { money } from '../purse';
@@ -10,7 +10,7 @@ import { courseFor } from '../golf3d/courses';
 import { hostChip } from '../host';
 import { board, crownFor, toParLabel } from '../standings';
 import { requireSession } from '../state';
-import { esc, header, render } from '../ui';
+import { esc, golferHref, header, render } from '../ui';
 import { barPane, fillBar } from './bar';
 import { bindShop, shopPane } from './shop';
 import { fillSeason, seasonPane } from './season';
@@ -18,7 +18,7 @@ import { fillTrophies, trophyPane } from './trophyroom';
 import { builtPane } from './built';
 import { badgeFor } from '../shop';
 
-export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'season' | 'trophies' | 'how' | 'built' | 'feedback';
+export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'season' | 'trophies' | 'about';
 const TABS: [ClubhouseTab, string][] = [
   ['members', 'Members'],
   ['shop', 'Pro Shop'],
@@ -26,16 +26,17 @@ const TABS: [ClubhouseTab, string][] = [
   ['trophies', 'Trophies'],
   ['bar', 'Bar'],
   ['chronicle', 'Chronicle'],
-  ['how', 'How to play'],
-  ['built', 'How it’s built'],
-  ['feedback', 'Feedback'],
+  ['about', 'About'],
 ];
 export const isClubhouseTab = (t: string | undefined): t is ClubhouseTab => TABS.some(([id]) => id === t);
+// How to play, How it's built and Feedback are sections of About now; their old links land on the section
+export const ABOUT_PARTS = ['how', 'built', 'feedback'] as const;
+export const isAboutPart = (t: string | undefined): t is (typeof ABOUT_PARTS)[number] => ABOUT_PARTS.includes(t as never);
 
 const topar = (n: number | null) => (n === null ? '–' : `<span class="${n < 0 ? 'under' : n > 0 ? 'over' : ''}">${toParLabel(n)}</span>`);
 
 export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: string) {
-  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, season: seasonPane, trophies: trophyPane, how, built: builtPane, feedback }[tab](snap);
+  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, season: seasonPane, trophies: trophyPane, about }[tab](snap);
   render(`
     ${header(snap.groupName, 'clubhouse')}
     <main class="clubhouse">
@@ -48,7 +49,11 @@ export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: 
   if (tab === 'season') void fillSeason();
   if (tab === 'trophies') void fillTrophies();
   if (tab === 'chronicle') void fillChronicle(snap, week);
-  if (tab === 'feedback') bindFeedback();
+  if (tab === 'about') {
+    bindFeedback();
+    // an old How to play / How it's built / Feedback link: open at that section
+    if (week && isAboutPart(week)) document.getElementById(`ab-${week}`)?.scrollIntoView({ block: 'start' });
+  }
 }
 
 // your club: this period's best first, then everyone yet to play this period (most rounds all time first), with
@@ -65,12 +70,12 @@ function members(snap: Snapshot) {
       const c = career(p.id);
       return `<tr class="${me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="${me ? '#/locker' : `#/member/${p.id}`}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</i></span></a></td>
+        <td class="who"><a href="${golferHref(p.id, me)}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}${me ? ' <small>you</small>' : ''}</i></span></a></td>
         <td class="num topar">${r.best ? topar(r.toPar) : '–'}</td>
         <td class="num">${r.rounds}</td>
         <td class="num all">${c.rounds}</td>
-        <td class="num topar">${topar(c.best)}</td>
-        <td class="num avg">${c.avg === null ? '–' : toParLabel(Math.round(c.avg * 10) / 10)}</td>
+        <td class="num topar all">${topar(c.best)}</td>
+        <td class="num avg all">${c.avg === null ? '–' : toParLabel(Math.round(c.avg * 10) / 10)}</td>
         <td class="num">${p.wins || ''}</td>
         <td class="num earn">${p.earnings ? money(p.earnings) : ''}</td>
       </tr>`;
@@ -81,8 +86,8 @@ function members(snap: Snapshot) {
     <div class="ch-head"><h1>${esc(snap.groupName)}</h1><p class="muted">${rows.length} ${rows.length === 1 ? 'member' : 'members'} · ${periodName(snap.month)}</p></div>
     ${rows.length ? `<div class="table-wrap"><table class="ch-table ch-members">
       <thead>
-        <tr class="group"><th colspan="2"></th><th colspan="2" class="num">${per}</th><th colspan="2" class="num all">All time</th><th class="avg"></th><th></th><th></th></tr>
-        <tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rds</th><th class="num all">Rds</th><th class="num">Best</th><th class="num avg">Avg</th><th class="num" title="Titles">🏆</th><th class="num" title="Career earnings from the weekly purses">💰</th></tr>
+        <tr class="group"><th colspan="2"></th><th colspan="2" class="num">${per}</th><th colspan="2" class="num all">All time</th><th class="avg all"></th><th></th><th></th></tr>
+        <tr><th></th><th>Member</th><th class="num">Best</th><th class="num">Rds</th><th class="num all">Rds</th><th class="num all">Best</th><th class="num avg all">Avg</th><th class="num" title="Titles">🏆</th><th class="num" title="Career earnings from the weekly purses">💰</th></tr>
       </thead>
       <tbody>${body}</tbody></table></div>` : '<p class="muted">No members yet.</p>'}`;
 }
@@ -162,6 +167,17 @@ function how(snap: Snapshot) {
     <h2 class="ch-sub">The swing</h2>
     ${list(swing)}
     <p class="muted ch-tip">Tap <b>?</b> on the course any time to see this again.</p>`;
+}
+
+// About the club: how to play, a note to the Committee, and how the club is built, on one page
+function about(snap: Snapshot) {
+  const h2 = (html: string) => html.replace(/<h1>/g, '<h2 class="ab-h">').replace(/<\/h1>/g, '</h2>');
+  return `
+    <div class="ch-head"><h1>About the club</h1></div>
+    <nav class="ab-jump" aria-label="On this page"><a href="#/clubhouse/about/how">How to play</a><a href="#/clubhouse/about/feedback">Feedback</a><a href="#/clubhouse/about/built">How it’s built</a></nav>
+    <section class="ab-part" id="ab-how">${h2(how(snap))}</section>
+    <section class="ab-part" id="ab-feedback">${h2(feedback())}</section>
+    <section class="ab-part" id="ab-built">${h2(builtPane())}</section>`;
 }
 
 function feedback() {

@@ -40,6 +40,9 @@ function clubName(groupName: string) {
 // The Admin tab shows for the admin only (main.ts marks the device when the club says you run it). On phones the
 // tabs sit in a bar along the bottom (the CSS moves them); the sound toggle stays up top.
 export type Tab = 'play' | 'clubhouse' | 'locker' | 'admin';
+// Any member's card: your own name opens your Locker, anyone else's their golfer card (any club)
+export const golferHref = (id: string, mine = false) => (mine ? '#/locker' : `#/golfer/${id}`);
+
 export function header(groupName: string, active: Tab): string {
   const admin = store.get('ccc-admin') === '1';
   const tab = (t: Tab, href: string, icon: string, label: string) =>
