@@ -2,6 +2,7 @@
 // Run: npm run check-holes
 import { bagFor, CLUBS, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor } from '../src/golf3d/courses';
+import { MIDWAY, MIDWAY_PAR } from '../src/golf3d/midway';
 import { periodClosesAt, periodOf } from '../src/day';
 import { conditionsFor, gusted, withPin } from '../src/golf3d/conditions';
 import { CUP_R, cupR, curbs, DROP_SPEED, dropPoint, lieScatter, simulate } from '../src/golf3d/physics';
@@ -299,7 +300,11 @@ function novice(base: Hole, seed: string) {
   return Math.min(s, h.par + 3);
 }
 
-const course = process.env.COURSE ? courseById(process.env.COURSE)! : courseFor('2026-10');
+// COURSE=midway checks the bar's Midway holes (they're not on the calendar)
+const course =
+  process.env.COURSE === 'midway'
+    ? ({ id: 'midway', name: 'The Midway', opens: '2099-01', tagline: '', holes: MIDWAY, par: MIDWAY_PAR } as unknown as NonNullable<ReturnType<typeof courseById>>)
+    : process.env.COURSE ? courseById(process.env.COURSE)! : courseFor('2026-10');
 const mode = process.argv[2] ?? 'all';
 
 // quick: every hole at once, each in its own process, in quick mode; prints each hole's report as it lands

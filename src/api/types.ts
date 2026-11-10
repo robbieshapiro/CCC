@@ -192,7 +192,7 @@ export type DailyRow = { playerId?: string; name: string; club: string; ft: numb
 export type DailyState = { mine: DailyTry[]; board: DailyRow[]; players: number; streak: number };
 export type DailyDay = { day: string; players: number; tries: number };
 // The Nineteenth Hole's weekly contests (see bar.ts): best score of the week, higher is better
-export type BarBoard = { week: string; board: { playerId?: string; name: string; score: number; mine: boolean }[]; mine: number | null; players: number };
+export type BarBoard = { week: string; board: { playerId?: string; name: string; score: number; mine: boolean }[]; mine: number | null; players: number; playedToday?: boolean };
 export type ClubRow = { id: string; name: string; mine: boolean; members: number; played: number; best: number | null; leaders: string[] | null };
 export type Chronicle = { week: string; body: { headline: string; dek: string; items: { title: string; body: string }[]; signoff: string } };
 export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
@@ -258,8 +258,8 @@ export interface Api {
   dailyState(session: Session, day: string): Promise<DailyState>;
   submitDaily(session: Session, day: string, t: DailyTry): Promise<void>;
   dailyAdmin(session: Session): Promise<DailyDay[]>;
-  submitBar(session: Session, game: 'minigolf' | 'drive' | 'members', score: number): Promise<void>;
-  barBoard(session: Session, game: 'minigolf' | 'drive' | 'members'): Promise<BarBoard>; // the last 7 days across the admin's clubs
+  submitBar(session: Session, game: 'minigolf' | 'drive' | 'members' | 'midway', score: number): Promise<void>;
+  barBoard(session: Session, game: 'minigolf' | 'drive' | 'members' | 'midway'): Promise<BarBoard>; // the last 7 days across the admin's clubs
   openBoard(session: Session): Promise<OpenRow[]>;
   clubList(session: Session): Promise<ClubRow[]>;
   chronicles(session: Session): Promise<Chronicle[]>;

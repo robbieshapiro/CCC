@@ -29,6 +29,7 @@ import { HANK } from '../staff';
 import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
 import { HOLLOW_HILLS } from '../golf3d/minigolf';
+import { MIDWAY } from '../golf3d/midway';
 import { buildHole } from '../designer/hole';
 import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
@@ -706,14 +707,17 @@ export function barRound(snap: Snapshot, kind: BarGame) {
   g.leaveText = 'Leave';
   g.howTo = 'practice';
   const again = () => barRound(snap, kind);
-  if (kind === 'minigolf' || kind === 'members') {
-    // six holes of Hollow Hills, or the members' own holes (up to nine): putter only, fewest strokes counts
+  if (kind === 'minigolf' || kind === 'members' || kind === 'midway') {
+    // six holes of Hollow Hills, the members' own holes (up to nine), or the Midway's three: fewest strokes counts
     g.howTo = kind === 'minigolf' ? 'minigolf' : 'round';
-    // the members' holes swing on the weekly course's meter
-    if (kind === 'members') g.meterStyle = 'vertical';
-    g.starter = kind === 'minigolf' ? `Six holes, ${me.name}. Mind the scythe.` : `Your fellow members built these, ${me.name}. Blame them.`;
+    // the members' holes and the Midway swing on the weekly course's meter
+    if (kind !== 'minigolf') g.meterStyle = 'vertical';
+    g.starter =
+      kind === 'minigolf' ? `Six holes, ${me.name}. Mind the scythe.` : kind === 'midway' ? `Eli's Midway, ${me.name}. Three holes. Reginald is pretending this isn't happening.` : `Your fellow members built these, ${me.name}. Blame them.`;
     void (async () => {
-      const holes = kind === 'minigolf' ? HOLLOW_HILLS : await membersHoles();
+      const holes = kind === 'minigolf' ? HOLLOW_HILLS : kind === 'midway' ? MIDWAY : await membersHoles();
+      // the Midway counts one round a day: after that it's for fun, and nothing is sent
+      const fun = kind === 'midway' && !!(await api.barBoard(requireSession(), 'midway').catch(() => null))?.playedToday;
       if (game !== g) return;
       if (!holes.length) return back();
       const scores: number[] = [];
@@ -729,8 +733,8 @@ export function barRound(snap: Snapshot, kind: BarGame) {
         if (design) void api.recordDesignPlay(requireSession(), design).then((paid) => paid && coinPop(el, BONUS.designPlay, `To the designer of ${holes[i].name}`, 'for playing their hole'));
       }
       const score = minigolfScore(sum());
-      await api.submitBar(requireSession(), kind, score).catch(() => {});
-      if (game === g) window.setTimeout(() => void barSummary(kind, score, again, back), 600);
+      if (!fun) await api.submitBar(requireSession(), kind, score).catch(() => {});
+      if (game === g) window.setTimeout(() => void barSummary(kind, score, again, back, fun), 600);
     })();
   } else {
     // off the tee of the week's longest hole, in today's wind: the first swing as you are, the last two with a fireball
