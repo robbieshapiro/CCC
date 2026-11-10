@@ -2230,7 +2230,26 @@ insert into shop_items (id, price, rack) values
   ('goldstaff', 3000, 'pro'),
   ('leatherbag', 4000, 'pro'),
   ('crocbag', 16000, 'legend'),
-  ('caddie', 50000, 'legend')
+  ('caddie', 50000, 'legend'),
+  -- the Tour Collection, on the shop floor (src/shop.ts tourItems)
+  ('tourzip', 1800, 'member'),
+  ('finalred', 2500, 'member'),
+  ('hoodie', 1600, 'member'),
+  ('crewneck', 1200, 'member'),
+  ('quiltvest', 2200, 'member'),
+  ('joggers', 1300, 'member'),
+  ('slimtour', 1500, 'member'),
+  ('tourspike', 2000, 'member'),
+  ('hightop', 1700, 'member'),
+  ('ropecap', 1000, 'member'),
+  ('flatbrim', 1100, 'member'),
+  ('tourbucket', 1200, 'member'),
+  ('halfrims', 1400, 'member'),
+  ('tourglove', 1000, 'member'),
+  ('tourstaff', 3500, 'member'),
+  ('standbag', 1500, 'member'),
+  ('bladeputter', 2200, 'member'),
+  ('mattedriver', 2800, 'member')
 on conflict (id) do update set price = excluded.price, rack = excluded.rack;
 
 create table if not exists purchases (

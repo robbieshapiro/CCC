@@ -80,18 +80,27 @@ export function shopPane(snap: Snapshot) {
     </div>`;
 }
 
-// the racks: one shelf per rank, the pieces in category order; a locked rack shows what's coming
+// the racks: the shop floor in two collections (Clubhouse Classics and the Tour Collection), then a shelf per rank
+// above it; each in category order, a locked rack showing what's coming
 function racks(earned: number, titles: number, kind = '') {
-  return RANKS.map((r) => {
-    const items = KINDS.flatMap((k) => ITEMS.filter((i) => i.rack === r.id && i.kind === k && (!kind || i.kind === kind)));
-    if (!items.length) return '';
-    const open = canShop(r.id, earned, titles);
-    const why = r.id === 'legend' && earned >= r.from && !titles ? 'opens with a weekly title' : `opens at ${money(r.from)} career${r.id === 'legend' ? ' and a weekly title' : ''}`;
-    return `<section class="fit-rack rack-${r.id}${open ? '' : ' locked'}">
-      <h3>${badgeSvg(r.id, 18)} ${r.id === 'member' ? 'The shop floor' : `${r.name} rack`}${open ? '' : ` <small>🔒 ${why}</small>`}</h3>
+  const shelves: { rack: (typeof RANKS)[number]; title: string; pick: (i: Item) => boolean }[] = [
+    { rack: RANKS[0], title: 'Clubhouse Classics', pick: (i) => i.rack === 'member' && !i.collection },
+    { rack: RANKS[0], title: 'The Tour Collection', pick: (i) => i.rack === 'member' && i.collection === 'tour' },
+    { rack: RANKS[1], title: `${RANKS[1].name} rack`, pick: (i) => i.rack === 'pro' },
+    { rack: RANKS[2], title: `${RANKS[2].name} rack`, pick: (i) => i.rack === 'legend' },
+  ];
+  return shelves
+    .map(({ rack: r, title, pick }) => {
+      const items = KINDS.flatMap((k) => ITEMS.filter((i) => pick(i) && i.kind === k && (!kind || i.kind === kind)));
+      if (!items.length) return '';
+      const open = canShop(r.id, earned, titles);
+      const why = r.id === 'legend' && earned >= r.from && !titles ? 'opens with a weekly title' : `opens at ${money(r.from)} career${r.id === 'legend' ? ' and a weekly title' : ''}`;
+      return `<section class="fit-rack rack-${r.id}${open ? '' : ' locked'}">
+      <h3>${badgeSvg(r.id, 18)} ${title}${open ? '' : ` <small>🔒 ${why}</small>`}</h3>
       <div class="fit-row">${items.map(card).join('')}</div>
     </section>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function card(i: Item) {
