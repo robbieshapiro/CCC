@@ -26,15 +26,17 @@ import { loadToday, todaySections } from './adminToday';
 const WINDOW: AdminWindow = 'week';
 
 type Members = AdminOverview['members'];
-type SortKey = 'lastSeen' | 'name' | 'club' | 'days' | 'rounds' | 'unfinished' | 'best' | 'practice';
-const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
+type SortKey = 'lastSeen' | 'name' | 'club' | 'days' | 'rounds' | 'best' | 'practice' | 'allRounds' | 'allBest';
+// the last 7 days, then all time (all: true), under a heading each
+const COLUMNS: { key: SortKey; label: string; num?: boolean; all?: boolean }[] = [
   { key: 'name', label: 'Member' },
   { key: 'club', label: 'Club' },
   { key: 'days', label: 'Days', num: true },
   { key: 'rounds', label: 'Rds', num: true },
-  { key: 'unfinished', label: 'Quit', num: true },
   { key: 'best', label: 'Best', num: true },
   { key: 'practice', label: 'Prac', num: true },
+  { key: 'allRounds', label: 'Rds', num: true, all: true },
+  { key: 'allBest', label: 'Best', num: true, all: true },
 ];
 
 export function admin(snap: Snapshot) {
@@ -275,12 +277,14 @@ let state: {
   data: AdminOverview | null;
   daily: DailyDay[] | null;
   sort: SortKey;
+  ever: Map<string, { rounds: number; best: number | null }>;
   desc: boolean;
   club: string;
 } = {
   data: null,
   daily: null,
   sort: 'lastSeen',
+  ever: new Map(),
   desc: true,
   club: '',
 };
@@ -342,7 +346,13 @@ async function load() {
   const body = document.getElementById('adm-body');
   if (!body) return;
   body.classList.add('loading');
-  const [data, daily] = await Promise.all([api.adminOverview(requireSession(), WINDOW).catch(() => null), api.dailyAdmin(requireSession()).catch(() => null)]);
+  const [data, daily, ever] = await Promise.all([
+    api.adminOverview(requireSession(), WINDOW).catch(() => null),
+    api.dailyAdmin(requireSession()).catch(() => null),
+    // all time, for the table's All time columns
+    api.adminOverview(requireSession(), 'all').catch(() => null),
+  ]);
+  state.ever = new Map((ever?.members ?? []).map((m) => [m.id ?? m.name, { rounds: m.rounds, best: m.best }]));
   state.daily = daily;
   if (!document.getElementById('adm-body')) return; // left the page
   body.classList.remove('loading');
@@ -362,8 +372,6 @@ function draw() {
   const sum = (k: 'members' | 'active' | 'rounds' | 'practice' | 'newMembers') => d.totals?.[k] ?? d.clubs.reduce((a, c) => a + c[k], 0);
   const guests = d.clubs.reduce((a, c) => a + (c.guests ?? 0), 0);
   const many = d.clubs.length > 1;
-  // rounds started and left unfinished, across the members shown (the Unfinished column has them one by one)
-  const unfinished = d.members.reduce((a, m) => a + m.unfinished, 0);
   const todo = document.getElementById('adm-todo');
   const todoCard = document.getElementById('adm-feedback-card');
   if (todoCard) todoCard.hidden = !d.feedback.length;
@@ -391,9 +399,9 @@ function draw() {
   body.innerHTML = `
     <section class="adm-card" data-goes="members">
       <div class="adm-head"><h2>Members</h2>${many ? `<div class="adm-chips">${['', ...d.clubs.map((c) => c.name)].map((c) => `<button data-club="${esc(c)}" class="${state.club === c ? 'on' : ''}">${c ? esc(c) : 'All'}</button>`).join('')}</div>` : ''}</div>
-      <p class="adm-sum">${sum('members')} members · ${sum('active')} active in the last 7 days · ${sum('rounds')} rounds${unfinished ? ` (${unfinished} unfinished)` : ''} · ${sum('practice')} practice sessions${sum('newMembers') ? ` · ${sum('newMembers')} new` : ''}</p>
+      <p class="adm-sum">${sum('members')} members · ${sum('active')} active in the last 7 days · ${sum('rounds')} rounds · ${sum('practice')} practice sessions${sum('newMembers') ? ` · ${sum('newMembers')} new` : ''}</p>
       ${memberTable(d.members, many)}
-      <p class="fine">Under each name, when they were last in. The last 7 days. Days: days they opened the club, played or practised. Rds: rounds posted. Quit: rounds started and left unfinished. Best: their best round to par. Prac: practice sessions. Tap a name for their card.</p>
+      <p class="fine">Under each name, when they were last in. Days: days they opened the club, played or practised. Rds: rounds posted. Best: best round to par. Prac: practice sessions. Tap a name for their card.</p>
     </section>
     <section class="adm-card" data-goes="members" id="adm-invites" ${d.invites.length ? '' : 'hidden'}>
       <h2>Invited, not joined yet <small>${d.invites.length}</small></h2>
@@ -525,7 +533,10 @@ function memberTable(all: Members, many: boolean) {
   const cols = COLUMNS.filter((c) => many || c.key !== 'club');
   const rows = all.filter((m) => !state.club || m.club === state.club || m.guestAt?.includes(state.club));
   if (!rows.length) return '<p class="muted">No members yet.</p>';
+  const ever = (m: Members[number]) => state.ever.get(m.id ?? m.name);
   const val = (m: Members[number]) => {
+    if (state.sort === 'allRounds') return ever(m)?.rounds ?? 0;
+    if (state.sort === 'allBest') return ever(m)?.best ?? null;
     const v = m[state.sort];
     return v === null ? null : v;
   };
@@ -539,11 +550,14 @@ function memberTable(all: Members, many: boolean) {
     return state.desc ? -c : c;
   });
   const arrow = (k: SortKey) => (state.sort === k ? (state.desc ? ' ↓' : ' ↑') : '');
-  return `<div class="table-wrap"><table class="practice-table adm-members"><thead><tr>${cols.map((c) => `<th data-sort="${c.key}" class="${c.num ? 'num' : ''}">${c.label}${arrow(c.key)}</th>`).join('')}</tr></thead>
+  const lead = cols.filter((c) => !c.num).length;
+  return `<div class="table-wrap"><table class="practice-table adm-members"><thead>
+    <tr class="group"><th colspan="${lead}"></th><th colspan="4" class="num">Last 7 days</th><th colspan="2" class="num all">All time</th></tr>
+    <tr>${cols.map((c) => `<th data-sort="${c.key}" class="${c.num ? 'num' : ''}${c.key === 'allRounds' ? ' all' : ''}">${c.label}${arrow(c.key)}</th>`).join('')}</tr></thead>
     <tbody>${rows
       .map(
         (m) =>
-          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${nameLink(m.name, m.id)}</b><small class="adm-last">${ago(m.lastSeen)}</small></td>${many ? `<td><small>${esc(m.club)}${m.guestAt?.length ? `<br><span class="muted">guest at ${esc(m.guestAt.join(', '))}</span>` : ''}</small></td>` : ''}<td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num${m.unfinished ? ' warn' : ''}">${m.unfinished}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td></tr>`,
+          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${nameLink(m.name, m.id)}</b><small class="adm-last">${ago(m.lastSeen)}</small></td>${many ? `<td><small>${esc(m.club)}${m.guestAt?.length ? `<br><span class="muted">guest at ${esc(m.guestAt.join(', '))}</span>` : ''}</small></td>` : ''}<td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td><td class="num all">${ever(m)?.rounds ?? '–'}</td><td class="num">${ever(m)?.best == null ? '–' : toParLabel(ever(m)!.best!)}</td></tr>`,
       )
       .join('')}</tbody></table></div>`;
 }
