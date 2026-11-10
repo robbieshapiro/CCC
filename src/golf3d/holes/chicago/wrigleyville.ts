@@ -1,4 +1,5 @@
-// Hole 4, Wrigleyville (par 4, 390 yd): straight up Clark Street to a green at the foot of Wrigley Field, parked
+// Hole 4, Wrigleyville (par 4, 390 yd): off a rooftop at the south end, straight up Clark Street to a green at the foot
+// of Wrigley Field, parked
 // cars along both curbs and a planted median of maples splitting the landing area.
 // Three-flats line both sides (a ball on a roof is gone), the red line's el runs the alley on the left with its trains
 // going by, one corner building pokes out into the street on the right, and the rooftop bleachers look down on the
@@ -13,7 +14,10 @@ import { building } from '../../looks/chicago';
 import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
 
 const LAND = 6;
-const GREEN = { x: 8, y: 520, rx: 22, ry: 16 };
+// the tee: on a rooftop over the street, 40 ft up
+const ROOF = { x0: -20, y0: -30, x1: 20, y1: 10, h: 40 };
+// bigger greens, for longer putts (about a third bigger each way since Nov 10)
+const GREEN = { x: 8, y: 520, rx: 29, ry: 21 };
 const traps = [greenside(GREEN, -26, 530, 8, 8, 1, 3, 0), greenside(GREEN, 40, 512, 8, 9, 2, 3, 0)];
 // [x, y, width, depth, rooftop bleachers?]
 const FLATS: [number, number, number, number, boolean][] = [
@@ -58,10 +62,10 @@ export const wrigleyville: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.03,
   yards: 390,
-  blurb: 'Up Clark Street to the foot of Wrigley Field. Parked cars both sides, a planted median, the red line rattling past.',
+  blurb: 'Off a rooftop and up Clark Street to Wrigley Field. The street runs fast, cars parked both sides, the red line rattling past.',
   tee: { x: 0, y: 0 },
-  cup: { x: 8, y: 522 },
-  pins: [{ x: 8, y: 522 }, { x: -6, y: 514 }, { x: 22, y: 526 }, { x: 4, y: 532 }],
+  cup: { x: 8, y: 523 },
+  pins: [{ x: 8, y: 523 }, { x: -9, y: 512 }, { x: 25, y: 528 }, { x: 3, y: 534 }],
   aim: -0.01,
   bounds: { x0: -140, y0: -50, x1: 140, y1: 640 },
   border: [
@@ -74,8 +78,10 @@ export const wrigleyville: Hole = {
     { x: -70, y: 500 },
     { x: -54, y: 460 },
   ],
-  base: 'rough',
+  // the street itself: asphalt that bounces and runs like a cart path
+  base: 'stone',
   regions: [
+    { poly: rect(ROOF.x0, ROOF.y0, ROOF.x1, ROOF.y1), surface: 'stone' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the street: a strip of turf down the middle, sidewalks either side
     // the street's turf: narrow, split by the median
@@ -94,6 +100,7 @@ export const wrigleyville: Hole = {
     // the street's crown: a little higher down the middle, so a ball drifts to the gutters
     { kind: 'ramp', x0: -54, y0: -50, x1: 0, y1: 460, axis: 'x', h0: -0.8, h1: 0, op: 'add' },
     { kind: 'ramp', x0: 0, y0: -50, x1: 54, y1: 460, axis: 'x', h0: 0, h1: -0.8, op: 'add' },
+    { kind: 'box', x0: ROOF.x0, y0: ROOF.y0, x1: ROOF.x1, y1: ROOF.y1, h: LAND + ROOF.h, edge: 1, op: 'set' },
     // the median's raised bed
     { kind: 'box', x0: -6, y0: 200, x1: 6, y1: 290, h: 1.2, edge: 1, op: 'add' },
     // the gangway's apron, tipping back toward the street
@@ -115,6 +122,7 @@ export const wrigleyville: Hole = {
     { x: 8, y: 520 },
   ],
   decor: [
+    { kind: 'teetower', x: 0, y: -10, size: [ROOF.x1 - ROOF.x0, ROOF.y1 - ROOF.y0, ROOF.h], scale: 72 },
     { kind: 'teebox', x: 0, y: 0 },
     ...blocks.map((b) => b.decor),
     ...CARS.map(([x, y]) => ({ kind: 'car', x, y, rot: Math.PI / 2 + (x < 0 ? Math.PI : 0) })),

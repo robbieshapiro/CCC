@@ -11,7 +11,8 @@ import { greenside } from '../woods';
 import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
 
 const LAND = 6;
-const GREEN = { x: 38, y: 568, rx: 22, ry: 16 };
+// bigger greens, for longer putts (about a third bigger each way since Nov 10)
+const GREEN = { x: 38, y: 568, rx: 29, ry: 21 };
 const traps = [greenside(GREEN, 4, 560, 8, 10, 1, 3, 0), greenside(GREEN, 30, 600, 10, 5, 2, 3, 0)];
 // the harbour: a big bite out of the right half of the hole
 const HARBOUR = { x0: 6, y0: 300, x1: 200, y1: 450 };
@@ -41,8 +42,8 @@ export const lakefront: Hole = {
   yards: 420,
   blurb: 'A beach hole on Lake Michigan. Miss the fairway and you are in the sand; the harbour bites in right, the Drive is out left.',
   tee: { x: 0, y: 0 },
-  cup: { x: 38, y: 570 },
-  pins: [{ x: 38, y: 570 }, { x: 24, y: 562 }, { x: 52, y: 574 }, { x: 34, y: 580 }],
+  cup: { x: 38, y: 571 },
+  pins: [{ x: 38, y: 571 }, { x: 21, y: 560 }, { x: 55, y: 576 }, { x: 33, y: 582 }],
   aim: -0.02,
   bounds: { x0: -110, y0: -50, x1: 170, y1: 660 },
   border: [

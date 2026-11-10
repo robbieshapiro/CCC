@@ -10,7 +10,8 @@ import { building } from '../../looks/chicago';
 import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
 
 const LAND = 8;
-const GREEN = { x: 6, y: 256, rx: 18, ry: 13 };
+// bigger greens, for longer putts (about a third bigger each way since Nov 10)
+const GREEN = { x: 6, y: 256, rx: 24, ry: 17 };
 const traps = [greenside(GREEN, 40, 262, 8, 7, 1, 3, 0), greenside(GREEN, 4, 286, 10, 5, 2, 3, 0)];
 const BEAN = { x: 30, y: 206 };
 const PLAZA = blob(BEAN.x, BEAN.y, 30, 22, 4, 0.08);
@@ -49,8 +50,8 @@ export const millennium: Hole = {
   yards: 180,
   blurb: 'Over the plaza to a small green past the Bean. The fountain pool short left, the rink beyond it, Michigan Avenue left.',
   tee: { x: 0, y: 0 },
-  cup: { x: 6, y: 258 },
-  pins: [{ x: 6, y: 258 }, { x: -6, y: 250 }, { x: 16, y: 262 }, { x: 2, y: 266 }],
+  cup: { x: 6, y: 259 },
+  pins: [{ x: 6, y: 259 }, { x: -8, y: 249 }, { x: 19, y: 264 }, { x: 2, y: 268 }],
   aim: 0.01,
   bounds: { x0: -150, y0: -50, x1: 120, y1: 360 },
   border: [
