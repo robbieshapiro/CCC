@@ -594,19 +594,20 @@ function memberTable(all: Members) {
 const PRACTICE: Record<string, string> = {
   range: 'hit the range',
   shortgame: 'worked the short game',
-  caldera: 'practised the course preview',
+  caldera: 'practised next week’s course',
 };
 
 function feed(d: AdminOverview, many: boolean) {
   if (!d.feed.length) return '<p class="muted">Nothing yet.</p>';
   const line = (e: AdminOverview['feed'][number]) => {
     if (e.kind === 'round') return `posted ${e.total} (${toParLabel((e.total ?? 0) - (e.par ?? 0))}) on ${esc(courseById(e.course ?? '')?.name ?? e.course ?? 'a course')}`;
+    if (e.kind === 'classic') return `played ${esc(courseById(e.course ?? '')?.name ?? e.course ?? 'a classic course')}, ${e.total} (${toParLabel((e.total ?? 0) - (e.par ?? 0))}), for the course record`;
     if (e.kind === 'practice') return `${PRACTICE[e.what ?? ''] ?? 'practised'}${e.shots ? ` · ${e.shots} shots` : ''}`;
     if (e.kind === 'quit') return `started a round on ${esc(courseById(e.course ?? '')?.name ?? e.course ?? 'a course')} but didn't finish${e.shots ? ` (stopped on hole ${e.shots})` : ''}`;
     if (e.kind === 'join') return e.what === 'guest' ? 'joined as a guest' : 'joined the club';
     return `sent feedback: “${esc(e.what ?? '')}”`;
   };
-  const icon = { round: '⛳', quit: '🚪', practice: '🎯', join: '👋', feedback: '✉️' };
+  const icon = { round: '⛳', quit: '🚪', practice: '🎯', join: '👋', feedback: '✉️', classic: '🏛️' };
   // everything in the window, newest first, under a heading for each day, in a box that scrolls on its own
   const day = (iso: string) => new Date(iso).toLocaleDateString('en-US', { timeZone: GAME_TZ, weekday: 'short', month: 'short', day: 'numeric' });
   const today = day(new Date().toISOString());

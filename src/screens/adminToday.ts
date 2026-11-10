@@ -5,6 +5,7 @@
 import { api } from '../api';
 import type { AdminToday, AdminTodayEvent, AdminTodayPerson } from '../api/types';
 import { GAME_TZ } from '../day';
+import { courseById } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc } from '../ui';
@@ -82,15 +83,16 @@ function line(e: AdminTodayEvent) {
   if (e.kind === 'round') return `posted <b>${e.total} (${toParLabel((e.total ?? 0) - (e.par ?? 0))})</b> on today's card`;
   if (e.kind === 'start') return `teed off on today's card`;
   if (e.kind === 'practice') {
-    const what = { course: 'practised the course', range: 'hit the range', shortgame: 'worked the short game', caldera: 'practised the preview' }[e.what ?? ''] ?? 'practised';
+    const what = { course: 'practised the course', range: 'hit the range', shortgame: 'worked the short game', caldera: 'practised next week’s course' }[e.what ?? ''] ?? 'practised';
     return `${what}${e.n ? ` · ${e.n} shots` : ''}`;
   }
+  if (e.kind === 'classic') return `played ${esc(courseById(e.what ?? '')?.name ?? e.what ?? 'a classic course')}, <b>${e.total} (${toParLabel((e.total ?? 0) - (e.par ?? 0))})</b>, for the course record`;
   if (e.kind === 'daily') return e.ft === 0 ? 'holed the Daily Shot!' : `took the Daily Shot${e.ft !== null ? `, best ${e.ft} ft` : ''}${e.n && e.n > 1 ? ` (${e.n} tries)` : ''}`;
   if (e.kind === 'playoff') return `played the playoff in ${e.total ?? '?'}${e.ft !== null ? `, ${e.ft} ft from the pin` : ''}`;
   if (e.kind === 'join') return e.what === 'guest' ? `joined ${esc(e.club)} as a guest` : 'joined the club';
   return `sent feedback: “${esc(e.what ?? '')}”`;
 }
-const ICON: Record<AdminTodayEvent['kind'], string> = { round: '✅', start: '⛳', practice: '🎯', daily: '📍', playoff: '🏆', join: '👋', feedback: '✉️' };
+const ICON: Record<AdminTodayEvent['kind'], string> = { round: '✅', start: '⛳', practice: '🎯', daily: '📍', playoff: '🏆', join: '👋', feedback: '✉️', classic: '🏛️' };
 
 function draw() {
   const top = document.getElementById('adm-today');
