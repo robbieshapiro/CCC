@@ -155,7 +155,7 @@ Last updated Nov 10, 2026 (board names link to cards; fits an iPhone, one golfer
 
 ## Setup status
 
-- [ ] #242: apply the updated `daily_state` and `bar_board` after merge (`pr_242_board_ids`), then check a board row has a `playerId`.
+- [x] #242: applied `pr_242_board_ids` on Nov 10; every row on the day's Closest to the Pin and long drive boards has a `playerId`.
 - [x] #238: applied `pr_238_activity_classic` on Nov 10; Tyler's four Highlands rounds show in the feed.
 
 - [x] #236: `trophy_progress` and the updated `secret_feats` applied Nov 10 (`pr_236_trophy_room`). Checked live: Marc 42 birdies, 27 eagles, 4 albatrosses, 3 aces, 14 bogey-free rounds, 2 titles, the Highlands and the Caldera mastered.
