@@ -1,8 +1,8 @@
-// The Committee Room's secondary numbers, under "More numbers" below Today: Reginald's morning read (api/insights.ts,
-// once a day, in its own tab), last week's players coming back, the purse, new members' first rounds and AI calls,
+// The Committee Room's secondary numbers, under "Numbers" below Today: last week's players coming back, the purse, new
+// members' first rounds and AI calls,
 // then three charts: players per day, week over week, and how this week's course is scoring hole by hole.
-import { api, useSupabase } from '../api';
-import type { AdminInsights, AdminKpis } from '../api/types';
+import { api } from '../api';
+import type { AdminKpis } from '../api/types';
 import { periodName, periodOf, todayInGameTz } from '../day';
 import { planCanvas } from '../designer/plan';
 import { courseFor } from '../golf3d/courses';
@@ -13,8 +13,6 @@ import { setNeeds } from './admin';
 import { setWeekAgo } from './adminToday';
 
 export const kpiSections = () => `<section class="adm-kpis" id="adm-kpis"><p class="muted">Loading…</p></section>`;
-// Reginald's read, in a tab of its own
-export const briefSection = () => `<section class="adm-card adm-brief" id="adm-brief"><h2>Reginald's morning read</h2><p class="muted">Loading…</p></section>`;
 export const chartSections = () => `<section class="adm-kpis adm-kpis-more" id="adm-kpis-more"></section>
   <section class="adm-card adm-charts" id="adm-charts" hidden></section>`;
 // the Course tab: how this week's course is scoring, then the hole report from members' shots
@@ -66,29 +64,6 @@ let kpis: AdminKpis | null = null;
 export async function loadKpis() {
   kpis = await api.adminKpis(requireSession()).catch(() => kpis);
   drawKpis();
-}
-
-// Reginald's read: once a day, kept on the server, so this is cheap to ask whenever Admin opens
-export async function loadBrief() {
-  const el = document.getElementById('adm-brief');
-  if (!el) return;
-  if (!useSupabase) {
-    el.innerHTML = `<h2>Reginald's morning read</h2><p class="muted">Reginald reads the live club's numbers, so there's nothing here in local mode.</p>`;
-    return;
-  }
-  el.innerHTML = `<h2>Reginald's morning read</h2><p class="muted reg-thinking">Reading the numbers…</p>`;
-  try {
-    const res = await fetch('/api/insights', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: requireSession().token }) });
-    const r = (await res.json()) as AdminInsights & { why?: string };
-    if (!document.getElementById('adm-brief')) return;
-    if (!r.points?.length) {
-      el.innerHTML = `<h2>Reginald's morning read</h2><p class="muted">${r.why === 'not configured' ? 'Shows up once the AI key is set in Vercel.' : 'Nothing from Reginald just now. He tries again next time you open Admin.'}</p>`;
-      return;
-    }
-    el.innerHTML = `<h2>Reginald's morning read</h2><ul class="adm-brief-list">${r.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>`;
-  } catch {
-    el.innerHTML = `<h2>Reginald's morning read</h2><p class="muted">Nothing from Reginald just now. He tries again next time you open Admin.</p>`;
-  }
 }
 
 const tile = (big: string, label: string, sub: string, change = '') => `<div class="kpi"><b>${big}</b><span>${label}</span><small>${sub}</small>${change}</div>`;

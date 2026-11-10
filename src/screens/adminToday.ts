@@ -1,14 +1,15 @@
 // The Committee Room's Overview, built around today: how many are in, who (each person once, with where their card
 // stands), and the live feed. It's meant to feel live: refreshed every 30 seconds while the page is open, a blinking dot
 // on anyone out on the course, new events sliding in lit up, times that count up ("4m ago"), and a feed that drifts
-// slowly down on its own (it stops while you touch or scroll it). Everything else sits under "More numbers".
+// slowly down on its own (flick it back to the top and a moment later it drifts down again). Every name opens that
+// member's card. Everything else sits under "Numbers".
 import { api } from '../api';
 import type { AdminToday, AdminTodayEvent, AdminTodayPerson } from '../api/types';
 import { GAME_TZ } from '../day';
 import { courseById } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
-import { esc } from '../ui';
+import { esc, golferHref } from '../ui';
 
 export const todaySections = () => `<section class="adm-today" id="adm-today"><p class="muted">Loading today…</p></section>
   <section class="adm-card adm-live" id="adm-live"><h2><span class="live-pill"><i></i>Live</span> Today's feed <small id="live-sub"></small></h2><div class="adm-feed-box live-box" id="live-box"><p class="muted">Loading…</p></div></section>`;
@@ -60,6 +61,7 @@ const ago = (iso: string) => {
   if (s < 3600) return `${Math.round(s / 60)}m ago`;
   return `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m ago`;
 };
+const who = (name: string, id?: string) => (id ? `<a class="adm-who" href="${golferHref(id)}">${esc(name)}</a>` : esc(name));
 const key = (e: AdminTodayEvent) => `${e.at}|${e.kind}|${e.name}`;
 // someone teed off in the last few minutes and hasn't posted: likely still out there
 const fresh = (iso: string | null, mins: number) => !!iso && Date.now() - Date.parse(iso) < mins * 60_000;
@@ -120,7 +122,7 @@ function draw() {
         ? `<ul class="tw-who">${people
             .map(
               (p) =>
-                `<li class="${p.card === 'going' ? 'going' : ''}"><div><b>${p.card === 'going' ? '<i class="dot"></i>' : fresh(p.last, 10) ? '<i class="dot soft"></i>' : ''}${esc(p.name)}</b>${many ? `<span class="adm-club">${esc(p.club)}</span>` : ''}<small>${status(p)}</small></div><time${p.last ? ` data-ago="${p.last}"` : ''}>${p.last ? ago(p.last) : ''}</time></li>`,
+                `<li class="${p.card === 'going' ? 'going' : ''}"><div><b>${p.card === 'going' ? '<i class="dot"></i>' : fresh(p.last, 10) ? '<i class="dot soft"></i>' : ''}${who(p.name, p.id)}</b>${many ? `<span class="adm-club">${esc(p.club)}</span>` : ''}<small>${status(p)}</small></div><time${p.last ? ` data-ago="${p.last}"` : ''}>${p.last ? ago(p.last) : ''}</time></li>`,
             )
             .join('')}</ul>`
         : '<p class="muted">Nobody yet today.</p>'
@@ -133,7 +135,7 @@ function draw() {
     ? `<ul class="adm-feed live-feed">${d.feed
         .map((e) => {
           const isNew = before !== null && !before.has(key(e));
-          return `<li class="k-${e.kind}${isNew ? ' new' : ''}"><span class="adm-ico">${ICON[e.kind]}</span><div>${many ? `<span class="adm-club">${esc(e.club)}</span>` : ''}<b>${esc(e.name)}</b> ${line(e)}<small>${time(e.at)} · <span data-ago="${e.at}">${ago(e.at)}</span></small></div></li>`;
+          return `<li class="k-${e.kind}${isNew ? ' new' : ''}"><span class="adm-ico">${ICON[e.kind]}</span><div>${many ? `<span class="adm-club">${esc(e.club)}</span>` : ''}<b>${who(e.name, e.id)}</b> ${line(e)}<small>${time(e.at)} · <span data-ago="${e.at}">${ago(e.at)}</span></small></div></li>`;
         })
         .join('')}</ul>`
     : '<p class="muted">Nothing yet today. It fills in as members come in.</p>';
@@ -141,8 +143,10 @@ function draw() {
   box.scrollTop = before && d.feed.some((e) => !before.has(key(e))) ? 0 : kept;
 }
 
-// The feed drifts slowly down on its own, rests at the bottom, then glides back to the top. Any touch, wheel or scroll
-// of your own stops it for a while; it doesn't move at all for anyone who prefers reduced motion.
+// The feed drifts slowly down on its own, about 12 pixels a second, and rests at the bottom. Scroll it yourself (say,
+// flick it back to the top) and it waits a couple of seconds after you let go, then drifts down again from wherever you
+// left it. Something new arriving puts it back at the top to start over. It doesn't move at all for anyone who prefers
+// reduced motion.
 let drifting = 0;
 function drift() {
   window.cancelAnimationFrame(drifting);
@@ -150,11 +154,13 @@ function drift() {
   let pausedUntil = 0;
   let pos = -1;
   let last = 0;
-  const hold = (ms: number) => (pausedUntil = performance.now() + ms);
+  const hold = (ms: number) => (pausedUntil = Math.max(pausedUntil, performance.now() + ms));
   const box0 = document.getElementById('live-box');
   if (box0) {
-    for (const ev of ['pointerdown', 'wheel', 'touchstart', 'mouseenter']) box0.addEventListener(ev, () => hold(10_000), { passive: true });
-    box0.addEventListener('mouseleave', () => hold(1_500));
+    // a finger on it, or a wheel: wait while they're at it, then a beat after
+    for (const ev of ['pointerdown', 'touchstart', 'wheel']) box0.addEventListener(ev, () => hold(2_500), { passive: true });
+    box0.addEventListener('mouseenter', () => hold(60_000));
+    box0.addEventListener('mouseleave', () => (pausedUntil = performance.now() + 1_500));
   }
   const step = (t: number) => {
     const box = document.getElementById('live-box');
@@ -163,15 +169,15 @@ function drift() {
     const dt = last ? Math.min(100, t - last) : 0;
     last = t;
     const room = box.scrollHeight - box.clientHeight;
-    if (room < 8 || t < pausedUntil || document.visibilityState !== 'visible') return (pos = box.scrollTop);
-    // someone else (a refresh, or your own scroll) moved it: carry on from there
-    if (pos < 0 || Math.abs(box.scrollTop - pos) > 2) pos = box.scrollTop;
-    pos += dt * 0.012; // about 12 pixels a second
-    if (pos >= room) {
-      box.scrollTo({ top: 0, behavior: 'smooth' });
-      pos = 0;
-      return hold(4_000);
+    // moved by someone else (their own scroll, momentum, or a refresh): hold a beat, then carry on from there
+    if (pos >= 0 && Math.abs(box.scrollTop - pos) > 2) {
+      pos = box.scrollTop;
+      return hold(2_000);
     }
+    if (room < 8 || t < pausedUntil || document.visibilityState !== 'visible') return (pos = box.scrollTop);
+    if (pos < 0) pos = box.scrollTop;
+    if (pos >= room) return (pos = box.scrollTop); // rest at the bottom
+    pos = Math.min(room, pos + dt * 0.012);
     box.scrollTop = pos;
   };
   drifting = window.requestAnimationFrame(step);

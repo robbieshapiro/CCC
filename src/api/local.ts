@@ -939,17 +939,17 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const feed: AdminTodayEvent[] = [];
     for (const r of db.rounds) {
       const p = who(r.playerId);
-      if (p && isToday(r.createdAt)) feed.push({ at: r.createdAt, kind: 'round', name: p.name, club: club(p.groupId), what: r.course, total: r.total, par: r.par, n: null, ft: null });
+      if (p && isToday(r.createdAt)) feed.push({ id: p.id, at: r.createdAt, kind: 'round', name: p.name, club: club(p.groupId), what: r.course, total: r.total, par: r.par, n: null, ft: null });
     }
     for (const x of db.practice ?? []) {
       const p = who(x.playerId);
-      if (p && isToday(x.startedAt)) feed.push({ at: x.startedAt, kind: 'practice', name: p.name, club: club(p.groupId), what: x.kind, total: null, par: null, n: x.shots, ft: null });
+      if (p && isToday(x.startedAt)) feed.push({ id: p.id, at: x.startedAt, kind: 'practice', name: p.name, club: club(p.groupId), what: x.kind, total: null, par: null, n: x.shots, ft: null });
     }
     for (const f of db.free ?? []) {
       const p = who(f.playerId);
-      if (p && isToday(f.createdAt)) feed.push({ at: f.createdAt, kind: 'classic', name: p.name, club: club(p.groupId), what: f.course, total: f.total, par: f.par, n: null, ft: null });
+      if (p && isToday(f.createdAt)) feed.push({ id: p.id, at: f.createdAt, kind: 'classic', name: p.name, club: club(p.groupId), what: f.course, total: f.total, par: f.par, n: null, ft: null });
     }
-    for (const p of mem) if (isToday(p.joined)) feed.push({ at: p.joined, kind: 'join', name: p.name, club: club(p.groupId), what: null, total: null, par: null, n: null, ft: null });
+    for (const p of mem) if (isToday(p.joined)) feed.push({ id: p.id, at: p.joined, kind: 'join', name: p.name, club: club(p.groupId), what: null, total: null, par: null, n: null, ft: null });
     feed.sort((a, b) => b.at.localeCompare(a.at));
     const cards = (db.cards ?? []).filter((c) => c.day === today);
     const people: AdminTodayPerson[] = mem
@@ -959,6 +959,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         const going = cards.find((c) => c.playerId === p.id && !c.done);
         if (!mine.length && !going) return null;
         return {
+          id: p.id,
           name: p.name,
           club: club(p.groupId),
           last: mine[0]?.at ?? null,
@@ -1144,6 +1145,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       const all = [db.seen?.[p.id], ...db.rounds.filter((r) => r.playerId === p.id).map((r) => r.createdAt), ...(db.practice ?? []).filter((x) => x.playerId === p.id).map((x) => x.startedAt)];
       const active = new Set([...days.map((x) => x.day), ...rounds.map((r) => todayInGameTz(new Date(r.createdAt))), ...practice.map((x) => todayInGameTz(new Date(x.startedAt)))]);
       return {
+        id: p.id,
         groupId: p.groupId,
         club: club(p.groupId),
         name: p.name,
@@ -1159,11 +1161,11 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     });
     const who = (id: string) => db.players.find((p) => p.id === id);
     const feed: AdminOverview['feed'] = [
-      ...db.rounds.filter((r) => clubs.has(r.groupId) && !who(r.playerId)?.admin).map((r) => ({ at: r.createdAt, kind: 'round' as const, club: club(r.groupId), name: who(r.playerId)?.name ?? '?', course: r.course, total: r.total, par: r.par, what: null, shots: null })),
-      ...(db.free ?? []).filter((f) => { const p = who(f.playerId); return p && clubs.has(p.groupId) && !p.admin; }).map((f) => ({ at: f.createdAt, kind: 'classic' as const, club: club(who(f.playerId)!.groupId), name: who(f.playerId)!.name, course: f.course, total: f.total, par: f.par, what: null, shots: null })),
-      ...(db.practice ?? []).filter((x) => clubs.has(x.groupId) && !who(x.playerId)?.admin).map((x) => ({ at: x.startedAt, kind: 'practice' as const, club: club(x.groupId), name: who(x.playerId)?.name ?? '?', course: null, total: null, par: null, what: x.kind, shots: x.shots })),
-      ...members.map((p) => ({ at: p.joined, kind: 'join' as const, club: club(p.groupId), name: p.name, course: null, total: null, par: null, what: null, shots: null })),
-      ...(db.feedback ?? []).filter((f) => clubs.has(f.groupId)).map((f) => ({ at: f.createdAt, kind: 'feedback' as const, club: club(f.groupId), name: who(f.playerId)?.name ?? 'A member', course: null, total: null, par: null, what: f.body.slice(0, 80), shots: null })),
+      ...db.rounds.filter((r) => clubs.has(r.groupId) && !who(r.playerId)?.admin).map((r) => ({ id: r.playerId, at: r.createdAt, kind: 'round' as const, club: club(r.groupId), name: who(r.playerId)?.name ?? '?', course: r.course, total: r.total, par: r.par, what: null, shots: null })),
+      ...(db.free ?? []).filter((f) => { const p = who(f.playerId); return p && clubs.has(p.groupId) && !p.admin; }).map((f) => ({ id: f.playerId, at: f.createdAt, kind: 'classic' as const, club: club(who(f.playerId)!.groupId), name: who(f.playerId)!.name, course: f.course, total: f.total, par: f.par, what: null, shots: null })),
+      ...(db.practice ?? []).filter((x) => clubs.has(x.groupId) && !who(x.playerId)?.admin).map((x) => ({ id: x.playerId, at: x.startedAt, kind: 'practice' as const, club: club(x.groupId), name: who(x.playerId)?.name ?? '?', course: null, total: null, par: null, what: x.kind, shots: x.shots })),
+      ...members.map((p) => ({ id: p.id, at: p.joined, kind: 'join' as const, club: club(p.groupId), name: p.name, course: null, total: null, par: null, what: null, shots: null })),
+      ...(db.feedback ?? []).filter((f) => clubs.has(f.groupId)).map((f) => ({ id: f.playerId ?? null, at: f.createdAt, kind: 'feedback' as const, club: club(f.groupId), name: who(f.playerId)?.name ?? 'A member', course: null, total: null, par: null, what: f.body.slice(0, 80), shots: null })),
     ]
       .filter((e) => e.at >= since)
       .sort((a, b) => b.at.localeCompare(a.at))

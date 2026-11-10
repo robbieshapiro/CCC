@@ -60,7 +60,6 @@ export function sundayCardSection(snap: Snapshot): string {
         <select id="adm-preview" aria-label="Course to preview">${all.map((x, i) => `<option value="${x.id}">${esc(shortName(x))}${i === 0 ? ' (this week)' : x.draft ? ' (draft)' : ''}</option>`).join('')}</select>
         <button class="btn" data-preview-go>Preview</button>
       </div>
-      <button class="link adm-coin" data-coin-test>Test the money note</button>
     </section>`;
 }
 

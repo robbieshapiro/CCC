@@ -1,6 +1,6 @@
-// The admin tab: every club the admin runs on one page. At the top, what's waiting on you (feedback) and the things
-// you can go do (notice, invite, preview, new club); then activity, every member, and member management (invites
-// nobody has opened yet, with revoke).
+// The Committee Room: four tabs, simplest first. Today (what needs you, the feedback inbox, who's in, the live feed,
+// then the numbers folded away), Course (the weeks ahead, the Hole Lab, previews, the hole report), Members (everyone,
+// invites, and the full history, over 7 days, the month or all time) and Tools. Every member name opens their card.
 import { api, getSession, listSessions } from '../api';
 import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
@@ -11,17 +11,15 @@ import { store } from '../storage';
 import { buildHole, tidy } from '../designer/hole';
 import { isHole } from '../designer/desk';
 import { planCanvas } from '../designer/plan';
-import { coinPop, testHole } from './round';
-import { esc, header, navigate, render } from '../ui';
+import { testHole } from './round';
+import { esc, golferHref, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
-import { adminShoutSection, loadAdminShouts } from './shoutouts';
-import { briefSection, chartSections, courseSections, kpiSections, loadBrief, loadHoleReport, loadKpis } from './adminKpis';
+import { chartSections, courseSections, kpiSections, loadHoleReport, loadKpis } from './adminKpis';
 import { ask, copyBox, tell } from '../dialog';
 import { bindSundayCard, sundayCardSection } from './adminCard';
 import { loadToday, todaySections } from './adminToday';
-import { askSection, bindAsk } from './adminAsk';
 
 const WINDOWS: { id: AdminWindow; label: string }[] = [
   { id: 'week', label: '7 days' },
@@ -50,32 +48,30 @@ export function admin(snap: Snapshot) {
     <main class="admin-page">
       <div class="admin-top">
         <div><p class="eyebrow">Committee only</p><h1>The Committee Room</h1></div>
-        <div class="seg" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
       </div>
       <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
-      <div class="adm-pane" data-pane="overview">
+      <div class="adm-pane" data-pane="today">
+        <div class="adm-needs" id="adm-needs"></div>
+        <section class="adm-card" id="adm-feedback-card" hidden>
+          <h2>Feedback</h2>
+          <div id="adm-todo"></div>
+        </section>
         ${todaySections()}
         <details class="adm-more">
-          <summary>More numbers <small>came back, purse, new members, AI, the charts</small></summary>
+          <summary>Numbers <small>purse, came back, AI calls, the charts</small></summary>
           ${kpiSections()}
           ${chartSections()}
           <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
+          <section class="adm-card" id="adm-daily-bars" hidden></section>
         </details>
       </div>
-      <div class="adm-pane" data-pane="reginald" hidden>${askSection()}${briefSection()}</div>
       <div class="adm-pane" data-pane="course" hidden>
         ${sundayCardSection(snap)}
         ${courseSections()}
       </div>
       <div class="adm-pane" data-pane="members" hidden>
+        <div class="seg adm-window" role="tablist" id="adm-window">${WINDOWS.map((w) => `<button role="tab" data-window="${w.id}">${w.label}</button>`).join('')}</div>
         <section class="adm-card" id="adm-holes" hidden></section>
-      </div>
-      <div class="adm-pane" data-pane="activity" hidden>
-        <section class="adm-card" id="adm-feedback-card">
-          <h2>Feedback</h2>
-          <div id="adm-todo"><p class="muted">Loading…</p></div>
-        </section>
-        ${adminShoutSection()}
       </div>
       <div class="adm-pane" data-pane="tools" hidden>
         <section class="adm-card adm-do">
@@ -95,7 +91,6 @@ export function admin(snap: Snapshot) {
     </main>`);
   bindTabs();
   bindSundayCard(snap);
-  bindAsk();
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
     b.onclick = () => {
       const open = document.querySelector<HTMLElement>(`[data-panel="${b.dataset.tool}"]`)!;
@@ -107,30 +102,14 @@ export function admin(snap: Snapshot) {
       if (!was) open.querySelector<HTMLElement>('textarea, input')?.focus();
     };
   });
-  // the reward moment, on demand: the animation and the sound, nothing paid
-  const coin = document.querySelector<HTMLButtonElement>('[data-coin-test]');
-  if (coin) {
-    let n = 0;
-    coin.onclick = () => {
-      const host = document.createElement('div');
-      host.className = 'coin-test';
-      document.body.appendChild(host);
-      const sample = [[200, 'Monster putt', '64 ft'], [75, 'Long putt', '38 ft'], [100, 'Chip-in', 'from off the green'], [150, 'Secret found', 'The Cliff Walk']] as const;
-      const [amount, title, sub] = sample[n++ % sample.length];
-      coinPop(host, amount, title, `${sub} · test, not paid`);
-      window.setTimeout(() => host.remove(), 3300);
-    };
-  }
   bindClubMaker();
   bindNoticeTool();
   bindInviteTool();
   void loadToday();
   void load();
-  void loadAdminShouts();
   void loadHoles(snap);
   void loadTrend();
   void loadKpis().then(loadHoleReport);
-  void loadBrief();
 }
 
 // Members' golf holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
@@ -409,12 +388,14 @@ function draw() {
   // rounds started and left unfinished, across the members shown (the Unfinished column has them one by one)
   const unfinished = d.members.reduce((a, m) => a + m.unfinished, 0);
   const todo = document.getElementById('adm-todo');
+  const todoCard = document.getElementById('adm-feedback-card');
+  if (todoCard) todoCard.hidden = !d.feedback.length;
   if (todo) {
     todo.innerHTML = d.feedback.length
       ? `<ul class="adm-list">${d.feedback
           .map(
             (f) =>
-              `<li><div>${chip(f.club, many)}<b>${esc(f.from ?? 'A member')}</b> <small>${ago(f.createdAt)}${f.context ? ` · ${esc(f.context)}` : ''}</small><p>${esc(f.body)}</p></div><button class="btn small" data-done="${f.id}">✓ Done</button></li>`,
+              `<li><div>${chip(f.club, many)}<b>${f.from ? nameLink(f.from, d.members.find((m) => m.name === f.from)?.id) : 'A member'}</b> <small>${ago(f.createdAt)}${f.context ? ` · ${esc(f.context)}` : ''}</small><p>${esc(f.body)}</p></div><button class="btn small" data-done="${f.id}">✓ Done</button></li>`,
           )
           .join('')}</ul>`
       : '<p class="muted">Nothing waiting on you. No new feedback.</p>';
@@ -431,14 +412,18 @@ function draw() {
     );
   }
   body.innerHTML = `
-    <section class="adm-card" data-goes="activity">
-      <h2>Activity</h2>
-      <div class="adm-stats">
-        ${stat(sum('members'), 'Members', `${sum('newMembers')} new`)}
-        ${stat(sum('active'), 'Active', win === 'all time' ? 'ever' : `last ${win}`.replace('last month', 'this month'))}
-        ${stat(sum('rounds'), 'Rounds', unfinished ? `posted · ${unfinished} unfinished` : 'posted')}
-        ${stat(sum('practice'), 'Practice', 'sessions')}
-      </div>
+    <section class="adm-card" data-goes="members">
+      <div class="adm-head"><h2>Members</h2>${many ? `<div class="adm-chips">${['', ...d.clubs.map((c) => c.name)].map((c) => `<button data-club="${esc(c)}" class="${state.club === c ? 'on' : ''}">${c ? esc(c) : 'All'}</button>`).join('')}</div>` : ''}</div>
+      <p class="adm-sum">${sum('members')} members · ${sum('active')} active ${win === 'all time' ? 'ever' : win === 'month' ? 'this month' : `in the last ${win}`} · ${sum('rounds')} rounds${unfinished ? ` (${unfinished} unfinished)` : ''} · ${sum('practice')} practice sessions${sum('newMembers') ? ` · ${sum('newMembers')} new` : ''}</p>
+      ${memberTable(d.members, many)}
+      <p class="fine">Days: days in the window they opened the club, played or practised. Best: their best round to par in the window. Tap a name for their card.</p>
+    </section>
+    <section class="adm-card" data-goes="members" id="adm-invites" ${d.invites.length ? '' : 'hidden'}>
+      <h2>Invited, not joined yet <small>${d.invites.length}</small></h2>
+      ${pending(d, many)}
+    </section>
+    <section class="adm-card" data-goes="members">
+      <h2>History</h2>
       ${
         many
           ? `<div class="table-wrap"><table class="practice-table adm-clubs"><thead><tr><th>Club</th><th class="num">Members</th>${guests ? '<th class="num">Guests</th>' : ''}<th class="num">Active</th><th class="num">New</th><th class="num">Rounds</th><th class="num">Practice</th></tr></thead><tbody>${d.clubs
@@ -446,20 +431,14 @@ function draw() {
               .join('')}</tbody></table></div>`
           : ''
       }
-      ${dailyBars(state.daily)}
-      <h3 class="adm-sub">Activity <small>${d.feed.length >= 1000 ? 'the latest 1,000' : `${d.feed.length} ${d.feed.length === 1 ? 'event' : 'events'}`} · ${(WINDOWS.find((w) => w.id === state.window)?.label ?? '').toLowerCase().replace('month', 'this month')}</small></h3>
+      <p class="adm-sum">${d.feed.length >= 1000 ? 'The latest 1,000' : `${d.feed.length} ${d.feed.length === 1 ? 'event' : 'events'}`} · ${(WINDOWS.find((w) => w.id === state.window)?.label ?? '').toLowerCase().replace('month', 'this month')}</p>
       ${feed(d, many)}
-    </section>
-    <section class="adm-card" data-goes="members">
-      <div class="adm-head"><h2>Members</h2>${many ? `<div class="adm-chips">${['', ...d.clubs.map((c) => c.name)].map((c) => `<button data-club="${esc(c)}" class="${state.club === c ? 'on' : ''}">${c ? esc(c) : 'All'}</button>`).join('')}</div>` : ''}</div>
-      ${memberTable(d.members)}
-      <p class="fine">Days: days in the window they opened the club, played or practised. Best: their best round to par in the window.</p>
-    </section>
-    <section class="adm-card" data-goes="members" id="adm-invites">
-      <h2>Member management</h2>
-      <h3 class="adm-sub">Invited, not joined yet${d.invites.length ? ` · ${d.invites.length}` : ''}</h3>
-      ${pending(d, many)}
     </section>`;
+  const bars = document.getElementById('adm-daily-bars');
+  if (bars) {
+    bars.innerHTML = dailyBars(state.daily);
+    bars.hidden = !state.daily;
+  }
   body.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.onclick = () => ((state.club = b.dataset.club!), draw())));
   body.querySelectorAll<HTMLElement>('[data-sort]').forEach(
     (th) =>
@@ -496,11 +475,9 @@ function draw() {
 // ---------- the layout: tabs, with Overview (what needs you, then the numbers) first ----------
 
 const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'reginald', label: 'Ask Reginald' },
+  { id: 'today', label: 'Today' },
   { id: 'course', label: 'Course' },
   { id: 'members', label: 'Members' },
-  { id: 'activity', label: 'Activity' },
   { id: 'tools', label: 'Tools' },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
@@ -516,7 +493,7 @@ function showTab(t: Tab, scrollTo?: string) {
 function bindTabs() {
   document.querySelectorAll<HTMLButtonElement>('#adm-tabs [data-tab]').forEach((b) => (b.onclick = () => showTab(b.dataset.tab as Tab)));
   const saved = store.get(TAB_KEY) as Tab | null;
-  showTab(saved && TABS.some((t) => t.id === saved) ? saved : 'overview');
+  showTab(saved && TABS.some((t) => t.id === saved) ? saved : 'today');
   drawNeeds();
 }
 
@@ -532,14 +509,14 @@ function arrange(body: HTMLElement) {
 // "Needs you": what's waiting on the Committee, each a tap to where it's dealt with
 const needs = { feedback: 0, holes: 0, invites: 0, unplayed: 0 };
 export const setNeeds = (k: keyof typeof needs, n: number) => ((needs[k] = n), drawNeeds());
-// shown as a count on the Activity tab (unread feedback), not a box up top
+// the first line of Today: what's waiting on you, each a tap to where it's dealt with
 function drawNeeds() {
-  const tab = document.querySelector<HTMLButtonElement>('#adm-tabs [data-tab="activity"]');
-  if (tab) tab.innerHTML = `Activity${needs.feedback ? ` <span class="adm-badge">${needs.feedback}</span>` : ''}`;
+  const tab = document.querySelector<HTMLButtonElement>('#adm-tabs [data-tab="today"]');
+  if (tab) tab.innerHTML = `Today${needs.feedback ? ` <span class="adm-badge">${needs.feedback}</span>` : ''}`;
   const el = document.getElementById('adm-needs');
   if (!el) return;
   const items: [number, string, Tab, string][] = [
-    [needs.feedback, needs.feedback === 1 ? 'piece of feedback' : 'pieces of feedback', 'activity', 'adm-feedback-card'],
+    [needs.feedback, needs.feedback === 1 ? 'piece of feedback' : 'pieces of feedback', 'today', 'adm-feedback-card'],
     [needs.holes, needs.holes === 1 ? 'hole to review' : 'holes to review', 'members', 'adm-holes'],
     [needs.unplayed, needs.unplayed === 1 ? 'new member yet to play' : 'new members yet to play', 'members', ''],
     [needs.invites, needs.invites === 1 ? 'invite not taken up' : 'invites not taken up', 'members', 'adm-invites'],
@@ -551,7 +528,8 @@ function drawNeeds() {
   el.querySelectorAll<HTMLButtonElement>('[data-need-tab]').forEach((b) => (b.onclick = () => showTab(b.dataset.needTab as Tab, b.dataset.needTo || undefined)));
 }
 
-const stat = (n: number, label: string, sub: string) => `<div class="adm-stat"><b>${n}</b><span>${label}</span><small>${esc(sub)}</small></div>`;
+// a member's name, as a link to their card when the server sent who they are
+export const nameLink = (name: string, id?: string | null) => (id ? `<a class="adm-who" href="${golferHref(id)}">${esc(name)}</a>` : esc(name));
 const chip = (club: string, many: boolean) => (many ? `<span class="adm-club">${esc(club)}</span>` : '');
 
 // invitations nobody has opened yet, oldest at the bottom: copy the link again, or revoke it
@@ -565,7 +543,9 @@ function pending(d: AdminOverview, many: boolean) {
     .join('')}</ul>`;
 }
 
-function memberTable(all: Members) {
+function memberTable(all: Members, many: boolean) {
+  // one club: no Club column
+  const cols = COLUMNS.filter((c) => many || c.key !== 'club');
   const rows = all.filter((m) => !state.club || m.club === state.club || m.guestAt?.includes(state.club));
   if (!rows.length) return '<p class="muted">No members yet.</p>';
   const val = (m: Members[number]) => {
@@ -582,11 +562,11 @@ function memberTable(all: Members) {
     return state.desc ? -c : c;
   });
   const arrow = (k: SortKey) => (state.sort === k ? (state.desc ? ' ↓' : ' ↑') : '');
-  return `<div class="table-wrap"><table class="practice-table adm-members"><thead><tr>${COLUMNS.map((c) => `<th data-sort="${c.key}" class="${c.num ? 'num' : ''}">${c.label}${arrow(c.key)}</th>`).join('')}</tr></thead>
+  return `<div class="table-wrap"><table class="practice-table adm-members"><thead><tr>${cols.map((c) => `<th data-sort="${c.key}" class="${c.num ? 'num' : ''}">${c.label}${arrow(c.key)}</th>`).join('')}</tr></thead>
     <tbody>${rows
       .map(
         (m) =>
-          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${esc(m.name)}</b></td><td><small>${esc(m.club)}${m.guestAt?.length ? `<br><span class="muted">guest at ${esc(m.guestAt.join(', '))}</span>` : ''}</small></td><td><small>${ago(m.lastSeen)}</small></td><td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num${m.unfinished ? ' warn' : ''}">${m.unfinished}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td><td class="num">${m.lockers}</td></tr>`,
+          `<tr class="${m.days ? '' : 'quiet'}"><td><b>${nameLink(m.name, m.id)}</b></td>${many ? `<td><small>${esc(m.club)}${m.guestAt?.length ? `<br><span class="muted">guest at ${esc(m.guestAt.join(', '))}</span>` : ''}</small></td>` : ''}<td><small>${ago(m.lastSeen)}</small></td><td class="num">${m.days}</td><td class="num">${m.rounds}</td><td class="num${m.unfinished ? ' warn' : ''}">${m.unfinished}</td><td class="num">${m.best === null ? '–' : toParLabel(m.best)}</td><td class="num">${m.practice}</td><td class="num">${m.lockers}</td></tr>`,
       )
       .join('')}</tbody></table></div>`;
 }
@@ -619,7 +599,7 @@ function feed(d: AdminOverview, many: boolean) {
       const dd = day(e.at);
       const head = dd !== last ? `<li class="adm-day">${dd === today ? 'Today' : dd === yesterday ? 'Yesterday' : dd}</li>` : '';
       last = dd;
-      return `${head}<li><span class="adm-ico">${icon[e.kind]}</span><div>${chip(e.club, many)}<b>${esc(e.name)}</b> ${line(e)}<small>${time(e.at)}</small></div></li>`;
+      return `${head}<li><span class="adm-ico">${icon[e.kind]}</span><div>${chip(e.club, many)}<b>${nameLink(e.name, e.id)}</b> ${line(e)}<small>${time(e.at)}</small></div></li>`;
     })
     .join('');
   return `<div class="adm-feed-box"><ul class="adm-feed">${rows}</ul></div>`;
