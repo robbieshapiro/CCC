@@ -37,6 +37,7 @@ import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
 import { canShare, dailySummary, share } from './daily';
 import { cardStatus, elsewhereLine } from './cardnote';
+import { earned, plaques } from '../trophies';
 
 let game: Course3D | null = null;
 
@@ -175,6 +176,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const course: Course = { ...full, holes, par: holes.reduce((a, h) => a + h.par, 0) };
   const me = snap.players.find((p) => p.id === snap.me)!;
   const before = myBest(snap);
+  // the Trophy Room as it stood before this round, so the summary can say what the round unlocked
+  const shelfBefore = !preview && !opts.practice ? api.trophyProgress(requireSession()).catch(() => null) : Promise.resolve(null);
   render(`<div class="g3" id="g3"></div>`);
   document.body.classList.add('court-open');
   const el = document.getElementById('g3')!;
@@ -403,6 +406,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       }
       ${!preview && posted ? '<p class="purse-line" id="purse-line" hidden></p>' : ''}
       ${bonusLine}${classicLine}
+      ${!preview && posted && !opts.practice ? '<p class="purse-line trophy-line" id="trophy-line" hidden></p>' : ''}
       ${opts.practice ? '' : `<p class="fine">${opts.classic ? 'Free play on a classic course. It counts for the course record, never the Open or a title.' : dry ? "That's today's card. A rehearsal: nothing was posted or paid." : rehearsal ? "A rehearsal of the card as it plays live. Nothing posted, nothing paid." : preview ? 'Preview round, not counted.' : posted ? (card ? "Posted to the board. That's today's card." : 'Posted to the board.') : esc(notPosted)}</p>`}
       ${opts.practice ? `<button class="link share-practice" data-share-score>${canShare() ? 'Send to the group' : 'Copy for the group chat'}</button>` : `<button class="btn ghost share-score" data-share-score>${canShare() ? '📤 Share your score' : '📋 Copy your score'}</button>`}
       <div class="summary-actions"><button class="btn" data-again>${card ? 'Practice round' : opts.practice ? 'Practise again' : 'Play again'}</button><button class="btn ghost" data-back>${dry ? 'Back to the Committee Room' : 'Back to the club'}</button></div>
@@ -420,6 +424,20 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   el.appendChild(sheet);
   // the round's bonus lands with a burst of coins
   if (bonusSum.sum) window.setTimeout(() => coinPop(el, bonusSum.sum, 'Club bonus', rehearsal ? 'preview, not paid' : "today's card"), 700);
+  // any plaque this round unlocked, named quietly under the card
+  if (!preview && posted && !opts.practice)
+    void shelfBefore
+      .then(async (was) => {
+        if (!was) return;
+        const now = await api.trophyProgress(requireSession());
+        if (!now) return;
+        const fresh = plaques().filter((pl) => !earned(pl, was) && earned(pl, now));
+        const line = sheet.querySelector<HTMLElement>('#trophy-line');
+        if (!line || !fresh.length) return;
+        line.innerHTML = `<b>${fresh.length === 1 ? 'New in the Trophy Room' : `${fresh.length} new in the Trophy Room`}</b><span>${fresh.map((pl) => esc(pl.name)).join(' · ')} · <a class="link" href="#/clubhouse/trophies">See the room</a></span>`;
+        line.hidden = false;
+      })
+      .catch(() => {});
   // where this leaves you on the board, and what the purse would pay you if the week ended now
   if (!preview && posted)
     void refresh()

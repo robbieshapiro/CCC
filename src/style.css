@@ -1183,6 +1183,8 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .purse-line { width: 100%; display: grid; gap: 2px; margin: 0; padding: 10px 12px; border-radius: 8px; background: #fbf4e0; border: 1px solid rgba(214, 169, 64, 0.6); animation: rise 0.45s ease-out both; }
 .purse-line b { font-family: var(--serif); font-size: 26px; color: #8a6514; }
 .purse-line span { font-size: 13px; color: var(--muted); }
+.trophy-line { background: #f6f3ea; border-color: rgba(120, 110, 80, 0.35); }
+.trophy-line b { font-size: 17px; color: var(--ink, #2b2b2b); }
 .ch-members .earn { color: #8a6514; font-weight: 700; white-space: nowrap; }
 .honours .paid li { display: grid; grid-template-columns: 3em 1fr auto; align-items: baseline; gap: 8px; }
 .honours .paid li span { grid-column: auto; }

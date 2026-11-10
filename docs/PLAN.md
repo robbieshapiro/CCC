@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 10, 2026 (Activity shows classic rounds; quieter rounds; the Trophy Room; course ideas to Reginald; the Season counts from October, banked points only; the Lakefront is a beach; The Windy City reworked: fall, day and night, harder; the great-hole raise isn't paid back; the Pro Shop's Tour Collection; great holes pay more; Robbie shows as the Committee; The Windy City, a Chicago course for Nov 22; five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
+Last updated Nov 10, 2026 (new plaques named after a round; Activity shows classic rounds; quieter rounds; the Trophy Room; course ideas to Reginald; the Season counts from October, banked points only; the Lakefront is a beach; The Windy City reworked: fall, day and night, harder; the great-hole raise isn't paid back; the Pro Shop's Tour Collection; great holes pay more; Robbie shows as the Committee; The Windy City, a Chicago course for Nov 22; five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 10, 2026 (Activity shows classic rounds; quieter rounds; the Tr
 
 | PR | What |
 |---|---|
+| #239 | A round's summary names any Trophy Room plaque it unlocked ("2 new in the Trophy Room: Bogey-Free · Regular"), with a link to the room. Quiet, no burst. The Windy City's five secret routes now have hole checks. |
 | #238 | Activity (the Committee Room's feed and Today) shows free play on the classic courses: "Tyler played The Highlands Course, 8 (-4), for the course record". Practice of next week's course reads "practised next week's course" (was "practised the preview"). |
 | #237 | Quieter rounds, classy and clean: the coin burst is gone, and a moment's money is a small dark note under the hole title ("+$100 Birdie · Creek Bend") that fades in and out, with no sound. A holed ball gets the cup's own sound; only an ace gets a soft round of applause (no more cheers on every hole, or at the end of a round). The Pure/Good/Slice callouts are smaller and lighter, the bomb's pop animation is gone, and a new card on home fades in rather than glowing gold. |
 | #236 | The Trophy Room: a Trophies tab in the Clubhouse (after Season) with about 55 engraved plaques, all earned from what's already recorded. Titles (club champion 1/3/5, Open winner, Open top 10s 1/5/10), Scoring (birdies 10/25/100, eagles 1/5/15, albatross, hole in one, the Ace Club, under-par rounds 1/5/20, bogey-free, rounds posted 10/50/100), Skill (30 ft putts 1/10, a 60 ft putt, chip-ins 1/5/15, Closest to the Pin inside 3 ft, long drives 325/350/400 yd), Course feats (every hole's secret, and Mastered: a birdie on every hole of a course, for each course once it's out) and Club life (7 and 30 day streaks, CTP wins 1/5, your Members' hole played by 10). Locked plaques show how to earn them and a progress bar; the three nearest sit up top. Golfer cards show the shelf for anyone. Cream plaques with a thin gold rule, no confetti. The Windy City's five secrets are now recorded on cards. New `trophy_progress`. Up-and-downs and fairways or greens hit aren't recorded, so they're not plaques yet. |
@@ -151,11 +152,11 @@ Last updated Nov 10, 2026 (Activity shows classic rounds; quieter rounds; the Tr
 
 ## Setup status
 
-- [ ] #238: apply the updated `admin_overview` and `admin_today` after merge (`pr_238_activity_classic`), then check Tyler's Highlands rounds show.
+- [x] #238: applied `pr_238_activity_classic` on Nov 10; Tyler's four Highlands rounds show in the feed.
 
 - [x] #236: `trophy_progress` and the updated `secret_feats` applied Nov 10 (`pr_236_trophy_room`). Checked live: Marc 42 birdies, 27 eagles, 4 albatrosses, 3 aces, 14 bogey-free rounds, 2 titles, the Highlands and the Caldera mastered.
 
-- [ ] #233: apply `season_from` and the updated `season_standings` and `golfer_card` after merge (`pr_233_season_from_october`), then check Marc leads on 1,000.
+- [x] #233: applied `pr_233_season_from_october`; Marc leads on 1,000.
 
 - [x] #231: `bonus_grants`, the updated `person_bonus` and Tyler's $525 credit applied Nov 10 (`pr_231_no_backpay`). Checked live: every balance matches the PR (Marc $1,044, Robbie $1,432, Hunter $2,151, Tyler $202).
 
@@ -166,7 +167,7 @@ Last updated Nov 10, 2026 (Activity shows classic rounds; quieter rounds; the Tr
 
 - [x] #224: `course_schedule` (table and both functions) applied Nov 10 (`pr_224_course_schedule`). Checked live: row security on, anon can call both, it reads `{}`.
 - [ ] Pick Nov 15's course in Admin > Course > The weeks ahead. The Pacific Bluffs is still a draft, so without a pick Nov 15 carries on with the Western Reserve.
-- [ ] Play The Windy City (Admin > Course > Preview a course), then put it on Nov 22 in The weeks ahead. Its secret routes have no hole check yet; add them to `SECRET_FROM` before it opens.
+- [ ] Play The Windy City (Admin > Course > Preview a course), then put it on Nov 22 in The weeks ahead.
 - [ ] Play the five Hole Lab holes (Admin > Course > The Hole Lab) and say which looks to build into full courses.
 
 - [x] #221: `course_practice` applied Nov 9 (`pr_221_practised_today`). Checked live: anon can call it; today it lists Robbie and Tyler.
