@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 10, 2026 (great holes pay more; Robbie shows as the Committee; The Windy City, a Chicago course for Nov 22; five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
+Last updated Nov 10, 2026 (the Pro Shop's Tour Collection; great holes pay more; Robbie shows as the Committee; The Windy City, a Chicago course for Nov 22; five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 10, 2026 (great holes pay more; Robbie shows as the Committee; 
 
 | PR | What |
 |---|---|
+| #230 | The Pro Shop's Tour Collection: 18 pieces of modern tour gear on the shop floor at $1,000 to $4,000, under the club's own label (no outside brands): a tour quarter-zip, the Final Round red mock, a tour hoodie, a CCC crewneck, a quilted vest, tour joggers, tailored tour trousers with a white belt, tour spikes, high-top golf sneakers, a rope cap, a flat-brim snapback, a tour bucket, tour half-rim shades, a tour glove, a tour staff bag, a stand bag, a forged blade putter and a matte black driver. Each is modelled on the golfer and mostly takes your own colours. The shop floor is now two collections, Clubhouse Classics and The Tour Collection, above the Club Pro and Club Legend racks. Existing prices unchanged. |
 | #229 | Great holes pay more: a birdie $100 (was $25), an eagle $500 (was $100), a new albatross (three under) $1,000, a hole in one $2,500 (was $500). Still on the day's card only. Paid back on every one already made: Marc +$7,400, Robbie +$5,725, Hunter +$2,125, everyone else +$150 to $1,100. The round summary and coin note name the albatross. |
 | #227 | Robbie shows as the Committee, not Kellogg: everywhere members see a club beside a name (the Open board, Season standings, his golfer card, today's cards and practice, Closest to the Pin and its crown, course records), whoever holds an admin seat reads "Committee", and the club boards no longer tag him a Guest. Display only: where he plays, what counts, the purse, titles and points are unchanged. New `club_label`; a `committee` flag on the snapshot's players. |
 | #226 | The Windy City (a draft for the week of Nov 22): five holes through Chicago in late November, grown from the Hole Lab's city. The Lakefront (par 4, 410 yd: Lake Michigan right and long, Lake Shore Drive and its traffic out of bounds left, a harbour inlet to carry, the skyline ahead), Millennium Park (par 3, 180: over the plaza past Cloud Gate, the ice rink short left, the Pritzker bandshell and trellis, Michigan Avenue in play), The River (par 4, 420: the river down the left and across the front, towers right, the brown line overhead, Marina City and a bascule bridge), Wrigleyville (par 4, 390: up a snowy street between three-flats, the red line running alongside, Wrigley Field's marquee and rooftop bleachers at the green) and Navy Pier (par 5, 560: straight out the pier, lake both sides, the wheel turning, Willis Tower behind). A new gale: 15 to 30 mph off the lake every day, gusting shot to shot. Snow flurries drift with the wind; people in winter coats walk the sidewalks, cabs run Lake Shore Drive, the el's trains run, steam comes off the vents. Buildings are in play (walls bounce a ball back, roofs lose it). Greens are flatter with some break, and the November turf runs a touch slower. All five pass the hole checks. |
@@ -143,7 +144,8 @@ Last updated Nov 10, 2026 (great holes pay more; Robbie shows as the Committee; 
 
 ## Setup status
 
-- [ ] #229: apply the updated `person_bonus` after merge (`pr_229_bigger_holes`), then check Marc's bonus went up by $7,400.
+- [x] #229: the updated `person_bonus` applied Nov 10 (`pr_229_bigger_holes`). Checked live: great-hole bonus Marc $1,800 to $9,200, Robbie $1,475 to $7,200, Hunter $575 to $2,700.
+- [ ] #230: apply the 18 Tour Collection rows to `shop_items` after merge (`pr_230_tour_collection`), then check there are 18 member-rack pieces from $1,000 to $3,500 among them.
 
 - [x] #227: `club_label` and the nine updated functions applied Nov 10 (`pr_227_committee_label`; the live copies matched `schema.sql` apart from line endings and `get_snapshot`'s comments). Checked live: the Season and the Open show Robbie as Committee and Marc as Kellogg; in The Clergy Robbie is still `away` (purse unchanged) and flagged `committee`; members can't call `club_label`.
 
@@ -287,6 +289,8 @@ Every counted stroke saved: club, power and accuracy, where it started and finis
 
 ## Next up (ideas, not started)
 
+- Trophy Room (agreed Nov 10): a Trophies tab in the Clubhouse and a shelf on every golfer card. About 35 engraved plaques computed from rounds already recorded: scoring milestones (birdies 10/25/100, eagles 1/5/15, aces, under par rounds, bogey-free, personal bests), skill challenges (30 and 60 ft putts, chip-ins, up and downs, every fairway or green on a card, Closest to the Pin inside 3 ft, a 300 yd drive, under par in a 25 mph wind), every secret route on every course (add the Western Reserve, the Bluffs and Chicago) and mastering a course, club life (streaks, cards posted, CTP wins, your Members' hole played), and titles (club champion, Open winner, top 10s, Season leader). Progress shown on locked plaques, and "closest to unlocking".
+- Quieter rounds (agreed Nov 10): the coin burst goes; money becomes a small note at the foot of the screen and a gold line on the summary; one soft clap for an ace only; smaller Pure/Good callouts; one cream-and-gold plaque style for every honour.
 - **More to spend purse money on:** sponsor a week's purse ("presented by"), naming rights on a hole, an engraved line on the plaque, entry fees for mini tournaments, a season money list with its own title. Restock the shop now and then so prices keep up with what the club earns.
 
 - **The Committee.** Robbie appoints elite members and gives titles (Hole Architect, Mini Game Manager). Perks:

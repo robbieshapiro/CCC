@@ -55,6 +55,7 @@ export type Item = {
   off: (s: GolferSpec) => void;
   worn: (s: GolferSpec) => boolean;
   focus?: 'full' | 'head' | 'chest' | 'hands' | 'club' | 'feet' | 'bag';
+  collection?: 'tour'; // the shop floor's Tour Collection: modern tour gear (the rest of the floor is Clubhouse Classics)
 };
 const top = (id: string, name: string, price: number, rack: Rack, what: string, t: GolferSpec['top']): Item => ({ id, name, kind: 'top', price, rack, what, wear: (s) => (s.top = t), off: (s) => (s.top = 'polo'), worn: (s) => s.top === t });
 const hat = (id: string, name: string, price: number, rack: Rack, what: string, h: GolferSpec['hat']): Item => ({ id, name, kind: 'hat', price, rack, what, wear: (s) => (s.hat = h), off: (s) => (s.hat = 'cap'), worn: (s) => s.hat === h });
@@ -109,7 +110,31 @@ const flag2 = (id: string, name: string, price: number, rack: Rack, what: string
 // The catalogue: about 60 pieces on a wide ladder. The shop floor runs $100 to $1,500, so everyone buys something in
 // their first week; the Club Pro rack $1,500 to $8,000; the Club Legend rack $10,000 to $30,000. Prices and racks are
 // mirrored in supabase/schema.sql (shop_items), which checks every purchase.
+// The Tour Collection, on the shop floor: what the pros wear now, under the club's own label (no outside brands).
+// $1,000 to $4,000, so a piece is a real purchase and a full outfit takes a few good weeks.
+const tourItems: Item[] = [
+  top('tourzip', 'Tour quarter-zip', 1800, 'member', 'Light performance knit in your shirt colour, a contrast band across the chest and a matching zip.', 'tourzip'),
+  top('finalred', 'Final Round mock', 2500, 'member', 'A deep red mock neck for the last day. Everyone knows what it means.', 'finalred'),
+  top('hoodie', 'Tour hoodie', 1600, 'member', 'A brushed fleece hoodie in your shirt colour, the hood down, made to swing in.', 'hoodie'),
+  top('crewneck', 'Clubhouse crewneck', 1200, 'member', 'Heavyweight cotton with CCC across the chest in your accent colour.', 'crewneck'),
+  slot('quiltvest', 'Quilted tour vest', 2200, 'member', 'outer', 'A quilted vest in your accent colour over whatever you’re wearing.', 'outer', 'quiltvest', undefined, 'chest'),
+  slot('joggers', 'Tour joggers', 1300, 'member', 'bottoms', 'Tapered to a ribbed cuff, in your trouser colour.', 'bottoms', 'joggers', 'trousers', 'full'),
+  slot('slimtour', 'Tailored tour trousers', 1500, 'member', 'bottoms', 'Slim, sharply creased, cropped over the shoe, with a white belt.', 'bottoms', 'slimtour', 'trousers', 'full'),
+  slot('tourspike', 'Tour spikes', 2000, 'member', 'shoes', 'White leather on a black sole, a blue lacing dial on the heel.', 'shoeStyle', 'tourspike', undefined, 'feet'),
+  slot('hightop', 'High-top golf sneakers', 1700, 'member', 'shoes', 'Black high-tops on a white sole. Street, but spiked.', 'shoeStyle', 'hightop', undefined, 'feet'),
+  hat('ropecap', 'Rope cap', 1000, 'member', 'A structured cap in your hat colour with a cream rope across the front.', 'rope'),
+  hat('flatbrim', 'Flat-brim snapback', 1100, 'member', 'A tall front, a dead-flat brim, in your hat colour.', 'flatbrim'),
+  hat('tourbucket', 'Tour bucket', 1200, 'member', 'A soft low bucket with a short brim and a darker band.', 'tourbucket'),
+  specs('halfrims', 'Tour half-rims', 1400, 'member', 'A white brow bar over rose lenses. Reads every break.', 'halfrim'),
+  glove('tourglove', 'Tour glove', 1000, 'member', 'Bright white cabretta leather with a navy wrist tab.', 'tour'),
+  slot('tourstaff', 'Tour staff bag', 3500, 'member', 'bag', 'A full staff bag in your bag colour, white bands and a name panel down the front.', 'bagStyle', 'tourstaff', undefined, 'bag'),
+  slot('standbag', 'Stand bag', 1500, 'member', 'bag', 'A light carry bag with fold-out legs, in your bag colour.', 'bagStyle', 'stand', undefined, 'bag'),
+  slot('bladeputter', 'Forged blade putter', 2200, 'member', 'putter', 'A satin-finished forged blade. Soft off the face.', 'putter', 'blade', 'classic', 'club'),
+  slot('mattedriver', 'Matte black driver', 2800, 'member', 'driver', 'A matte black tour head. No shine, all business.', 'driver', 'matte', undefined, 'club'),
+].map((i) => ({ ...i, collection: 'tour' as const }));
+
 export const ITEMS: Item[] = [
+  ...tourItems,
   // tops
   top('stripepolo', 'Striped polo', 300, 'member', 'Fine stripes in your shirt colour and cream, collar out.', 'stripepolo'),
   top('hawaiian', 'Hawaiian shirt', 400, 'member', 'Pacific teal with coral hibiscus and palm fronds. Loud.', 'hawaiian'),
