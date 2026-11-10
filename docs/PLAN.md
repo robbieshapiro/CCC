@@ -145,7 +145,7 @@ Last updated Nov 10, 2026 (the great-hole raise isn't paid back; the Pro Shop's 
 
 ## Setup status
 
-- [ ] #231: apply `bonus_grants` and the updated `person_bonus` after merge (`pr_231_no_backpay`), add Tyler's $525 credit (a checked one-off insert), then check the balances match the PR.
+- [x] #231: `bonus_grants`, the updated `person_bonus` and Tyler's $525 credit applied Nov 10 (`pr_231_no_backpay`). Checked live: every balance matches the PR (Marc $1,044, Robbie $1,432, Hunter $2,151, Tyler $202).
 
 - [x] #229: the updated `person_bonus` applied Nov 10 (`pr_229_bigger_holes`). Checked live: great-hole bonus Marc $1,800 to $9,200, Robbie $1,475 to $7,200, Hunter $575 to $2,700.
 - [x] #230: the 18 Tour Collection rows applied to `shop_items` Nov 10 (`pr_230_tour_collection`). Checked live: 18 shop-floor pieces, $1,000 to $3,500.
