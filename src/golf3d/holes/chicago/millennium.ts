@@ -10,7 +10,7 @@ import { building } from '../../looks/chicago';
 import { CHI_TURF, chiGreen } from './common';
 
 const LAND = 8;
-const GREEN = { x: 6, y: 256, rx: 20, ry: 15 };
+const GREEN = { x: 6, y: 256, rx: 18, ry: 13 };
 const traps = [greenside(GREEN, 40, 262, 8, 7, 1, 3, 0), greenside(GREEN, 4, 286, 10, 5, 2, 3, 0)];
 const BEAN = { x: 30, y: 206 };
 const PLAZA = blob(BEAN.x, BEAN.y, 30, 22, 4, 0.08);
@@ -24,7 +24,12 @@ const AVE = [
   [-110, 300, 50, 90, 380],
 ].map(([x, y, w, d, h], i) => building(x, y, w, d, h, i + 20));
 
+// the Crown Fountain's reflecting pool, short and left of the green: a thin sheet of water on black granite
+const POOL = rect(-44, 214, 2, 236);
+
 const posts: Post[] = [
+  // maples along the Michigan Avenue edge and behind the green
+  ...[[-62, 60], [-60, 130], [-58, 270], [52, 300], [-30, 312], [64, 200], [60, 90]].map(([x, y], i) => ({ x, y, r: 6, h: 22 + (i % 3) * 4, soft: true, look: 'maple' as const })),
   { x: BEAN.x, y: BEAN.y, r: 13, h: 15, look: 'tower' },
   ...[[-70, 20], [-70, 120], [-70, 220], [60, 40], [60, 140]].map(([x, y]) => ({ x, y, r: 0.4, h: 16, look: 'streetlight' as const })),
 ];
@@ -41,7 +46,7 @@ export const millennium: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.04,
   yards: 180,
-  blurb: 'Over the plaza to a small green past the Bean. The ice rink short left, Michigan Avenue in play left.',
+  blurb: 'Over the plaza to a small green past the Bean. The fountain pool short left, the rink beyond it, Michigan Avenue left.',
   tee: { x: 0, y: 0 },
   cup: { x: 6, y: 258 },
   pins: [{ x: 6, y: 258 }, { x: -6, y: 250 }, { x: 16, y: 262 }, { x: 2, y: 266 }],
@@ -65,13 +70,15 @@ export const millennium: Hole = {
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     ...traps.map((t) => t.region),
   ],
-  water: [],
+  water: [{ poly: POOL, level: 8 - 0.4 }],
   terrain: [
     { kind: 'ramp', x0: -150, y0: -50, x1: 120, y1: 360, axis: 'y', h0: LAND, h1: LAND, op: 'set' },
     { kind: 'disc', x: 0, y: 0, r: 16, h: LAND + 1.5, edge: 8, op: 'set' },
     // the rink is sunk a little; the plaza rises gently to the green
     { kind: 'disc', x: -40, y: 176, r: 26, h: LAND - 1.2, edge: 4, op: 'set' },
     { kind: 'ramp', x0: -10, y0: 186, x1: 60, y1: 236, axis: 'y', h0: 0, h1: 0.8, op: 'add' },
+    // the pool, sunk a few inches into the plaza
+    { kind: 'box', x0: -44, y0: 214, x1: 2, y1: 236, h: -1.2, edge: 0.6, op: 'add' },
     ...chiGreen(GREEN, LAND, [0.4, 0.6], [[-6, -4, 6, 0.2], [8, 5, 5, -0.2]]),
     ...traps.flatMap((t) => t.pieces),
   ],

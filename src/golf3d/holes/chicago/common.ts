@@ -1,10 +1,10 @@
-// The Windy City's shared settings: November turf and greens that are kinder than the Western Reserve's.
+// The Windy City's shared settings: late-fall turf as thick as the Western Reserve's, and kinder greens.
 import type { Hole, Piece } from '../../types';
 import { greenComplex, type GreenSpec } from '../woods';
 
-// Dormant November turf with snow in the rough: the rough holds a landing ball and costs some distance, the fairways
-// run firm, the greens run a touch slower than tour pace, and the bunker sand is half frozen
-export const CHI_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.3, roughDrag: 1.4, roughLie: 0.86, roughScatter: 0.15, fairwayRoll: 0.9, greenRoll: 1.06, sandLie: 0.8, sandScatter: 0.25 };
+// Late-fall turf, as thick as the Western Reserve's: the rough stops a landing ball, a full club gets about 84% out of
+// it and can come off the face anywhere; the fairways run firm, the greens a touch slower than tour pace
+export const CHI_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.24, roughDrag: 1.6, roughLie: 0.84, roughScatter: 0.2, fairwayRoll: 0.9, greenRoll: 1.06, sandLie: 0.75, sandScatter: 0.3 };
 
 // A Windy City green: mostly flat, a gentle tilt and one or two soft rolls so there's some break to read
 export const chiGreen = (g: GreenSpec, base: number, tilt: [number, number], rolls: [number, number, number, number][] = []): Piece[] =>

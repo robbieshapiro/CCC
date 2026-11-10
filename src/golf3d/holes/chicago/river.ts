@@ -29,7 +29,14 @@ const TOWERS = [
 ].map(([x, y, w, d, h], i) => building(x, y, w, d, h, i + 40));
 const SLOT = rect(70, 360, 104, 404);
 
-const posts: Post[] = [[60, 20], [60, 140], [60, 260], [-40, 40], [-40, 200]].map(([x, y]) => ({ x, y, r: 0.4, h: 16, look: 'streetlight' as const }));
+// a boat slip cut in from the river across most of the fairway, where a good drive wants to land: lay up short of it or
+// carry it
+const SLIP = { y0: 272, y1: 300, x1: 34 };
+const posts: Post[] = [
+  ...[[60, 20], [60, 140], [60, 260]].map(([x, y]) => ({ x, y, r: 0.4, h: 16, look: 'streetlight' as const })),
+  // maples along the riverwalk, hanging over the left of the fairway
+  ...[30, 110, 190, 330, 410].map((y, i) => ({ x: -46 + (i % 2) * 3, y, r: 6, h: 24 + (i % 3) * 3, soft: true, look: 'maple' as const })),
+];
 
 export const river: Hole = {
   id: 'river',
@@ -43,7 +50,7 @@ export const river: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.03,
   yards: 420,
-  blurb: 'Up the south bank with the river all down the left, then over it to a green under the corn cobs. Towers right.',
+  blurb: 'The river down the left, a boat slip across the landing area, then over the river to the corn cobs. Towers right.',
   tee: { x: 0, y: 0 },
   cup: { x: 30, y: 582 },
   pins: [{ x: 30, y: 582 }, { x: 16, y: 572 }, { x: 44, y: 586 }, { x: 26, y: 594 }],
@@ -55,13 +62,17 @@ export const river: Hole = {
     { x: 84, y: 340 },
     { x: 196, y: 340 },
     { x: 196, y: 676 },
-    { x: -150, y: 676 },
+    { x: -30, y: 676 },
+    // the far bank west of the green is out of bounds: no cutting the bend over the river
+    { x: -30, y: 548 },
+    { x: -150, y: 430 },
   ],
   base: 'rough',
   regions: [
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
-    { poly: blob(10, 230, 36, 170, 1, 0.05), surface: 'fairway' },
-    { poly: blob(50, 420, 34, 30, 2, 0.06), surface: 'fairway' },
+    // a narrow first leg to the slip, then a second up the right past it
+    { poly: blob(6, 160, 24, 100, 1, 0.05), surface: 'fairway' },
+    { poly: blob(46, 400, 24, 60, 2, 0.06), surface: 'fairway' },
     // the riverwalk along the bank, and Wacker Drive along the towers
     { poly: band(BANK.slice(0, 4), 4), surface: 'stone' },
     { poly: rect(66, -40, 84, 340), surface: 'path' },
@@ -70,9 +81,14 @@ export const river: Hole = {
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     ...traps.map((t) => t.region),
   ],
-  water: [{ poly: [...BANK, { x: 220, y: 540 }, { x: 120, y: 538 }, { x: -20, y: 520 }, { x: -110, y: 420 }, { x: -130, y: 200 }, { x: -130, y: -60 }], level: RIVER }],
+  water: [
+    { poly: rect(-130, SLIP.y0, SLIP.x1, SLIP.y1), level: RIVER },
+    { poly: [...BANK, { x: 220, y: 540 }, { x: 120, y: 538 }, { x: -20, y: 520 }, { x: -110, y: 420 }, { x: -130, y: 200 }, { x: -130, y: -60 }], level: RIVER },
+  ],
   terrain: [
     { kind: 'ramp', x0: -160, y0: -50, x1: 200, y1: 680, axis: 'y', h0: LAND, h1: LAND, op: 'set' },
+    // the slip, walled in stone like the river
+    { kind: 'box', x0: -130, y0: SLIP.y0, x1: SLIP.x1, y1: SLIP.y1, h: RIVER - 8, edge: 1, op: 'set' },
     // the river in its stone channel
     { kind: 'channel', pts: [{ x: -100, y: -60 }, { x: -98, y: 200 }, { x: -84, y: 400 }, { x: -20, y: 496 }, { x: 120, y: 514 }, { x: 230, y: 512 }], width: 34, depth: 9 },
     ...chiGreen(GREEN, LAND, [0.6, 0.5], [[-8, -6, 7, 0.25], [9, 6, 6, -0.2]]),

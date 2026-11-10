@@ -1,5 +1,5 @@
-// Chicago in late November: a low steel sky, snow flurries, a hard wind off Lake Michigan, and the city going about its
-// day. Towers stand in play (their sides are walls, their roofs lose a ball), and the landmarks are drawn here: Willis
+// Chicago in the fall: a crisp sky, the park trees turned, leaves blowing through, a hard wind off Lake Michigan, and the
+// city going about its day; after 5pm (on the player's own clock) the same city at night, every window and streetlight lit. Towers stand in play (their sides are walls, their roofs lose a ball), and the landmarks are drawn here: Willis
 // Tower, the Hancock, the Aon Center, Marina City, Cloud Gate, the Pritzker bandshell, the bascule bridges, the CTA el
 // with its trains running, Wrigley Field's marquee, and the Navy Pier wheel turning. People in winter coats on the
 // sidewalks, traffic on Lake Shore Drive, steam from the vents.
@@ -10,7 +10,7 @@ import { mat, mesh } from '../props';
 import { heightAt } from '../terrain';
 import type { Decor, Hole, Roof, V2, Wall } from '../types';
 
-const SNOW = '#eef1f4';
+const ROOF = '#8f8d87'; // gravel on the flat roofs
 const GLASS = ['#9fb0bd', '#aab9c4', '#8fa2b1', '#b5c2cc'];
 const STONE = ['#cfc3ad', '#c2b59e', '#b7ab97', '#d8cdb8', '#9c7c66', '#8a6a55'];
 
@@ -38,7 +38,7 @@ function board(lines: Parameters<typeof signTexture>[0], w: number, h: number, b
   return new THREE.Mesh(new THREE.PlaneGeometry(ww, hh), m);
 }
 
-// A tower: glass or stone, floor bands, windows lit against the grey day, snow on the roof
+// A tower: glass or stone, floor bands, a few windows lit, gravel on the roof
 export function tower(w: number, d: number, hgt: number, seed: number) {
   const g = new THREE.Group();
   const rng = makeRng(`chi:${seed}`);
@@ -56,14 +56,14 @@ export function tower(w: number, d: number, hgt: number, seed: number) {
     win.position.set(face ? (rng.next() - 0.5) * (w - 4) : w / 2 + 0.05, y, face ? d / 2 + 0.05 : (rng.next() - 0.5) * (d - 4));
     g.add(win);
   }
-  g.add(mesh(new THREE.BoxGeometry(w - 0.5, 1, d - 0.5), mat(SNOW, { rough: 0.6 }), false).translateY(hgt + 0.5));
+  g.add(mesh(new THREE.BoxGeometry(w - 0.5, 1, d - 0.5), mat(ROOF, { rough: 0.6 }), false).translateY(hgt + 0.5));
   if (hgt > 260) g.add(mesh(new THREE.BoxGeometry(w * 0.6, 30, d * 0.6), skin).translateY(hgt + 15));
   g.add(mesh(new THREE.BoxGeometry(w + 0.6, 14, d + 0.6), mat('#4a4642', { rough: 0.5 })).translateY(7));
   return noShadow(g);
 }
 
 // The city's buildings cast no shadows: in the low November sun a tower's shadow reaches across a whole hole and
-// turns the fairway the same grey as the snow
+// turns the fairway grey
 function noShadow<T extends THREE.Object3D>(o: T): T {
   o.traverse((m) => (m.castShadow = false));
   return o;
@@ -123,7 +123,7 @@ export function marinaCity() {
       ring.position.set(x, y, 0);
       g.add(ring);
     }
-    g.add(mesh(new THREE.CylinderGeometry(22, 22, 1.4, 16), mat(SNOW), false).translateX(x).translateY(271));
+    g.add(mesh(new THREE.CylinderGeometry(22, 22, 1.4, 16), mat(ROOF), false).translateX(x).translateY(271));
   }
   return g;
 }
@@ -187,7 +187,7 @@ export function bascule(span: number) {
     const house = mesh(new THREE.BoxGeometry(10, 16, 10), mat('#b9a98e'), false);
     house.position.set((s * span) / 2 + s * 8, 8, 14);
     g.add(house);
-    g.add(mesh(new THREE.ConeGeometry(7.6, 5, 4), mat(SNOW), false).translateX((s * span) / 2 + s * 8).translateY(18.5).translateZ(14));
+    g.add(mesh(new THREE.ConeGeometry(7.6, 5, 4), mat(ROOF), false).translateX((s * span) / 2 + s * 8).translateY(18.5).translateZ(14));
   }
   return g;
 }
@@ -201,8 +201,8 @@ export function el(len: number, anim: Anim, line: 'brown' | 'red' = 'brown') {
     for (const z of [-7, 7]) g.add(mesh(new THREE.BoxGeometry(1.1, 26, 1.1), steel).translateX(x).translateY(13).translateZ(z));
     g.add(mesh(new THREE.BoxGeometry(1, 1, 16), steel).translateX(x).translateY(18));
   }
-  // snow along the deck edges
-  for (const z of [-7.6, 7.6]) g.add(mesh(new THREE.BoxGeometry(len, 0.5, 0.8), mat(SNOW), false).translateY(27.2).translateZ(z));
+  // the deck's edge trim
+  for (const z of [-7.6, 7.6]) g.add(mesh(new THREE.BoxGeometry(len, 0.5, 0.8), mat(ROOF), false).translateY(27.2).translateZ(z));
   const stripe = line === 'red' ? '#c6283a' : '#62361b';
   const train = new THREE.Group();
   for (let i = 0; i < 4; i++) {
@@ -282,6 +282,16 @@ export function traffic(len: number, n: number, seed: number, anim: Anim) {
   return g;
 }
 
+// A car parked at the curb (its body is a wall on the hole: a ball bounces off it)
+export function parkedCar(seed: number) {
+  const g = new THREE.Group();
+  const paint = ['#f2c12e', '#2c2f36', '#b9bec4', '#7a1f25', '#1d3d6b', '#e9e9e9', '#3f5a3a'][seed % 7];
+  g.add(mesh(new THREE.BoxGeometry(9, 2.4, 4.4), mat(paint, { metal: 0.3, rough: 0.4 })).translateY(1.8));
+  g.add(mesh(new THREE.BoxGeometry(5, 1.8, 4), mat('#3a4450', { rough: 0.2 })).translateY(3.8));
+  for (const x of [-3, 3]) for (const z of [-2.2, 2.2]) g.add(mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.5, 10), mat('#1a1a1a')).rotateX(Math.PI / 2).translateX(x).translateZ(-0.8).translateY(z));
+  return g;
+}
+
 // Steam rising off a street vent, drifting with the wind
 export function steam(anim: Anim) {
   const g = new THREE.Group();
@@ -357,7 +367,7 @@ export function wrigley() {
   return g;
 }
 
-// A brownstone three-flat: brick, bay windows, a cornice, snow on the flat roof, rooftop bleachers if asked
+// A brownstone three-flat: brick, bay windows, a cornice, a flat roof, rooftop bleachers if asked
 export function threeFlat(w: number, d: number, seed: number, bleachers = false) {
   const g = new THREE.Group();
   const rng = makeRng(`flat:${seed}`);
@@ -365,7 +375,7 @@ export function threeFlat(w: number, d: number, seed: number, bleachers = false)
   const h = 34 + Math.floor(rng.next() * 3) * 4;
   g.add(mesh(new THREE.BoxGeometry(w, h, d), mat(bricks[seed % bricks.length])).translateY(h / 2));
   g.add(mesh(new THREE.BoxGeometry(w + 1.4, 2, d + 1.4), mat('#c9bba0')).translateY(h));
-  g.add(mesh(new THREE.BoxGeometry(w - 1, 0.8, d - 1), mat(SNOW), false).translateY(h + 1.2));
+  g.add(mesh(new THREE.BoxGeometry(w - 1, 0.8, d - 1), mat(ROOF), false).translateY(h + 1.2));
   for (let f = 0; f < 3; f++) for (let k = -1; k <= 1; k++) g.add(mesh(new THREE.BoxGeometry(3.4, 5, 0.3), mat(rng.next() < 0.3 ? '#ffd98f' : '#2a2f36', rng.next() < 0.3 ? { emissive: '#ffbf5a' } : {}), false).translateX((k * w) / 3.4).translateY(8 + f * 10).translateZ(d / 2 + 0.05));
   if (bleachers) {
     for (let r = 0; r < 5; r++) g.add(mesh(new THREE.BoxGeometry(w - 4, 1, 3), mat('#2f5d8a')).translateY(h + 3 + r * 2.2).translateZ(-d / 2 + 4 + r * 3));
@@ -477,15 +487,17 @@ function skyline(h: Hole, root: THREE.Group, floor: number, shore: Decor | undef
 }
 
 export const chicago: Kit = {
-  surface: { green: '#4c9a4a', fairway: '#5e9444', fringe: '#578a40', rough: '#9ea296', sand: '#d8d0bc', path: '#8e8f8c', stone: '#a3a39f', wood: '#7a6a58' },
-  floor: '#9a9c98',
-  lake: '#556e60', // the river, green-grey
-  sea: '#5b7584', // Lake Michigan in November
-  light: { sky: '#b9c0c7', ground: '#5e605c', hemi: 1.0, sunColor: '#eef0f3', sun: 1.7, fog: '#bcc3c9', near: 620, far: 2400, env: 0.6 },
-  skyColors: ['#68727d', '#98a1aa', '#c9ced2'],
-  sun: { color: '#eef0f2', at: [-900, 420, 1100], size: 40, glow: '#d9dde2' },
+  // late-season turf: the fairways still green, the rough gone a dull olive and brown
+  surface: { green: '#4f9a4a', fairway: '#5f9846', fringe: '#57893f', rough: '#6f7444', sand: '#d8cdb2', path: '#8e8f8c', stone: '#a3a39f', wood: '#7a6a58' },
+  floor: '#7d7f76',
+  lake: '#4f6c5e', // the river, green-grey
+  sea: '#4f7590', // Lake Michigan on a clear fall day
+  light: { sky: '#cdd9e4', ground: '#5c5840', hemi: 1.15, sunColor: '#ffd9a8', sun: 2.4, fog: '#d8d4c8', near: 650, far: 2500, env: 0.85 },
+  skyColors: ['#3d6ea8', '#9dbad4', '#ead9bd'],
+  sun: { color: '#fff1d6', at: [-1100, 330, 900], size: 44, glow: '#ffd29a' },
   clouds: true,
-  snow: true,
+  // autumn leaves blowing through, rust, gold and red
+  drift: { colors: ['#c8641e', '#e0a12a', '#a83a22', '#d9822b', '#8a5a2a'], size: 0.55, fall: 2.6, count: 700 },
   rail: true,
   post(_h, p) {
     if (p.look === 'streetlight') {
@@ -520,6 +532,7 @@ export const chicago: Kit = {
     else if (d.kind === 'walkers') o = walkers(d.scale ?? 80, d.size?.[0] ?? 6, Math.round(d.x + d.y), anim);
     else if (d.kind === 'traffic') o = traffic(d.scale ?? 400, d.size?.[0] ?? 10, Math.round(d.x + d.y), anim);
     else if (d.kind === 'steam') o = steam(anim);
+    else if (d.kind === 'car') o = parkedCar(Math.round(d.x * 3 + d.y));
     else if (d.kind === 'wrigley') o = wrigley();
     else if (d.kind === 'ferris') o = ferrisWheel(anim);
     else if (d.kind === 'lake') o = new THREE.Group(); // the shoreline: the frame reads it
@@ -540,4 +553,14 @@ export const chicago: Kit = {
     skyline(h, root, floor, h.decor.find((d) => d.kind === 'lake'));
     void heightAt;
   },
+};
+
+// The same city at night: a deep blue sky with the skyline's glow low on it, the moon, cool light, the fog closing in a
+// little; the windows, streetlights and signs glow on their own
+export const chicagoNight: Kit = {
+  ...chicago,
+  light: { sky: '#7083ad', ground: '#2c3040', hemi: 1.25, sunColor: '#c4d2ee', sun: 1.0, fog: '#24304a', near: 500, far: 2200, env: 0.4 },
+  skyColors: ['#050a18', '#142443', '#4a4058'],
+  sun: { color: '#eef0f6', at: [-700, 520, 1200], size: 34, glow: '#9fb2d8' },
+  clouds: false,
 };

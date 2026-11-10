@@ -19,7 +19,7 @@ import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
 import { accuracyError, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, stretched, stretchRate, type MeterStyle } from './swing';
 import type { Hole, Shot, V2 } from './types';
-import { KITS } from './kits';
+import { isNight, KITS } from './kits';
 
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
@@ -451,7 +451,7 @@ export class Course3D {
     this.sharpen(!!hole.tour);
     // the Caldera challenge's last days: a storm over the volcano (see tempestOn)
     const tempest = tempestOn(hole);
-    const look: Look = tempest ? 'tempest' : hole.theme && KITS[hole.theme] ? hole.theme : hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? (hole.wet ? 'storm' : 'autumn') : hole.theme === 'coastal' ? 'coastal' : 'day';
+    const look: Look = tempest ? 'tempest' : hole.theme && KITS[hole.theme] ? (KITS[`${hole.theme}@night`] && isNight() ? `${hole.theme}@night` : hole.theme) : hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? (hole.wet ? 'storm' : 'autumn') : hole.theme === 'coastal' ? 'coastal' : 'day';
     if (this.look !== look) this.setLook(look);
     this.fitShadows();
     this.petalsFor(hole);
@@ -632,20 +632,28 @@ export class Course3D {
   private rain: THREE.LineSegments | null = null;
   private snow: THREE.Points | null = null;
 
-  // Snow flurries (a look kit with snow): soft white flakes round the camera, drifting with the day's wind
+  // Something drifting down round the camera (a look kit's drift: autumn leaves, snow), blown by the day's wind
   private snowFor(h: Hole) {
     if (this.snow) {
       this.scene.remove(this.snow);
       this.snow.geometry.dispose();
       this.snow = null;
     }
-    if (!(h.theme && KITS[h.theme]?.snow)) return;
-    const n = 1400;
-    const arr = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) arr.set([(Math.random() - 0.5) * 160, Math.random() * 70, (Math.random() - 0.5) * 160], i * 3);
+    const d = h.theme ? KITS[h.theme]?.drift : undefined;
+    if (!d) return;
+    const arr = new Float32Array(d.count * 3);
+    const col = new Float32Array(d.count * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < d.count; i++) {
+      arr.set([(Math.random() - 0.5) * 160, Math.random() * 70, (Math.random() - 0.5) * 160], i * 3);
+      c.set(d.colors[i % d.colors.length]);
+      col.set([c.r, c.g, c.b], i * 3);
+    }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
-    this.snow = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ffffff', size: 0.45, transparent: true, opacity: 0.85, depthWrite: false }));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    this.snow = new THREE.Points(geo, new THREE.PointsMaterial({ size: d.size, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false }));
+    this.snow.userData.fall = d.fall;
     this.snow.frustumCulled = false;
     this.scene.add(this.snow);
   }
@@ -2355,7 +2363,7 @@ export class Course3D {
       const wz = -(this.wind?.accel.y ?? 0) * 0.35;
       for (let i = 0; i < arr.length; i += 3) {
         arr[i] += dt * (wx + Math.sin(this.clock * 1.3 + i) * 1.2);
-        arr[i + 1] -= dt * 4.5;
+        arr[i + 1] -= dt * (this.snow.userData.fall ?? 4.5);
         arr[i + 2] += dt * wz;
         if (arr[i + 1] < 0) arr[i + 1] += 70;
         if (arr[i] > 80) arr[i] -= 160;
