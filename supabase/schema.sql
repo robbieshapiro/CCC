@@ -1342,6 +1342,10 @@ begin
           from round_starts rs join players p on p.id = rs.player_id join g on g.id = rs.group_id
           where p.role <> 'admin' and round_abandoned(rs)
         union all
+        -- free play on a classic course (the Highlands, the Caldera): it counts only for the course record
+        select f.created_at, 'classic', g.name, p.name, f.course, f.total, f.par, null, null
+          from free_rounds f join players p on p.id = f.player_id join g on g.id = p.group_id where p.role <> 'admin'
+        union all
         select f.created_at, 'feedback', g.name, coalesce(p.name, 'A member'), null, null, null, left(f.body, 80), null
           from feedback f join g on g.id = f.group_id left join players p on p.id = f.player_id
       ) e where at >= since order by at desc limit 1000
@@ -1461,6 +1465,10 @@ begin
       union all
       select m.who, m.name, m.club, m2.created_at, 'join', case when m.id <> m.who then 'guest' end, null, null, null, null
         from mem m join players m2 on m2.id = m.id where m2.created_at >= t0
+      union all
+      -- free play on a classic course, for the course record
+      select m.who, m.name, m.club, f.created_at, 'classic', f.course, f.total, f.par, null, null
+        from free_rounds f join mem m on m.id = f.player_id where f.created_at >= t0
       union all
       select m.who, m.name, m.club, f.created_at, 'feedback', left(f.body, 80), null, null, null, null
         from feedback f join mem m on m.id = f.player_id where f.created_at >= t0
