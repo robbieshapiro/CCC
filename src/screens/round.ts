@@ -9,7 +9,7 @@ import { sfx } from '../fx/sound';
 import { Course3D, planVisits, scoreName, type Ghost } from '../golf3d/engine';
 import { cardsOn, openPurseOn, todayInGameTz } from '../day';
 import { inPoly, isWater, surfaceAt } from '../golf3d/terrain';
-import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus } from '../bonus';
+import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus, shotName } from '../bonus';
 import type { CardToday, RoundShot, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
 import { conditionsFor } from '../golf3d/conditions';
@@ -315,7 +315,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     spots[i] = r.spot;
     // a birdie or better on a card pays (the card is the day's first round): the coins come as it drops
     const sb = pops && !opts.practice ? shotBonus(r.strokes, h.par) : 0;
-    if (sb) coinPop(el, sb, r.strokes === 1 ? 'Hole in one' : sb === BONUS.eagle ? 'Eagle' : 'Birdie', unpaid || h.name);
+    if (sb) coinPop(el, sb, shotName(r.strokes, h.par), unpaid || h.name);
     // a hole's secret, found for the first time on a card
     if (pops && h.secret && r.feats.includes(h.secret.zone) && (rehearsal || (SECRET_FEATS.includes(h.secret.zone) && !foundBefore.has(h.secret.zone)))) {
       foundBefore.add(h.secret.zone);
@@ -371,7 +371,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     scores.forEach((s, i) => {
       const v = shotBonus(s, course.holes[i].par);
       if (!v) return;
-      const k = s === 1 ? 'ace' : v === BONUS.eagle ? 'eagle' : 'birdie';
+      const k = s === 1 ? 'ace' : shotName(s, course.holes[i].par).toLowerCase();
       const x = kinds.get(k) ?? { n: 0, v: 0 };
       kinds.set(k, { n: x.n + 1, v: x.v + v });
     });

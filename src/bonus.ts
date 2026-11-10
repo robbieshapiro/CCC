@@ -7,9 +7,10 @@ export const BONUS = {
   streak3: 100, // the third day running at the club (opened the app, played or practised)
   streak7: 250, // every seventh day running
   ctp: 150, // the day's Closest to the Pin winner, across every club
-  birdie: 25, // birdies and better pay on the day's first finished round only
-  eagle: 100,
-  ace: 500,
+  birdie: 100, // birdies and better pay on the day's first finished round only (raised from 25 on Nov 10, paid back)
+  eagle: 500, // was 100
+  albatross: 1000, // three under on a hole (was paid as an eagle)
+  ace: 2500, // was 500
   // on a daily card (counted rounds only, one a day): the moments worth a cheer
   longPutt: 75, // holed from 30 ft
   monsterPutt: 200, // holed from 60 ft
@@ -30,7 +31,10 @@ export const puttBonus = (ft: number) => (ft >= MONSTER_PUTT_FT ? BONUS.monsterP
 
 // what one hole earns: an ace is an ace whatever the par
 export const shotBonus = (strokes: number, par: number) =>
-  strokes === 1 ? BONUS.ace : strokes <= par - 2 ? BONUS.eagle : strokes === par - 1 ? BONUS.birdie : 0;
+  strokes === 1 ? BONUS.ace : strokes <= par - 3 ? BONUS.albatross : strokes === par - 2 ? BONUS.eagle : strokes === par - 1 ? BONUS.birdie : 0;
+// and what it's called
+export const shotName = (strokes: number, par: number) =>
+  strokes === 1 ? 'Hole in one' : strokes <= par - 3 ? 'Albatross' : strokes === par - 2 ? 'Eagle' : strokes === par - 1 ? 'Birdie' : '';
 
 // days: every day (YYYY-MM-DD) someone was at the club. Each run pays at its third day and at every seventh.
 export function streakBonus(days: string[]) {
