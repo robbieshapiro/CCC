@@ -3,7 +3,8 @@
 // Fireball on it too.
 import * as THREE from 'three';
 import { sfx } from '../fx/sound';
-import { DRINKS, SCALE, type Drink } from './clubs';
+import { SCALE, type Drink } from './clubs';
+import { pour } from './drinks';
 import { CREW, Hostess } from './hostess';
 import * as props from './props';
 import { w3 } from './scene';
@@ -117,7 +118,7 @@ export class CartGirl implements Visitor {
       <div class="cart-card">
         <div class="cart-head"><p class="eyebrow">The beverage cart · ${this.name}</p><p class="cart-line">${menuLine(this.hole)}</p></div>
         <div class="cart-drinks">${this.menu
-          .map((k) => `<button data-drink="${k}"><b>${DRINKS[k].name}</b><small>${DRINKS[k].blurb}</small></button>`)
+          .map((k) => `<button data-drink="${k}"><b>${pour(k, this.hole).name}</b><small>${pour(k, this.hole).blurb}</small></button>`)
           .join('')}</div>
         <button class="link" data-drink="none">No thanks</button>
       </div>`;

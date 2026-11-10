@@ -11,6 +11,7 @@ import { CartGirl, type Visitor } from './cartgirl';
 import { ReginaldTray } from './reginaldtray';
 import { conditionsFor, gusted, tempestOn, withPin, type Conditions } from './conditions';
 import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
+import { pour } from './drinks';
 import { Golfer, HANK_SPEC, reactionFor, type Reaction } from './golfer';
 import { BALL_R, dropPoint, escapeLoft, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Frame, type Result } from './physics';
 import * as stands from './stands';
@@ -1035,7 +1036,7 @@ export class Course3D {
     const el = this.overlay.querySelector('[data-drink]') as HTMLElement | null;
     if (!el) return;
     el.hidden = !this.drink || this.drink.kind === 'water';
-    if (this.drink) el.innerHTML = `<b>${DRINKS[this.drink.kind].name}</b><span>${this.drink.shots} ${this.drink.shots === 1 ? 'swing' : 'swings'} left</span>`;
+    if (this.drink) el.innerHTML = `<b>${pour(this.drink.kind, this.hole).name}</b><span>${this.drink.shots} ${this.drink.shots === 1 ? 'swing' : 'swings'} left</span>`;
   }
 
   // ---------- the beverage cart ----------

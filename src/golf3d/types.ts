@@ -16,7 +16,8 @@ export type Piece =
   // wobble: ft the width wanders in and out, so a coastline isn't ruler-straight
   | { kind: 'embankment'; pts: V2[]; h: number[]; width: number; edge: number; wobble?: number };
 
-export type Wall = { a: V2; b: V2; h: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' | 'iron' | 'crypt' | 'blade' | 'teeth' | 'barn' | 'hidden' };
+// bounce: share of the pace into it a ball keeps (0.72 usually; the hole's wallBounce if set)
+export type Wall = { a: V2; b: V2; h: number; bounce?: number; look?: 'hedge' | 'stone' | 'wood' | 'rail' | 'cart' | 'iron' | 'crypt' | 'blade' | 'teeth' | 'barn' | 'hidden' };
 // soft: a tree crown. A ball flies through it, slowed and knocked about, and now and then it's caught and drops; only
 // the trunk (the lowest few feet) is solid.
 export type Post = { x: number; y: number; r: number; h: number; e?: number; soft?: boolean; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' | 'cactus' | 'gorse' | 'maple' | 'monterey' | 'torrey' | 'lighthouse' | 'sabal' | 'cypressknee' | 'snowpine' | 'hoodoo' | 'tower' | 'streetlight' };
@@ -52,8 +53,9 @@ export type Hole = {
   pins?: V2[]; // where the pin can be cut; one is picked each day
   chipDrop?: number; // tour holes: share of the usual speed a shot from off the green can drop at, so a chip must die at the hole
   greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
+  wallBounce?: number; // how lively this hole's walls are (0.72 usually): a city's stone and glass give a ball back more
   // Tougher turf (the Western Reserve). roughKeep: share of its pace a ball keeps landing in the rough (the usual is
-  // 0.45). roughDrag: how much harder the rough grabs a rolling ball. roughLie: share of the distance a full club gets
+  // 0.58). roughDrag: how much harder the rough grabs a rolling ball. roughLie: share of the distance a full club gets
   // out of it. roughScatter: how far a shot from it can come off the face, either way (as swing error). fairwayRoll:
   // fairway friction against the usual tour fairway's (under 1 runs further). sandLie: share of the distance a wedge
   // gets out of a bunker (an iron gets less still); sandScatter: how far off the face a bunker shot can come.
