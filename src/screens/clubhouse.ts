@@ -1,5 +1,5 @@
 // The Clubhouse: everything off the course, as tabs. Your club's members and standings (the default), the Pro Shop, the
-// Season standings across every club, the bar (its games), Reginald's weekly Chronicle, how the game works, and a note to the Committee. Each tab has its own link
+// Season standings across every club, the bar (its games), Reginald's weekly Chronicle, how the game works, how the club is built, and a note to the Committee. Each tab has its own link
 // (#/clubhouse/<tab>; an older Chronicle is #/clubhouse/chronicle/<week>).
 import { cardsOn, periodName, span } from '../day';
 import { money } from '../purse';
@@ -15,9 +15,10 @@ import { barPane, fillBar } from './bar';
 import { bindShop, shopPane } from './shop';
 import { fillSeason, seasonPane } from './season';
 import { fillTrophies, trophyPane } from './trophyroom';
+import { builtPane } from './built';
 import { badgeFor } from '../shop';
 
-export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'season' | 'trophies' | 'how' | 'feedback';
+export type ClubhouseTab = 'bar' | 'chronicle' | 'members' | 'shop' | 'season' | 'trophies' | 'how' | 'built' | 'feedback';
 const TABS: [ClubhouseTab, string][] = [
   ['members', 'Members'],
   ['shop', 'Pro Shop'],
@@ -26,6 +27,7 @@ const TABS: [ClubhouseTab, string][] = [
   ['bar', 'Bar'],
   ['chronicle', 'Chronicle'],
   ['how', 'How to play'],
+  ['built', 'How it’s built'],
   ['feedback', 'Feedback'],
 ];
 export const isClubhouseTab = (t: string | undefined): t is ClubhouseTab => TABS.some(([id]) => id === t);
@@ -33,7 +35,7 @@ export const isClubhouseTab = (t: string | undefined): t is ClubhouseTab => TABS
 const topar = (n: number | null) => (n === null ? '–' : `<span class="${n < 0 ? 'under' : n > 0 ? 'over' : ''}">${toParLabel(n)}</span>`);
 
 export function clubhouse(snap: Snapshot, tab: ClubhouseTab = 'members', week?: string) {
-  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, season: seasonPane, trophies: trophyPane, how, feedback }[tab](snap);
+  const pane = { bar: barPane, chronicle: chroniclePane, members, shop: shopPane, season: seasonPane, trophies: trophyPane, how, built: builtPane, feedback }[tab](snap);
   render(`
     ${header(snap.groupName, 'clubhouse')}
     <main class="clubhouse">

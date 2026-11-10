@@ -1779,3 +1779,36 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .money-note b { font-family: var(--serif); font-size: 17px; color: #e6cf9f; font-weight: 700; }
 @keyframes money-note { 0% { opacity: 0; transform: translate(-50%, 6px); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .money-note { animation: none; } }
+
+/* How it's built (Clubhouse): the stack as layers, the shipping loop, who does what, the course steps */
+.hb-stack { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--paper); }
+.hb-top { margin: 0; padding: 10px 14px; font: 600 12px/1.3 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--paper); background: var(--green); text-align: center; }
+.hb-layer { display: grid; grid-template-columns: minmax(130px, 34%) 1fr; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); align-items: baseline; }
+.hb-layer:nth-child(odd) { background: #f6f0e1; }
+.hb-name { margin: 0; font-family: var(--serif); font-size: 18px; color: var(--green); display: grid; }
+.hb-name small { font: 600 12px/1.4 var(--font); color: var(--gold); letter-spacing: 0.02em; }
+.hb-does { margin: 0; font-size: 14px; color: var(--ink); }
+.hb-loop { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; counter-reset: hb; }
+.hb-loop li { position: relative; display: grid; gap: 4px; align-content: start; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); font-size: 13px; color: var(--muted); }
+.hb-loop li b { font-family: var(--serif); font-size: 17px; color: var(--green); }
+.hb-loop li:not(:last-child)::after { content: '›'; position: absolute; right: -8px; top: 50%; transform: translate(50%, -50%); color: var(--gold); font-size: 20px; }
+.hb-note { margin: 6px 0 0; font-size: 13px; }
+.hb-who { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.hb-card { display: grid; gap: 3px; align-content: start; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 6px; background: var(--paper); }
+.hb-card b { font-family: var(--serif); font-size: 18px; color: var(--green); }
+.hb-card span { font-size: 14px; color: var(--ink); }
+.hb-role { margin: 0; font: 600 11px/1.3 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.hb-steps { margin: 0; padding: 0; list-style: none; counter-reset: st; display: grid; gap: 0; }
+.hb-steps li { counter-increment: st; display: grid; grid-template-columns: 32px 1fr; column-gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.hb-steps li::before { content: counter(st); grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: var(--paper); font: 600 13px/1 var(--font); }
+.hb-steps li b { font-family: var(--serif); font-size: 17px; color: var(--green); }
+.hb-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hb-split > div { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.hb-split > div:last-child { background: #f6f0e1; }
+.hb-split ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+@media (max-width: 640px) {
+  .hb-layer { grid-template-columns: 1fr; gap: 2px; }
+  .hb-loop { grid-template-columns: 1fr; }
+  .hb-loop li:not(:last-child)::after { content: '⌄'; right: 50%; top: auto; bottom: -6px; transform: translate(50%, 50%); font-size: 16px; }
+  .hb-split { grid-template-columns: 1fr; }
+}
