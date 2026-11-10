@@ -490,14 +490,14 @@ export const chicago: Kit = {
   // late-season turf: the fairways still green, the rough gone a dull olive and brown
   surface: { green: '#4f9a4a', fairway: '#5f9846', fringe: '#57893f', rough: '#6f7444', sand: '#d8cdb2', path: '#8e8f8c', stone: '#a3a39f', wood: '#7a6a58' },
   floor: '#7d7f76',
-  lake: '#4f6c5e', // the river, green-grey
+  lake: '#2f6e9f', // the river, a clear autumn blue (it was a green-grey that read as a puddle)
   sea: '#4f7590', // Lake Michigan on a clear fall day
   light: { sky: '#cdd9e4', ground: '#5c5840', hemi: 1.15, sunColor: '#ffd9a8', sun: 2.4, fog: '#d8d4c8', near: 650, far: 2500, env: 0.85 },
   skyColors: ['#3d6ea8', '#9dbad4', '#ead9bd'],
   sun: { color: '#fff1d6', at: [-1100, 330, 900], size: 44, glow: '#ffd29a' },
   clouds: true,
-  // autumn leaves blowing through, rust, gold and red
-  drift: { colors: ['#c8641e', '#e0a12a', '#a83a22', '#d9822b', '#8a5a2a'], size: 0.55, fall: 2.6, count: 700 },
+  // a few autumn leaves blowing through, rust, gold and red (a light touch: a thick fall was distracting)
+  drift: { colors: ['#c8641e', '#e0a12a', '#a83a22', '#d9822b', '#8a5a2a'], size: 0.4, fall: 2.2, count: 140 },
   rail: true,
   post(_h, p) {
     if (p.look === 'streetlight') {
@@ -521,6 +521,14 @@ export const chicago: Kit = {
     if (d.kind === 'tower' && d.size) o = tower(d.size[0], d.size[1], d.size[2], d.scale ?? 0);
     else if (d.kind === 'flat' && d.size) o = threeFlat(d.size[0], d.size[1], d.scale ?? 0);
     else if (d.kind === 'rooftop' && d.size) o = threeFlat(d.size[0], d.size[1], d.scale ?? 0, true);
+    else if (d.kind === 'teetower' && d.size) {
+      // a rooftop tee: the hole raises the ground into a block for the tee; this is the building under it, its roof just
+      // under the tee's surface and its walls a foot outside the block, hanging down to the street
+      o = new THREE.Group();
+      const t = tower(d.size[0] + 2, d.size[1] + 2, d.size[2], d.scale ?? 0);
+      t.position.y = -d.size[2] - 0.4;
+      o.add(t);
+    }
     else if (d.kind === 'willis') o = willis();
     else if (d.kind === 'hancock') o = hancock();
     else if (d.kind === 'aon') o = aon();
@@ -545,7 +553,7 @@ export const chicago: Kit = {
       b.position.y = 12;
       o.add(b);
     }
-    if (o && (d.kind === 'tower' || d.kind === 'flat' || d.kind === 'rooftop')) o.userData.solid = true;
+    if (o && (d.kind === 'tower' || d.kind === 'flat' || d.kind === 'rooftop' || d.kind === 'teetower')) o.userData.solid = true;
     void h;
     return o;
   },
