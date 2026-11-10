@@ -147,7 +147,7 @@ Last updated Nov 10, 2026 (the Season counts from October, banked points only; t
 
 ## Setup status
 
-- [ ] #233: apply `season_from` and the updated `season_standings` and `golfer_card` after merge (`pr_233_season_from_october`), then check Marc leads on 1,000.
+- [x] #233: `season_from`, `season_standings` and `golfer_card` applied Nov 10 (`pr_233_season_from_october`). Checked live: Marc 1,000 (+300 projected), Robbie 343 (+500), Charles 293, Hunter and Tyler 245.
 
 - [x] #231: `bonus_grants`, the updated `person_bonus` and Tyler's $525 credit applied Nov 10 (`pr_231_no_backpay`). Checked live: every balance matches the PR (Marc $1,044, Robbie $1,432, Hunter $2,151, Tyler $202).
 
