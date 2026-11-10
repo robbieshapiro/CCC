@@ -8,13 +8,13 @@ import { isHole } from '../designer/desk';
 import { bestTry, dailyShot, resultLabel } from '../daily';
 import { MO, staffChip } from '../staff';
 import { requireSession } from '../state';
-import { esc } from '../ui';
+import { esc, golferHref } from '../ui';
 
-const top3 = (rows: { name: string; label: string; mine: boolean }[]) =>
+const top3 = (rows: { playerId?: string; name: string; label: string; mine: boolean }[]) =>
   rows.length
     ? `<ol class="bar-top">${rows
         .slice(0, 3)
-        .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i]}</span><b>${esc(r.name)}</b><em>${esc(r.label)}</em></li>`)
+        .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i]}</span><b>${r.playerId ? `<a href="${golferHref(r.playerId, r.mine)}">${esc(r.name)}</a>` : esc(r.name)}</b><em>${esc(r.label)}</em></li>`)
         .join('')}</ol>`
     : '<p class="bar-empty">Nobody yet. Be first.</p>';
 
@@ -61,11 +61,11 @@ export async function fillBar(snap: Snapshot) {
   };
   if (daily) {
     const best = bestTry(daily.mine);
-    put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
+    put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ playerId: r.playerId, name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
   }
   for (const [game, b] of [['drive', drive], ['members', members]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
-    put(game, b.mine === null ? 'Not played this week' : `You: ${scoreLabel(game, b.mine)}`, top3(b.board.map((r) => ({ name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
+    put(game, b.mine === null ? 'Not played this week' : `You: ${scoreLabel(game, b.mine)}`, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
   }
 }
 

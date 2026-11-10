@@ -1845,7 +1845,7 @@ begin
   end loop;
   return (
     with people as (
-      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.group_id
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.group_id, p.id as home_id
       from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
     ), tries as (
       select pe.k, pe.h, s.* from daily_shots s join players p on p.id = s.player_id
@@ -1861,7 +1861,7 @@ begin
       'mine', coalesce((select json_agg(json_build_object('try', t.try, 'ft', t.ft, 'holed', t.holed, 'lost', t.lost) order by t.try)
         from tries t where t.k = lower(me.name) and t.h = me.pin_hash), '[]'),
       -- ranked: holed beats everything, holed sooner beats later, then nearest, then the next-best try, then the earlier player
-      'board', coalesce((select json_agg(json_build_object('name', pe.name, 'club', club_label(pe.k, pe.h, pe.group_id), 'ft', b.fts[1], 'holed', b.holed, 'holedTry', b.htry, 'tries', b.n,
+      'board', coalesce((select json_agg(json_build_object('playerId', pe.home_id, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.group_id), 'ft', b.fts[1], 'holed', b.holed, 'holedTry', b.htry, 'tries', b.n,
           'mine', b.k = lower(me.name) and b.h = me.pin_hash)
         order by b.holed desc, b.htry asc nulls last, b.fts[1] asc nulls last, b.fts[2] asc nulls last, b.fts[3] asc nulls last, b.first_at)
         from best b join people pe on pe.k = b.k and pe.h = b.h join groups g on g.id = pe.group_id), '[]'),
@@ -1955,7 +1955,7 @@ declare me players := player_for(p_token); wk date := date_trunc('week', now() a
 begin
   return (
     with people as (
-      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.id as home_id
       from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
     ), best as (
       select lower(p.name) as k, p.pin_hash as h, max(b.score) as score, min(b.created_at) as first_at
@@ -1964,7 +1964,7 @@ begin
     )
     select json_build_object(
       'week', wk,
-      'board', coalesce((select json_agg(json_build_object('name', pe.name, 'score', b.score, 'mine', b.k = lower(me.name) and b.h = me.pin_hash)
+      'board', coalesce((select json_agg(json_build_object('playerId', pe.home_id, 'name', pe.name, 'score', b.score, 'mine', b.k = lower(me.name) and b.h = me.pin_hash)
         order by b.score desc, b.first_at) from best b join people pe on pe.k = b.k and pe.h = b.h), '[]'),
       'mine', (select score from best where k = lower(me.name) and h = me.pin_hash),
       'players', (select count(*) from best)
