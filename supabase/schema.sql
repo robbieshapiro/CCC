@@ -2312,7 +2312,8 @@ language sql stable security definer set search_path = public, extensions as $$
       50 * (select count(distinct (r.created_at at time zone 'America/New_York')::date) from r)::int as rounds,
       (select coalesce(sum(case when n >= 3 then 100 else 0 end + (n / 7) * 250), 0) from runs)::int as streaks,
       150 * (select count(*) from ctp_winners() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
-      (select coalesce(sum(case when s = 1 then 500 when s <= par - 2 then 100 when s = par - 1 then 25 else 0 end), 0) from shots)::int as shots,
+      -- birdie $100, eagle $500, albatross $1,000, ace $2,500 (src/bonus.ts; raised Nov 10 and paid back on every one made)
+      (select coalesce(sum(case when s = 1 then 2500 when s <= par - 3 then 1000 when s = par - 2 then 500 when s = par - 1 then 100 else 0 end), 0) from shots)::int as shots,
       (select coalesce(sum(case when d >= 60 then 200 when d >= 30 then 75 else 0 end), 0) from strokes where c = 'putter' and i = 1)::int as putts,
       100 * (select count(*) from strokes where c <> 'putter' and i = 1 and coalesce(l, '') <> 'green' and nth > 1)::int as chipins,
       150 * (select count(distinct f) from rounds x cross join lateral unnest(x.feats) f where x.player_id in (select id from seats) and x.card and f = any (secret_feats()))::int as secrets,
