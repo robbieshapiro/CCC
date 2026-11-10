@@ -3,7 +3,8 @@
 // "No thanks", and he goes back the way he came.
 import * as THREE from 'three';
 import { sfx } from '../fx/sound';
-import { DRINKS, type Drink } from './clubs';
+import type { Drink } from './clubs';
+import { pour } from './drinks';
 import { menuFor, menuLine, type Visitor } from './cartgirl';
 import { Golfer, REGINALD_SPEC } from './golfer';
 import { mat, mesh } from './props';
@@ -20,7 +21,7 @@ const LINES = [
 ];
 
 // the tray: a silver salver with three glasses on it, held at the hands
-function tray(menu: Drink[]) {
+function tray(menu: Drink[], h: Hole) {
   const g = new THREE.Group();
   const silver = mat('#e3e6ea', { rough: 0.3, metal: 0.55 });
   const plate = mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.06, 28), silver);
@@ -29,10 +30,9 @@ function tray(menu: Drink[]) {
   rim.rotation.x = Math.PI / 2;
   rim.position.y = 0.04;
   g.add(rim);
-  const colour: Record<Drink, string> = { palmer: '#c98a3a', lager: '#e8c86a', espresso: '#3b2418', transfusion: '#8e2f4a', water: '#bfe3ec', fireball: '#c4361b' };
   menu.slice(0, 3).forEach((d, i) => {
     const a = (i / 3) * Math.PI * 2 + 0.4;
-    const glass = mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.42, 12), new THREE.MeshStandardMaterial({ color: colour[d], transparent: true, opacity: 0.85, roughness: 0.1 }));
+    const glass = mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.42, 12), new THREE.MeshStandardMaterial({ color: pour(d, h).colour, transparent: true, opacity: 0.85, roughness: 0.1 }));
     glass.position.set(Math.cos(a) * 0.5, 0.24, Math.sin(a) * 0.5);
     g.add(glass);
   });
@@ -59,7 +59,7 @@ export class ReginaldTray implements Visitor {
     this.reg.holdClub(null);
     this.reg.showBag(false);
     this.reg.setPose('clasp');
-    this.tray = tray(this.menu);
+    this.tray = tray(this.menu, hole);
     // in front of the clasped hands, at about the waist
     this.tray.position.set(0, 2.62, 1.0);
     this.reg.group.add(this.tray);
@@ -99,7 +99,7 @@ export class ReginaldTray implements Visitor {
       <div class="cart-card">
         <div class="cart-head"><p class="eyebrow">Reginald, with the tray</p><p class="cart-line">"${line} ${menuLine(this.hole)}"</p></div>
         <div class="cart-drinks">${this.menu
-          .map((k) => `<button data-drink="${k}"><b>${DRINKS[k].name}</b><small>${DRINKS[k].blurb}</small></button>`)
+          .map((k) => `<button data-drink="${k}"><b>${pour(k, this.hole).name}</b><small>${pour(k, this.hole).blurb}</small></button>`)
           .join('')}</div>
         <button class="link" data-drink="none">No thanks</button>
       </div>`;

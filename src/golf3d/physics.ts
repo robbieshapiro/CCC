@@ -24,9 +24,10 @@ const ROLL = 5 / 7; // a rolling ball feels 5/7 of the slope's pull
 const TRUNK_H = 5;
 const TRUNK_R = 1.1;
 // (rock is broken and jagged: a ball that lands on it hops about, then soon dies)
-const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 24, path: 1.0, stone: 4.6, wood: 2.6, sand: 40, rock: 16, cinder: 4.5 };
+// rough was 24 and kept 0.45 of a landing ball: it stopped dead. Now it checks up but still hops and runs a little
+const FRICTION: Record<Surface, number> = { green: 4.2, fairway: 9, fringe: 11, rough: 19, path: 1.0, stone: 4.6, wood: 2.6, sand: 40, rock: 16, cinder: 4.5 };
 // how much of a landing ball's speed each surface lets it keep
-const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.45, path: 1, stone: 1, wood: 1, sand: 0.1, rock: 1, cinder: 0.95 };
+const LANDING: Record<Surface, number> = { green: 1, fairway: 0.9, fringe: 0.8, rough: 0.58, path: 1, stone: 1, wood: 1, sand: 0.1, rock: 1, cinder: 0.95 };
 // how well each surface grabs a spinning ball: soft greens bite, rough and sand eat the spin
 const GRIP: Record<Surface, number> = { green: 1, fairway: 0.8, fringe: 0.6, rough: 0.25, path: 0.4, stone: 0.4, wood: 0.4, sand: 0, rock: 0.3, cinder: 0.4 };
 
@@ -328,7 +329,10 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
           // (a ball that slams into a steep face doesn't fly off it like a trampoline: a few feet at most)
           vz = Math.min(14, -vzRel * 0.5 + (vx * gr.x + vy * gr.y));
           sound('rock', 'wall');
-        } else if (vzRel < -9 && surf !== 'sand') vz = -vzRel * 0.24 * deaden + (vx * gr.x + vy * gr.y);
+        } else if ((surf === 'path' || surf === 'stone') && vzRel < -5) {
+          // concrete and paving: a real bounce, like a cart path (it keeps its pace, so it runs on too)
+          vz = -vzRel * 0.36 * deaden + (vx * gr.x + vy * gr.y);
+        } else if (vzRel < -9 && surf !== 'sand') vz = -vzRel * (surf === 'rough' ? 0.2 : 0.24) * deaden + (vx * gr.x + vy * gr.y);
         else air = false;
       }
     } else {
@@ -452,8 +456,10 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         y = c.y + ny * BALL_R;
         const vn = vx * nx + vy * ny;
         if (vn < 0) {
-          vx -= 1.72 * vn * nx;
-          vy -= 1.72 * vn * ny;
+          // how lively a wall is: most give back about 0.72 of the pace into them; a hole can set its own (city stone)
+          const e = 1 + (w.bounce ?? h.wallBounce ?? 0.72);
+          vx -= e * vn * nx;
+          vy -= e * vn * ny;
           sound(`w${i}`, 'wall');
         }
       }
@@ -513,8 +519,8 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         y = p.y + ny * (BALL_R + p.r);
         const vn = vx * nx + vy * ny;
         if (vn < 0) {
-          vx -= (1 + (p.e ?? 0.6)) * vn * nx;
-          vy -= (1 + (p.e ?? 0.6)) * vn * ny;
+          vx -= (1 + (p.e ?? h.wallBounce ?? 0.6)) * vn * nx;
+          vy -= (1 + (p.e ?? h.wallBounce ?? 0.6)) * vn * ny;
           sound(`p${i}`, 'post');
         }
       }

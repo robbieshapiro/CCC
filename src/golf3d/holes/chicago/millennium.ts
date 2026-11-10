@@ -7,7 +7,7 @@ import { blob, circle, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_TURF, chiGreen } from './common';
+import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
 
 const LAND = 8;
 const GREEN = { x: 6, y: 256, rx: 18, ry: 13 };
@@ -42,6 +42,7 @@ export const millennium: Hole = {
   weather: 'gale',
   tour: true,
   turf: CHI_TURF,
+  wallBounce: CHI_WALLS,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.04,
