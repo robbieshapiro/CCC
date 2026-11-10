@@ -105,6 +105,10 @@ const SFX = {
     for (let i = 0; i < 4; i++) hiss('bandpass', 1200 + i * 500, 1.5, { at: i * 0.05, dur: 1.4, attack: 0.1, peak: 0.12 }, 900);
     tone('sawtooth', 520, 780, { at: 0.05, dur: 0.25, peak: 0.05 });
   },
+  // a soft round of applause from a small gallery: for a hole in one, the only fanfare left on the course
+  clap: () => {
+    for (let i = 0; i < 14; i++) hiss('bandpass', 1800 + (i % 3) * 400, 2, { at: i * 0.07 + (i % 2) * 0.02, dur: 0.06, attack: 0.005, peak: 0.07 }, 1400);
+  },
   buzzer: () => {
     tone('square', 110, 105, { dur: 0.55, peak: 0.18 });
     tone('square', 116, 110, { dur: 0.55, peak: 0.12 });

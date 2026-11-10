@@ -1,7 +1,7 @@
 // The Committee Room's Course tab: Sunday's card, self-contained. A copy of the member's Play tile driven by the
 // rehearsal card kept on this device (see dryToday in round.ts), so the whole day can be walked through from here:
 // the note before a fresh card, leaving mid-round and coming back to Continue, the card going in, and midnight
-// forfeiting a card that was never finished. Below it, one picker to preview any course, and the coin test.
+// forfeiting a card that was never finished. Below it, one picker to preview any course, and a test of the money note.
 import type { Snapshot } from '../api/types';
 import { ask, tell } from '../dialog';
 import { api } from '../api';
@@ -60,7 +60,7 @@ export function sundayCardSection(snap: Snapshot): string {
         <select id="adm-preview" aria-label="Course to preview">${all.map((x, i) => `<option value="${x.id}">${esc(shortName(x))}${i === 0 ? ' (this week)' : x.draft ? ' (draft)' : ''}</option>`).join('')}</select>
         <button class="btn" data-preview-go>Preview</button>
       </div>
-      <button class="link adm-coin" data-coin-test>Test a coin burst</button>
+      <button class="link adm-coin" data-coin-test>Test the money note</button>
     </section>`;
 }
 

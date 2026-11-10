@@ -1629,7 +1629,8 @@ export class Course3D {
     if (this.spot === undefined) this.spot = r.holed ? { ...this.hole.cup } : r.penalty ? null : { ...r.end };
     if (r.holed) {
       sfx('pop');
-      window.setTimeout(() => sfx('cheer'), 250);
+      // quiet: the cup's own sound, and a soft clap only for an ace
+      if (this.strokes === 1) window.setTimeout(() => sfx('clap'), 250);
       this.holedFrames = r.frames;
       const feats = [...this.zones];
       if (this.strokes === 1) feats.push('ace');
@@ -1728,7 +1729,7 @@ export class Course3D {
     this.replay = null;
     const last = rp.frames[rp.frames.length - 1];
     this.ball.position.copy(w3(last.x, last.y, last.z + BALL_R));
-    sfx('cheer');
+    sfx('clap');
     this.startReaction('ace');
   }
 

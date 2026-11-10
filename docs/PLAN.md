@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 10, 2026 (the Trophy Room; course ideas to Reginald; the Season counts from October, banked points only; the Lakefront is a beach; The Windy City reworked: fall, day and night, harder; the great-hole raise isn't paid back; the Pro Shop's Tour Collection; great holes pay more; Robbie shows as the Committee; The Windy City, a Chicago course for Nov 22; five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
+Last updated Nov 10, 2026 (quieter rounds; the Trophy Room; course ideas to Reginald; the Season counts from October, banked points only; the Lakefront is a beach; The Windy City reworked: fall, day and night, harder; the great-hole raise isn't paid back; the Pro Shop's Tour Collection; great holes pay more; Robbie shows as the Committee; The Windy City, a Chicago course for Nov 22; five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 10, 2026 (the Trophy Room; course ideas to Reginald; the Season
 
 | PR | What |
 |---|---|
+| #237 | Quieter rounds, classy and clean: the coin burst is gone, and a moment's money is a small dark note under the hole title ("+$100 Birdie · Creek Bend") that fades in and out, with no sound. A holed ball gets the cup's own sound; only an ace gets a soft round of applause (no more cheers on every hole, or at the end of a round). The Pure/Good/Slice callouts are smaller and lighter, the bomb's pop animation is gone, and a new card on home fades in rather than glowing gold. |
 | #236 | The Trophy Room: a Trophies tab in the Clubhouse (after Season) with about 55 engraved plaques, all earned from what's already recorded. Titles (club champion 1/3/5, Open winner, Open top 10s 1/5/10), Scoring (birdies 10/25/100, eagles 1/5/15, albatross, hole in one, the Ace Club, under-par rounds 1/5/20, bogey-free, rounds posted 10/50/100), Skill (30 ft putts 1/10, a 60 ft putt, chip-ins 1/5/15, Closest to the Pin inside 3 ft, long drives 325/350/400 yd), Course feats (every hole's secret, and Mastered: a birdie on every hole of a course, for each course once it's out) and Club life (7 and 30 day streaks, CTP wins 1/5, your Members' hole played by 10). Locked plaques show how to earn them and a progress bar; the three nearest sit up top. Golfer cards show the shelf for anyone. Cream plaques with a thin gold rule, no confetti. The Windy City's five secrets are now recorded on cards. New `trophy_progress`. Up-and-downs and fairways or greens hit aren't recorded, so they're not plaques yet. |
 | #234 | Under the next-course tile on home: "Want to feature next week's course? Submit an idea to Reginald for review." ("Submit an idea" underlined, one link). Either opens Reginald's form; the idea lands in the Committee's feedback inbox marked "Course idea". The Season names its early events by course, the Highlands and the Caldera, not "October"; from Nov 8 each week is its Open. |
 | #233 | The Season counts from October: the Highlands month and the Caldera challenge score points too (each ranked across every club), so Marc leads with 1,000 from his two wins. The standings and the place on home go by banked points only; this week's place shows as "+N projected this week" and moves nobody until the week closes. Golfer cards count banked points the same way. New `season_from`. The Windy City's Lakefront is a beach hole: fairways, a sliver of rough, then sand everywhere down to the water and up to the street (novice bot +2.0 there, was +1.7). |
@@ -149,7 +150,7 @@ Last updated Nov 10, 2026 (the Trophy Room; course ideas to Reginald; the Season
 
 ## Setup status
 
-- [ ] #236: apply `trophy_progress` and the updated `secret_feats` after merge (`pr_236_trophy_room`), then check Marc's progress reads right.
+- [x] #236: `trophy_progress` and the updated `secret_feats` applied Nov 10 (`pr_236_trophy_room`). Checked live: Marc 42 birdies, 27 eagles, 4 albatrosses, 3 aces, 14 bogey-free rounds, 2 titles, the Highlands and the Caldera mastered.
 
 - [ ] #233: apply `season_from` and the updated `season_standings` and `golfer_card` after merge (`pr_233_season_from_october`), then check Marc leads on 1,000.
 
@@ -300,7 +301,6 @@ Every counted stroke saved: club, power and accuracy, where it started and finis
 
 ## Next up (ideas, not started)
 
-- Quieter rounds (agreed Nov 10): the coin burst goes; money becomes a small note at the foot of the screen and a gold line on the summary; one soft clap for an ace only; smaller Pure/Good callouts; one cream-and-gold plaque style for every honour.
 - **More to spend purse money on:** sponsor a week's purse ("presented by"), naming rights on a hole, an engraved line on the plaque, entry fees for mini tournaments, a season money list with its own title. Restock the shop now and then so prices keep up with what the club earns.
 
 - **The Committee.** Robbie appoints elite members and gives titles (Hole Architect, Mini Game Manager). Perks:
