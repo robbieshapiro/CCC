@@ -2298,6 +2298,18 @@ revoke all on function ctp_winners() from public, anon, authenticated;
 -- holed putt from 30 ft, $200 from 60 ft, $100 a chip-in from off the green. $150 the first time they find each hole's
 -- secret on a card. And $100 each time another member finishes one of their Members' Course holes (once per member per
 -- hole per week, up to $500 a week). From Nov 8 a day has one card, so none of this grows with replays.
+-- One-off credits to a person's club bonus, by name and PIN (one person across their clubs): a correction the Committee
+-- makes, with its reason. Counted in person_bonus (grants), so it lands in career earnings and the spending balance.
+create table if not exists bonus_grants (
+  id bigserial primary key,
+  k text not null,
+  h text not null,
+  amount int not null,
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+alter table bonus_grants enable row level security;
+
 create or replace function person_bonus(p players) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with seats as (select person_seats(p) as id),
@@ -2307,7 +2319,7 @@ language sql stable security definer set search_path = public, extensions as $$
     from rounds r left join course_pars cp on cp.course = r.course where r.player_id in (select id from seats)
   ),
   shots as (
-    select r.holes[i] as s, r.hp[i] as par from r cross join lateral generate_subscripts(r.holes, 1) i
+    select r.holes[i] as s, r.hp[i] as par, r.created_at from r cross join lateral generate_subscripts(r.holes, 1) i
     where r.nth = 1 and array_length(r.hp, 1) = array_length(r.holes, 1)
   ),
   strokes as (
@@ -2331,16 +2343,20 @@ language sql stable security definer set search_path = public, extensions as $$
       50 * (select count(distinct (r.created_at at time zone 'America/New_York')::date) from r)::int as rounds,
       (select coalesce(sum(case when n >= 3 then 100 else 0 end + (n / 7) * 250), 0) from runs)::int as streaks,
       150 * (select count(*) from ctp_winners() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
-      -- birdie $100, eagle $500, albatross $1,000, ace $2,500 (src/bonus.ts; raised Nov 10 and paid back on every one made)
-      (select coalesce(sum(case when s = 1 then 2500 when s <= par - 3 then 1000 when s = par - 2 then 500 when s = par - 1 then 100 else 0 end), 0) from shots)::int as shots,
+      -- birdie $100, eagle $500, albatross $1,000, ace $2,500 (src/bonus.ts) for holes from Nov 10 2026; before that the
+      -- old rates, $25, $100 (an albatross too) and $500: the raise isn't paid back
+      (select coalesce(sum(case when created_at >= timestamp '2026-11-10 00:00' at time zone 'America/New_York'
+        then case when s = 1 then 2500 when s <= par - 3 then 1000 when s = par - 2 then 500 when s = par - 1 then 100 else 0 end
+        else case when s = 1 then 500 when s <= par - 2 then 100 when s = par - 1 then 25 else 0 end end), 0) from shots)::int as shots,
       (select coalesce(sum(case when d >= 60 then 200 when d >= 30 then 75 else 0 end), 0) from strokes where c = 'putter' and i = 1)::int as putts,
       100 * (select count(*) from strokes where c <> 'putter' and i = 1 and coalesce(l, '') <> 'green' and nth > 1)::int as chipins,
       150 * (select count(distinct f) from rounds x cross join lateral unnest(x.feats) f where x.player_id in (select id from seats) and x.card and f = any (secret_feats()))::int as secrets,
-      (select coalesce(sum(least(500, 100 * n)), 0) from (select dp.week, count(*) as n from design_plays dp join designs d on d.id = dp.design_id where d.player_id in (select id from seats) group by dp.week) w)::int as designs
+      (select coalesce(sum(least(500, 100 * n)), 0) from (select dp.week, count(*) as n from design_plays dp join designs d on d.id = dp.design_id where d.player_id in (select id from seats) group by dp.week) w)::int as designs,
+      (select coalesce(sum(amount), 0) from bonus_grants g where g.k = lower(p.name) and g.h = p.pin_hash)::int as grants
   )
   select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'shots', b.shots,
-    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs,
-    'total', b.rounds + b.streaks + b.ctp + b.shots + b.putts + b.chipins + b.secrets + b.designs) from b
+    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants,
+    'total', b.rounds + b.streaks + b.ctp + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 

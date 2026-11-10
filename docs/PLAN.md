@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 10, 2026 (the Pro Shop's Tour Collection; great holes pay more; Robbie shows as the Committee; The Windy City, a Chicago course for Nov 22; five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
+Last updated Nov 10, 2026 (the great-hole raise isn't paid back; the Pro Shop's Tour Collection; great holes pay more; Robbie shows as the Committee; The Windy City, a Chicago course for Nov 22; five Hole Lab test holes; pick each week's course from Admin, and the Hole Lab; wedges get out of steep bunker faces; who practised today under today's cards; the Season in the Clubhouse with anyone's card; Closest to the Pin on the week's course; fall colours; one card a day per person; admin counts people; playoffs decided when played; Admin built around today; the whole field on the course; a simpler home page; a loading sheet into rounds; preview the welcome; Ask Reginald and a live feed; a live home page).
 
 ## Handoff (Nov 7): open threads for the next session
 
@@ -17,6 +17,7 @@ Last updated Nov 10, 2026 (the Pro Shop's Tour Collection; great holes pay more;
 
 | PR | What |
 |---|---|
+| #231 | The great-hole raise isn't paid back after all: birdies, eagles and aces made before Nov 10 pay the old rates ($25, $100, $500), the new ones ($100, $500, $1,000 albatross, $2,500 ace) from Nov 10 on. Balances back to where they were: Marc $8,444 to $1,044, Robbie $7,157 to $1,432, Hunter $4,276 to $2,151, and so on. Tyler had already spent his, so a one-off $525 Committee credit keeps him where he was ($202). New `bonus_grants` (Committee credits, shown in the Pro Shop's breakdown). |
 | #230 | The Pro Shop's Tour Collection: 18 pieces of modern tour gear on the shop floor at $1,000 to $4,000, under the club's own label (no outside brands): a tour quarter-zip, the Final Round red mock, a tour hoodie, a CCC crewneck, a quilted vest, tour joggers, tailored tour trousers with a white belt, tour spikes, high-top golf sneakers, a rope cap, a flat-brim snapback, a tour bucket, tour half-rim shades, a tour glove, a tour staff bag, a stand bag, a forged blade putter and a matte black driver. Each is modelled on the golfer and mostly takes your own colours. The shop floor is now two collections, Clubhouse Classics and The Tour Collection, above the Club Pro and Club Legend racks. Existing prices unchanged. |
 | #229 | Great holes pay more: a birdie $100 (was $25), an eagle $500 (was $100), a new albatross (three under) $1,000, a hole in one $2,500 (was $500). Still on the day's card only. Paid back on every one already made: Marc +$7,400, Robbie +$5,725, Hunter +$2,125, everyone else +$150 to $1,100. The round summary and coin note name the albatross. |
 | #227 | Robbie shows as the Committee, not Kellogg: everywhere members see a club beside a name (the Open board, Season standings, his golfer card, today's cards and practice, Closest to the Pin and its crown, course records), whoever holds an admin seat reads "Committee", and the club boards no longer tag him a Guest. Display only: where he plays, what counts, the purse, titles and points are unchanged. New `club_label`; a `committee` flag on the snapshot's players. |
@@ -144,8 +145,10 @@ Last updated Nov 10, 2026 (the Pro Shop's Tour Collection; great holes pay more;
 
 ## Setup status
 
+- [ ] #231: apply `bonus_grants` and the updated `person_bonus` after merge (`pr_231_no_backpay`), add Tyler's $525 credit (a checked one-off insert), then check the balances match the PR.
+
 - [x] #229: the updated `person_bonus` applied Nov 10 (`pr_229_bigger_holes`). Checked live: great-hole bonus Marc $1,800 to $9,200, Robbie $1,475 to $7,200, Hunter $575 to $2,700.
-- [ ] #230: apply the 18 Tour Collection rows to `shop_items` after merge (`pr_230_tour_collection`), then check there are 18 member-rack pieces from $1,000 to $3,500 among them.
+- [x] #230: the 18 Tour Collection rows applied to `shop_items` Nov 10 (`pr_230_tour_collection`). Checked live: 18 shop-floor pieces, $1,000 to $3,500.
 
 - [x] #227: `club_label` and the nine updated functions applied Nov 10 (`pr_227_committee_label`; the live copies matched `schema.sql` apart from line endings and `get_snapshot`'s comments). Checked live: the Season and the Open show Robbie as Committee and Marc as Kellogg; in The Clergy Robbie is still `away` (purse unchanged) and flagged `committee`; members can't call `club_label`.
 

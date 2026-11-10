@@ -121,6 +121,7 @@ function earnedFrom(me: Player) {
       ['Chip-ins', b?.chipins ?? 0],
       ['Secrets found', b?.secrets ?? 0],
       ['Your holes played', b?.designs ?? 0],
+      ['Committee credits', b?.grants ?? 0],
     ] as [string, number][]
   ).filter(([, n]) => n > 0);
   if (!parts.length) return '';
