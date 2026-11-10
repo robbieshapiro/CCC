@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState } from './types';
+import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -119,6 +119,10 @@ export const supabaseApi: Api = {
   },
   powerupState: (s) => rpc<PowerupState>('powerup_state', { p_token: s.token }).catch(() => ({ locker: [] })),
   usePowerup: (s, id) => rpc<string>('use_powerup', { p_token: s.token, p_id: id }),
+  sendCurse: (s, kind, target) => rpc<string>('send_curse', { p_token: s.token, p_kind: kind, p_target: target }),
+  pickPocket: (s, target) => rpc<string>('pick_pocket', { p_token: s.token, p_target: target }),
+  landCurses: (s) => rpc<LandedCurse[]>('land_curses', { p_token: s.token }).catch(() => []),
+  passCurse: (s, curse, target) => rpc<string>('pass_curse', { p_token: s.token, p_curse: curse, p_target: target }),
   adminFeedbackDone: async (s, id, done) => {
     await rpc('admin_feedback_done', { p_token: s.token, p_id: id, p_done: done });
   },

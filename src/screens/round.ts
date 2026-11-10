@@ -30,7 +30,7 @@ import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
 import { HOLLOW_HILLS } from '../golf3d/minigolf';
 import { MIDWAY } from '../golf3d/midway';
-import { pickPower } from './prizecounter';
+import { landCurses, pickPower } from './prizecounter';
 import { buildHole } from '../designer/hole';
 import { isHole } from '../designer/desk';
 import type { Hole } from '../golf3d/types';
@@ -722,12 +722,20 @@ export function barRound(snap: Snapshot, kind: BarGame) {
       // the day's counting Midway round: the locker's power-ups, offered on each tee
       let locker = kind === 'midway' && !fun ? (await api.powerupState(requireSession()).catch(() => ({ locker: [] }))).locker : [];
       if (game !== g) return;
+      // the curses waiting for you land now: one a hole, in order; the Bouncer keeps your locker shut this round
+      const curses = kind === 'midway' && !fun ? await landCurses(snap) : [];
+      if (game !== g) return;
+      if (curses.some((c) => c.kind === 'bouncer')) locker = [];
+      const holeCurses = curses.filter((c) => c.kind !== 'bouncer').map((c) => c.kind);
       if (!holes.length) return back();
       const scores: number[] = [];
       const sum = () => scores.reduce((a, b) => a + b, 0);
       for (let i = 0; i < holes.length; i++) {
         const par = holes.slice(0, i).reduce((a, h) => a + h.par, 0);
         g.mods = {};
+        // this hole's curse, if one landed on it
+        const curse = holeCurses[i];
+        const hole = curse === 'lid' ? { ...holes[i], cupScale: 0.5 } : holes[i];
         if (locker.length) {
           const pick = await pickPower(locker, holes[i]);
           if (game !== g) return;
@@ -738,7 +746,11 @@ export function barRound(snap: Snapshot, kind: BarGame) {
             if (used === 'express' && holes[i].express) g.mods = { express: holes[i].express };
           }
         }
-        const r = await g.play(holes[i], i + 1, { strokes: sum(), par }, { of: holes.length });
+        if (curse === 'shortpour') g.mods.powerCap = 0.5;
+        if (curse === 'ironsonly') g.mods.noWoods = true;
+        el.classList.toggle('goggles', curse === 'goggles');
+        const r = await g.play(hole, i + 1, { strokes: sum(), par }, { of: holes.length });
+        el.classList.remove('goggles');
         g.mods = {};
         if (game !== g) return; // they left
         scores.push(r.strokes);

@@ -185,7 +185,7 @@ export type AdminOverview = {
 // The Daily Shot: one shot a day for everyone, three tries, best counts (see daily.ts)
 // The Committee Room's Today (admin_today): everyone in today, each person once, and today's feed
 export type AdminTodayPerson = { cards?: number; id?: string; name: string; club: string; last: string | null; card: 'in' | 'going' | null; toPar: number | null; total: number | null; hole: number | null; practice: number; daily: boolean; dailyFt: number | null };
-export type AdminTodayEvent = { id?: string; at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback' | 'classic'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
+export type AdminTodayEvent = { id?: string; at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback' | 'classic' | 'midway'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
 export type AdminToday = { today: string; in: number; cardsIn: number; onCourse: number; people: AdminTodayPerson[]; feed: AdminTodayEvent[] };
 export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: boolean };
 export type DailyRow = { playerId?: string; name: string; club: string; ft: number | null; holed: boolean; holedTry?: number | null; tries: number; mine: boolean };
@@ -218,7 +218,10 @@ export type CardProgress = { scores: number[]; shots: number; spots: (Spot | nul
 // club/clubId: set when a card is going at another of the member's clubs, or all of today's cards are in there (two a day per person)
 // done: all of today's cards are in; n: how many are in; of: cards a day; best: the better card's to-par so far
 export type CardToday = CardProgress & { done: boolean; n?: number; of?: number; best?: number | null; id: number | null; course: string | null; club?: string | null; clubId?: string | null };
-export type PowerupState = { locker: { id: number; kind: string }[] };
+// locker: yours to use; waiting: curses waiting for your next counting round (what and who stay a surprise);
+// sentThisWeek: curses you've sent; news: the week's goings-on (see newsLine in src/powerups.ts)
+export type PowerupState = { locker: { id: number; kind: string }[]; waiting?: number; sentThisWeek?: number; news?: { kind: string; status: string; mine: boolean; who: string | null; at: string }[] };
+export type LandedCurse = { id: number; kind: string; from: string | null; via: string | null };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 
 export interface Api {
@@ -237,6 +240,12 @@ export interface Api {
   buyPowerup(session: Session, kind: string): Promise<void>;
   powerupState(session: Session): Promise<PowerupState>;
   usePowerup(session: Session, id: number): Promise<string>;
+  // curses and theft: send one ('sent', or 'blocked' by their Prenup), pick a pocket (what you got, or 'blocked'), the
+  // curses landing at the start of your counting round, and passing one on ('passed' or 'blocked')
+  sendCurse(session: Session, kind: string, target: string): Promise<string>;
+  pickPocket(session: Session, target: string): Promise<string>;
+  landCurses(session: Session): Promise<LandedCurse[]>;
+  passCurse(session: Session, curse: number, target: string): Promise<string>;
   createInvite(session: Session, name: string): Promise<{ id: string; name: string; code: string }>;
   listInvites(session: Session): Promise<Invite[]>;
   deleteInvite(session: Session, id: string): Promise<void>;
