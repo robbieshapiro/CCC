@@ -161,7 +161,7 @@ Last updated Nov 10, 2026 (two cards a day; Windy City: rooftop tees, an island 
 
 ## Setup status
 
-- [ ] #250: apply the two-cards-a-day SQL after merge (`pr_250_two_cards`), then check `card_today` gives `n` and `of`, and a member with one card in today can start another.
+- [x] #250: applied `pr_250_two_cards` on Nov 10; the five members with a card in today (Eli G, Charlie, Hunter, Marc, Pato) each show 1 of 2 with their second open.
 - [x] #244: applied `pr_244_admin_ids` on Nov 10; all 1,000 feed rows, 46 members and today's people carry an `id`.
 - [x] #242: applied `pr_242_board_ids` on Nov 10; every row on the day's Closest to the Pin and long drive boards has a `playerId`.
 - [x] #238: applied `pr_238_activity_classic` on Nov 10; Tyler's four Highlands rounds show in the feed.
