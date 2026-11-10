@@ -72,9 +72,9 @@ function status(p: AdminTodayPerson) {
   const extras = [p.practice ? `practised${p.practice > 1 ? ` ×${p.practice}` : ''}` : '', p.daily ? `Daily Shot${p.dailyFt === 0 ? ' holed!' : p.dailyFt !== null ? ` ${p.dailyFt} ft` : ''}` : ''].filter(Boolean);
   const main =
     p.card === 'in'
-      ? `<span class="tw-card in">✅ Card in, ${toParLabel(p.toPar ?? 0)}</span>`
+      ? `<span class="tw-card in">✅ ${(p.cards ?? 1) > 1 ? `Both cards in, best ${toParLabel(p.toPar ?? 0)}` : `Card in, ${toParLabel(p.toPar ?? 0)}`}</span>`
       : p.card === 'going'
-        ? `<span class="tw-card going">⛳ On the course, hole ${p.hole}</span>`
+        ? `<span class="tw-card going">⛳ ${p.cards ? `Card ${p.cards + 1}, ` : 'On the course, '}hole ${p.hole}${p.cards ? ` (card 1: ${toParLabel(p.toPar ?? 0)})` : ''}</span>`
         : extras.length
           ? ''
           : '<span class="tw-card look">👀 Looked in</span>';

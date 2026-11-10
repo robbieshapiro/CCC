@@ -7,7 +7,7 @@ type Layer = { name: string; tools: string; does: string };
 const STACK: Layer[] = [
   { name: 'The game', tools: 'Vite · TypeScript · three.js', does: 'Every hole is drawn and played right in your browser, ball physics and all.' },
   { name: 'Hosting', tools: 'Vercel', does: 'Serves the site, plus a few small server functions that talk to Claude.' },
-  { name: 'The database', tools: 'Supabase · Postgres', does: 'Rounds, cards, purses, the Season, trophies. Club rules like one card a day live here too.' },
+  { name: 'The database', tools: 'Supabase · Postgres', does: 'Rounds, cards, purses, the Season, trophies. Club rules like two cards a day live here too.' },
   { name: 'The words', tools: 'Claude API', does: 'Reginald: your daily line, the note on your card, the Chronicle.' },
 ];
 

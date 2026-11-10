@@ -1,7 +1,7 @@
 // Browser-only backend for playing without Supabase. Mirrors supabase/schema.sql.
 import { seasonPoints } from '../season';
 import { STOCK_BUDDIES } from '../buddies';
-import { cardsOn, GAME_TZ, openPurseOn, periodOf, todayInGameTz } from '../day';
+import { CARDS_A_DAY, cardsOn, GAME_TZ, openPurseOn, periodOf, todayInGameTz } from '../day';
 import { courseById, courseFor } from '../golf3d/courses';
 import { BONUS, bonusOf, puttBonus, RAISE_FROM, SECRET_FEATS } from '../bonus';
 import { makeRng } from '../seed';
@@ -270,14 +270,14 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     if (total < course.par) feats.push('underpar');
     const spots = r.spots?.length === holes.length ? r.spots.map((p) => (p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null)) : null;
     const today = todayInGameTz();
-    // daily cards: one round a day counts
+    // daily cards: two a day count, the better one is the day's score
     const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
-    if (cardsOn(month) && db.rounds.some((x) => seats.has(x.playerId) && x.month === month && todayInGameTz(new Date(x.createdAt)) === today))
-      throw new Error('Your card for today is already in. Practise as much as you like.');
+    if (cardsOn(month) && db.rounds.filter((x) => seats.has(x.playerId) && x.month === month && todayInGameTz(new Date(x.createdAt)) === today).length >= CARDS_A_DAY)
+      throw new Error("Both of today's cards are in. Practise as much as you like.");
     if (cardsOn(month) && (db.cards ?? []).some((c) => seats.has(c.playerId) && c.playerId !== me.id && c.day === today && !c.done))
       throw new Error("Today's card is going at another club. Finish it there.");
     db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, shots: r.shots?.slice(0, 150), createdAt: new Date().toISOString() });
-    const card = (db.cards ?? []).find((c) => c.playerId === me.id && c.day === today);
+    const card = (db.cards ?? []).find((c) => c.playerId === me.id && c.day === today && !c.done);
     if (card) card.done = true;
     save(db);
   },
@@ -673,11 +673,11 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const me = playSeat(db, playerByToken(db, session.token));
     const today = todayInGameTz();
     const cards = (db.cards ??= []);
-    // one card a day per person, whichever club it's played in
+    // two cards a day per person, whichever club they're played in; one open at a time
     const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
-    const c = cards.find((x) => seats.has(x.playerId) && x.day === today);
-    if (c?.done || db.rounds.some((x) => seats.has(x.playerId) && todayInGameTz(new Date(x.createdAt)) === today && cardsOn(x.month)))
-      throw new Error('Your card for today is already in. Practise as much as you like.');
+    const c = cards.find((x) => seats.has(x.playerId) && x.day === today && !x.done);
+    if (db.rounds.filter((x) => seats.has(x.playerId) && todayInGameTz(new Date(x.createdAt)) === today && cardsOn(x.month)).length >= CARDS_A_DAY)
+      throw new Error("Both of today's cards are in. Practise as much as you like.");
     if (c && c.playerId !== me.id) throw new Error("Today's card is going at another club. Finish it there.");
     if (c) return c.id;
     const id = cards.length + 1;
@@ -692,13 +692,15 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const db = load();
     const me = playSeat(db, playerByToken(db, session.token));
     const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
-    const c = (db.cards ?? []).find((x) => seats.has(x.playerId) && x.day === today);
-    const r = db.rounds.find((x) => seats.has(x.playerId) && todayInGameTz(new Date(x.createdAt)) === today);
-    const done = !!r;
-    // the card's club, when it's at another of this person's clubs
-    const atGroup = c ? db.players.find((p) => p.id === c.playerId)?.groupId : r?.groupId;
+    const c = (db.cards ?? []).find((x) => seats.has(x.playerId) && x.day === today && !x.done);
+    const rs = db.rounds.filter((x) => seats.has(x.playerId) && todayInGameTz(new Date(x.createdAt)) === today && cardsOn(x.month));
+    const n = rs.length;
+    const done = n >= CARDS_A_DAY;
+    const best = n ? Math.min(...rs.map((x) => x.total - x.par)) : null;
+    // the club of a card going at another of this person's clubs
+    const atGroup = c ? db.players.find((p) => p.id === c.playerId)?.groupId : undefined;
     const at = atGroup && atGroup !== me.groupId ? { clubId: atGroup, club: Object.values(db.groups).find((g) => g.id === atGroup)?.name ?? null } : {};
-    return c ? { ...c, done: done || c.done, ...at } : { done, id: null, course: null, scores: [], shots: 0, spots: [], feats: [], ...at };
+    return c ? { ...c, done, n, of: CARDS_A_DAY, best, ...at } : { done, n, of: CARDS_A_DAY, best, id: null, course: null, scores: [], shots: 0, spots: [], feats: [], ...at };
   },
   async cardProgress(session, id, p) {
     const db = load();
@@ -893,10 +895,12 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const today = todayInGameTz();
     const club = (id: string) => Object.values(db.groups).find((g) => g.id === id)?.name ?? '?';
     const best = new Map<string, DbRound>();
+    const count = new Map<string, number>();
     for (const r of db.rounds) {
       const p = db.players.find((x) => x.id === r.playerId);
       if (!p || !r.spots || r.course !== course || todayInGameTz(new Date(r.createdAt)) !== today) continue;
       const k = `${p.name.toLowerCase()}|${p.pin}`;
+      count.set(k, (count.get(k) ?? 0) + 1);
       const b = best.get(k);
       if (!b || r.total - r.par < b.total - b.par) best.set(k, r);
     }
@@ -904,7 +908,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       const p = db.players.find((x) => x.id === r.playerId)!;
       const local = db.players.find((x) => x.groupId === me.groupId && x.name.toLowerCase() === p.name.toLowerCase() && x.pin === p.pin);
       const mine = p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin;
-      return { playerId: p.id, name: p.name, club: club(p.groupId), avatar: p.avatar, holes: r.holes, spots: r.spots!, going: false, at: r.createdAt, mine, localId: local?.id ?? null };
+      return { playerId: p.id, name: p.name, club: club(p.groupId), avatar: p.avatar, holes: r.holes, spots: r.spots!, going: false, at: r.createdAt, mine, localId: local?.id ?? null, best: r.holes, bestAt: r.createdAt, cards: count.get(`${p.name.toLowerCase()}|${p.pin}`) ?? 1 };
     });
   },
 
@@ -955,7 +959,9 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const people: AdminTodayPerson[] = mem
       .map((p): AdminTodayPerson | null => {
         const mine = feed.filter((e) => e.name === p.name && e.club === club(p.groupId));
-        const round = mine.find((e) => e.kind === 'round');
+        // the better of today's cards, and how many are in
+        const rounds = mine.filter((e) => e.kind === 'round');
+        const round = rounds.reduce<(typeof rounds)[number] | undefined>((a, e) => (!a || e.total! - e.par! < a.total! - a.par! ? e : a), undefined);
         const going = cards.find((c) => c.playerId === p.id && !c.done);
         if (!mine.length && !going) return null;
         return {
@@ -963,7 +969,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           name: p.name,
           club: club(p.groupId),
           last: mine[0]?.at ?? null,
-          card: round ? ('in' as const) : going ? ('going' as const) : null,
+          card: going ? ('going' as const) : round ? ('in' as const) : null,
+          cards: rounds.length,
           toPar: round ? round.total! - round.par! : null,
           total: round?.total ?? null,
           hole: going ? going.scores.length + 1 : null,

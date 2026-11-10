@@ -647,7 +647,7 @@ create or replace function submit_round(p_token uuid, p_course text, p_holes int
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := play_seat(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
 begin
-  if cards_on() and card_in(me) then raise exception 'Your card for today is already in. Practise as much as you like.'; end if;
+  if cards_on() and card_in(me) then raise exception 'Both of today''s cards are in. Practise as much as you like.'; end if;
   -- from the daily cards, a round only counts as the card started today on that course: a round begun before midnight
   -- (last week's course, or yesterday's card) can't land on the new day's board or use up its card
   if cards_on() and (card_of(me)).player_id <> me.id then raise exception 'Today''s card is going at another club. Finish it there.'; end if;
@@ -907,8 +907,9 @@ begin
   ), '[]');
 end $$;
 
--- Today's field on a course: everyone who played it today, in every club, each person once: their card if it's in, or
--- the holes played so far on a card in progress. Up to 30, your own club's first. For the golfers out on the course in a
+-- Today's field on a course: everyone who played it today, in every club, each person once: the card they're out on
+-- now if there is one, otherwise their better card in today. best: their better card in today (also while they're out on
+-- their second), cards: how many of today's cards they've posted. Up to 30, your own club's first. For the golfers out on the course in a
 -- round (which leaves you out: mine) and home's "On the course now" and "Today's cards". playerId: the person, as the
 -- Open names them; localId: their seat in your club, if they have one (kudos and chirps stay within a club); at: when
 -- the card went in, or when it was started.
@@ -934,15 +935,19 @@ begin
       join round_starts rs on rs.player_id = p.id and rs.card and not rs.finished and rs.course = p_course and rs.started_at >= t0
       order by pe.home_id, rs.started_at desc
     ), field as (
-      select * from done union all select * from going g where not exists (select 1 from done d where d.home_id = g.home_id)
+      select * from going union all select * from done d where not exists (select 1 from going g where g.home_id = d.home_id)
     ), rows as (
       select pe.home_id, pe.name, club_label(pe.k, pe.h, pe.home_group) as club, pe.avatar, f.holes, f.spots, f.going, f.at,
+        (select d.holes from done d where d.home_id = f.home_id) as best_holes, (select d.at from done d where d.home_id = f.home_id) as best_at,
+        (select count(*) from players p join rounds rd on rd.player_id = p.id and rd.course = p_course and rd.created_at >= t0
+          where lower(p.name) = pe.k and p.pin_hash = pe.h)::int as cards,
         (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = pe.k and p2.pin_hash = pe.h and not p2.host_only) as local_id,
         lower(me.name) = pe.k and me.pin_hash = pe.h as mine
       from field f join people pe on pe.home_id = f.home_id join groups gr on gr.id = pe.home_group
     )
     select json_agg(json_build_object('playerId', r.home_id, 'name', r.name, 'club', r.club, 'avatar', r.avatar, 'holes', r.holes,
-        'spots', r.spots, 'going', r.going, 'at', r.at, 'mine', r.mine, 'localId', r.local_id) order by r.local_id is null, r.at desc)
+        'spots', r.spots, 'going', r.going, 'at', r.at, 'mine', r.mine, 'localId', r.local_id,
+        'best', r.best_holes, 'bestAt', r.best_at, 'cards', r.cards) order by r.local_id is null, r.at desc)
     from (select * from rows order by local_id is null, at desc limit 30) r
   ), '[]');
 end $$;
@@ -1479,10 +1484,11 @@ begin
       union select m.who from mem m where m.last_seen_at >= t0
       union select m.who from member_days md join mem m on m.id = md.player_id where md.day = today
     ),
-    -- today's card: the round posted today in this week (one a person)
+    -- today's cards: the better of them (one a person), and how many are in
     card as (
-      select distinct on (m.who) m.who, r.total - r.par as to_par, r.total, r.created_at as at
-      from rounds r join mem m on m.id = r.player_id where r.created_at >= t0 and r.month = game_month() order by m.who, r.created_at
+      select distinct on (m.who) m.who, r.total - r.par as to_par, r.total, r.created_at as at,
+        count(*) over (partition by m.who) as n
+      from rounds r join mem m on m.id = r.player_id where r.created_at >= t0 and r.month = game_month() order by m.who, r.total - r.par, r.created_at
     ),
     going as (
       select distinct on (m.who) m.who, coalesce(array_length(rs.scores, 1), 0) + 1 as hole, rs.started_at as at
@@ -1494,8 +1500,8 @@ begin
         coalesce((select m.name from mem m where m.id = i.who), (select min(m.name) from mem m where m.who = i.who)) as name,
         coalesce((select m.club from mem m where m.id = i.who), (select min(m.club) from mem m where m.who = i.who)) as club,
         greatest((select max(at) from ev where ev.who = i.who), (select max(m.last_seen_at) from mem m where m.who = i.who and m.last_seen_at >= t0)) as last,
-        case when c.who is not null then 'in' when gg.who is not null then 'going' end as card,
-        c.to_par, c.total, gg.hole,
+        case when gg.who is not null then 'going' when c.who is not null then 'in' end as card,
+        c.to_par, c.total, gg.hole, coalesce(c.n, 0) as cards,
         (select count(*) from ev where ev.who = i.who and ev.kind = 'practice') as practice,
         (select ev.ft from ev where ev.who = i.who and ev.kind = 'daily' limit 1) as daily_ft,
         exists (select 1 from ev where ev.who = i.who and ev.kind = 'daily') as daily
@@ -1507,7 +1513,7 @@ begin
       'cardsIn', (select count(*) from people where card = 'in'),
       'onCourse', (select count(*) from people where card = 'going'),
       'people', coalesce((select json_agg(json_build_object('id', p.who, 'name', p.name, 'club', p.club, 'last', p.last, 'card', p.card,
-          'toPar', p.to_par, 'total', p.total, 'hole', p.hole, 'practice', p.practice, 'daily', p.daily, 'dailyFt', p.daily_ft)
+          'toPar', p.to_par, 'total', p.total, 'hole', p.hole, 'cards', p.cards, 'practice', p.practice, 'daily', p.daily, 'dailyFt', p.daily_ft)
         order by p.last desc nulls last, p.name) from people p), '[]'),
       'feed', coalesce((select json_agg(json_build_object('id', e.who, 'at', e.at, 'kind', e.kind, 'name', e.name, 'club', e.club,
           'what', e.course, 'total', e.total, 'par', e.par, 'n', e.n, 'ft', e.ft) order by e.at desc) from ev e), '[]')
@@ -1675,17 +1681,27 @@ alter table round_starts add column if not exists shots int not null default 0;
 alter table round_starts add column if not exists spots jsonb;
 alter table round_starts add column if not exists feats text[] not null default '{}';
 
--- today's card, if one has been started (and whether it's already in). One card a day per person, not per club: a
--- guest's card in one club is their card in every club they play in (person_seats).
+-- Two cards a day per person (from Nov 10), not per club: one to warm up, one to go at it; the better one is the day's
+-- score. A guest's cards in one club are their cards in every club they play in (person_seats).
+create or replace function cards_a_day() returns int language sql immutable as $$ select 2 $$;
+-- the card in progress today, if one is open (started and not posted yet)
 create or replace function card_of(me players) returns round_starts
 language sql stable security definer set search_path = public, extensions as $$
-  select * from round_starts rs where rs.player_id in (select person_seats(me)) and rs.card and (rs.started_at at time zone 'America/New_York')::date = game_today()
+  select * from round_starts rs where rs.player_id in (select person_seats(me)) and rs.card and not rs.finished
+    and (rs.started_at at time zone 'America/New_York')::date = game_today()
   order by rs.started_at desc limit 1
 $$;
 revoke all on function card_of(players) from public, anon, authenticated;
+-- how many of today's cards are in
+create or replace function cards_today(me players) returns int
+language sql stable security definer set search_path = public, extensions as $$
+  select count(*)::int from rounds r where r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today() and r.month = game_month()
+$$;
+revoke all on function cards_today(players) from public, anon, authenticated;
+-- all of today's cards are in
 create or replace function card_in(me players) returns boolean
 language sql stable security definer set search_path = public, extensions as $$
-  select exists (select 1 from rounds r where r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today() and r.month = game_month())
+  select cards_today(me) >= cards_a_day()
 $$;
 revoke all on function card_in(players) from public, anon, authenticated;
 
@@ -1700,7 +1716,7 @@ language sql stable as $$
     or exists (select 1 from round_starts n where n.player_id = rs.player_id and n.started_at > rs.started_at))
 $$;
 
--- p_card: start today's card, or carry on with the one already started (it's the same card all day)
+-- p_card: start one of today's cards, or carry on with the one already going
 drop function if exists start_round(uuid, text);
 create or replace function start_round(p_token uuid, p_course text, p_card boolean default false) returns bigint
 language plpgsql security definer set search_path = public, extensions as $$
@@ -1708,7 +1724,7 @@ declare me players := player_for(p_token); new_id bigint; c round_starts;
 begin
   if p_card and cards_on() then
     me := play_seat(me);
-    if card_in(me) then raise exception 'Your card for today is already in. Practise as much as you like.'; end if;
+    if card_in(me) then raise exception 'Both of today''s cards are in. Practise as much as you like.'; end if;
     c := card_of(me);
     if c.player_id <> me.id then raise exception 'Today''s card is going at %. Finish it there.', (select g.name from groups g join players p on p.group_id = g.id where p.id = c.player_id); end if;
     if c.id is not null then return c.id; end if;
@@ -1728,12 +1744,14 @@ declare me players := play_seat(player_for(p_token)); c round_starts; at_id uuid
 begin
   if not cards_on() then return null; end if;
   c := card_of(me);
-  -- the card's club, when it's in or going at another of the person's clubs
+  -- the club of a card going at another of the person's clubs (or, once all of today's cards are in, where they were played)
   select g.id, g.name into at_id, at_name from groups g where g.id = coalesce(
     (select p.group_id from players p where p.id = c.player_id),
-    (select r.group_id from rounds r where r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today()
-      and r.month = game_month() order by r.created_at limit 1));
-  return json_build_object('done', card_in(me), 'id', c.id, 'course', c.course, 'scores', coalesce(c.scores, '{}'),
+    (select r.group_id from rounds r where card_in(me) and r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today()
+      and r.month = game_month() order by r.created_at desc limit 1));
+  return json_build_object('done', card_in(me), 'n', cards_today(me), 'of', cards_a_day(),
+    'best', (select min(r.total - r.par) from rounds r where r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today() and r.month = game_month()),
+    'id', c.id, 'course', c.course, 'scores', coalesce(c.scores, '{}'),
     'shots', coalesce(c.shots, 0), 'spots', c.spots, 'feats', coalesce(c.feats, '{}'),
     'clubId', case when at_id <> me.group_id then at_id end, 'club', case when at_id <> me.group_id then at_name end);
 end $$;

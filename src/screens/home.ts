@@ -1,10 +1,10 @@
 import { api, listSessions, localApi, switchClub, useSupabase } from '../api';
 import { badgeFor } from '../shop';
 import { clubPurse, money, OPEN_FLOOR, openPurseOf, placeLabel, purseOf } from '../purse';
-import type { Snapshot } from '../api/types';
+import type { Snapshot, CardToday } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
-import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz } from '../day';
+import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz, CARDS_A_DAY } from '../day';
 import { bindOpen } from './open';
 import { bindLive, liveCards, liveNow } from './live';
 import { bindPlayTiles, playTiles } from './playtiles';
@@ -113,7 +113,12 @@ export function home(snap: Snapshot) {
   const host = !!snap.players.find((p) => p.id === snap.me)?.host;
   // daily cards: one counts a day; once today's is in, the course is open for practice
   const cards = cardsOn(snap.month) && !host;
-  const cardIn = cards && snap.rounds.some((r) => r.playerId === snap.me && todayInGameTz(new Date(r.createdAt)) === snap.today);
+  // all of today's cards in (two a day, the better one counts)
+  const todays = snap.rounds.filter((r) => r.playerId === snap.me && r.month === snap.month && todayInGameTz(new Date(r.createdAt)) === snap.today);
+  const cardIn = cards && todays.length >= CARDS_A_DAY;
+  const dayCards: CardToday | null = cardIn
+    ? { done: true, n: todays.length, of: CARDS_A_DAY, best: Math.min(...todays.map((r) => r.total - r.par)), id: null, course: null, scores: [], shots: 0, spots: [], feats: [] }
+    : null;
 
   const head = course.holes.map((_, i) => `<th class="num">${i + 1}</th>`).join('');
   const body = rows
@@ -157,7 +162,7 @@ export function home(snap: Snapshot) {
           ${
             !cards
               ? `<a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>`
-              : `<div id="card-tile">${cardTile(cardIn ? 'in' : 'fresh', course, null, CARD_LINKS)}</div>`
+              : `<div id="card-tile">${cardTile(cardIn ? 'in' : 'fresh', course, dayCards, CARD_LINKS)}</div>`
           }
           <p class="who-out" id="who-out" hidden></p>
         </div>
@@ -232,7 +237,8 @@ export function home(snap: Snapshot) {
     void api.cardToday(requireSession()).then((t) => {
       const tile = document.getElementById('card-tile');
       const state = tileState(t, false);
-      if (tile && state !== 'fresh') {
+      // a card going, elsewhere, all in, or the second card waiting
+      if (tile && (state !== 'fresh' || t?.n)) {
         tile.innerHTML = cardTile(state, course, t, CARD_LINKS);
         bindCardNote(tile, CARD_LINKS, navigate);
       }
