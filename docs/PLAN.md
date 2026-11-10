@@ -145,7 +145,7 @@ Last updated Nov 10, 2026 (the Pro Shop's Tour Collection; great holes pay more;
 ## Setup status
 
 - [x] #229: the updated `person_bonus` applied Nov 10 (`pr_229_bigger_holes`). Checked live: great-hole bonus Marc $1,800 to $9,200, Robbie $1,475 to $7,200, Hunter $575 to $2,700.
-- [ ] #230: apply the 18 Tour Collection rows to `shop_items` after merge (`pr_230_tour_collection`), then check there are 18 member-rack pieces from $1,000 to $3,500 among them.
+- [x] #230: the 18 Tour Collection rows applied to `shop_items` Nov 10 (`pr_230_tour_collection`). Checked live: 18 shop-floor pieces, $1,000 to $3,500.
 
 - [x] #227: `club_label` and the nine updated functions applied Nov 10 (`pr_227_committee_label`; the live copies matched `schema.sql` apart from line endings and `get_snapshot`'s comments). Checked live: the Season and the Open show Robbie as Committee and Marc as Kellogg; in The Clergy Robbie is still `away` (purse unchanged) and flagged `committee`; members can't call `club_label`.
 
