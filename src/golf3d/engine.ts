@@ -11,6 +11,7 @@ import { CartGirl, type Visitor } from './cartgirl';
 import { ReginaldTray } from './reginaldtray';
 import { conditionsFor, gusted, tempestOn, withPin, type Conditions } from './conditions';
 import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
+import { MAGNET_FT } from '../powerups';
 import { pour } from './drinks';
 import { Golfer, HANK_SPEC, reactionFor, type Reaction } from './golfer';
 import { BALL_R, dropPoint, escapeLoft, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Frame, type Result } from './physics';
@@ -259,6 +260,9 @@ export class Course3D {
   private strokes = 0;
   private zones = new Set<string>();
   private drink: { kind: Drink; shots: number } | null = null;
+  // the Midway's power-ups for the hole being played (set by the round before each hole): the Magnet drops a ball that
+  // stops on the green within MAGNET_FT; the Express Lane sends a tee shot that finishes in its circle to the green
+  mods: { magnet?: boolean; express?: { x: number; y: number; r: number; to: V2 } } = {};
   // settle: when the ball has as good as stopped (the last creep down a slope isn't worth waiting for)
   // slow: the slow-motion window on a pure strike, in shot time
   private shot: {
@@ -1637,6 +1641,24 @@ export class Course3D {
       if (this.strokes === 1) feats.push('ace');
       if (s.club === 'wedge' || s.club === 'chip') feats.push('chipin');
       return this.finish(feats);
+    }
+    // the Magnet: close enough on the green and it drops
+    if (!r.penalty && this.mods.magnet && surfaceAt(this.hole, r.end) === 'green' && Math.hypot(r.end.x - this.hole.cup.x, r.end.y - this.hole.cup.y) * SCALE <= MAGNET_FT) {
+      sfx('pop');
+      this.callout('The Magnet', 'Pulled it in', 1600);
+      this.pos = { ...this.hole.cup };
+      return this.finish([...this.zones], 1600);
+    }
+    // the Express Lane: a tee shot into the circle goes to the front of the green
+    const lane = this.mods.express;
+    if (!r.penalty && lane && this.strokes === 1 && Math.hypot(r.end.x - lane.x, r.end.y - lane.y) <= lane.r) {
+      this.callout('Express Lane', 'Straight to the green', 1800);
+      this.pos = { ...lane.to };
+      this.placeBall();
+      this.trailPts = [];
+      this.drawTrail();
+      window.setTimeout(() => this.mode === 'roll' && this.toAim(), 900);
+      return;
     }
     if (r.penalty) {
       this.strokes++;
