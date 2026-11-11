@@ -19,7 +19,8 @@ import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
-import { accuracyError, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, stretched, stretchRate, type MeterStyle } from './swing';
+import { accuracyError, goldHalf, meterPos, OVERSWING, PURE, returnSpeed, type MeterStyle } from './swing';
+import { needleAt, powerAt } from './meter';
 import type { Hole, Shot, V2 } from './types';
 import { isNight, KITS } from './kits';
 
@@ -256,7 +257,8 @@ export class Course3D {
   private power = 0;
   private club: ClubId = 'driver';
   // the swing in progress: the power bar fills, then the needle comes back for the accuracy tap
-  private meter = { phase: 'power' as 'power' | 'accuracy', p: 0, d: 0, x: 0, speed: 0, half: 0 };
+  // t0: when the phase began (performance.now ms); x0: where the needle set off from; boosted: a lager or fireball
+  private meter = { phase: 'power' as 'power' | 'accuracy', p: 0, d: 0, x: 0, speed: 0, half: 0, t0: 0, x0: 0, boosted: false };
   private wind: Conditions | null = null; // the wind for this shot
   private dayWind: Conditions | null = null; // the day's wind on this hole (a gusting day swings either side of it)
   private spin = 0; // -1 topspin .. 1 backspin, from where you strike the ball
@@ -1273,7 +1275,8 @@ export class Course3D {
         else this.closeUntil = 0;
         return;
       }
-      if (this.mode === 'meter') return this.tapSwing();
+      // read the meter at the moment of the tap, not at the last frame
+      if (this.mode === 'meter') return this.tapSwing(e.timeStamp);
       if (this.mode !== 'aim') return;
       el.setPointerCapture(e.pointerId);
       this.drag = { x: e.clientX, y: e.clientY, aim: this.aim, power: this.power, kind: '' };
@@ -1330,7 +1333,7 @@ export class Course3D {
     if (this.mode === 'fly' && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) return this.endFlyover();
     if (this.mode === 'meter' && (e.key === ' ' || e.key === 'Enter')) {
       e.preventDefault();
-      return this.tapSwing();
+      return this.tapSwing(e.timeStamp);
     }
     if (this.mode !== 'aim') return;
     const bag = this.bag;
@@ -1392,7 +1395,7 @@ export class Course3D {
     if (this.mode !== 'aim' || this.club === 'putter') return;
     const drink = this.drink ? DRINKS[this.drink.kind] : null;
     this.mode = 'meter';
-    this.meter = { phase: 'power', p: 0, d: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0 };
+    this.meter = { phase: 'power', p: 0, d: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0, t0: performance.now(), x0: 0, boosted: (drink?.boost ?? 1) > 1 };
     const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
     m.hidden = false;
     m.classList.remove('accuracy');
@@ -1415,10 +1418,31 @@ export class Course3D {
     sfx('tick');
   }
 
-  // Tap 2 sets the power; tap 3 strikes it.
-  private tapSwing() {
+  // Where the meter is at time `at` (performance.now ms). True once the bar has reached the top, or the needle has gone
+  // right past the impact point.
+  private meterTo(at: number) {
+    const m = this.meter;
+    const t = (at - m.t0) / 1000;
+    if (m.phase === 'power') {
+      const r = powerAt(this.club, m.speed, m.boosted, t);
+      m.p = r.p;
+      m.d = r.d;
+      m.x = barX(this.meterAt(m.p));
+      return r.top;
+    }
+    const r = needleAt(m.x0, m.speed, IMPACT - m.half - 0.15, t);
+    m.x = r.x;
+    return r.past;
+  }
+
+  // Tap 2 sets the power; tap 3 strikes it. `at`: when the tap happened (an event's timeStamp, the same clock as
+  // performance.now), so the reading is exact to the millisecond whatever the frame rate.
+  private tapSwing(at?: number) {
     if (this.mode !== 'meter') return;
     const m = this.meter;
+    const now = performance.now();
+    const when = at === undefined || !(at > 0) ? now : Math.min(now, Math.max(m.t0, at));
+    this.meterTo(when);
     if (m.phase === 'power') {
       const drink = this.drink ? DRINKS[this.drink.kind] : null;
       // the Short Pour (a Midway curse): however far you take it back, it's capped
@@ -1427,6 +1451,9 @@ export class Course3D {
       const fire = (drink?.boost ?? 1) > 1;
       m.half = goldHalf(this.club, m.p, drink?.sweet ?? 1, this.style(), fire);
       m.speed = returnSpeed(this.club, m.p, drink?.needle ?? 1, this.style(), fire);
+      // the needle sets off back from where the bar stopped, from the moment of the tap
+      m.t0 = when;
+      m.x0 = m.x;
       const box = this.overlay.querySelector('[data-swing]') as HTMLElement;
       box.classList.add('accuracy');
       this.span(this.overlay.querySelector('[data-gold]') as HTMLElement, IMPACT - m.half, m.half * 2);
@@ -2270,25 +2297,9 @@ export class Course3D {
 
     if (this.mode === 'meter') {
       const m = this.meter;
-      if (m.phase === 'power') {
-        // fills faster toward the top; at the end of the overswing it stops on its own. With a lager or a fireball in
-        // you the overswing is the fire, and the bar slows right down in it so you can stop it there
-        const fire = !!this.drink && DRINKS[this.drink.kind].boost > 1 && m.p > 1;
-        // the chipper and the wedge climb their stretched scale at a steady pace (see meterPos); the rest fill by power
-        if (stretched(this.club)) {
-          m.d = Math.min(OVERSWING, m.d + stretchRate(this.club) * m.speed * (fire ? 0.45 : 1) * dt);
-          m.p = m.d >= OVERSWING ? OVERSWING : fromMeter(this.club, m.d);
-        } else m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * dt);
-        m.x = barX(this.meterAt(m.p));
-        if (m.p >= OVERSWING) this.tapSwing();
-      } else {
-        m.x -= m.speed * dt;
-        // gone right past the impact point: a full hook
-        if (m.x < IMPACT - m.half - 0.15) {
-          m.x = IMPACT - m.half - 0.15;
-          this.tapSwing();
-        }
-      }
+      // on real time (see meter.ts): the bar fills faster toward the top and stops on its own at the end of the
+      // overswing; the needle gone right past the impact point is a full hook
+      if (this.meterTo(now)) this.tapSwing(now);
       const needle = this.overlay.querySelector('[data-needle]') as HTMLElement | null;
       if (needle) this.mark(needle, Math.max(0, m.x));
       const fill = this.overlay.querySelector('[data-fill]') as HTMLElement | null;
