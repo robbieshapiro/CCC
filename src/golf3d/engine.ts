@@ -26,6 +26,8 @@ import { isNight, KITS } from './kits';
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
 
+export type DrillResult = { ft: number | null; holed: boolean; lost: boolean; from: V2; end: V2 };
+
 // A practice area: the stations you can hit from (the short game), and the flags out on the range.
 export type Drill = {
   title: string;
@@ -36,7 +38,9 @@ export type Drill = {
   wind?: Conditions;
   tag?: () => string;
   eyebrow?: string;
-  onResult?: (r: { ft: number | null; holed: boolean; lost: boolean; from: V2; end: V2 }) => boolean;
+  onResult?: (r: DrillResult) => boolean;
+  // the same result the moment the ball is struck (the flight is already worked out), so leaving mid-flight can't undo a try
+  onHit?: (r: DrillResult) => void;
   // bar games: move on to the next spot after each shot, and say how it went in your own words
   advance?: boolean;
   report?: (r: { holed: boolean; lost: boolean; from: V2; end: V2 }) => string;
@@ -1490,8 +1494,11 @@ export class Course3D {
       this.strokes++;
       this.setStrokes();
       r.zones.forEach((z) => this.zones.add(z));
-      this.onStroke?.(this.strokes);
+      // the flight is already worked out, so a penalty is saved now, at impact: closing the app mid-flight can't dodge it
+      // (the counter on screen still ticks over when the ball comes to rest)
+      this.onStroke?.(this.strokes + (r.penalty ? 1 : 0));
     }
+    if (this.drill?.onHit) this.drill.onHit(this.drillResult(r, this.pos));
     this.mode = 'roll';
     // on tour courses, an approach that might go in gets the slow-motion treatment as it tracks toward the hole:
     // one that drops, or one that comes within a couple of feet of it
@@ -1601,6 +1608,13 @@ export class Course3D {
     this.overlay.querySelector('[data-focus]')?.classList.toggle('on', on);
   }
 
+  // how a try at the pin went, worked out from the simulated flight
+  private drillResult(r: ReturnType<typeof simulate>, from: V2): DrillResult {
+    const last = r.frames[r.frames.length - 1];
+    const ft = r.penalty || r.holed ? (r.holed ? 0 : null) : Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y) * SCALE * 10) / 10;
+    return { ft, holed: r.holed, lost: r.penalty, from: { ...from }, end: { x: last.x, y: last.y } };
+  }
+
   private endShot() {
     const s = this.shot!;
     this.shot = null;
@@ -1615,7 +1629,7 @@ export class Course3D {
         const said = this.drill?.report?.({ holed: r.holed, lost: r.penalty, from: s.from, end: last });
         this.callout(said ?? (r.holed ? 'In the hole!' : lost || `${away(d, surfaceAt(this.hole, last) === 'green')} from the pin`), this.drill?.tag?.() ?? 'Practice', 1600);
       }
-      const more = this.drill?.onResult?.({ ft: r.penalty || r.holed ? (r.holed ? 0 : null) : Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y) * SCALE * 10) / 10, holed: r.holed, lost: r.penalty, from: s.from, end: { x: last.x, y: last.y } });
+      const more = this.drill?.onResult?.(this.drillResult(r, s.from));
       if (more === false) {
         this.mode = 'done';
         return;
@@ -1665,9 +1679,9 @@ export class Course3D {
       return;
     }
     if (r.penalty) {
+      // already saved at impact
       this.strokes++;
       this.setStrokes();
-      this.onStroke?.(this.strokes);
       const last = r.frames[r.frames.length - 1];
       const roof = this.hole.roofs?.some((rf) => inPoly(last, rf.poly));
       // tour courses: drop beside where it went in, as the real game does; classic courses play it again

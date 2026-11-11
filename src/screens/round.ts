@@ -612,11 +612,15 @@ export async function dailyRound(snap: Snapshot) {
     stations: [{ name: shot.label, at: shot.from }],
     wind: shot.wind,
     eyebrow: 'Three tries · closest wins',
-    tag: () => `Try ${done.length + 1} of ${DAILY_TRIES}`,
-    onResult: (r) => {
+    // read once the ball stops, after onHit has counted the try
+    tag: () => `Try ${done.length} of ${DAILY_TRIES}`,
+    // posted the moment the ball is struck (the flight is already known), so closing the app mid-flight can't undo a try
+    onHit: (r) => {
       const t = { try: done.length + 1, ...r };
       done.push(t);
-      void api.submitDaily(requireSession(), day, t).catch(() => {});
+      void api.submitDaily(requireSession(), day, t).catch(() => api.submitDaily(requireSession(), day, t).catch(() => {}));
+    },
+    onResult: () => {
       if (done.length < DAILY_TRIES) return true;
       window.setTimeout(() => void dailySummary(day, back), 1900);
       return false;
