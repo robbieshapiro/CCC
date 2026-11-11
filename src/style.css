@@ -1758,6 +1758,11 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 /* under the next-course band: an invitation to send Reginald a course idea */
 .course-idea { margin: 8px 2px 0; font-size: 13px; color: var(--muted); text-align: center; }
 .course-idea .link { padding: 0; font: inherit; color: var(--green); text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; cursor: pointer; }
+.adm-nudge textarea { width: 100%; box-sizing: border-box; font: 500 15px/1.45 var(--font); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--ink); resize: vertical; }
+.adm-nudge-yet { margin: 12px 0 0; font-size: 14px; color: var(--muted); }
+.adm-nudge-yet b { color: var(--ink); }
+.adm-nudge .adm-pick { margin: 0 0 10px; }
+.adm-nudge .adm-actions { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
 /* the Home Screen tip at the top of home (the week of Nov 8 only) */
 .hs-tip { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 12px 12px 12px 14px; border-radius: 12px; background: var(--green); color: var(--cream); }
 .hs-tip .hs-icon { font-size: 22px; line-height: 1.2; }
