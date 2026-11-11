@@ -16,6 +16,7 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
 - `npm run check-api` if you touched `api/`.
 - `npm run check-holes` if you touched holes, terrain, physics or clubs. Its `greens` sweep (in `quick` and `all`) putts every green from all round every pin; never ship a course that fails it.
 - `npm run check-minigolf` if you touched mini golf or the putting bot.
+- `npm run check-roller` if you touched High Roller (`src/roller/`). It takes seconds: a robot clears every stage along its `path`. A new stage needs a `path`, and a new stage count needs `roller_stages()` in `schema.sql` raised to match.
 
 ## Working notes (things agents keep relearning)
 

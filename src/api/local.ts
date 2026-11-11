@@ -20,7 +20,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[] };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; roller?: { playerId: string; stage: number; ms: number; chips: number }[] };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -495,6 +495,31 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     if (!inv) return null;
     const group = Object.values(db.groups).find((g) => g.id === inv.groupId);
     return { name: inv.name, code: inv.code, groupName: group?.name ?? '', used: !!inv.usedBy };
+  },
+
+  // High Roller (roller_state and roller_save in schema.sql): progress follows the person, the board is the club's
+  async rollerState(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const runs = db.roller ?? [];
+    const of = (p: DbPlayer) => runs.filter((r) => r.playerId === homeOf(db, p).id);
+    return {
+      mine: of(me).map(({ stage, ms, chips }) => ({ stage, ms, chips })),
+      board: db.players
+        .filter((p) => p.groupId === me.groupId && !p.host && of(p).length)
+        .map((p) => ({ playerId: p.id, name: p.name, cleared: of(p).length, ms: of(p).reduce((a, r) => a + r.ms, 0), mine: p.id === me.id }))
+        .sort((a, b) => b.cleared - a.cleared || a.ms - b.ms),
+    };
+  },
+
+  async rollerSave(session, stage, ms, chips) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const runs = (db.roller ??= []);
+    const old = runs.find((r) => r.playerId === me.id && r.stage === stage);
+    if (old) Object.assign(old, { ms: Math.min(old.ms, ms), chips: Math.max(old.chips, chips) });
+    else runs.push({ playerId: me.id, stage, ms, chips });
+    save(db);
   },
 
   // Nominate a friend (nominate_friend and friends in schema.sql)

@@ -34,6 +34,7 @@ jobs:
           has() { echo "$files" | grep -qE "$1" && echo true || echo false; }
           echo "holes=$(has '^(src/golf3d/|scripts/check-holes)')" >> "$GITHUB_OUTPUT"
           echo "minigolf=$(has '^(src/golf3d/(minigolf|haunted|putbot)|scripts/check-minigolf)')" >> "$GITHUB_OUTPUT"
+          echo "roller=$(has '^(src/roller/|scripts/check-roller)')" >> "$GITHUB_OUTPUT"
           echo "sql=$(has '^supabase/schema\.sql$')" >> "$GITHUB_OUTPUT"
       - run: npm run build
       - run: npm run check-api
@@ -41,6 +42,8 @@ jobs:
         run: npm run check-holes -- quick
       - if: steps.changed.outputs.minigolf == 'true'
         run: npm run check-minigolf
+      - if: steps.changed.outputs.roller == 'true'
+        run: npm run check-roller
       - name: schema.sql loads, and loads again on top
         if: steps.changed.outputs.sql == 'true'
         env:

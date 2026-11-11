@@ -2974,3 +2974,56 @@ grant execute on function nominate_friend(uuid, text, text) to anon;
 grant execute on function my_nominations(uuid) to anon;
 grant execute on function admin_nominations(uuid) to anon;
 grant execute on function decide_nomination(uuid, bigint, boolean) to anon;
+
+-- High Roller, the rolling-ball game at the bar (src/roller): a campaign of stages, cleared in order. One row a person
+-- a stage, keeping their best time and most chips; it follows the person (their home seat), so it's the same from any
+-- club. The board is the club's: most stages cleared, then the lowest total of best times.
+create table if not exists roller_runs (
+  player_id uuid not null references players on delete cascade,
+  stage int not null check (stage between 1 and 200),
+  best_ms int not null check (best_ms > 0),
+  chips int not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (player_id, stage)
+);
+alter table roller_runs enable row level security;
+
+-- how many stages there are (ALL_STAGES in src/roller/stages.ts)
+create or replace function roller_stages() returns int language sql immutable as $$ select 8 $$;
+
+create or replace function roller_save(p_token uuid, p_stage int, p_ms int, p_chips int) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); h players := home_of(me);
+begin
+  if p_stage not between 1 and roller_stages() then raise exception 'No such stage.'; end if;
+  -- nobody clears a stage in under two seconds, and the longest clock is well under ten minutes
+  if p_ms not between 2000 and 600000 then raise exception 'That time does not look right.'; end if;
+  -- stages are cleared in order (the Committee may try any)
+  if p_stage > 1 and me.role <> 'admin' and not exists (select 1 from roller_runs where player_id = h.id and stage = p_stage - 1) then
+    raise exception 'Clear the stage before it first.';
+  end if;
+  insert into roller_runs (player_id, stage, best_ms, chips) values (h.id, p_stage, p_ms, greatest(0, least(coalesce(p_chips, 0), 50)))
+  on conflict (player_id, stage) do update
+    set best_ms = least(roller_runs.best_ms, excluded.best_ms), chips = greatest(roller_runs.chips, excluded.chips), updated_at = now();
+end $$;
+
+create or replace function roller_state(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); h players := home_of(me);
+begin
+  return json_build_object(
+    'mine', coalesce((select json_agg(json_build_object('stage', r.stage, 'ms', r.best_ms, 'chips', r.chips) order by r.stage)
+      from roller_runs r where r.player_id = h.id), '[]'),
+    'board', coalesce((select json_agg(json_build_object('playerId', b.id, 'name', b.name, 'cleared', b.cleared, 'ms', b.ms, 'mine', b.id = me.id)
+        order by b.cleared desc, b.ms, b.name)
+      from (
+        select p.id, p.name, count(*)::int as cleared, sum(r.best_ms)::int as ms
+        from players p join roller_runs r on r.player_id = (home_of(p)).id
+        where p.group_id = me.group_id and not p.host_only
+        group by p.id, p.name
+      ) b), '[]'));
+end $$;
+
+revoke all on function roller_stages() from public, anon, authenticated;
+grant execute on function roller_save(uuid, int, int, int) to anon;
+grant execute on function roller_state(uuid) to anon;

@@ -4,6 +4,7 @@ import { getSession, listSessions, switchClub } from './api';
 import { holdSheet } from './dialog';
 import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
+import { roller } from './roller';
 import { golfer, leaveGolfer } from './screens/golfer';
 import { home, newPeriod } from './screens/home';
 import { invite } from './screens/invite';
@@ -82,6 +83,7 @@ async function router() {
     if (page === 'daily') return dailyRound(s);
     if (page === 'playoff') return playoff(s);
     if (page === 'bar') return arg === 'drive' || arg === 'members' || arg === 'midway' ? barRound(s, arg) : clubhouse(s, 'bar');
+    if (page === 'roller') return roller(s);
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     // the old Clubs tab became the Season
     if (page === 'clubhouse') return isAboutPart(arg) ? clubhouse(s, 'about', arg) : clubhouse(s, arg === 'clubs' ? 'season' : isClubhouseTab(arg) ? arg : 'members', extra);

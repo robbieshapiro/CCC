@@ -222,6 +222,9 @@ export type CardToday = CardProgress & { done: boolean; n?: number; of?: number;
 // sentThisWeek: curses you've sent; news: the week's goings-on (see newsLine in src/powerups.ts)
 export type PowerupState = { locker: { id: number; kind: string }[]; waiting?: number; sentThisWeek?: number; news?: { kind: string; status: string; mine: boolean; who: string | null; at: string }[] };
 export type LandedCurse = { id: number; kind: string; from: string | null; via: string | null };
+// High Roller (src/roller): each member's best time and chips a stage, and the club's board (most stages cleared,
+// then the lowest total of best times)
+export type RollerState = { mine: { stage: number; ms: number; chips: number }[]; board: { playerId: string; name: string; cleared: number; ms: number; mine: boolean }[] };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 // Nominate a friend: a member puts someone up with a first name and a mobile number; the Committee approves (an
 // invitation to text them) or declines. A member sees only their own, waiting or joined (never a decline).
@@ -256,6 +259,8 @@ export interface Api {
   listInvites(session: Session): Promise<Invite[]>;
   deleteInvite(session: Session, id: string): Promise<void>;
   peekInvite(id: string): Promise<InvitePeek | null>;
+  rollerState(session: Session): Promise<RollerState>;
+  rollerSave(session: Session, stage: number, ms: number, chips: number): Promise<void>; // a stage cleared: keeps the best
   nominate(session: Session, name: string, phone: string): Promise<void>;
   myNominations(session: Session): Promise<MyNomination[]>;
   adminNominations(session: Session): Promise<AdminNominations>;

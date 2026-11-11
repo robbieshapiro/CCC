@@ -10,6 +10,7 @@ import { MO, staffChip } from '../staff';
 import { requireSession } from '../state';
 import { esc, golferHref } from '../ui';
 import { openPrizeCounter } from './prizecounter';
+import { ALL_STAGES } from '../roller/stages';
 
 const top3 = (rows: { playerId?: string; name: string; label: string; mine: boolean }[]) =>
   rows.length
@@ -31,6 +32,7 @@ export function barPane(snap: Snapshot) {
       </section>
       <div class="bar-games">
         <a class="bar-game" href="#/daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
+        <a class="bar-game roller" href="#/roller"><i>🎱</i><div><b>High Roller</b><span>New · tilt the table, roll your golfer to the gate · 8 stages</span></div><p data-mine="roller"></p></a>
         <a class="bar-game midway" href="#/bar/midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game members" href="#/bar/members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
@@ -62,6 +64,11 @@ export async function fillBar(snap: Snapshot) {
     count.textContent = course.length ? `${course.length} ${course.length === 1 ? 'hole' : 'holes'} by ${[...new Set(course.map((h) => h.by))].slice(0, 3).join(', ')} · this week` : 'No member holes yet. Design the first.';
     if (!course.length) card.href = '#/design';
   }
+  // High Roller: how far you've got
+  void api.rollerState(s).then((r) => {
+    const el = document.querySelector('[data-mine="roller"]');
+    if (el && r.mine.length) el.textContent = `You've cleared ${r.mine.length} of ${ALL_STAGES.length}`;
+  }).catch(() => {});
   const put = (game: string, mine: string, board: string) => {
     const m = document.querySelector(`[data-mine="${game}"]`);
     const b = document.querySelector(`[data-board="${game}"]`);
