@@ -239,6 +239,8 @@ export class GolferStage {
     this.turn.add(ring);
     this.ring = ring;
     this.scene.add(this.turn);
+    // start three-quarters on, toward the camera with the bag beside (then the slow turn takes over)
+    this.turn.rotation.y = -0.6;
     this.set(spec);
     const el = this.renderer.domElement;
     el.style.touchAction = 'pan-y';

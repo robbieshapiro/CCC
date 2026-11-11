@@ -562,7 +562,7 @@ export class Golfer {
   private legs: THREE.Group[] = [];
   private arms: { upper: THREE.Group; lower: THREE.Group; side: number }[] = [];
   private t = 0;
-  private state: { pose: PoseName; hold?: number; react?: { kind: Reaction; t: number }; swing?: { t: number; back: number; dur: number; impact: () => void; done: () => void; hit: boolean } } = { pose: 'idle' };
+  private state: { pose: PoseName; hold?: number; finish?: { phi: number; twist: number }; react?: { kind: Reaction; t: number }; swing?: { t: number; back: number; dur: number; impact: () => void; done: () => void; hit: boolean } } = { pose: 'idle' };
   private cur = { tilt: 0, phi: 0, twist: 0, bend: 0, knee: 0, headTilt: 0 };
 
   constructor(readonly spec: GolferSpec) {
@@ -1375,6 +1375,21 @@ export class Golfer {
         target.phi = this.state.hold;
         target.twist = putting ? 0 : this.state.hold * 0.32;
       }
+      const fin = this.state.finish;
+      if (fin) {
+        target.phi = fin.phi;
+        target.twist = fin.twist;
+        if (putting) {
+          // putter held through, eyes up along the line
+          target.headTilt = 0.05;
+        } else {
+          // a full swing finishes tall, chest to the target, eyes up after the ball
+          target.bend = 0.18;
+          target.tilt = -0.48 - target.bend;
+          target.knee = 0.12;
+          target.headTilt = -0.25;
+        }
+      }
     } else if (p === 'cheer') {
       target.tilt = Math.PI * 0.95;
       target.phi = Math.sin(this.t * 7) * 0.25;
@@ -1476,8 +1491,10 @@ export class Golfer {
       }
       target.phi = phi;
       target.twist = putting ? 0 : phi * 0.32;
+      // the swing's over: hold the follow-through and watch the ball (until the next setPose, usually address for the
+      // next shot, which eases back over about a third of a second)
       if (k > 1.35) {
-        this.state = { pose: 'address' };
+        this.state = { pose: 'address', finish: { phi, twist: target.twist } };
         sw.done();
       }
       this.cur.phi = phi;
