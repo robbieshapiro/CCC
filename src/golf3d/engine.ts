@@ -389,6 +389,7 @@ export class Course3D {
     this.bindInput();
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.onKey);
+    document.addEventListener('visibilitychange', this.onHidden);
     this.resize();
     this.loop();
     if (import.meta.env.DEV) Object.assign(window, { __g3: this }); // for browser tests
@@ -398,6 +399,7 @@ export class Course3D {
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKey);
+    document.removeEventListener('visibilitychange', this.onHidden);
     this.world?.dispose();
     this.cart?.dispose();
     this.clearGhosts();
@@ -786,6 +788,7 @@ export class Course3D {
           </div>
         </div>
         <p data-swing-tip></p>
+        <button class="g3-swing-cancel" data-swing-cancel type="button">Cancel</button>
       </div>
       <div class="g3-callout" data-callout></div>
       <div class="g3-intro" data-intro aria-live="polite"></div>
@@ -812,6 +815,7 @@ export class Course3D {
       if (await ask(o)) this.onQuit();
     };
     if (this.drill && this.drill.stations.length > 1) q('[data-station]').onclick = () => this.nextStation();
+    q('[data-swing-cancel]').onclick = () => this.cancelSwing();
     if (this.menu) q('[data-holes]').onclick = () => this.holeMenu();
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
       b.onclick = () => {
@@ -1416,6 +1420,22 @@ export class Course3D {
     (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = 'Tap on the gold line';
     this.hint('');
     sfx('tick');
+  }
+
+  // the app put away mid-swing (a call, the home screen) before the power was set: call it off rather than let the bar
+  // run to the top while nobody's looking
+  private onHidden = () => {
+    if (document.hidden) this.cancelSwing();
+  };
+
+  // Called off before the power was set: back to aiming, no stroke. (The bar reaching the top untapped does this too,
+  // so a thumb slip while aiming isn't a 110% hook on a locked card.) Once the power's set, the swing is committed.
+  private cancelSwing(why = 'Swing called off') {
+    if (this.mode !== 'meter' || this.meter.phase !== 'power') return;
+    (this.overlay.querySelector('[data-swing]') as HTMLElement).hidden = true;
+    this.mode = 'aim';
+    this.golfer.setPose('address');
+    this.callout(why, 'No stroke. Tap to swing when ready.', 1400);
   }
 
   // Where the meter is at time `at` (performance.now ms). True once the bar has reached the top, or the needle has gone
@@ -2297,9 +2317,12 @@ export class Course3D {
 
     if (this.mode === 'meter') {
       const m = this.meter;
-      // on real time (see meter.ts): the bar fills faster toward the top and stops on its own at the end of the
-      // overswing; the needle gone right past the impact point is a full hook
-      if (this.meterTo(now)) this.tapSwing(now);
+      // on real time (see meter.ts): the bar fills faster toward the top, and reaching the end of the overswing untapped
+      // calls the swing off; the needle gone right past the impact point is a full hook
+      if (this.meterTo(now)) {
+        if (m.phase === 'power') this.cancelSwing("Didn't stop it");
+        else this.tapSwing(now);
+      }
       const needle = this.overlay.querySelector('[data-needle]') as HTMLElement | null;
       if (needle) this.mark(needle, Math.max(0, m.x));
       const fill = this.overlay.querySelector('[data-fill]') as HTMLElement | null;
