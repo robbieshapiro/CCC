@@ -134,20 +134,36 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
     g.drawImage(off, x0 - size / 2, y0 - size / 2, w * size, h * size);
   }
   g.setTransform(1, 0, 0, 1, 0, 0);
-  // grain, so close-up grass isn't flat colour
-  const img = g.getImageData(0, 0, c.width, c.height);
-  const rng = makeRng(`grain:${h.id}`);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const n = (rng.next() - 0.5) * 14;
-    img.data[i] += n;
-    img.data[i + 1] += n;
-    img.data[i + 2] += n;
-  }
-  g.putImageData(img, 0, 0);
+  // grain, so close-up grass isn't flat colour: a small tile of grey noise laid over the whole canvas in one 'overlay'
+  // draw, which nudges each pixel lighter or darker by a few shades (about the ±7 the old per-pixel pass added). Until
+  // Nov 11 this read the whole canvas back (up to 4096 px, about 26 MB) and wrote it out again, most of a hole's build
+  // time on a slow device.
+  g.save();
+  g.globalCompositeOperation = 'overlay';
+  g.fillStyle = g.createPattern(grainTile(`grain:${h.id}`), 'repeat')!;
+  g.fillRect(0, 0, c.width, c.height);
+  g.restore();
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 16;
   t.userData.ownCanvas = true; // this hole's alone: its canvas is let go when the hole is
+  return t;
+}
+
+// The ground's grain: 256 px of grey noise around mid grey, seeded per hole so it's the same every visit.
+function grainTile(seed: string) {
+  const N = 256;
+  const t = document.createElement('canvas');
+  t.width = t.height = N;
+  const g = t.getContext('2d')!;
+  const img = g.createImageData(N, N);
+  const rng = makeRng(seed);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 128 + (rng.next() - 0.5) * 22;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
   return t;
 }
 
