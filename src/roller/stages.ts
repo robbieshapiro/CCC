@@ -29,7 +29,7 @@ const LOUNGE: Stage[] = [
   {
     id: 'ante',
     name: 'Ante',
-    tip: 'Drag anywhere to tilt the table. Roll through the gold gate.',
+    tip: 'Drag to tilt the table. Roll through the gold gate.',
     time: 60,
     start: start(),
     goal: { p: [0, 0, -20] },

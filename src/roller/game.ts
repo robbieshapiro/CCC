@@ -1,5 +1,5 @@
-// High Roller, the part you see: one stage in 3D with your golfer inside the ball, the camera that rolls with the tilt,
-// the thumb stick, and the clock. The physics is sim.ts; this draws it and feeds it the stick.
+// High Roller, the part you see: one stage in 3D with your golfer inside the ball, a level camera that never turns, the
+// table tipping under the ball, the thumb stick, and the clock. The physics is sim.ts; this draws it and feeds it the stick.
 import * as THREE from 'three';
 import { Golfer, type GolferSpec } from '../golf3d/golfer';
 import { sfx } from '../fx/sound';
@@ -211,9 +211,10 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
       <div class="rl-clock" data-clock>${stage.time.toFixed(1)}</div>
       <div class="rl-chips"><i></i><b data-chips>0</b><small>/ ${stage.chips.length}</small></div>
     </div>
+    <div class="rl-level" aria-hidden="true"><i data-level></i></div>
     <div class="rl-call" data-call></div>
     <p class="rl-tip" data-tip>${stage.tip ?? ''}</p>
-    <div class="rl-stick" data-stick hidden><i></i></div>`;
+    <div class="rl-stick" data-stick><i></i><small data-start>Drag to start</small></div>`;
   const canvas = host.querySelector('canvas')!;
   const q = <T extends HTMLElement>(s: string) => host.querySelector(s) as T;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -235,9 +236,12 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
   scene.add(buildCity());
 
   const tex = { felt: feltTex('#0f5a3c'), blue: feltTex('#1f4a8a'), wheel: wheelTex(), stack: stackTex() };
+  // the whole stage in one group: it tips under the ball while the horizon and the camera stay level
+  const table = new THREE.Group();
+  scene.add(table);
   const solids = stage.solids.map((s) => {
     const o = buildSolid(s, tex);
-    scene.add(o);
+    table.add(o);
     return o;
   });
   const place = (t: number) =>
@@ -249,7 +253,7 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
   const gate = buildGate();
   gate.position.set(stage.goal.p[0], stage.goal.p[1], stage.goal.p[2]);
   gate.rotation.y = stage.goal.yaw ?? 0;
-  scene.add(gate);
+  table.add(gate);
 
   // chips to pick up, standing on edge and turning
   const chipGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.09, 24);
@@ -279,7 +283,7 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
     const m = new THREE.Mesh(chipGeo, chipMats);
     m.position.set(c[0], c[1], c[2]);
     m.castShadow = true;
-    scene.add(m);
+    table.add(m);
     return m;
   });
 
@@ -314,16 +318,22 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
   const stickEl = q<HTMLElement>('[data-stick]');
   const knob = stickEl.querySelector('i') as HTMLElement;
   const REACH = 64;
+  // the first touch (or key) of a run starts the clock
+  const begin = () => {
+    if (phase !== 'ready' || paused) return;
+    phase = 'go';
+    q('[data-tip]').classList.add('gone');
+    q('[data-start]').hidden = true;
+    call('Go!', 'go');
+    window.setTimeout(() => phase === 'go' && call(''), 500);
+  };
   const down = (e: PointerEvent) => {
-    if (stick.id !== -1 || (e.target as HTMLElement).closest('button')) return;
+    if (stick.id !== -1 || (e.target as HTMLElement).closest('button, .rl-sheet')) return;
     stick.id = e.pointerId;
     stick.ox = e.clientX;
     stick.oy = e.clientY;
-    stickEl.hidden = false;
-    stickEl.style.left = `${e.clientX}px`;
-    stickEl.style.top = `${e.clientY}px`;
-    knob.style.transform = '';
-    q('[data-tip]').classList.add('gone');
+    stickEl.classList.add('held');
+    begin();
   };
   const move = (e: PointerEvent) => {
     if (e.pointerId !== stick.id) return;
@@ -332,14 +342,15 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
     if (m > 1) (dx /= m), (dy /= m);
     stick.x = dx;
     stick.y = -dy;
-    knob.style.transform = `translate(${dx * REACH}px, ${dy * REACH}px)`;
+    knob.style.transform = `translate(${dx * 38}px, ${dy * 38}px)`;
   };
-  const up = (e: PointerEvent) => {
-    if (e.pointerId !== stick.id) return;
+  const letGo = () => {
     stick.id = -1;
     stick.x = stick.y = 0;
-    stickEl.hidden = true;
+    knob.style.transform = '';
+    stickEl.classList.remove('held');
   };
+  const up = (e: PointerEvent) => e.pointerId === stick.id && letGo();
   host.addEventListener('pointerdown', down);
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', up);
@@ -349,7 +360,7 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
     const k = e.key.toLowerCase();
     if (!['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(k)) return;
     e.preventDefault();
-    if (e.type === 'keydown') keys.add(k), q('[data-tip]').classList.add('gone');
+    if (e.type === 'keydown') keys.add(k), begin();
     else keys.delete(k);
   };
   window.addEventListener('keydown', key);
@@ -361,8 +372,10 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
   const yaw0 = Math.atan2(-(first.x - stage.start[0]), -(first.z - stage.start[2]));
   let ball: Ball = newBall(stage);
   let acc = { t: 0 };
-  let yaw = yaw0;
+  const yaw = yaw0; // the camera never turns: up on the stick is always away from you
   let tilt = { x: 0, z: 0 };
+  let seen = { x: 0, z: 0 }; // the lean as drawn: it settles more slowly than the real one
+  let camY = stage.start[1];
   let phase: 'ready' | 'go' | 'over' = 'ready';
   let wait = 0; // the count-in, then the pause before the result
   let paused = false;
@@ -378,10 +391,11 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
   function reset() {
     ball = newBall(stage);
     acc = { t: 0 };
-    yaw = yaw0;
     tilt = { x: 0, z: 0 };
     phase = 'ready';
-    wait = 1.1;
+    wait = 0;
+    letGo(); // a new touch starts the next go
+    keys.clear();
     done = null;
     taken = 0;
     spinQ.identity();
@@ -390,11 +404,13 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
     conf.visible = false;
     golfer.setPose('idle');
     q('[data-chips]').textContent = '0';
-    call('Ready');
+    call('');
+    q('[data-tip]').classList.remove('gone');
+    q('[data-start]').hidden = false;
   }
   reset();
 
-  const up3 = new THREE.Vector3(), back = new THREE.Vector3(), look = new THREE.Vector3(), axis = new THREE.Vector3(), dq = new THREE.Quaternion();
+  const up3 = new THREE.Vector3(), back = new THREE.Vector3(), pivot = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0), look = new THREE.Vector3(), axis = new THREE.Vector3(), dq = new THREE.Quaternion();
   let last = performance.now();
   let raf = 0;
   let dead = false;
@@ -411,7 +427,7 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       // a tall phone sees less to the sides: widen the view a little
-      camera.fov = w < h ? 68 : 56;
+      camera.fov = w < h ? 62 : 52;
       camera.updateProjectionMatrix();
     }
     if (!paused) {
@@ -431,12 +447,7 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
       tilt.z += (wz - tilt.z) * ease;
 
       if (phase === 'ready') {
-        wait -= dt;
-        if (wait <= 0) {
-          phase = 'go';
-          call('Go!', 'go');
-          window.setTimeout(() => phase === 'go' && call(''), 600);
-        }
+        // waiting for the first touch (see begin)
       } else if (phase === 'go') {
         const before = ball.p.slice();
         advance(ball, stage, tilt.x, tilt.z, dt, acc, floor);
@@ -485,7 +496,6 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
         if (done?.state === 'goal') {
           ball.v[0] *= 0.9;
           ball.v[2] *= 0.9;
-          yaw += dt * 0.9;
           for (let i = 0; i < N; i++) {
             cvel[i * 3 + 1] -= 9 * dt;
             for (let k = 0; k < 3; k++) cpos[i * 3 + k] += cvel[i * 3 + k] * dt;
@@ -519,33 +529,37 @@ export function play(host: HTMLElement, stage: Stage, spec: GolferSpec, label: s
       heading += d * Math.min(1, dt * 9);
     }
     rider.position.set(bx, by, bz);
-    // leaning into it a touch as the speed builds
-    golfer.group.rotation.x = Math.min(0.3, speed * 0.022);
     chips.forEach((c, i) => c.visible && (c.rotation.y = now / 500 + i));
     sun.position.set(bx + 9, by + 22, bz + 7);
     sun.target.position.set(bx, by, bz);
 
-    // the camera sits behind the ball and swings round to follow where it's going
-    if (phase === 'go' && speed > 1.2) {
-      const want = Math.atan2(-ball.v[0], -ball.v[2]);
-      let d = want - yaw;
-      d = Math.atan2(Math.sin(d), Math.cos(d));
-      yaw += d * Math.min(1, dt * 1.9) * Math.min(1, speed / 5);
-    }
-    // the table tips: really it's the camera rolling the other way about the ball
-    const m = Math.min(1, Math.hypot(tilt.x, tilt.z));
-    const ang = m * MAX_TILT;
-    const sx = m > 1e-4 ? tilt.x / Math.hypot(tilt.x, tilt.z) : 0, sz = m > 1e-4 ? tilt.z / Math.hypot(tilt.x, tilt.z) : 0;
-    up3.set(-Math.sin(ang) * sx, Math.cos(ang), -Math.sin(ang) * sz);
-    back.set(Math.sin(yaw), 0, Math.cos(yaw));
-    back.addScaledVector(up3, -back.dot(up3)).normalize();
-    // your golfer stays upright on screen while the table tips under them
-    rider.quaternion.setFromUnitVectors(look.set(0, 1, 0), up3).multiply(dq.setFromAxisAngle(look, heading));
+    // the lean as drawn eases in and out, so letting go doesn't snap the picture flat
+    const soft = Math.min(1, dt * 5);
+    seen.x += (tilt.x - seen.x) * soft;
+    seen.z += (tilt.z - seen.z) * soft;
+    const m = Math.min(1, Math.hypot(seen.x, seen.z));
+    const sx = m > 1e-4 ? seen.x / Math.hypot(seen.x, seen.z) : 0, sz = m > 1e-4 ? seen.z / Math.hypot(seen.x, seen.z) : 0;
+    // the table tips under the ball, a little over half the real lean: enough to read, not enough to swim
+    const show = m * MAX_TILT * 0.6;
+    // (it dips the way you lean, so its upright leans that way too)
+    up3.set(Math.sin(show) * sx, Math.cos(show), Math.sin(show) * sz);
+    table.quaternion.setFromUnitVectors(Y, up3);
+    pivot.set(bx, by - R, bz);
+    table.position.copy(pivot).sub(look.copy(pivot).applyQuaternion(table.quaternion));
+    // your golfer leans the way the ball is being sent
+    up3.set(Math.sin(show * 0.7) * sx, Math.cos(show * 0.7), Math.sin(show * 0.7) * sz);
+    rider.quaternion.setFromUnitVectors(Y, up3).multiply(dq.setFromAxisAngle(Y, heading));
+    // the dial under the clock: the dot sits the way you're leaning
+    const dot = q('[data-level]');
+    dot.style.transform = `translate(${(Math.cos(yaw) * seen.x - Math.sin(yaw) * seen.z) * 15}px, ${(Math.sin(yaw) * seen.x + Math.cos(yaw) * seen.z) * 15}px)`;
+
+    // the camera: level, high and behind, always looking the same way down the stage. It only slides with the ball.
     const tall = w < h;
-    const cy = Math.max(by, floor + 6); // don't follow a falling ball all the way down
-    camera.position.set(bx, cy, bz).addScaledVector(back, tall ? 5.2 : 4.6).addScaledVector(up3, tall ? 2.9 : 2.4);
-    camera.up.copy(up3);
-    look.set(bx, by, bz).addScaledVector(up3, 0.7);
+    camY += (Math.max(by, floor + 6) - camY) * Math.min(1, dt * 6); // smooth over bounces; don't follow a fall all the way
+    back.set(Math.sin(yaw), 0, Math.cos(yaw));
+    camera.position.set(bx, camY, bz).addScaledVector(back, tall ? 8.2 : 7.6).addScaledVector(Y, tall ? 7.4 : 6.2);
+    camera.up.copy(Y);
+    look.set(bx, camY, bz).addScaledVector(back, -2.6);
     camera.lookAt(look);
     renderer.render(scene, camera);
   }

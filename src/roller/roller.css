@@ -53,10 +53,16 @@ body:has(.rl-menu) { background: radial-gradient(120% 80% at 50% 0%, #3a1a4a 0%,
 .rl-call.on { opacity: 1; transform: scale(1); }
 .rl-call.goal { color: #f6c56a; }
 .rl-call.out { color: #ff8d7a; text-shadow: 0 3px 0 #5a1a12, 0 0 30px rgba(0, 0, 0, 0.6); }
-.rl-tip { position: absolute; left: 16px; right: 16px; bottom: calc(22px + env(safe-area-inset-bottom)); margin: 0 auto; max-width: 420px; text-align: center; padding: 10px 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.5); font-size: 14px; pointer-events: none; transition: opacity 0.4s; }
+.rl-tip { position: absolute; left: 16px; right: 16px; top: calc(118px + env(safe-area-inset-top)); margin: 0 auto; max-width: 420px; text-align: center; padding: 10px 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.5); font-size: 14px; pointer-events: none; transition: opacity 0.4s; }
 .rl-tip:empty, .rl-tip.gone { opacity: 0; }
-.rl-stick { position: absolute; width: 128px; height: 128px; margin: -64px 0 0 -64px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); pointer-events: none; }
-.rl-stick i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(241, 213, 143, 0.85); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); }
+.rl-stick { position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); width: 116px; height: 116px; margin-left: -58px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.45); background: rgba(0, 0, 0, 0.3); pointer-events: none; transition: opacity 0.2s; }
+.rl-stick.held { border-color: #f1d58f; }
+.rl-stick i { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; background: rgba(241, 213, 143, 0.92); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45); }
+.rl-stick small { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 10px; white-space: nowrap; padding: 6px 12px; border-radius: 999px; background: #f6c56a; color: #2a1c05; font: 800 12px var(--font, system-ui); letter-spacing: 0.08em; text-transform: uppercase; animation: rl-nudge 0.9s ease-in-out infinite alternate; }
+@keyframes rl-nudge { to { transform: translateX(-50%) translateY(-5px); } }
+.rl-level { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top)); width: 44px; height: 44px; margin-left: -22px; border-radius: 50%; border: 1px solid rgba(241, 213, 143, 0.6); background: rgba(0, 0, 0, 0.35); pointer-events: none; }
+.rl-level::before { content: ''; position: absolute; inset: 50% auto auto 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255, 255, 255, 0.35); }
+.rl-level i { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #f6c56a; }
 .rl-sheet { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(8, 6, 22, 0.6); backdrop-filter: blur(3px); }
 .rl-card { width: min(380px, 100%); text-align: center; padding: 22px 20px; border-radius: 18px; background: linear-gradient(160deg, #0f5a3c, #093a28); border: 1px solid #d6a940; box-shadow: 0 24px 60px -20px #000; }
 .rl-card .rl-eyebrow { margin: 0 0 6px; }
