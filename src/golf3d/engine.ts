@@ -15,7 +15,7 @@ import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from '
 import { MAGNET_FT } from '../powerups';
 import { pour } from './drinks';
 import { Golfer, HANK_SPEC, reactionFor, type Reaction } from './golfer';
-import { BALL_R, dropPoint, escapeLoft, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Frame, type Result } from './physics';
+import { BALL_R, dropPoint, escapeLoft, G, greenFriction, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Frame, type Result } from './physics';
 import * as stands from './stands';
 import * as props from './props';
 import { buildWorld, w3, type World } from './scene';
@@ -188,6 +188,11 @@ function targetMarker() {
   g.add(beam);
   return g;
 }
+
+// The pace mark on the putting bar (Nov 11): a gold tick at the pull that rolls the ball to the hole on a flat green,
+// and the roll in feet beside the bar as you pull back. It ignores slope on purpose: reading the break is still the
+// skill. 'everyone' shows it on every green; 'practice' only in practice rounds and practice swings; 'off' nowhere.
+export const PACE_MARK: 'everyone' | 'practice' | 'off' = 'everyone';
 
 // When the ball first comes down: the first frame, after it's left the ground, within a few inches of it. A putt (or a
 // chip that never gets up) is on the ground from the start.
@@ -815,7 +820,8 @@ export class Course3D {
       </div>
       <canvas class="g3-mini" width="132" height="168" aria-hidden="true"></canvas>
       <div class="g3-drink" data-drink hidden></div>
-      <div class="g3-power" aria-hidden="true"><i data-power></i></div>
+      <div class="g3-power" aria-hidden="true"><i data-power></i><b class="pace" data-pace hidden></b></div>
+      <div class="g3-roll" data-roll hidden></div>
       <div class="g3-strike" data-strike hidden>
         <small class="t">Top</small><small class="l">Draw</small>
         <div class="g3-ball" data-ball role="slider" aria-label="Strike point: spin and shape" tabindex="0"><i data-dot></i></div>
@@ -1606,6 +1612,10 @@ export class Course3D {
   // A putt goes where you aim it, as hard as you pulled it back.
   // The putter is already back where you pulled it to: let go and it comes through.
   private putt() {
+    if (this.paceTip && !(this.overlay.querySelector('[data-pace]') as HTMLElement).hidden) {
+      this.paceTip = false;
+      store.set('ccc-pace-tip', '1');
+    }
     this.swing(0, 'top');
   }
 
@@ -1691,6 +1701,34 @@ export class Course3D {
     } else sfx(club === 'putter' ? 'tick' : club === 'driver' ? 'crack' : 'thump');
     this.follow.set(Math.sin(this.aim), 0, -Math.cos(this.aim));
   }
+
+  // The putting bar's pace mark and roll (see PACE_MARK): only while pulling a putt back on a green
+  private drawPace() {
+    const pace = this.overlay.querySelector('[data-pace]') as HTMLElement | null;
+    const roll = this.overlay.querySelector('[data-roll]') as HTMLElement | null;
+    if (!pace || !roll) return;
+    const on =
+      this.club === 'putter' &&
+      this.mode === 'aim' &&
+      this.drag?.kind === 'power' &&
+      !this.hole.putterOnly &&
+      PACE_MARK !== 'off' &&
+      (PACE_MARK === 'everyone' || this.practice || this.howTo === 'practice') &&
+      surfaceAt(this.hole, this.pos) === 'green';
+    pace.hidden = roll.hidden = !on;
+    if (!on) return;
+    const f = greenFriction(this.hole);
+    const [v0, v1] = CLUBS.putter.carry;
+    const to = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
+    // the pull whose roll on a flat green just reaches the hole: speed² = 2·friction·distance
+    const mark = Math.max(0, Math.min(1, (Math.sqrt(2 * f * to) - v0) / (v1 - v0)));
+    pace.style.bottom = `${mark * 100}%`;
+    const v = carryOf('putter', this.power);
+    const ft = Math.round(((v * v) / (2 * f)) * SCALE);
+    roll.innerHTML = `<b>${ft} ft</b>${this.paceTip ? '<span>Gold mark: flat pace to the hole</span>' : ''}`;
+  }
+  // the label on the mark, until their first putt with it
+  private paceTip = !store.get('ccc-pace-tip');
 
   // a tap while the ball's on its way: once it has landed, play the rest out at 3x
   private hurryTip = Number(store.get('ccc-hurry-tip') ?? 0);
@@ -2319,6 +2357,7 @@ export class Course3D {
     }
     this.dots.count = n;
     this.dots.instanceMatrix.needsUpdate = true;
+    this.drawPace();
     const bar = this.overlay.querySelector('[data-power]') as HTMLElement | null;
     if (bar) {
       bar.style.height = `${Math.round(this.power * 100)}%`;

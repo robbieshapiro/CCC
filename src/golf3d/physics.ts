@@ -14,6 +14,8 @@ export const cupR = (h: Hole) => (h.tour ? TOUR_CUP_R : CUP_R) * (h.cupScale ?? 
 // the fastest a ball can roll over the dead centre of a tour cup and still drop (ft/s); it's slower toward the edge
 export const DROP_SPEED = 9.5;
 export const TOUR_GREEN = 3;
+// how hard a hole's greens hold a rolling ball back (ft/s²); the engine's pace mark on the putting bar uses it too
+export const greenFriction = (h: Hole) => (h.tour ? TOUR_GREEN : FRICTION.green) * (h.turf?.greenRoll ?? 1) * (h.wet ? 1.08 : 1);
 const TOUR_FAIRWAY = 5;
 const TOUR_BITE = 1.4; // tour turf grabs a spinning ball a little harder than the Highlands, not three times
 export const G = 32;
@@ -219,7 +221,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
   const wet = h.wet ? 1.15 : 1;
   const friction = (s: Surface) =>
     s === 'green'
-      ? greenF * (h.turf?.greenRoll ?? 1) * (h.wet ? 1.08 : 1)
+      ? greenFriction(h)
       : s === 'fairway' && h.tour
         ? TOUR_FAIRWAY * (h.turf?.fairwayRoll ?? 1) * wet
         : s === 'rough' && h.turf
