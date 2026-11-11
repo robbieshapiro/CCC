@@ -40,7 +40,29 @@ window.visualViewport?.addEventListener('resize', () => {
 let route = '';
 let routing = false; // the router draws the page itself; the refresh hook mustn't draw it a second time
 
+// Scroll: a new page starts at the top; Back (the browser's, or a screen's own) returns to where you were.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+const scrolls = new Map<string, number>();
+let shownHash = location.hash;
+let goingBack = false;
+window.addEventListener('popstate', () => (goingBack = true));
+window.addEventListener('scroll', () => scrolls.set(shownHash, window.scrollY), { passive: true });
+
 async function router() {
+  const hash = location.hash;
+  const back = goingBack;
+  goingBack = false;
+  const same = hash === shownHash;
+  shownHash = hash;
+  await draw();
+  if (same) return;
+  // a screen's own fetches can still be filling it in, so try again a moment later if the page isn't tall enough yet
+  const y = back ? (scrolls.get(hash) ?? 0) : 0;
+  window.scrollTo(0, y);
+  if (y > 0) window.setTimeout(() => shownHash === hash && window.scrollY < y - 2 && window.scrollTo(0, y), 400);
+}
+
+async function draw() {
   closeRound();
   leaveCard();
   leaveShop();
