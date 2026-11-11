@@ -302,6 +302,11 @@ export class Course3D {
   howTo: 'round' | 'practice' | 'daily' | 'minigolf' = 'round';
   // Hank the Starter's word on the first tee of a round
   starter = '';
+  // A first-timer's first tee (Nov 11): Hank walks them through a practice swing (aim, power, strike) at a slower meter.
+  // Practice swings never count; once it's done or skipped, onGuided says so and it isn't shown again.
+  guided = false;
+  onGuided: (() => void) | null = null;
+  private walk: 'aim' | 'swing' | 'power' | 'strike' | null = null;
   // told after every swing, for the practice log
   onShot: (() => void) | null = null;
   // after every counted stroke, with the hole's count so far (a daily card saves itself on each one)
@@ -815,6 +820,7 @@ export class Course3D {
       <div class="g3-callout" data-callout></div>
       <div class="g3-intro" data-intro aria-live="polite"></div>
       <div class="g3-hint" data-hint></div>
+      <button class="g3-guide-skip" data-guide-skip type="button" hidden>Skip the walkthrough</button>
       <div class="g3-read" data-read hidden></div>
       <div class="g3-cart" data-cart hidden></div>
       <div class="g3-bottom">
@@ -866,6 +872,7 @@ export class Course3D {
     const practice = q('[data-practice]');
     practice.onclick = () => {
       if (this.mode !== 'aim' || this.strokes > 0) return;
+      if (this.walk) return this.endGuide();
       this.practice = !this.practice;
       practice.textContent = this.practice ? 'Practice: on' : 'Practice';
       practice.setAttribute('aria-pressed', String(this.practice));
@@ -874,6 +881,7 @@ export class Course3D {
       sfx('tick');
     };
     q('[data-skip]').onclick = () => this.endFlyover();
+    q('[data-guide-skip]').onclick = () => this.endGuide();
     q('[data-help]').onclick = () => this.showHowTo();
     const w = this.wind!;
     q('[data-wind-speed]').textContent = w.mph ? `${w.mph} mph` : 'Calm';
@@ -1043,6 +1051,48 @@ export class Course3D {
     const go = () => card.remove();
     card.querySelector<HTMLButtonElement>('[data-go]')!.onclick = go;
     card.onclick = (e) => e.target === card && go();
+  }
+
+  // ---------- the first-tee walkthrough ----------
+
+  private setPracticePill(on: boolean) {
+    this.practice = on;
+    const b = this.overlay.querySelector('[data-practice]') as HTMLElement | null;
+    if (!b) return;
+    b.textContent = on ? 'Practice: on' : 'Practice';
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('on', on);
+  }
+
+  private guideSay(beat: NonNullable<typeof this.walk>) {
+    this.walk = beat;
+    this.hint(
+      {
+        aim: "Hank: Let's have a practice one first. It won't count. Drag left or right to aim.",
+        swing: 'Hank: Good. Now tap anywhere to start your swing.',
+        power: 'Hank: Tap again when the bar reaches the gold line.',
+        strike: 'Hank: Now tap as the needle comes down into the gold.',
+      }[beat],
+    );
+  }
+
+  private startGuide() {
+    this.setPracticePill(true);
+    (this.overlay.querySelector('[data-guide-skip]') as HTMLElement).hidden = false;
+    this.guideSay('aim');
+  }
+
+  // done (after the practice swing) or skipped: the next swing counts, and it isn't shown again
+  private endGuide(done = false) {
+    if (!this.walk) return;
+    if (this.mode === 'meter') this.cancelSwing();
+    this.walk = null;
+    this.guided = false;
+    (this.overlay.querySelector('[data-guide-skip]') as HTMLElement).hidden = true;
+    this.setPracticePill(false);
+    this.hint(done ? "Hank: That's the swing. This next one's for real." : '');
+    if (!done) this.callout('Your swing counts now', 'Tap Practice for a warm-up first', 1800);
+    this.onGuided?.();
   }
 
   private hint(text: string) {
@@ -1285,6 +1335,10 @@ export class Course3D {
           ? 'Drag the dot on the ball for spin, or to bend the shot. Mind the wind.'
           : '',
     );
+    // a first-timer's first tee: the walkthrough, or its last line once the practice swing has landed
+    if (first && this.guided && !this.walk) this.startGuide();
+    else if (this.walk === 'strike') this.endGuide(true);
+    else if (this.walk) this.guideSay(this.walk === 'power' ? 'swing' : this.walk);
     this.golfer.setPose('address');
   }
 
@@ -1326,6 +1380,7 @@ export class Course3D {
       const d = this.drag;
       this.drag = null;
       if (!d || this.mode !== 'aim') return;
+      if (this.walk === 'aim' && d.kind === 'aim') return this.guideSay('swing');
       // a tap on another member: their card, not a swing
       if (!d.kind && this.onGhostTap) {
         const g = this.ghostAt(e.clientX, e.clientY);
@@ -1421,7 +1476,9 @@ export class Course3D {
     if (this.mode !== 'aim' || this.club === 'putter') return;
     const drink = this.drink ? DRINKS[this.drink.kind] : null;
     this.mode = 'meter';
-    this.meter = { phase: 'power', p: 0, d: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0, t0: performance.now(), x0: 0, boosted: (drink?.boost ?? 1) > 1 };
+    // the walkthrough's practice swing runs the meter at 60%, so there's time to see what it's doing
+    const slow = this.walk && this.practice ? 0.6 : 1;
+    this.meter = { phase: 'power', p: 0, d: 0, x: barX(0), speed: (drink?.needle ?? 1) * slow, half: 0, t0: performance.now(), x0: 0, boosted: (drink?.boost ?? 1) > 1 };
     const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
     m.hidden = false;
     m.classList.remove('accuracy');
@@ -1441,6 +1498,7 @@ export class Course3D {
     (this.overlay.querySelector('[data-pure]') as HTMLElement).style.cssText = 'display:none';
     (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = 'Tap on the gold line';
     this.hint('');
+    if (this.walk) this.guideSay('power');
     sfx('tick');
   }
 
@@ -1458,6 +1516,7 @@ export class Course3D {
     this.mode = 'aim';
     this.golfer.setPose('address');
     this.callout(why, 'No stroke. Tap to swing when ready.', 1400);
+    if (this.walk) this.guideSay('swing');
   }
 
   // Where the meter is at time `at` (performance.now ms). True once the bar has reached the top, or the needle has gone
@@ -1492,7 +1551,8 @@ export class Course3D {
       m.phase = 'accuracy';
       const fire = (drink?.boost ?? 1) > 1;
       m.half = goldHalf(this.club, m.p, drink?.sweet ?? 1, this.style(), fire);
-      m.speed = returnSpeed(this.club, m.p, drink?.needle ?? 1, this.style(), fire);
+      m.speed = returnSpeed(this.club, m.p, drink?.needle ?? 1, this.style(), fire) * (this.walk && this.practice ? 0.6 : 1);
+      if (this.walk) this.guideSay('strike');
       // the needle sets off back from where the bar stopped, from the moment of the tap
       m.t0 = when;
       m.x0 = m.x;

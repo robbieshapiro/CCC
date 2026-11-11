@@ -212,6 +212,8 @@ html:has(.g3), body:has(.g3) { overflow: hidden; overscroll-behavior: none; }
 .g3-focus.on { opacity: 1; }
 .g3-hint { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); text-align: center; font-weight: 700; font-size: 14px; padding: 8px 14px; border-radius: 999px; background: rgba(15, 42, 31, 0.6); }
 .g3-hint:empty { display: none; }
+.g3-guide-skip { position: absolute; left: 50%; top: calc(var(--hud-top, calc(76px + env(safe-area-inset-top, 0px))) + 40px); transform: translateX(-50%); min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(244, 238, 226, 0.45); background: rgba(15, 42, 31, 0.6); color: var(--cream); font: 700 12px var(--font); cursor: pointer; }
+.g3-guide-skip::after { content: ''; position: absolute; inset: -4px; }
 .g3-bottom {
   position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 28px max(14px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));

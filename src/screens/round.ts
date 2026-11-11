@@ -244,6 +244,12 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       .catch(() => {});
   }
   game.starter = HANK.firstTee(me.name, snap.today, course.holes[0]?.theme);
+  // a member who has never posted a round gets Hank's walkthrough on the first tee: a practice swing that doesn't count,
+  // at a slower meter. Not in the Committee's rehearsal, and never again once it's done or skipped.
+  if (!dry && !store.get('ccc-guided') && !(me.career?.rounds ?? 0) && !snap.rounds.some((r) => r.playerId === snap.me) && !(resume && resume.scores.length)) {
+    game.guided = true;
+    game.onGuided = () => store.set('ccc-guided', '1');
+  }
   const scores: number[] = resume ? [...resume.scores] : [];
   // who comes by with drinks, and on which holes: different every round
   // (none on a practice of next week's course: that's for Sunday)

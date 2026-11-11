@@ -525,9 +525,13 @@ export async function welcome(snap0: Snapshot, preview = false) {
         <p class="eyebrow">Tee time</p>
         <h1>${esc(me.name)}, ${teeTime()}</h1>
         <p>${esc(course.name)} · Hole 1, ${esc(course.holes[0].name)}</p>
-        <div class="summary-actions"><button class="btn" data-tee>Head to the first tee</button><button class="btn ghost" data-later>Later</button></div>
+        <p class="muted">A practice round first? It never counts, and Hank will show you the swing on the tee.</p>
+        <div class="summary-actions"><button class="btn" data-practise>Practise the course</button><button class="btn ghost" data-tee>Play today's card</button></div>
+        <button class="link" data-later type="button">Later</button>
       </div>`;
     c.addEventListener('pointerdown', (e) => e.stopPropagation());
+    // a new member's first tee: practice leads, the card is there for anyone who wants straight in
+    (c.querySelector('[data-practise]') as HTMLButtonElement).onclick = () => finishTour('#/round/practice');
     (c.querySelector('[data-tee]') as HTMLButtonElement).onclick = () => finishTour(true);
     (c.querySelector('[data-later]') as HTMLButtonElement).onclick = () => finishTour(false);
   }

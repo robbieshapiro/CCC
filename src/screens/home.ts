@@ -116,6 +116,9 @@ export function home(snap: Snapshot) {
   // all of today's cards in (two a day, the better one counts)
   const todays = snap.rounds.filter((r) => r.playerId === snap.me && r.month === snap.month && todayInGameTz(new Date(r.createdAt)) === snap.today);
   const cardIn = cards && todays.length >= CARDS_A_DAY;
+  // never posted a round: practice leads the Play tile, with today's card second
+  const me = snap.players.find((p) => p.id === snap.me);
+  const firstTime = !(me?.career?.rounds ?? 0) && !snap.rounds.some((r) => r.playerId === snap.me);
   const dayCards: CardToday | null = cardIn
     ? { done: true, n: todays.length, of: CARDS_A_DAY, best: Math.min(...todays.map((r) => r.total - r.par)), id: null, course: null, scores: [], shots: 0, spots: [], feats: [] }
     : null;
@@ -162,7 +165,7 @@ export function home(snap: Snapshot) {
           ${
             !cards
               ? `<a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>`
-              : `<div id="card-tile">${cardTile(cardIn ? 'in' : 'fresh', course, dayCards, CARD_LINKS)}</div>`
+              : `<div id="card-tile">${cardTile(cardIn ? 'in' : 'fresh', course, dayCards, CARD_LINKS, firstTime)}</div>`
           }
           <p class="who-out" id="who-out" hidden></p>
         </div>
@@ -239,7 +242,7 @@ export function home(snap: Snapshot) {
       const state = tileState(t, false);
       // a card going, elsewhere, all in, or the second card waiting
       if (tile && (state !== 'fresh' || t?.n)) {
-        tile.innerHTML = cardTile(state, course, t, CARD_LINKS);
+        tile.innerHTML = cardTile(state, course, t, CARD_LINKS, firstTime);
         bindCardNote(tile, CARD_LINKS, navigate);
       }
     });

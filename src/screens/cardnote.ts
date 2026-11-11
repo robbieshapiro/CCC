@@ -38,7 +38,8 @@ const bestSoFar = (t: CardToday | null) => (t?.best != null ? ` (${toParLabel(t.
 
 // The buttons and lines under the course name on the Play tile. `play` and `practice` are where they go; on a fresh
 // card the play button carries data-card-note, so a tap opens the note first (see bindCardNote).
-export function cardTile(state: TileState, course: Course, t: CardToday | null, links: { play: string; practice: string }): string {
+// `first`: they've never posted a round, so practice leads (Hank shows them the swing there) and the card comes second.
+export function cardTile(state: TileState, course: Course, t: CardToday | null, links: { play: string; practice: string }, first = false): string {
   if (state === 'elsewhere' && t) {
     const e = elsewhereLine(t);
     return `<div class="card-going"><p class="eyebrow">Two cards a day, in any club</p><b>${e.head}</b></div>
@@ -54,6 +55,8 @@ export function cardTile(state: TileState, course: Course, t: CardToday | null, 
   // one card in: the second is waiting
   if (t?.n)
     return `<a class="btn big" href="${links.play}">Play card ${nth(t)} of ${t.of ?? CARDS_A_DAY}</a><p class="fine card-line">Card 1 is in${bestSoFar(t)}. Your better card counts. <a href="${links.practice}">Practise first</a></p>`;
+  if (first)
+    return `<a class="btn big" href="${links.practice}">Practise first</a><p class="fine card-line">New here? A practice round never counts, and Hank will show you the swing. Then <a href="${links.play}" data-card-note>play today's card</a>.</p>`;
   return `<a class="btn big" href="${links.play}" data-card-note>Play today's card</a><p class="fine card-line">Two cards a day. Your better one counts. <a href="${links.practice}">Practise first</a></p>`;
 }
 
