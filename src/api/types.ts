@@ -223,6 +223,12 @@ export type CardToday = CardProgress & { done: boolean; n?: number; of?: number;
 export type PowerupState = { locker: { id: number; kind: string }[]; waiting?: number; sentThisWeek?: number; news?: { kind: string; status: string; mine: boolean; who: string | null; at: string }[] };
 export type LandedCurse = { id: number; kind: string; from: string | null; via: string | null };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
+// Nominate a friend: a member puts someone up with a first name and a mobile number; the Committee approves (an
+// invitation to text them) or declines. A member sees only their own, waiting or joined (never a decline).
+export type MyNomination = { name: string; status: 'waiting' | 'joined'; at: string };
+export type Nomination = { id: number; club: string; name: string; phone: string; from: string | null; fromId: string | null; createdAt: string };
+export type AdminNominations = { pending: Nomination[]; joined: { club: string; name: string; id: string; from: string | null; fromId: string | null; at: string }[] };
+export type Nominated = { inviteId: string; code: string; name: string; phone: string; from: string | null };
 
 export interface Api {
   mode: 'local' | 'supabase';
@@ -250,6 +256,11 @@ export interface Api {
   listInvites(session: Session): Promise<Invite[]>;
   deleteInvite(session: Session, id: string): Promise<void>;
   peekInvite(id: string): Promise<InvitePeek | null>;
+  nominate(session: Session, name: string, phone: string): Promise<void>;
+  myNominations(session: Session): Promise<MyNomination[]>;
+  adminNominations(session: Session): Promise<AdminNominations>;
+  // approve: the invitation is made and the number comes back once, for the text; decline: null
+  decideNomination(session: Session, id: number, approve: boolean): Promise<Nominated | null>;
   submitFeedback(session: Session, body: string, context: string): Promise<void>;
   listFeedback(session: Session): Promise<Feedback[]>;
   setFeedbackDone(session: Session, id: number, done: boolean): Promise<void>;

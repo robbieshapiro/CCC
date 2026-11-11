@@ -1758,6 +1758,20 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 /* under the next-course band: an invitation to send Reginald a course idea */
 .course-idea { margin: 8px 2px 0; font-size: 13px; color: var(--muted); text-align: center; }
 .course-idea .link { padding: 0; font: inherit; color: var(--green); text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; cursor: pointer; }
+/* Nominate a friend: a quiet paper tile under the board, and two boxes on Reginald's sheet */
+.nominate { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--gold); }
+.nominate .nm-icon { font-size: 22px; line-height: 1; }
+.nominate .nm-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.nominate .nm-text b { font: 700 19px/1.15 var(--serif); color: var(--green); }
+.nominate .nm-text small { font-size: 13px; color: var(--muted); }
+.nominate .btn { flex: none; }
+@media (max-width: 420px) {
+  .nominate { flex-wrap: wrap; }
+  .nominate .btn { width: 100%; }
+}
+.nominate-card label { display: grid; gap: 6px; font-weight: 700; font-size: 13px; }
+.nominate-card input { font: 500 16px var(--font); padding: 11px 13px; border-radius: 4px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+.nominate-card .fine { margin: 0; }
 
 /* the Trophy Room: cream plaques with a thin gold rule, engraved in the serif; locked ones quiet, with progress */
 .tr-group { margin: 6px 0 18px; }

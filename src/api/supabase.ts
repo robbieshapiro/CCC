@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse } from './types';
+import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -70,6 +70,12 @@ export const supabaseApi: Api = {
   listInvites: (s) => rpc<Invite[]>('list_invites', { p_token: s.token }),
   deleteInvite: (s, id) => rpc('delete_invite', { p_token: s.token, p_id: id }),
   peekInvite: (id) => rpc<InvitePeek | null>('peek_invite', { p_id: id }),
+  nominate: async (s, name, phone) => {
+    await rpc('nominate_friend', { p_token: s.token, p_name: name, p_phone: phone });
+  },
+  myNominations: (s) => rpc<MyNomination[]>('my_nominations', { p_token: s.token }).catch(() => []),
+  adminNominations: (s) => rpc<AdminNominations>('admin_nominations', { p_token: s.token }),
+  decideNomination: (s, id, approve) => rpc<Nominated | null>('decide_nomination', { p_token: s.token, p_id: id, p_approve: approve }),
   submitFeedback: async (s, body, context) => {
     await rpc('submit_feedback', { p_token: s.token, p_body: body, p_context: context });
   },

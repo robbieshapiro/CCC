@@ -2868,3 +2868,109 @@ begin
   );
 end $$;
 grant execute on function trophy_progress(uuid, uuid) to anon;
+
+-- Nominate a friend: a member puts someone up for membership with a first name and a mobile number, from home. Only
+-- the Committee reads them (admin_nominations). Approving makes the personal invitation, for the Committee to text
+-- from their own phone; declining clears it. Either way the number is wiped once decided: the club keeps no phone
+-- numbers of people who haven't joined. The member who put them up hears only when the friend joins.
+create table if not exists nominations (
+  id bigserial primary key,
+  group_id uuid not null references groups on delete cascade,
+  nominated_by uuid references players on delete set null,
+  name text not null check (char_length(name) between 1 and 20),
+  phone text check (char_length(phone) <= 20), -- e.g. '+15551234567'; null once decided
+  status text not null default 'pending' check (status in ('pending', 'invited', 'declined')),
+  invite_id text references invitations on delete set null,
+  created_at timestamptz not null default now(),
+  decided_at timestamptz
+);
+alter table nominations enable row level security;
+create index if not exists nominations_by on nominations (nominated_by, created_at);
+
+-- A mobile number, tidied: 10 digits (or 11 starting with 1) is a US number; anything else needs its + and country code
+create or replace function clean_phone(p_phone text) returns text
+language plpgsql immutable set search_path = public, extensions as $$
+declare d text := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
+begin
+  if char_length(d) = 10 then return '+1' || d; end if;
+  if char_length(d) = 11 and left(d, 1) = '1' then return '+' || d; end if;
+  if left(trim(coalesce(p_phone, '')), 1) = '+' and char_length(d) between 8 and 15 then return '+' || d; end if;
+  raise exception 'That number doesn''t look right. A mobile number, please, with the country code if it''s not American.';
+end $$;
+
+create or replace function nominate_friend(p_token uuid, p_name text, p_phone text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); clean text := trim(p_name); ph text := clean_phone(p_phone);
+begin
+  if char_length(clean) not between 1 and 20 then raise exception 'Their first name, please (up to 20 letters).'; end if;
+  -- three a day each is plenty
+  if (select count(*) from nominations where nominated_by = me.id and created_at > now() - interval '1 day') >= 3 then
+    raise exception 'Three in a day is generous enough. Do come back tomorrow.';
+  end if;
+  if exists (select 1 from nominations where group_id = me.group_id and phone = ph and status = 'pending') then
+    raise exception 'Someone has already put them up. The Committee has their name.';
+  end if;
+  insert into nominations (group_id, nominated_by, name, phone) values (me.group_id, me.id, clean, ph);
+end $$;
+
+-- A member's own nominations, for the tile on home: who's waiting, and who has joined. Declines aren't shown.
+create or replace function my_nominations(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((
+    select json_agg(json_build_object('name', n.name,
+        'status', case when i.used_by is not null then 'joined' else 'waiting' end,
+        'at', coalesce(i.used_at, n.created_at)) order by coalesce(i.used_at, n.created_at) desc)
+    from nominations n left join invitations i on i.id = n.invite_id
+    where n.nominated_by = me.id and n.status <> 'declined' and n.created_at > now() - interval '60 days'
+  ), '[]');
+end $$;
+
+-- The Committee's list: every nomination waiting in the clubs they run, and the friends who joined from one lately
+create or replace function admin_nominations(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can see nominations.'; end if;
+  return json_build_object(
+    'pending', coalesce((select json_agg(json_build_object('id', n.id, 'club', g.name, 'name', n.name, 'phone', n.phone,
+        'from', p.name, 'fromId', case when p.id is null then null else (home_of(p)).id end, 'createdAt', n.created_at) order by n.created_at)
+      from nominations n join groups g on g.id = n.group_id left join players p on p.id = n.nominated_by
+      where n.status = 'pending' and n.group_id in (select admin_clubs(me))), '[]'),
+    'joined', coalesce((select json_agg(json_build_object('club', g.name, 'name', j.name, 'id', j.id,
+        'from', p.name, 'fromId', case when p.id is null then null else (home_of(p)).id end, 'at', i.used_at) order by i.used_at desc)
+      from nominations n join groups g on g.id = n.group_id join invitations i on i.id = n.invite_id
+        join players j on j.id = i.used_by left join players p on p.id = n.nominated_by
+      where n.group_id in (select admin_clubs(me)) and i.used_at > now() - interval '14 days'), '[]'));
+end $$;
+
+-- Approve: the personal invitation is made (in the friend's club), and the number comes back once for the text.
+-- Decline: it's cleared. Both wipe the number.
+create or replace function decide_nomination(p_token uuid, p_id bigint, p_approve boolean) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); n nominations; v_code text; v_id text;
+begin
+  if me.role <> 'admin' then raise exception 'Only the committee can decide nominations.'; end if;
+  select * into n from nominations where id = p_id and group_id in (select admin_clubs(me)) and status = 'pending' for update;
+  if not found then raise exception 'That nomination has already been dealt with.'; end if;
+  if not p_approve then
+    update nominations set status = 'declined', phone = null, decided_at = now() where id = n.id;
+    return null;
+  end if;
+  loop
+    v_code := invite_code();
+    exit when not exists (select 1 from invitations where code = v_code) and not exists (select 1 from groups where invite_code = v_code);
+  end loop;
+  v_id := rand_code(10);
+  insert into invitations (id, group_id, name, code, created_by) values (v_id, n.group_id, n.name, v_code, me.id);
+  update nominations set status = 'invited', invite_id = v_id, phone = null, decided_at = now() where id = n.id;
+  return json_build_object('inviteId', v_id, 'code', v_code, 'name', n.name, 'phone', n.phone,
+    'from', (select name from players where id = n.nominated_by));
+end $$;
+
+revoke all on function clean_phone(text) from public, anon, authenticated;
+grant execute on function nominate_friend(uuid, text, text) to anon;
+grant execute on function my_nominations(uuid) to anon;
+grant execute on function admin_nominations(uuid) to anon;
+grant execute on function decide_nomination(uuid, bigint, boolean) to anon;
