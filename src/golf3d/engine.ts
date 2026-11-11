@@ -604,6 +604,28 @@ export class Course3D {
     this.resize();
   }
 
+  // One step down for a phone that can't keep up: plain shadow edges first (cheaper than soft ones, and hard to tell
+  // apart on a small screen), then the resolution in half steps, so it gets a little softer, not suddenly blurry. A
+  // phone with a sharp screen (2x or more) keeps at least 1.5x.
+  private shed() {
+    this.slow = 0;
+    if (this.renderer.shadowMap.type === THREE.PCFSoftShadowMap) {
+      this.renderer.shadowMap.type = THREE.PCFShadowMap;
+      // three.js only rebuilds the shaders for a new shadow type when told to
+      this.scene.traverse((o) => {
+        const m = (o as THREE.Mesh).material;
+        if (m) (Array.isArray(m) ? m : [m]).forEach((x) => (x.needsUpdate = true));
+      });
+      return;
+    }
+    const touch = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const floor = touch && window.devicePixelRatio >= 2 ? 1.5 : 1;
+    const pr = this.renderer.getPixelRatio();
+    if (pr <= floor) return;
+    this.renderer.setPixelRatio(Math.max(floor, pr - 0.5));
+    this.resize();
+  }
+
   private fitShadows() {
     const { x0, y0, x1, y1 } = this.hole.bounds;
     const cx = (x0 + x1) / 2;
@@ -2300,16 +2322,12 @@ export class Course3D {
     const dt = Math.min(0.05, raw);
     this.last = now;
     if (!this.hole) return;
-    // drop the pixel ratio if the device is struggling: when the running average falls below about 48 frames a second
-    // for two seconds (a one-off hitch, or a stretch in a background tab, doesn't count)
+    // ease the picture off if the device is struggling: when the running average falls below about 26 frames a second
+    // for two seconds (a one-off hitch, or a stretch in a background tab, doesn't count). A steady 30 is fine: it's what
+    // an iPhone in Low Power Mode is capped at, and dropping the resolution there only blurs it for nothing.
     if (raw < 0.25) this.frameAvg += (raw - this.frameAvg) * 0.1;
-    this.slow = this.frameAvg > 1 / 48 ? this.slow + Math.min(raw, 0.1) : Math.max(0, this.slow - raw);
-    // in half steps, so a struggling phone gets a little softer, not suddenly blurry
-    if (this.slow > 2 && this.renderer.getPixelRatio() > 1) {
-      this.renderer.setPixelRatio(Math.max(1, this.renderer.getPixelRatio() - 0.5));
-      this.resize();
-      this.slow = 0;
-    }
+    this.slow = this.frameAvg > 1 / 26 ? this.slow + Math.min(raw, 0.1) : Math.max(0, this.slow - raw);
+    if (this.slow > 2) this.shed();
     this.clock += dt;
     this.world?.update(this.clock, dt);
     if (this.replay) this.stepReplay(dt);
