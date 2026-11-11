@@ -166,7 +166,7 @@ Last updated Nov 11, 2026 (nominate a friend; a live-sql skill for agents; Midwa
 
 ## Setup status
 
-- [ ] #257: apply `pr_257_nominations` after merge (the `nominations` table and five functions from the end of `schema.sql`), then check `admin_nominations` answers.
+- [x] #257: applied `pr_257_nominations` on Nov 11; `admin_nominations` answers (none yet), the four member and Committee functions run for the app and `clean_phone` stays private.
 - [ ] Remove Robbie's Midway test round (`bar_scores` id 58, 9 strokes, Nov 10). Two tries timed out on the approval prompt; resend when Robbie says go, or he pastes the one-off block from the live-sql skill.
 - [x] #254: applied `pr_254_midway_curses`; `powerup_state` answers with `waiting`, `sentThisWeek` and `news`, and `admin_today` answers (9 in today).
 - [x] #253: applied `pr_253_prize_counter`; `powerup_state` answers and every member's `spent` is unchanged (Hunter 350, Marc 7,200, Robbie 5,000, Tyler 3,650).
