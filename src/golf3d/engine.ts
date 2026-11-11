@@ -2,6 +2,7 @@
 // Pick a club, drag sideways to aim, pick a strike point for spin and shape, pull down to plan your power,
 // then the three-tap swing: tap to start, tap to set power on your plan, tap in the gold for accuracy.
 import * as THREE from 'three';
+import { store } from '../storage';
 import type { Avatar } from '../api/types';
 import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
@@ -188,6 +189,19 @@ function targetMarker() {
   return g;
 }
 
+// When the ball first comes down: the first frame, after it's left the ground, within a few inches of it. A putt (or a
+// chip that never gets up) is on the ground from the start.
+function landTime(h: Hole, r: Result) {
+  const f = r.frames;
+  let up = false;
+  for (const p of f) {
+    const off = p.z - heightAt(h, p.x, p.y);
+    if (off > 1) up = true;
+    else if (up && off < 0.3) return p.t;
+  }
+  return up ? r.duration : 0;
+}
+
 // When the ball has as good as stopped: the first moment after which it moves less than half a foot.
 // A holed or lost ball plays out in full.
 function settleTime(r: Result) {
@@ -282,7 +296,11 @@ export class Course3D {
     clock: number;
     settle: number;
     slow: { from: number; to: number } | null;
+    // land: when the ball first comes down (shot time); fast: a tap since then has it playing out at 3x
+    land: number;
+    fast: boolean;
   } | null = null;
+  private cutWait = false; // a tap after holing out: on to the card without the usual pause
   private practice = false; // warm-up swings on the first tee: they don't count
   private fly: { curve: THREE.CatmullRomCurve3; t: number; dur: number; pin: THREE.Vector3 | null } | null = null;
   private follow = new THREE.Vector3(0, 0, -1);
@@ -1352,11 +1370,15 @@ export class Course3D {
       // the hole's over: a tap skips the replay, then the close-up
       if (this.mode === 'done') {
         if (this.replay) this.endReplay();
-        else this.closeUntil = 0;
+        else {
+          this.closeUntil = 0;
+          this.cutWait = true;
+        }
         return;
       }
       // read the meter at the moment of the tap, not at the last frame
       if (this.mode === 'meter') return this.tapSwing(e.timeStamp);
+      if (this.mode === 'roll' && this.shot) return this.hurry();
       if (this.mode !== 'aim') return;
       el.setPointerCapture(e.pointerId);
       this.drag = { x: e.clientX, y: e.clientY, aim: this.aim, power: this.power, kind: '' };
@@ -1645,7 +1667,7 @@ export class Course3D {
       const at = r.holed ? r.duration : near.t;
       if (r.holed || gap < 2.5) slow = { from: Math.max(0.1, at - 1.6), to: at + 0.3 };
     }
-    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice, clock: shot.clock, settle: settleTime(r), slow };
+    this.shot = { r, t: 0, from: { ...this.pos }, club, next: 0, practice, clock: shot.clock, settle: settleTime(r), slow, land: landTime(this.hole, r), fast: false };
     this.trailPts = [];
     this.power = 0;
     const trail = this.trail.material as THREE.LineBasicMaterial;
@@ -1670,11 +1692,29 @@ export class Course3D {
     this.follow.set(Math.sin(this.aim), 0, -Math.cos(this.aim));
   }
 
+  // a tap while the ball's on its way: once it has landed, play the rest out at 3x
+  private hurryTip = Number(store.get('ccc-hurry-tip') ?? 0);
+  private get hurryHint() {
+    return (this.overlay.querySelector('[data-hint]') as HTMLElement | null)?.textContent === 'Tap to speed it up';
+  }
+  private hurry() {
+    const s = this.shot!;
+    if (s.fast || s.t < s.land) return;
+    s.fast = true;
+    if (this.hurryHint) this.hint('');
+  }
+
   private stepShot(dt: number) {
     const s = this.shot!;
     const slow = !!s.slow && s.t >= s.slow.from && s.t < s.slow.to;
     this.focus(slow);
-    s.t += dt * (slow ? 0.4 : 1);
+    // once it's down, a tap plays the rest at 3x (the result is already worked out: this is only how fast it's shown)
+    s.t += dt * (slow && !s.fast ? 0.4 : 1) * (s.fast ? 3 : 1);
+    if (!s.fast && s.t >= s.land && s.t < s.settle - 1.5 && this.hurryTip < 2) {
+      this.hurryTip++;
+      store.set('ccc-hurry-tip', String(this.hurryTip));
+      this.hint('Tap to speed it up');
+    }
     const f = s.r.frames;
     while (s.next < s.r.sounds.length && s.r.sounds[s.next].t <= s.t) {
       const k = s.r.sounds[s.next++].s;
@@ -1728,6 +1768,7 @@ export class Course3D {
     this.drawTrail();
     if (s.t >= s.settle + 0.3) {
       this.focus(false);
+      if (this.hurryHint) this.hint('');
       this.endShot();
     }
   }
@@ -1860,13 +1901,15 @@ export class Course3D {
     // on to the card once the moment's over: the usual pause, and never in the middle of the replay or the reaction
     // (a slow phone plays them slower than the clock on the wall); a tap skips both
     const started = performance.now();
+    this.cutWait = false;
     const wait = () => {
       if (this.resolve !== done) return;
       const busy = !!this.replay || this.clock < this.closeUntil - 0.3;
-      if (busy || performance.now() - started < 2800 + delay + extra) return void window.setTimeout(wait, 150);
+      // a tap cuts the pause short (it already skips the replay and the close-up)
+      if (busy || (!this.cutWait && performance.now() - started < 2800 + delay + extra)) return void window.setTimeout(wait, 150);
       done?.({ strokes: this.strokes, feats: [...new Set(feats)], spot: this.spot ?? null });
     };
-    window.setTimeout(wait, 2800 + delay);
+    window.setTimeout(wait, 150);
   }
 
   // your golfer reacts, with the camera close on them for it
