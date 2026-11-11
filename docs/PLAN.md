@@ -4,6 +4,8 @@ Last updated Nov 10, 2026 (a live-sql skill for agents; Midway curses and theft;
 
 ## Handoff (Nov 7): open threads for the next session
 
+- **Nov 11: a private preview, not shipped.** A full audit's steps 1 and 2 (fairness fixes, quick wins, a new member's first round) are built on branch `claude/peaceful-johnson-0y2mo3`, one commit per item, for Robbie to try on the Vercel preview before anything merges. The work order, and everything held for later (speed, Home and naming, server checks, avatars), is in `docs/audit/2026-11-11-preview-handoff.md`. No pull request, no SQL.
+
 - **Before Sunday, Robbie can rehearse a member's card** (Admin, Course, "Rehearse Sunday's card", #183): the whole card flow on the Western Reserve, kept on his device, nothing posted.
 - **Sun Nov 8 is the big day.** Daily cards start (#149: one card a day counts, locked at the first swing) and the Western Reserve opens (#146, reworked in #168, #176, #180). Robbie plays a real card Sunday morning to check it end to end: the card, the Open purse, coins on feats, the drinks visits, kudos and chirps, the reactions after each hole, and the Gorge's harvest hillside.
 - **The chip and wedge meters' speeds are guesses** (`CHIP_RATE` 0.48 and `WEDGE_RATE` 0.55 in `src/golf3d/swing.ts`, on every course since #180 and #183). If Robbie finds them too slow or quick, nudge them.
