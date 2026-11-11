@@ -1,6 +1,6 @@
 import './style.css';
 import { inject, pageview } from '@vercel/analytics';
-import { getSession, listSessions, switchClub } from './api';
+import { getSession, listSessions, setSession, switchClub } from './api';
 import { holdSheet } from './dialog';
 import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
@@ -112,14 +112,16 @@ async function draw() {
     if (page === 'rehearse') {
       const c = nextCourse(s.month) ?? courseFor(s.month);
       if (s.admin) return round(s, { course: c, dry: true });
-      location.hash = '#/';
+      // replace, not push: Back mustn't land on the address that bounced here and bounce again
+      location.replace('#/');
       return;
     }
     if (page === 'preview') {
       const c = courseById(arg ?? '');
       // any course, this week's included: the Committee rehearses before members play
       if (s.admin && c) return round(s, { course: c });
-      location.hash = '#/';
+      // replace, not push: Back mustn't land on the address that bounced here and bounce again
+      location.replace('#/');
       return;
     }
     // the Season: FedEx Cup style points from every week's Open, a Clubhouse tab (the old page's link still lands there)
@@ -130,7 +132,8 @@ async function draw() {
     if (page === 'classic') {
       const c = classics(s.month).find((x) => x.id === arg);
       if (c) return round(s, { course: c, classic: true });
-      location.hash = '#/';
+      // replace, not push: Back mustn't land on the address that bounced here and bounce again
+      location.replace('#/');
       return;
     }
     // the practice facility, open to every member
@@ -142,7 +145,8 @@ async function draw() {
     if (page === 'practice') {
       const c = nextCourse(s.month);
       if (c && c.id === arg) return practice(s, c);
-      location.hash = '#/';
+      // replace, not push: Back mustn't land on the address that bounced here and bounce again
+      location.replace('#/');
       return;
     }
     // the Locker (the old Member Card and Locker Room links still land there)
@@ -151,13 +155,26 @@ async function draw() {
     if (page === 'member' && arg) return golfer(s, arg);
     if (page === 'admin') {
       if (s.admin) return admin(s);
-      location.hash = '#/';
+      // replace, not push: Back mustn't land on the address that bounced here and bounce again
+      location.replace('#/');
       return;
     }
+    // anything else (an old or mistyped address) is Home, and live updates should treat it as Home
+    route = 'home';
     return home(s);
   } catch (err) {
-    render(`<main class="narrow"><h1>Something went wrong</h1><p class="error">${esc((err as Error).message)}</p>
-      <p class="muted">If your session expired, open your group's invite link again.</p></main>`);
+    // the server's own wording for a lost seat still says "invite link" (codes are single-use now; members sign in)
+    const msg = (err as Error).message;
+    const said = /session expired/i.test(msg) ? 'This device is no longer signed in.' : msg;
+    render(`<main class="narrow"><h1>Something went wrong</h1><p class="error">${esc(said)}</p>
+      <p class="muted">It may just be the signal. Try again, or sign in again with your name and PIN.</p>
+      <p class="row"><button class="btn" data-retry type="button">Try again</button> <button class="btn ghost" data-signin type="button">Sign in again</button></p></main>`);
+    document.querySelector<HTMLButtonElement>('[data-retry]')!.onclick = () => void router();
+    document.querySelector<HTMLButtonElement>('[data-signin]')!.onclick = () => {
+      setSession(null);
+      if (location.hash && location.hash !== '#/') location.replace('#/');
+      else void router();
+    };
   }
 }
 
@@ -169,9 +186,25 @@ onSnapshot((s) => {
 // Any way into a round (Practice round, Practise first, Continue today's card): hold a "heading out" sheet until the
 // course is up. A fresh card's Play button opens the note first, which does the same once a choice is made.
 document.addEventListener('click', (e) => {
-  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#/round"], a[href^="#/practice/"], a[href^="#/rehearse"], a[href^="#/preview/"]');
+  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>(
+    'a[href^="#/round"], a[href^="#/practice/"], a[href^="#/rehearse"], a[href^="#/preview/"], a[href^="#/daily"], a[href^="#/bar/"], a[href^="#/classic/"], a[href^="#/facility/"]',
+  );
   if (!a || a.hasAttribute('data-card-note') || e.defaultPrevented) return;
-  holdSheet(/practi|preview/.test(a.getAttribute('href')!) ? 'Opening the practice round' : 'Heading to the first tee', 'Setting out the course. It can take a few seconds.');
+  const href = a.getAttribute('href')!;
+  const title = href.startsWith('#/daily')
+    ? 'Heading out for Closest to the Pin'
+    : href.startsWith('#/bar/drive')
+      ? 'Heading to the long drive tee'
+      : href.startsWith('#/bar/members')
+        ? "Heading to the Members' Course"
+        : href.startsWith('#/bar/midway')
+          ? 'Heading out to the Midway'
+          : href.startsWith('#/facility/')
+            ? 'Opening the practice facility'
+            : /practi|preview/.test(href)
+              ? 'Opening the practice round'
+              : 'Heading to the first tee';
+  holdSheet(title, 'Setting out the course. It can take a few seconds.');
 });
 
 // "Go to Kellogg": today's card is at another of the member's clubs, so take them there
