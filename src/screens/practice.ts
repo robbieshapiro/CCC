@@ -3,7 +3,7 @@
 import { api } from '../api';
 import type { PracticeKind } from '../api/types';
 import { requireSession } from '../state';
-import { esc, render } from '../ui';
+import { esc, header, render } from '../ui';
 
 let current: { end: () => void } | null = null;
 
@@ -32,8 +32,9 @@ export function leavePractice() {
 }
 
 // The practice facility: the range and the short game area. Open to every member, any month.
-export function facility() {
+export function facility(groupName: string) {
   render(`
+    ${header(groupName, 'play')}
     <main class="narrow facility">
       <p class="eyebrow">Practice facility</p>
       <h1>Warm up, or work on it</h1>

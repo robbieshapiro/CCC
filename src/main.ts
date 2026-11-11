@@ -136,7 +136,7 @@ async function draw() {
     // the practice facility, open to every member
     if (page === 'facility') {
       if (arg === 'range' || arg === 'shortgame') return practiceArea(s, arg);
-      return facility();
+      return facility(s.groupName);
     }
     // any member's practice on the first holes of the next course, before it counts
     if (page === 'practice') {
