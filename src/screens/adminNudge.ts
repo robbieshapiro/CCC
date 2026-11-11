@@ -4,7 +4,7 @@
 import { api, getSession, listSessions } from '../api';
 import type { Snapshot } from '../api/types';
 import { courseFor } from '../golf3d/courses';
-import { openPurseOn, periodClosesAt } from '../day';
+import { openPurseOn, periodClosesAt, todayInGameTz } from '../day';
 import { money, OPEN_FLOOR, purseOf } from '../purse';
 import { board, toParLabel } from '../standings';
 import { esc } from '../ui';
@@ -13,21 +13,16 @@ import { copyBox } from '../dialog';
 const BACK = ['', 'one', 'two'];
 const list = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 
-export function nudgeText(snap: Snapshot, now = Date.now()): string {
+// The card shows on the period's last day only (Saturday, for a week): the day before it closes at midnight ET
+export const lastDay = (month: string, now = new Date()) => todayInGameTz(now) === todayInGameTz(new Date(periodClosesAt(month).getTime() - 1));
+
+export function nudgeText(snap: Snapshot): string {
   const course = courseFor(snap.month);
   const name = course.name.replace(/ Course$/, '');
-  const ends = periodClosesAt(snap.month).getTime();
-  const days = Math.ceil((ends - now) / 86_400_000);
-  const weekday = new Date(ends - 1).toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' });
   const who = (id: string) => snap.players.find((p) => p.id === id)?.name ?? '?';
   const rows = board(snap);
   const played = rows.filter((r) => r.best);
-  const lines: string[] = [];
-
-  // when
-  if (days <= 1) lines.push(`⛳ Last day on ${name}. It closes at midnight ET tonight.`);
-  else if (days >= 6) lines.push(`⛳ ${name} is open: ${course.holes.length} holes, par ${course.par}. It runs till ${weekday} midnight ET.`);
-  else lines.push(`⛳ ${name} closes ${weekday} at midnight ET, ${days} days left.`);
+  const lines: string[] = [`⛳ Last day on ${name}. It closes at midnight ET tonight.`];
 
   // who's leading, and who's close
   if (!played.length) lines.push("Nobody's posted a card yet. First one sets the bar.");
@@ -69,8 +64,9 @@ function draw(snap: Snapshot) {
     : '<b>Everyone has a card in.</b>';
 }
 
-// One club at a time, each with its own group chat: the clubs this device runs, the one you're in picked first
-export function nudgeSection(_snap: Snapshot) {
+// On the last day only. One club at a time, each with its own group chat: the clubs this device runs, the one you're in picked first
+export function nudgeSection(snap: Snapshot) {
+  if (!lastDay(snap.month)) return '';
   const all = listSessions();
   const on = getSession()?.groupId;
   return `<section class="adm-card adm-nudge">
