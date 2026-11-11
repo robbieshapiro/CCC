@@ -216,6 +216,8 @@ html:has(.g3), body:has(.g3) { overflow: hidden; overscroll-behavior: none; }
 .g3-focus.on { opacity: 1; }
 .g3-hint { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); text-align: center; font-weight: 700; font-size: 14px; padding: 8px 14px; border-radius: 999px; background: rgba(15, 42, 31, 0.6); }
 .g3-hint:empty { display: none; }
+.g3-hint { transition: opacity 0.4s; }
+.g3-hint.fading { opacity: 0; }
 .g3-guide-skip { position: absolute; left: 50%; top: calc(var(--hud-top, calc(76px + env(safe-area-inset-top, 0px))) + 40px); transform: translateX(-50%); min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(244, 238, 226, 0.45); background: rgba(15, 42, 31, 0.6); color: var(--cream); font: 700 12px var(--font); cursor: pointer; }
 .g3-guide-skip::after { content: ''; position: absolute; inset: -4px; }
 .g3-bottom {
@@ -356,6 +358,10 @@ html:has(.g3), body:has(.g3) { overflow: hidden; overscroll-behavior: none; }
   .cart-card .msg { font-size: 15px; }
   .g3-aim button { min-width: 46px; }
   .g3-hint { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); font-size: 13px; border-radius: 12px; max-width: calc(100vw - 48px); width: auto; }
+  /* on a phone the golfer and the ball fill the bottom middle: Hank's lines go up beside him, on the far side from your
+     golfer, clear of the ball (Nov 11) */
+  .g3-hint { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); transform: none; bottom: calc(232px + env(safe-area-inset-bottom, 0px)); max-width: min(56vw, 300px); text-align: left; }
+  .g3-ui.lefty .g3-hint { right: auto; left: max(12px, env(safe-area-inset-left, 0px)); }
   .g3-mini { width: 84px; height: 108px; top: calc(78px + env(safe-area-inset-top, 0px)); }
   .g3-strike { grid-template-columns: auto 72px auto; right: max(8px, env(safe-area-inset-right, 0px)); }
   .g3-ball { width: 72px; height: 72px; }
@@ -866,6 +872,7 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .g3-howto-card li b { font-size: 17px; }
 .g3-howto-card li span { color: var(--muted); font-size: 14px; }
 .g3-howto-card .btn { width: 100%; font-size: 16px; padding: 13px; }
+.g3-howto-card .g3-sound { margin-top: 14px; font-size: 14px; }
 
 /* The Play page: Reginald and one big button up top, small tiles under it. Light motion: things settle in, Reginald
    nods now and then. */

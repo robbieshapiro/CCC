@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { store } from '../storage';
 import type { Avatar } from '../api/types';
 import { specOf } from '../avatar';
-import { sfx } from '../fx/sound';
+import { setSound, sfx, soundOn } from '../fx/sound';
 import { todayInGameTz } from '../day';
 import { ask, type AskOpts } from '../dialog';
 import { CartGirl, type Visitor } from './cartgirl';
@@ -1068,12 +1068,21 @@ export class Course3D {
         <li><i>🟢</i><b>Putt</b><span>Drag down, let go</span></li>`
       }</ol>
       <button class="btn" data-go>Let's go</button>
+      <button class="link g3-sound" data-sound type="button" aria-pressed="${soundOn()}">${soundOn() ? 'Sound is on · turn off' : 'Sound is off · turn on'}</button>
     </div>`;
     this.overlay.appendChild(card);
     // taps on the card are for the card, not the swing underneath
     for (const ev of ['pointerdown', 'pointerup', 'pointermove'] as const) card.addEventListener(ev, (e) => e.stopPropagation());
     const go = () => card.remove();
     card.querySelector<HTMLButtonElement>('[data-go]')!.onclick = go;
+    // the page's own sound switch is in the header, which the course covers, so it's here too
+    const sound = card.querySelector<HTMLButtonElement>('[data-sound]')!;
+    sound.onclick = () => {
+      setSound(!soundOn());
+      sound.textContent = soundOn() ? 'Sound is on · turn off' : 'Sound is off · turn on';
+      sound.setAttribute('aria-pressed', String(soundOn()));
+      if (soundOn()) sfx('tick');
+    };
     card.onclick = (e) => e.target === card && go();
   }
 
@@ -1119,9 +1128,26 @@ export class Course3D {
     this.onGuided?.();
   }
 
+  // A line from Hank or a tip fades after a few seconds, or at the first touch; the walkthrough's lines stay until done.
+  private hintTimer = 0;
   private hint(text: string) {
     const el = this.overlay.querySelector('[data-hint]') as HTMLElement | null;
-    if (el) el.textContent = text;
+    if (!el) return;
+    window.clearTimeout(this.hintTimer);
+    el.classList.remove('fading');
+    el.textContent = text;
+    if (text && !this.walk) this.hintTimer = window.setTimeout(() => this.fadeHint(), 4000);
+  }
+  private fadeHint() {
+    const el = this.overlay.querySelector('[data-hint]') as HTMLElement | null;
+    if (!el || !el.textContent || this.walk || el.classList.contains('fading')) return;
+    window.clearTimeout(this.hintTimer);
+    el.classList.add('fading');
+    this.hintTimer = window.setTimeout(() => {
+      if (this.walk) return;
+      el.textContent = '';
+      el.classList.remove('fading');
+    }, 400);
   }
 
   callout(text: string, sub = '', ms = 1800) {
@@ -1373,6 +1399,7 @@ export class Course3D {
     el.style.touchAction = 'none';
     el.addEventListener('pointerdown', (e) => {
       if (this.mode === 'fly') return this.endFlyover();
+      this.fadeHint();
       // the hole's over: a tap skips the replay, then the close-up
       if (this.mode === 'done') {
         if (this.replay) this.endReplay();
@@ -2155,14 +2182,47 @@ export class Course3D {
     return best?.g ?? null;
   }
 
-  // Step aside when your own ball comes to rest beside theirs.
+  // Step aside when your own ball comes to rest beside theirs. While you're aiming, a name card over the first 100 yards
+  // of your line is put away (the golfer under it stays), so the line reads clear.
   private updateGhosts(dt: number) {
+    const line = this.mode === 'aim' || this.mode === 'meter' ? this.lineOnScreen() : null;
     for (const o of this.onCourse) {
       const near = !o.keep && (o.at.distanceTo(this.ball.position) < 7 || o.at.distanceTo(this.golfer.group.position) < 5);
-      o.objs.forEach((x) => (x.visible = !near));
+      o.objs.forEach((x) => (x.visible = !near && !(line && x instanceof THREE.Sprite && this.tagOnLine(x, line))));
       if (!near) o.golfer.update(dt);
     }
   }
+
+  // the first 100 yards of the aim line, as points on the screen
+  private lineOnScreen() {
+    const W = this.renderer.domElement.clientWidth;
+    const H = this.renderer.domElement.clientHeight;
+    const dx = Math.sin(this.aim);
+    const dy = Math.cos(this.aim);
+    const reach = 300 / SCALE;
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 1; i <= 12; i++) {
+      const d = (reach * i) / 12;
+      const x = this.pos.x + dx * d;
+      const y = this.pos.y + dy * d;
+      const v = this.scratch.copy(w3(x, y, heightAt(this.hole, x, y))).project(this.camera);
+      if (v.z < 1) pts.push({ x: ((v.x + 1) / 2) * W, y: ((1 - v.y) / 2) * H });
+    }
+    return { pts, W, H };
+  }
+
+  // does a name card (a fixed size on screen: see nameTag) sit over any of those points?
+  private tagOnLine(tag: THREE.Sprite, line: { pts: { x: number; y: number }[]; W: number; H: number }) {
+    const v = this.scratch.copy(tag.position).project(this.camera);
+    if (v.z > 1) return false;
+    const px = line.H / (2 * Math.tan((this.camera.fov * Math.PI) / 360));
+    const w = tag.scale.x * px;
+    const h = tag.scale.y * px;
+    const cx = ((v.x + 1) / 2) * line.W;
+    const cy = ((1 - v.y) / 2) * line.H - (0.5 - tag.center.y) * h;
+    return line.pts.some((p) => Math.abs(p.x - cx) < w / 2 + 6 && Math.abs(p.y - cy) < h / 2 + 6);
+  }
+  private scratch = new THREE.Vector3();
 
   private placeBall() {
     const z = heightAt(this.hole, this.pos.x, this.pos.y);
