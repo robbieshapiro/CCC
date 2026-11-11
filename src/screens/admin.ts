@@ -21,6 +21,7 @@ import { ask, copyBox, tell } from '../dialog';
 import { bindSundayCard, sundayCardSection } from './adminCard';
 import { loadToday, todaySections } from './adminToday';
 import { loadNominations, nominationsSection } from './nominate';
+import { bindNudge, nudgeSection } from './adminNudge';
 
 // Members and History always cover the last 7 days: with a course a week, that's the week (all-time numbers are on
 // each golfer's card)
@@ -50,6 +51,7 @@ export function admin(snap: Snapshot) {
       <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
       <div class="adm-pane" data-pane="today">
         <div class="adm-needs" id="adm-needs"></div>
+        ${nudgeSection(snap)}
         <section class="adm-card" id="adm-feedback-card" hidden>
           <h2>Feedback</h2>
           <div id="adm-todo"></div>
@@ -89,6 +91,7 @@ export function admin(snap: Snapshot) {
     </main>`);
   bindTabs();
   bindSundayCard(snap);
+  bindNudge(snap);
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
     b.onclick = () => {
       const open = document.querySelector<HTMLElement>(`[data-panel="${b.dataset.tool}"]`)!;
