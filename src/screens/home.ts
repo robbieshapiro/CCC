@@ -16,6 +16,7 @@ import { bindNotices, noticesStrip } from './notices';
 import { bindShoutouts, shoutStrip } from './shoutouts';
 import { bindPlayoff, playoffCard } from './playoff';
 import { bindNominateTile, nominateTile } from './nominate';
+import { bindHomeScreenTip, homeScreenTip } from './homescreen';
 import { board, crownFor, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { store } from '../storage';
@@ -152,6 +153,7 @@ export function home(snap: Snapshot) {
   render(`
     ${header(snap.groupName, 'play')}
     <main>
+      ${homeScreenTip()}
       ${playoffCard()}
       ${noticesStrip()}
       ${shoutStrip()}
@@ -251,6 +253,7 @@ export function home(snap: Snapshot) {
   void bindHonours(snap);
   void bindPlayoff();
   void bindNominateTile();
+  bindHomeScreenTip();
   if (newPeriod(snap)) store.set(SEEN_PERIOD, snap.month);
   // in a club you only run, play from your own club: that's where it counts
   document.querySelector<HTMLAnchorElement>('[data-play-home]')?.addEventListener('click', (e) => {

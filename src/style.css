@@ -1758,6 +1758,13 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 /* under the next-course band: an invitation to send Reginald a course idea */
 .course-idea { margin: 8px 2px 0; font-size: 13px; color: var(--muted); text-align: center; }
 .course-idea .link { padding: 0; font: inherit; color: var(--green); text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; cursor: pointer; }
+/* the Home Screen tip at the top of home (the week of Nov 8 only) */
+.hs-tip { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 12px 12px 12px 14px; border-radius: 12px; background: var(--green); color: var(--cream); }
+.hs-tip .hs-icon { font-size: 22px; line-height: 1.2; }
+.hs-tip p { flex: 1; margin: 0; font-size: 14px; line-height: 1.4; }
+.hs-tip p b { display: block; font: 700 18px/1.2 var(--serif); color: #fff; margin-bottom: 2px; }
+.hs-tip em { font-style: normal; font-weight: 700; color: #f1d58f; }
+.hs-x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.12); color: var(--cream); font-size: 14px; cursor: pointer; }
 /* Nominate a friend: a quiet paper tile under the board, and two boxes on Reginald's sheet */
 .nominate { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--gold); }
 .nominate .nm-icon { font-size: 22px; line-height: 1; }
