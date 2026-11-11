@@ -1,4 +1,4 @@
-// The new-member welcome: up the drive, Reginald in the foyer, the locker room, your locker, then your tee time.
+// The new-member welcome: up the drive, Reginald in the foyer, the locker room, then your locker. "I'm ready" goes home.
 // One renderer; the three sets sit far apart in one scene and the camera travels between them.
 import { span } from '../day';
 import * as THREE from 'three';
@@ -6,7 +6,7 @@ import { api, localApi, useSupabase } from '../api';
 import type { Avatar, Snapshot } from '../api/types';
 import { specOf } from '../avatar';
 import { sfx } from '../fx/sound';
-import { courseFor, nextCourse } from '../golf3d/courses';
+import { courseFor } from '../golf3d/courses';
 import { Golfer, REGINALD_SPEC } from '../golf3d/golfer';
 import * as props from '../golf3d/props';
 import { refresh, requireSession } from '../state';
@@ -276,13 +276,6 @@ export function lockerRoom(scene: THREE.Scene, names: string[], blankLast = true
 
 // ---------- the flow ----------
 
-const teeTime = () => {
-  const d = new Date(Date.now() + 10 * 60_000);
-  const m = Math.ceil(d.getMinutes() / 6) * 6;
-  d.setMinutes(m, 0, 0);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
-};
-
 export async function welcome(snap0: Snapshot, preview = false) {
   closeWelcome();
   let snap = snap0;
@@ -300,7 +293,6 @@ export async function welcome(snap0: Snapshot, preview = false) {
       <div class="intro-title" data-title></div>
       <div class="intro-dialog" data-dialog hidden></div>
       <div class="intro-builder" data-builder hidden></div>
-      <div class="intro-card" data-card hidden></div>
       <button class="g3-pill intro-skip" data-skipall>Skip intro</button>
     </div></div>`);
   document.body.classList.add('court-open');
@@ -489,13 +481,8 @@ export async function welcome(snap0: Snapshot, preview = false) {
     // frame the golfer clear of the builder panel
     const portrait = host.clientWidth < host.clientHeight;
     go(portrait ? { pos: v(mx, 7.5, 6), look: v(mx, 2.2, -11) } : { pos: v(mx + 7.5, 6, 6), look: v(mx + 6.5, 4.4, -11) }, 1.2);
-    // three ways out: straight to the course, the clubhouse, or on to your tee time
-    const next = nextCourse(snap.month);
-    const play = next ? `#/practice/${next.id}` : '#/round';
-    b.innerHTML = `<div class="intro-builder-head"><h2>Suit up</h2><button class="btn lava" data-play>Play ${esc((next ?? course).name.replace(/ Course$/, ''))}</button></div>
-      <div class="intro-builder-exits"><button class="btn ghost" data-home>Clubhouse</button><button class="btn" data-done>Ready</button></div>`;
-    (b.querySelector('[data-play]') as HTMLButtonElement).onclick = () => finishTour(play);
-    (b.querySelector('[data-home]') as HTMLButtonElement).onclick = () => finishTour(false);
+    // one way out: I'm ready, to home, where this week's course is the first thing on the page
+    b.innerHTML = `<div class="intro-builder-head"><h2>Suit up</h2><button class="btn lava" data-done>I'm ready</button></div>`;
     b.appendChild(
       lockerPanel(spec, me.wins, (next) => {
         spec = next;
@@ -515,21 +502,7 @@ export async function welcome(snap0: Snapshot, preview = false) {
     you.setPose('cheer');
     sfx('cheer');
     await wait(900);
-
-    // 5. Tee time
-    const c = q('[data-card]');
-    c.hidden = false;
-    c.innerHTML = `
-      <div class="tee-card">
-        ${crest(64, 'tt')}
-        <p class="eyebrow">Tee time</p>
-        <h1>${esc(me.name)}, ${teeTime()}</h1>
-        <p>${esc(course.name)} · Hole 1, ${esc(course.holes[0].name)}</p>
-        <div class="summary-actions"><button class="btn" data-tee>Head to the first tee</button><button class="btn ghost" data-later>Later</button></div>
-      </div>`;
-    c.addEventListener('pointerdown', (e) => e.stopPropagation());
-    (c.querySelector('[data-tee]') as HTMLButtonElement).onclick = () => finishTour(true);
-    (c.querySelector('[data-later]') as HTMLButtonElement).onclick = () => finishTour(false);
+    void finishTour(false);
   }
 
   // 1. Arrival
