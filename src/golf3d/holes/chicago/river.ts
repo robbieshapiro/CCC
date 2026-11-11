@@ -76,9 +76,9 @@ export const river: Hole = {
     // the rooftop, gravel and the tee mat
     { poly: rect(ROOF.x0, ROOF.y0, ROOF.x1, ROOF.y1), surface: 'stone' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
-    // a narrow first leg to the slip, then a second up the right past it
-    { poly: blob(6, 160, 24, 100, 1, 0.05), surface: 'fairway' },
-    { poly: blob(46, 400, 24, 60, 2, 0.06), surface: 'fairway' },
+    // a first leg to the slip, then a second up the right past it (both half as wide again since Nov 11)
+    { poly: blob(6, 160, 34, 100, 1, 0.05), surface: 'fairway' },
+    { poly: blob(46, 400, 34, 60, 2, 0.06), surface: 'fairway' },
     // the riverwalk along the bank, and Wacker Drive along the towers
     { poly: band(BANK.slice(0, 4), 4), surface: 'stone' },
     { poly: rect(66, -40, 84, 340), surface: 'path' },

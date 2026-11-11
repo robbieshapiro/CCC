@@ -84,9 +84,9 @@ export const wrigleyville: Hole = {
     { poly: rect(ROOF.x0, ROOF.y0, ROOF.x1, ROOF.y1), surface: 'stone' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the street: a strip of turf down the middle, sidewalks either side
-    // the street's turf: narrow, split by the median
-    { poly: blob(-2, 250, 22, 200, 1, 0.04), surface: 'fairway' },
-    { poly: blob(4, 460, 22, 24, 2, 0.06), surface: 'fairway' },
+    // the street's turf, split by the median (half as wide again since Nov 11: it stops short of the sidewalks)
+    { poly: blob(-2, 250, 32, 200, 1, 0.04), surface: 'fairway' },
+    { poly: blob(4, 460, 32, 24, 2, 0.06), surface: 'fairway' },
     { poly: MEDIAN, surface: 'rough' },
     { poly: rect(-54, -40, -42, 460), surface: 'path' },
     { poly: rect(42, -40, 54, 460), surface: 'path' },

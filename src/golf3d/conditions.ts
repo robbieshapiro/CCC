@@ -22,9 +22,10 @@ export function conditionsFor(h: Hole, day: string): Conditions {
   const pin = pins[Math.floor(rng.next() * pins.length)];
   // mostly light, sometimes properly breezy; in storm country never calm, and often blowing hard
   const storm = h.weather === 'storm';
-  // Chicago in November: never less than a stiff breeze off the lake, often a proper gale, gusting shot to shot
+  // Chicago in November: never less than a stiff breeze off the lake, gusting shot to shot. 12 to 20 mph for its
+  // first week (it was built at 15 to 30: with members missing most fairways on a calm course, that was too much)
   if (h.weather === 'gale') {
-    const mph = Math.round(15 + rng.next() ** 0.8 * 15);
+    const mph = Math.round(12 + rng.next() ** 0.8 * 8);
     const toward = rng.next() * Math.PI * 2;
     return { pin, mph, toward, accel: { x: Math.sin(toward) * mph * WIND_PER_MPH, y: Math.cos(toward) * mph * WIND_PER_MPH }, gust: 0.3 };
   }

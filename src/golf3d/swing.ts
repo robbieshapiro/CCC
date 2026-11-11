@@ -36,15 +36,17 @@ const WIDER: Record<ClubId, number> = { driver: 1.25, wood: 1.2, iron: 1, wedge:
 const RETURN: Record<ClubId, number> = { driver: 1.0, wood: 0.92, iron: 0.84, wedge: 0.72, chip: 0.9, putter: 0 };
 // fire: you've a lager or a fireball in you, and the overswing zone is the fire. Swinging into it is what the drink
 // is for, so it's only a little harder than a full swing, where a sober overswing is a gamble.
+// The gamble was halved on Nov 11 (the needle 1.5x as fast at 110%, not 2x; the gold 20% narrower, not 40%): in the
+// week of Nov 8 members swung 42% of drives past 100%, over half of those were full misses, and none went further.
 export function returnSpeed(club: ClubId, power: number, needle = 1, style: MeterStyle = 'classic', fire = false) {
   const over = Math.max(0, power - 1);
-  return RETURN[club] * (0.7 + 0.6 * Math.min(1, power)) * (1 + over * (fire ? 2.5 : 10)) * needle * (style === 'vertical' ? SLOWER[club] : 1);
+  return RETURN[club] * (0.7 + 0.6 * Math.min(1, power)) * (1 + over * (fire ? 2.5 : 5)) * needle * (style === 'vertical' ? SLOWER[club] : 1);
 }
 
 // the gold window either side of the impact point, as a share of the bar; overswing shrinks it
 export function goldHalf(club: ClubId, power: number, sweetMul = 1, style: MeterStyle = 'classic', fire = false) {
   const over = Math.max(0, power - 1);
-  return (CLUBS[club].sweet / 2) * sweetMul * (1 - over * (fire ? 1.5 : 4)) * (style === 'vertical' ? WIDER[club] : 1);
+  return (CLUBS[club].sweet / 2) * sweetMul * (1 - over * (fire ? 1.5 : 2)) * (style === 'vertical' ? WIDER[club] : 1);
 }
 export const PURE = 0.3; // the gold strip is this share of the window
 

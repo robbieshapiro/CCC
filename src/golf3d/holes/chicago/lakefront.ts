@@ -57,16 +57,17 @@ export const lakefront: Hole = {
   regions: [
     // a sliver of rough round the tee, the fairways and the green, then the beach
     { poly: rect(-18, -18, 18, 18), surface: 'rough' },
-    { poly: blob(-12, 190, 28, 116, 1, 0.05), surface: 'rough' },
-    { poly: blob(-18, 400, 22, 66, 2, 0.06), surface: 'rough' },
-    { poly: blob(14, 500, 32, 28, 3, 0.06), surface: 'rough' },
+    { poly: blob(-12, 190, 38, 116, 1, 0.05), surface: 'rough' },
+    { poly: blob(-18, 400, 30, 66, 2, 0.06), surface: 'rough' },
+    { poly: blob(14, 500, 40, 28, 3, 0.06), surface: 'rough' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 10, GREEN.ry + 10, 3, 0.06), surface: 'rough' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
-    // a narrow first leg up the left-centre, squeezed between the trail's maples and the harbour
-    { poly: blob(-12, 190, 22, 110, 1, 0.05), surface: 'fairway' },
+    // the first leg up the left-centre, between the trail's maples and the harbour (half as wide again since Nov 11:
+    // members hit 6% of fairways the week before)
+    { poly: blob(-12, 190, 32, 110, 1, 0.05), surface: 'fairway' },
     // a ribbon up the left past the harbour, and the run-in to the green
-    { poly: blob(-18, 400, 16, 60, 2, 0.06), surface: 'fairway' },
-    { poly: blob(14, 500, 26, 22, 3, 0.06), surface: 'fairway' },
+    { poly: blob(-18, 400, 24, 60, 2, 0.06), surface: 'fairway' },
+    { poly: blob(14, 500, 34, 22, 3, 0.06), surface: 'fairway' },
     { poly: BREAKWATER, surface: 'fairway' },
     { poly: band([{ x: -46, y: -40 }, { x: -46, y: 650 }], 3), surface: 'path' },
     // the stone revetment along the water
