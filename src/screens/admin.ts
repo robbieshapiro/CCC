@@ -20,6 +20,7 @@ import { chartSections, courseSections, kpiSections, loadHoleReport, loadKpis } 
 import { ask, copyBox, tell } from '../dialog';
 import { bindSundayCard, sundayCardSection } from './adminCard';
 import { loadToday, todaySections } from './adminToday';
+import { loadNominations, nominationsSection } from './nominate';
 
 // Members and History always cover the last 7 days: with a course a week, that's the week (all-time numbers are on
 // each golfer's card)
@@ -53,6 +54,7 @@ export function admin(snap: Snapshot) {
           <h2>Feedback</h2>
           <div id="adm-todo"></div>
         </section>
+        ${nominationsSection()}
         ${todaySections()}
         <details class="adm-more">
           <summary>Numbers <small>purse, came back, AI calls, the charts</small></summary>
@@ -353,6 +355,8 @@ async function load() {
     api.adminOverview(requireSession(), 'all').catch(() => null),
   ]);
   state.ever = new Map((ever?.members ?? []).map((m) => [m.id ?? m.name, { rounds: m.rounds, best: m.best }]));
+  // friends members have put up: waiting on you, and the ones who joined lately
+  void loadNominations({ many: (data?.clubs.length ?? 0) > 1, who: nameLink, count: (n) => setNeeds('nominations', n) });
   state.daily = daily;
   if (!document.getElementById('adm-body')) return; // left the page
   body.classList.remove('loading');
@@ -492,7 +496,7 @@ function arrange(body: HTMLElement) {
 }
 
 // "Needs you": what's waiting on the Committee, each a tap to where it's dealt with
-const needs = { feedback: 0, holes: 0, invites: 0, unplayed: 0 };
+const needs = { feedback: 0, nominations: 0, holes: 0, invites: 0, unplayed: 0 };
 export const setNeeds = (k: keyof typeof needs, n: number) => ((needs[k] = n), drawNeeds());
 // the first line of Today: what's waiting on you, each a tap to where it's dealt with
 function drawNeeds() {
@@ -502,6 +506,7 @@ function drawNeeds() {
   if (!el) return;
   const items: [number, string, Tab, string][] = [
     [needs.feedback, needs.feedback === 1 ? 'piece of feedback' : 'pieces of feedback', 'today', 'adm-feedback-card'],
+    [needs.nominations, needs.nominations === 1 ? 'friend put up' : 'friends put up', 'today', 'adm-nominations'],
     [needs.holes, needs.holes === 1 ? 'hole to review' : 'holes to review', 'course', 'adm-holes'],
     [needs.unplayed, needs.unplayed === 1 ? 'new member yet to play' : 'new members yet to play', 'members', ''],
     [needs.invites, needs.invites === 1 ? 'invite not taken up' : 'invites not taken up', 'members', 'adm-invites'],

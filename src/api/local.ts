@@ -20,7 +20,8 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[] };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[] };
+type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
 
@@ -69,6 +70,14 @@ async function bankOf(api: { snapshot(s: { token: string }): Promise<Snapshot> }
 }
 
 const uid = () => crypto.randomUUID();
+// a mobile number, tidied as clean_phone in schema.sql does it
+function cleanPhone(raw: string): string {
+  const d = raw.replace(/\D/g, '');
+  if (d.length === 10) return `+1${d}`;
+  if (d.length === 11 && d[0] === '1') return `+${d}`;
+  if (raw.trim().startsWith('+') && d.length >= 8 && d.length <= 15) return `+${d}`;
+  throw new Error("That number doesn't look right. A mobile number, please, with the country code if it's not American.");
+}
 const rand = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
 // k7q-4m2: letters and digits alternating, so a code never spells anything
 const inviteCode = () =>
@@ -486,6 +495,72 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     if (!inv) return null;
     const group = Object.values(db.groups).find((g) => g.id === inv.groupId);
     return { name: inv.name, code: inv.code, groupName: group?.name ?? '', used: !!inv.usedBy };
+  },
+
+  // Nominate a friend (nominate_friend and friends in schema.sql)
+  async nominate(session, name, phone) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const clean = name.trim();
+    if (!clean || clean.length > 20) throw new Error('Their first name, please (up to 20 letters).');
+    const ph = cleanPhone(phone);
+    const list = (db.nominations ??= []);
+    if (list.filter((n) => n.by === me.id && Date.now() - Date.parse(n.createdAt) < 86_400_000).length >= 3) throw new Error('Three in a day is generous enough. Do come back tomorrow.');
+    if (list.some((n) => n.groupId === me.groupId && n.phone === ph && n.status === 'pending')) throw new Error('Someone has already put them up. The Committee has their name.');
+    list.push({ id: list.length + 1, groupId: me.groupId, by: me.id, name: clean, phone: ph, status: 'pending', inviteId: null, createdAt: new Date().toISOString() });
+    save(db);
+  },
+
+  async myNominations(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    return (db.nominations ?? [])
+      .filter((n) => n.by === me.id && n.status !== 'declined')
+      .map((n) => {
+        const inv = (db.invites ?? []).find((i) => i.id === n.inviteId);
+        return { name: n.name, status: inv?.usedBy ? ('joined' as const) : ('waiting' as const), at: inv?.usedAt ?? n.createdAt };
+      })
+      .sort((a, b) => b.at.localeCompare(a.at));
+  },
+
+  async adminNominations(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can see nominations.');
+    const clubs = new Set(db.players.filter((p) => p.admin && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.groupId));
+    const club = (id: string) => Object.values(db.groups).find((g) => g.id === id)?.name ?? '';
+    const who = (id: string) => db.players.find((p) => p.id === id);
+    const mine = (db.nominations ?? []).filter((n) => clubs.has(n.groupId));
+    return {
+      pending: mine.filter((n) => n.status === 'pending').map((n) => ({ id: n.id, club: club(n.groupId), name: n.name, phone: n.phone ?? '', from: who(n.by)?.name ?? null, fromId: who(n.by) ? homeOf(db, who(n.by)!).id : null, createdAt: n.createdAt })),
+      joined: mine.flatMap((n) => {
+        const inv = (db.invites ?? []).find((i) => i.id === n.inviteId);
+        const j = inv?.usedBy ? who(inv.usedBy) : undefined;
+        return inv && j && inv.usedAt ? [{ club: club(n.groupId), name: j.name, id: j.id, from: who(n.by)?.name ?? null, fromId: who(n.by) ? homeOf(db, who(n.by)!).id : null, at: inv.usedAt }] : [];
+      }),
+    };
+  },
+
+  async decideNomination(session, id, approve) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    if (!me.admin) throw new Error('Only the committee can decide nominations.');
+    const clubs = new Set(db.players.filter((p) => p.admin && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.groupId));
+    const n = (db.nominations ?? []).find((x) => x.id === id && clubs.has(x.groupId) && x.status === 'pending');
+    if (!n) throw new Error('That nomination has already been dealt with.');
+    const phone = n.phone ?? '';
+    n.phone = null;
+    if (!approve) {
+      n.status = 'declined';
+      save(db);
+      return null;
+    }
+    const inv: DbInvite = { id: rand(10), groupId: n.groupId, name: n.name, code: inviteCode(), createdAt: new Date().toISOString(), usedBy: null, usedAt: null, createdBy: me.id };
+    (db.invites ??= []).push(inv);
+    n.status = 'invited';
+    n.inviteId = inv.id;
+    save(db);
+    return { inviteId: inv.id, code: inv.code, name: inv.name, phone, from: db.players.find((p) => p.id === n.by)?.name ?? null };
   },
 
   async submitFeedback(session, body, context) {

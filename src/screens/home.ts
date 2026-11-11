@@ -15,6 +15,7 @@ import { bindCardNote, cardTile, tileState } from './cardnote';
 import { bindNotices, noticesStrip } from './notices';
 import { bindShoutouts, shoutStrip } from './shoutouts';
 import { bindPlayoff, playoffCard } from './playoff';
+import { bindNominateTile, nominateTile } from './nominate';
 import { board, crownFor, myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { store } from '../storage';
@@ -187,6 +188,7 @@ export function home(snap: Snapshot) {
         <button class="link board-more" id="board-more" hidden>See hole by hole</button>
         ${openPurseOn(snap.month) ? `<a class="season-link" href="#/clubhouse/season" id="season-link">🏆 ${snap.month.slice(0, 4)} Season standings</a>` : ''}
       </section>
+      ${nominateTile()}
       ${playTiles(snap)}
       ${previewBand(snap.month)}
       <p class="course-idea">Want to feature next week's course? <button class="link" data-course-idea>Submit an idea</button> to Reginald for review.</p>
@@ -248,6 +250,7 @@ export function home(snap: Snapshot) {
   void bindDaily(snap.today, snap.crown);
   void bindHonours(snap);
   void bindPlayoff();
+  void bindNominateTile();
   if (newPeriod(snap)) store.set(SEEN_PERIOD, snap.month);
   // in a club you only run, play from your own club: that's where it counts
   document.querySelector<HTMLAnchorElement>('[data-play-home]')?.addEventListener('click', (e) => {
