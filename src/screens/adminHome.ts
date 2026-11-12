@@ -50,16 +50,20 @@ let data: Data = { kpis: null, report: [], planner: { approved: {}, results: {} 
 let snap0: Snapshot | null = null;
 let view: string | null = null; // a course id when one is open
 
-// more: the rest of the numbers (adminKpis.ts), folded under the Pulse
-export const homeSections = (more = '') => `<div id="adm-needs" class="adm-needs" hidden></div>
-  <div id="jv-top"></div>
+// Overview: the briefing, what's waiting, then the Pulse (one strip of headline numbers, every club side by side, one
+// chart). who: who's in and the feed (adminToday.ts); more: the rest of the numbers (adminKpis.ts), folded.
+export const overviewSections = (who = '', more = '') => `<div id="jv-top"></div>
+  <div id="adm-needs" class="adm-needs" hidden></div>
   <section class="jv-pulse" id="jv-pulse">
     <h2 class="jv-h">The pulse <small>every club</small></h2>
     <div id="jv-pulse-top"></div>
     <div id="adm-pulse-clubs"></div>
-    ${more}
+    <div class="adm-card adm-charts" id="jv-pulse-chart" hidden></div>
   </section>
-  <div id="jv-home"><p class="muted">Loading…</p></div>`;
+  ${who}
+  ${more}`;
+// Courses: every week's tile, and a course's own page
+export const coursesSections = () => `<div id="jv-home"><p class="muted">Loading…</p></div>`;
 
 export async function loadHome(snap: Snapshot, course?: string) {
   snap0 = snap;
@@ -87,10 +91,8 @@ function draw() {
   const el = document.getElementById('jv-home');
   if (!el || !snap0) return;
   const c = view ? courseById(view) : null;
-  // a course open: just the course (the briefing, the pulse and what's waiting come back with Every week)
-  el.closest('.adm-pane')?.classList.toggle('jv-course-open', !!c);
   const top = document.getElementById('jv-top');
-  if (top) top.innerHTML = c ? '' : brief(snap0);
+  if (top) top.innerHTML = brief(snap0);
   pulse();
   el.innerHTML = c ? detail(snap0, c) : home(snap0);
   bind(el, snap0);
@@ -154,8 +156,8 @@ function briefing(snap: Snapshot): string[] {
   const lines: string[] = [];
   if (isWeek(snap.month)) {
     const day = Math.min(7, Math.max(1, Math.round((Date.parse(`${todayInGameTz()}T12:00:00Z`) - Date.parse(`${snap.month}T12:00:00Z`)) / 86400000) + 1));
-    lines.push(`Day ${day} of 7 on <b>${esc(short(now))}</b>. ${played.length} of ${rows.length} have a card in.`);
-  } else lines.push(`<b>${esc(short(now))}</b> is on. ${played.length} of ${rows.length} have a card in.`);
+    lines.push(`Day ${day} of 7 on <b>${esc(short(now))}</b>.`);
+  } else lines.push(`<b>${esc(short(now))}</b> is on.`);
   if (played.length) {
     const top = played.filter((r) => r.rank === 1);
     const who = top.map((r) => snap.players.find((p) => p.id === r.playerId)?.name ?? '?');
@@ -166,7 +168,7 @@ function briefing(snap: Snapshot): string[] {
   const nw = nextStart(snap.month);
   const next = courseFor(nw);
   if (scheduleOf()[nw]) lines.push(`Next week: <b>${esc(short(next))}</b>, picked.${next.draft ? ' Still a draft: play it before Sunday.' : ''}`);
-  else if (next.id === now.id) lines.push(`Nothing picked for next week, so ${esc(short(now))} carries on. Pick one below.`);
+  else if (next.id === now.id) lines.push(`Nothing picked for next week, so ${esc(short(now))} carries on.`);
   else lines.push(`Next week: <b>${esc(short(next))}</b>, from the calendar.`);
   return lines;
 }
@@ -221,7 +223,8 @@ function home(snap: Snapshot): string {
 
     ${back.length ? `<h2 class="jv-h">Weeks gone by</h2><div class="jv-weeks past">${back.map((x) => weekTile(x, true)).join('')}</div>` : ''}
 
-    ${bench.length ? `<h2 class="jv-h" id="jv-benchh">The bench <small>on no week</small></h2><div class="jv-bench">${bench.map(benchTile).join('')}</div>` : ''}`;
+    ${bench.length ? `<h2 class="jv-h" id="jv-benchh">The bench <small>on no week</small></h2><div class="jv-bench">${bench.map(benchTile).join('')}</div>` : ''}
+    <p class="jv-foot"><a href="#/room">🛰️ Build a course from scratch in the Design Room</a></p>`;
 }
 
 function weekTile(w: string, past = false): string {
@@ -346,7 +349,7 @@ function detail(snap: Snapshot, c: Course): string {
 function bind(el: HTMLElement, snap: Snapshot) {
   el.querySelectorAll<HTMLElement>('[data-open]').forEach((b) => (b.onclick = () => navigate(`#/admin/course/${b.dataset.open}`)));
   const back = el.querySelector<HTMLButtonElement>('[data-back]');
-  if (back) back.onclick = () => (history.length > 1 ? history.back() : navigate('#/admin'));
+  if (back) back.onclick = () => navigate('#/admin/courses');
   const nights = [...el.querySelectorAll<HTMLButtonElement>('[data-night]')];
   const showNight = () => nights.forEach((b) => b.classList.toggle('on', (store.get('ccc-preview-night') ?? '') === b.dataset.night));
   nights.forEach((b) => (b.onclick = () => (setNight(b.dataset.night as 'day' | 'night' | ''), showNight())));

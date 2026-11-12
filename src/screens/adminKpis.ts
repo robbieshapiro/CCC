@@ -10,7 +10,6 @@ import { money } from '../purse';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 import { setNeeds } from './admin';
-import { setWeekAgo } from './adminToday';
 
 export const kpiSections = () => `<section class="adm-kpis" id="adm-kpis"><p class="muted">Loading…</p></section>`;
 export const chartSections = () => `<section class="adm-kpis adm-kpis-more" id="adm-kpis-more"></section>
@@ -77,17 +76,14 @@ function drawKpis() {
     el.innerHTML = `<p class="muted">The headline numbers show up once their SQL has been run in Supabase.</p>`;
     return;
   }
-  const back = pct(k.cameBack, k.lastPlayers);
   const aiToday = Object.values(k.ai.today).reduce((a, n) => a + n, 0) + k.ai.designsToday;
   el.innerHTML = `
     <div class="kpi-grid">
-      ${tile(k.lastPlayers ? `${back}%` : '–', 'Came back', k.lastPlayers ? `${k.cameBack} of last week's ${k.lastPlayers} players have played this week` : 'no last week to compare yet')}
       ${tile(money(k.purse), 'Purse in play', `Pro Shop: ${money(k.shop7)} in 7 days, ${money(k.shopAll)} ever`)}
     </div>`;
   // the rest, in the Overview tab
   const more = document.getElementById('adm-kpis-more');
   if (more) more.innerHTML = `<div class="kpi-grid">
-      ${tile(`${k.firstRound14} of ${k.joined14}`, 'New members playing', k.neverPlayed14.length ? `yet to play: ${k.neverPlayed14.slice(0, 4).map(esc).join(', ')}${k.neverPlayed14.length > 4 ? ` and ${k.neverPlayed14.length - 4} more` : ''}` : k.joined14 ? 'joined in the last 14 days, all have played' : 'nobody new in the last 14 days')}
       ${tile(String(aiToday), 'AI calls today', `${k.ai.today.daily ?? 0} daily lines · ${k.ai.today.round ?? 0} round notes · ${k.ai.designsToday} designs · ${k.ai.month} this month`)}
     </div>`;
   drawCharts(k);
@@ -97,14 +93,19 @@ function drawCharts(k: AdminKpis) {
   const el = document.getElementById('adm-charts');
   if (!el) return;
   el.hidden = false;
-  el.innerHTML = `${perDay(k)}${weeks(k)}`;
+  el.innerHTML = weeks(k);
+  // players per day sits open in the Pulse
+  const day = document.getElementById('jv-pulse-chart');
+  if (day) {
+    day.hidden = false;
+    day.innerHTML = perDay(k);
+  }
   const course = document.getElementById('adm-course-chart');
   if (course) {
     course.hidden = false;
     course.innerHTML = holes(k);
   }
   setNeeds('unplayed', k.neverPlayed14.length);
-  setWeekAgo(k.visitedWeekAgo);
 }
 
 // the last 14 days: who played a round, and who only came in, stacked

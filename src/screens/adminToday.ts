@@ -12,21 +12,45 @@ import { requireSession } from '../state';
 import { esc, golferHref } from '../ui';
 import { powerOf } from '../powerups';
 
+// Who's in today (just the names: the counts are in the Pulse), then one feed with two views: today, live, and the
+// last 7 days (filled in by admin.ts)
 export const todaySections = () => `<section class="adm-today" id="adm-today"><p class="muted">Loading today…</p></section>
-  <section class="adm-card adm-live" id="adm-live"><h2><span class="live-pill"><i></i>Live</span> Today's feed <small id="live-sub"></small></h2><div class="adm-feed-box live-box" id="live-box"><p class="muted">Loading…</p></div></section>`;
+  <section class="adm-card adm-live" id="adm-live">
+    <h2><span class="live-pill"><i></i>Live</span> The feed <small id="live-sub"></small></h2>
+    <div class="adm-chips" role="group" aria-label="How far back"><button data-feed="today" class="on">Today</button><button data-feed="week">Last 7 days</button></div>
+    <div class="adm-chips" id="feed-clubs" role="group" aria-label="Club" hidden></div>
+    <div class="adm-feed-box live-box" id="live-box"><p class="muted">Loading…</p></div>
+    <div id="adm-history" hidden><p class="muted">Loading…</p></div>
+  </section>`;
 
 let data: AdminToday | null = null;
-let weekAgo: number | null = null;
 let timer = 0;
 let ticker = 0;
 let seen: Set<string> | null = null; // the feed as last drawn, so what's new can light up
-let lastIn: number | null = null;
 let fetchedAt = 0;
 
-// the same day last week, from the headline numbers when they arrive
-export function setWeekAgo(n: number) {
-  weekAgo = n;
-  draw();
+// one club's events only, in both views of the feed ('' for every club)
+let clubFilter = '';
+export function applyFeedFilter() {
+  for (const li of document.querySelectorAll<HTMLElement>('#live-box li, #adm-history li')) {
+    if (li.classList.contains('adm-day')) continue;
+    li.hidden = !!clubFilter && li.querySelector('.adm-club')?.textContent !== clubFilter;
+  }
+}
+function drawClubs(clubs: string[]) {
+  const el = document.getElementById('feed-clubs');
+  if (!el) return;
+  el.hidden = clubs.length < 2;
+  if (clubs.length < 2) return;
+  el.innerHTML = ['', ...clubs].map((c) => `<button data-feed-club="${esc(c)}" class="${c === clubFilter ? 'on' : ''}">${c ? esc(c) : 'Every club'}</button>`).join('');
+  el.querySelectorAll<HTMLButtonElement>('[data-feed-club]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        clubFilter = b.dataset.feedClub ?? '';
+        drawClubs(clubs);
+        applyFeedFilter();
+      }),
+  );
 }
 
 async function fetchToday() {
@@ -37,8 +61,16 @@ async function fetchToday() {
 
 export async function loadToday() {
   seen = null;
-  lastIn = null;
   await fetchToday();
+  document.querySelectorAll<HTMLButtonElement>('[data-feed]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        const week = b.dataset.feed === 'week';
+        document.querySelectorAll('[data-feed]').forEach((x) => x.classList.toggle('on', x === b));
+        document.getElementById('live-box')!.hidden = week;
+        document.getElementById('adm-history')!.hidden = !week;
+      }),
+  );
   window.clearInterval(timer);
   window.clearInterval(ticker);
   timer = window.setInterval(() => {
@@ -118,15 +150,10 @@ function draw() {
     return;
   }
   const many = new Set(d.people.map((p) => p.club)).size > 1;
-  const looked = d.in - d.cardsIn - d.onCourse;
-  const change = weekAgo === null ? '' : `<em class="${d.in > weekAgo ? 'up' : d.in < weekAgo ? 'down' : ''}">${d.in > weekAgo ? '▲' : d.in < weekAgo ? '▼' : '='} ${weekAgo} this day last week</em>`;
-  const bumped = lastIn !== null && d.in !== lastIn;
-  lastIn = d.in;
   // out on the course first, then the most recent
   const people = [...d.people].sort((a, b) => Number(b.card === 'going') - Number(a.card === 'going'));
   top.innerHTML = `
-    <div class="tw-hero"><b class="${bumped ? 'bump' : ''}">${d.in}</b><div><span>in today</span><small>${d.cardsIn} ${d.cardsIn === 1 ? 'card' : 'cards'} in · <span class="tw-live">${d.onCourse ? '<i class="dot"></i>' : ''}${d.onCourse} on the course</span> · ${looked} just looked in or practised</small>${change}</div></div>
-    <h2 class="tw-head">Who's in today</h2>
+    <h2 class="tw-head">Who's in today${d.onCourse ? ` <small class="tw-live"><i class="dot"></i>${d.onCourse} on the course now</small>` : ''}</h2>
     ${
       people.length
         ? `<ul class="tw-who">${people
@@ -145,10 +172,12 @@ function draw() {
     ? `<ul class="adm-feed live-feed">${d.feed
         .map((e) => {
           const isNew = before !== null && !before.has(key(e));
-          return `<li class="k-${e.kind}${isNew ? ' new' : ''}"><span class="adm-ico">${ICON[e.kind]}</span><div>${many ? `<span class="adm-club">${esc(e.club)}</span>` : ''}<b>${who(e.name, e.id)}</b> ${line(e)}<small>${time(e.at)} · <span data-ago="${e.at}">${ago(e.at)}</span></small></div></li>`;
+          return `<li class="k-${e.kind}${isNew ? ' new' : ''}"><span class="adm-ico">${ICON[e.kind]}</span><div><span class="adm-club"${many ? '' : ' hidden'}>${esc(e.club)}</span><b>${who(e.name, e.id)}</b> ${line(e)}<small>${time(e.at)} · <span data-ago="${e.at}">${ago(e.at)}</span></small></div></li>`;
         })
         .join('')}</ul>`
     : '<p class="muted">Nothing yet today. It fills in as members come in.</p>';
+  drawClubs([...new Set([...d.people.map((p) => p.club), ...d.feed.map((e) => e.club)])].sort());
+  applyFeedFilter();
   // something new: back to the top to show it; otherwise stay where the drift had got to
   box.scrollTop = before && d.feed.some((e) => !before.has(key(e))) ? 0 : kept;
 }

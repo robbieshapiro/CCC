@@ -2186,7 +2186,6 @@ body.room-open { background: #030a12; }
 .jv-reqs li { display: flex; justify-content: space-between; gap: 10px; align-items: start; padding: 8px 10px; border-radius: 8px; background: #fbf6ea; font-size: 14px; }
 .jv-reqs li.done span { text-decoration: line-through; color: var(--muted); }
 @media (max-width: 620px) { .jv-tweak { grid-template-columns: 1fr; } .jv-tw-plan { justify-self: center; } }
-.jv-course-open #jv-top, .jv-course-open #jv-pulse, .jv-course-open #adm-needs { display: none; }
 .jv-pulse { margin-top: 4px; }
 .jv-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .jv-kpis > div { display: grid; gap: 1px; padding: 10px 12px; border-radius: 12px; background: #fff; border: 1px solid var(--line); }
@@ -2200,3 +2199,10 @@ body.room-open { background: #030a12; }
 #adm-pulse-clubs td small { color: var(--muted); }
 .adm-clubs tr.adm-total td { border-top: 2px solid var(--line); }
 @media (max-width: 720px) { .jv-kpis { grid-template-columns: repeat(2, 1fr); } .jv-kpis > div:first-child { grid-column: span 2; } }
+
+.jv-foot { margin: 18px 0 0; font-size: 14px; }
+.jv-foot a { color: var(--green); font-weight: 700; }
+#jv-pulse-chart { margin-top: 10px; }
+.tw-head small { font: 700 12px var(--font); letter-spacing: 0; text-transform: none; margin-left: 8px; }
+.adm-live .adm-chips { margin-bottom: 8px; }
+#adm-history[hidden], #live-box[hidden], #feed-clubs[hidden] { display: none; }
