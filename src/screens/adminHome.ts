@@ -17,6 +17,7 @@ import { refresh, requireSession } from '../state';
 import { store } from '../storage';
 import { esc, navigate } from '../ui';
 import { setNight } from './previewControls';
+import { setNeeds } from './admin';
 
 const AHEAD = 6;
 const FIRST_WEEK = '2026-11-01';
@@ -49,7 +50,16 @@ let data: Data = { kpis: null, report: [], planner: { approved: {}, results: {} 
 let snap0: Snapshot | null = null;
 let view: string | null = null; // a course id when one is open
 
-export const homeSections = () => `<div id="adm-needs" class="adm-needs"></div><div id="jv-home"><p class="muted">Loading…</p></div>`;
+// more: the rest of the numbers (adminKpis.ts), folded under the Pulse
+export const homeSections = (more = '') => `<div id="adm-needs" class="adm-needs" hidden></div>
+  <div id="jv-top"></div>
+  <section class="jv-pulse" id="jv-pulse">
+    <h2 class="jv-h">The pulse <small>every club</small></h2>
+    <div id="jv-pulse-top"></div>
+    <div id="adm-pulse-clubs"></div>
+    ${more}
+  </section>
+  <div id="jv-home"><p class="muted">Loading…</p></div>`;
 
 export async function loadHome(snap: Snapshot, course?: string) {
   snap0 = snap;
@@ -77,8 +87,44 @@ function draw() {
   const el = document.getElementById('jv-home');
   if (!el || !snap0) return;
   const c = view ? courseById(view) : null;
+  // a course open: just the course (the briefing, the pulse and what's waiting come back with Every week)
+  el.closest('.adm-pane')?.classList.toggle('jv-course-open', !!c);
+  const top = document.getElementById('jv-top');
+  if (top) top.innerHTML = c ? '' : brief(snap0);
+  pulse();
   el.innerHTML = c ? detail(snap0, c) : home(snap0);
   bind(el, snap0);
+  courseNeeds(snap0);
+}
+
+// what's waiting on the course side: next week with nothing picked (it would carry on), and new courses on no week
+function courseNeeds(snap: Snapshot) {
+  const nw = nextStart(snap.month);
+  const ahead: string[] = [];
+  let w = snap.month;
+  for (let i = 0; i < AHEAD; i++) ahead.push((w = nextStart(w)));
+  setNeeds('nopick', !scheduleOf()[nw] && courseFor(nw).id === courseFor(snap.month).id ? 1 : 0);
+  setNeeds('unplaced', tourCourses().filter((c) => c.draft && !c.id.startsWith('room-') && !ahead.some((x) => courseFor(x).id === c.id)).length);
+}
+
+// the headline numbers, every club together: today against the same day last week, this week, who came back
+function pulse() {
+  const el = document.getElementById('jv-pulse-top');
+  const k = data.kpis;
+  if (!el) return;
+  if (!k) {
+    el.innerHTML = '<p class="muted">Loading…</p>';
+    return;
+  }
+  const vs = (now: number, then: number) => (now === then ? '<small>same as last week</small>' : `<small class="${now > then ? 'up' : 'down'}">${now > then ? '▲' : '▼'} ${Math.abs(now - then)} on last week</small>`);
+  const back = k.lastPlayers ? `${Math.round((k.cameBack / k.lastPlayers) * 100)}%` : '–';
+  el.innerHTML = `<div class="jv-kpis">
+    <div><b>${k.visitedToday}</b><span>in today</span>${vs(k.visitedToday, k.visitedWeekAgo)}</div>
+    <div><b>${k.playedToday}</b><span>played today</span>${vs(k.playedToday, k.playedWeekAgo)}</div>
+    <div><b>${k.players}<small>/${k.members}</small></b><span>played this week</span><small>${k.rounds} rounds${k.prevPlayers ? `, ${k.prevPlayers} played last week` : ''}</small></div>
+    <div><b>${back}</b><span>came back</span><small>${k.lastPlayers ? `${k.cameBack} of last week's ${k.lastPlayers}` : 'no last week yet'}</small></div>
+    <div><b>${k.firstRound14}<small>/${k.joined14}</small></b><span>new members playing</span><small>joined in 14 days</small></div>
+  </div>`;
 }
 
 // ---- Jarvis: what matters now, in a line or two each ----
@@ -132,8 +178,17 @@ function greeting() {
 
 // ---- the home: briefing, this week, every week ----
 
-function home(snap: Snapshot): string {
+function brief(snap: Snapshot): string {
   const me = snap.players.find((p) => p.id === snap.me)?.name ?? '';
+  return `<section class="jv-brief">
+      <p class="jv-hi">${greeting()}${me ? `, ${esc(me)}` : ''}.</p>
+      ${briefing(snap)
+        .map((l) => `<p>${l}</p>`)
+        .join('')}
+    </section>`;
+}
+
+function home(snap: Snapshot): string {
   const now = courseFor(snap.month);
   const notes = notesFor(now);
   const ahead: string[] = [];
@@ -147,13 +202,6 @@ function home(snap: Snapshot): string {
   const rows = board(snap);
   const played = rows.filter((r) => r.best);
   return `
-    <section class="jv-brief">
-      <p class="jv-hi">${greeting()}${me ? `, ${esc(me)}` : ''}.</p>
-      ${briefing(snap)
-        .map((l) => `<p>${l}</p>`)
-        .join('')}
-    </section>
-
     <h2 class="jv-h">This week</h2>
     <button class="jv-now" data-open="${now.id}" style="${style(now)}">
       <div class="jv-art"><span class="jv-emoji" aria-hidden="true">${artOf(now).emoji}</span>
@@ -168,12 +216,12 @@ function home(snap: Snapshot): string {
     </button>
     ${notes.length ? `<ul class="jv-notes">${notes.slice(0, 3).map((n) => `<li class="${n.level}">${esc(n.text)}</li>`).join('')}</ul>` : ''}
 
-    <h2 class="jv-h">Coming up</h2>
+    <h2 class="jv-h" id="jv-coming">Coming up</h2>
     <div class="jv-weeks">${ahead.map((x) => weekTile(x)).join('')}</div>
 
     ${back.length ? `<h2 class="jv-h">Weeks gone by</h2><div class="jv-weeks past">${back.map((x) => weekTile(x, true)).join('')}</div>` : ''}
 
-    ${bench.length ? `<h2 class="jv-h">The bench <small>on no week</small></h2><div class="jv-bench">${bench.map(benchTile).join('')}</div>` : ''}`;
+    ${bench.length ? `<h2 class="jv-h" id="jv-benchh">The bench <small>on no week</small></h2><div class="jv-bench">${bench.map(benchTile).join('')}</div>` : ''}`;
 }
 
 function weekTile(w: string, past = false): string {

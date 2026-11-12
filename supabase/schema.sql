@@ -145,14 +145,31 @@ end $$;
 
 -- Each member's best round of each period at a club, ranked on its board. A club that took in another keeps the old
 -- boards apart for the weeks before the merge (board: see rounds.board_group).
+-- One golfer, however many clubs: their seats are the players with the same name and PIN. Looks, the Pro Shop and the
+-- money list follow the person, not the club.
+create or replace function person_seats(p players) returns setof uuid
+language sql stable security definer set search_path = public, extensions as $$
+  select s.id from players s where lower(s.name) = lower(p.name) and s.pin_hash = p.pin_hash
+$$;
+
 drop function if exists month_bests(uuid);
 create or replace function month_bests(p_group uuid)
 returns table (month text, player_id uuid, total int, par int, r bigint, board uuid)
 language sql stable security definer set search_path = public, extensions as $$
   select b.month, b.player_id, b.total, b.par, rank() over (partition by b.month, b.board order by b.total - b.par), b.board
   from (
-    select distinct on (month, player_id) month, player_id, total, par, coalesce(board_group, group_id) as board
-    from rounds where group_id = p_group and not exists (select 1 from players h where h.id = rounds.player_id and h.host_only)
+    select distinct on (month, player_id) month, player_id, total, par, board
+    from (
+      select r.month, r.player_id, r.total, r.par, coalesce(r.board_group, r.group_id) as board, r.created_at
+      from rounds r where r.group_id = p_group
+      union all
+      -- from the week of Nov 8: a member's cards from their other clubs count here too, as this seat's (a person's
+      -- best card is their best on every board they're on)
+      select r.month, s.id, r.total, r.par, s.group_id, r.created_at
+      from players s join rounds r on r.player_id in (select person_seats(s)) and r.group_id <> p_group
+      where s.group_id = p_group and r.month >= '2026-11-08'
+    ) x
+    where not exists (select 1 from players h where h.id = x.player_id and h.host_only)
     order by month, player_id, total - par, created_at
   ) b
 $$;
@@ -354,13 +371,6 @@ revoke all on function period_champs(uuid) from public, anon, authenticated;
 -- host-only membership is never on that club's board; their play counts at home, the same name and PIN in the club
 -- they belong to.
 
-
--- One golfer, however many clubs: their seats are the players with the same name and PIN. Looks, the Pro Shop and the
--- money list follow the person, not the club.
-create or replace function person_seats(p players) returns setof uuid
-language sql stable security definer set search_path = public, extensions as $$
-  select s.id from players s where lower(s.name) = lower(p.name) and s.pin_hash = p.pin_hash
-$$;
 
 -- What the purses of a person's other clubs paid them (their home club's purse, when this seat is an away one)
 create or replace function person_away_earned(p players) returns json
@@ -744,7 +754,15 @@ begin
     'rounds', coalesce((
       select json_agg(json_build_object('playerId', r.player_id, 'month', r.month, 'course', r.course, 'holes', r.holes,
         'total', r.total, 'par', r.par, 'feats', r.feats, 'spots', r.spots, 'createdAt', r.created_at) order by r.created_at)
-      from rounds r where r.group_id = me.group_id and r.month = m
+      from (
+        select r.player_id, r.month, r.course, r.holes, r.total, r.par, r.feats, r.spots, r.created_at
+        from rounds r where r.group_id = me.group_id and r.month = m
+        union all
+        -- from the week of Nov 8: members' cards from their other clubs, shown as their seat here (see month_bests)
+        select s.id, r.month, r.course, r.holes, r.total, r.par, r.feats, r.spots, r.created_at
+        from players s join rounds r on r.player_id in (select person_seats(s)) and r.group_id <> me.group_id
+        where s.group_id = me.group_id and r.month = m and m >= '2026-11-08'
+      ) r
     ), '[]'),
     'champions', coalesce((
       select json_agg(c order by c.month desc) from (
