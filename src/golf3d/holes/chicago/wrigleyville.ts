@@ -61,8 +61,8 @@ export const wrigleyville: Hole = {
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.03,
-  teeTip: 'You can reach the green from up here. Miss, and a roof drops it in the street.',
-  yards: 390,
+  teeTip: 'A full drive stops in the rough short of the green and leaves a wedge. A roof drops a miss in the street.',
+  yards: 385,
   blurb: 'Off a rooftop and up Clark Street to Wrigley Field. The street runs fast, cars parked both sides, the red line rattling past.',
   tee: { x: 0, y: 0 },
   cup: { x: 8, y: 523 },
@@ -87,7 +87,9 @@ export const wrigleyville: Hole = {
     // the street: a strip of turf down the middle, sidewalks either side
     // the street's turf, split by the median (half as wide again since Nov 11: it stops short of the sidewalks)
     { poly: blob(-2, 250, 32, 200, 1, 0.04), surface: 'fairway' },
-    { poly: blob(4, 460, 32, 24, 2, 0.06), surface: 'fairway' },
+    // a band of rough across the street short of the green (Nov 12): a full drive used to run all the way on, now it
+    // stops here and leaves a wedge
+    { poly: blob(4, 446, 50, 26, 2, 0.06), surface: 'rough' },
     { poly: MEDIAN, surface: 'rough' },
     { poly: rect(-54, -40, -42, 460), surface: 'path' },
     { poly: rect(42, -40, 54, 460), surface: 'path' },

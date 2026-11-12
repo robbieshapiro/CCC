@@ -1,6 +1,6 @@
 // Hole 1, The Lakefront (par 4, 420 yd): a beach hole, north along Lake Michigan with the whole skyline ahead. Off the
 // fairways and a sliver of rough it's all sand, down to the water and up to the street. Lake Shore Drive and its
-// traffic are out of bounds all down the left, maples line the lakefront trail, and the lake runs the whole right side.
+// traffic are in play all down the left (out of bounds until Nov 12), maples line the lakefront trail, and the lake runs the whole right side.
 // Halfway up, the harbour cuts deep into the right of the fairway, so the hole bends left round it and back right to a
 // green out on a point, water right and long.
 // The play: a drive up the left-centre short of the harbour, then a mid iron across the corner of it to the green.
@@ -40,19 +40,20 @@ export const lakefront: Hole = {
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.03,
-  teeTip: 'The harbour cuts in on the right from halfway. Keep it up the left.',
+  teeTip: 'The harbour cuts in on the right from halfway. Keep it left: the Drive is in play.',
   yards: 420,
-  blurb: 'A beach hole on Lake Michigan. Miss the fairway and you are in the sand; the harbour bites in right, the Drive is out left.',
+  blurb: 'A beach hole on Lake Michigan. Miss the fairway and you are in the sand; the harbour bites in right, and Lake Shore Drive is in play on the left.',
   tee: { x: 0, y: 0 },
   cup: { x: 38, y: 571 },
   pins: [{ x: 38, y: 571 }, { x: 21, y: 560 }, { x: 55, y: 576 }, { x: 33, y: 582 }],
   aim: -0.02,
   bounds: { x0: -110, y0: -50, x1: 170, y1: 660 },
   border: [
-    { x: -60, y: -46 },
+    // (the Drive is in play since Nov 12: out of bounds is its far kerb, not the trail)
+    { x: -104, y: -46 },
     { x: 166, y: -46 },
     { x: 166, y: 656 },
-    { x: -60, y: 656 },
+    { x: -104, y: 656 },
   ],
   // a beach: everything off the turf is sand (it plays as a waste bunker), down to the water and up to the street
   base: 'sand',
@@ -72,8 +73,10 @@ export const lakefront: Hole = {
     { poly: blob(14, 500, 34, 22, 3, 0.06), surface: 'fairway' },
     { poly: BREAKWATER, surface: 'fairway' },
     { poly: band([{ x: -46, y: -40 }, { x: -46, y: 650 }], 3), surface: 'path' },
+    // Lake Shore Drive: asphalt, in play (a ball bounces and runs on it)
+    { poly: rect(-106, -46, -54, 656), surface: 'path' },
     // the stone revetment along the water
-    { poly: band([{ x: 78, y: -40 }, { x: 78, y: 290 }], 5), surface: 'stone' },
+    { poly: band([{ x: 100, y: -40 }, { x: 100, y: 290 }], 5), surface: 'stone' },
     { poly: band([{ x: 22, y: 296 }, { x: 22, y: 452 }], 4), surface: 'stone' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
@@ -83,7 +86,7 @@ export const lakefront: Hole = {
   terrain: [
     { kind: 'ramp', x0: -110, y0: -50, x1: 170, y1: 660, axis: 'y', h0: LAND, h1: LAND, op: 'set' },
     // the lake: down the right, round the back of the green, and the harbour cut into the middle of the hole
-    { kind: 'box', x0: 84, y0: -60, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
+    { kind: 'box', x0: 106, y0: -60, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
     { kind: 'box', x0: HARBOUR.x0, y0: HARBOUR.y0, x1: HARBOUR.x1, y1: HARBOUR.y1, h: -6, edge: 1, op: 'set' },
     { kind: 'box', x0: -120, y0: 612, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
     { kind: 'box', x0: 72, y0: 520, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },

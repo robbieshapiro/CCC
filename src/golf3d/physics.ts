@@ -212,7 +212,7 @@ function offRoof(h: Hole, roof: { poly: V2[] }, p: V2, clock: number): V2 | null
 
 export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Result {
   let { x, y } = from;
-  const shotLaunch = launch({ ...shot, loft: shot.loft ?? escapeLoft(h, from, shot), boost: (shot.boost ?? 1) * lieFactor(h, from, shot.club) });
+  const shotLaunch = launch({ ...shot, loft: shot.loft ?? escapeLoft(h, from, shot), boost: (shot.boost ?? 1) * (shot.cleanLie ? 1 : lieFactor(h, from, shot.club)) });
   let { vx, vy, vz } = shotLaunch;
   const exposure = h.windByHeight ? windExposure(vz) : 1;
   const club = CLUBS[shot.club];

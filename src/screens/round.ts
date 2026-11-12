@@ -15,6 +15,7 @@ import { courseFor, type Course } from '../golf3d/courses';
 import { conditionsFor } from '../golf3d/conditions';
 import { shoutSheet } from './shoutouts';
 import { store } from '../storage';
+import { bindPreviewControls, releaseNight, restoreNight } from './previewControls';
 import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
@@ -328,7 +329,15 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
           };
   // the admin's preview can jump to any hole, or start the one they're on over
   let jump: ((i: number) => void) | null = null;
-  if (preview && !opts.practice && !dry && !opts.classic) game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
+  if (preview && !opts.practice && !dry && !opts.classic) {
+    game.setHoleMenu(course.holes.map((h) => `${h.name} · Par ${h.par}`), (i) => jump?.(i));
+    // and a control centre: conditions, drinks, the cart, and moving the ball about (previewControls.ts)
+    restoreNight();
+    bindPreviewControls(game, el, (visit) => {
+      if (visit) visits[holeAt] = visit;
+      jump?.(holeAt);
+    });
+  } else releaseNight(); // a member's round follows the clock
   for (let i = scores.length; i < course.holes.length; ) {
     const h = course.holes[i];
     holeAt = i;

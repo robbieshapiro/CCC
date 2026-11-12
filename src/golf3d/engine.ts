@@ -9,8 +9,8 @@ import { todayInGameTz } from '../day';
 import { ask, type AskOpts } from '../dialog';
 import { CartGirl, type Visitor } from './cartgirl';
 import { ReginaldTray } from './reginaldtray';
-import { conditionsFor, gusted, tempestOn, withPin, type Conditions } from './conditions';
-import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
+import { conditionsFor, gusted, tempestOn, WIND_PER_MPH, withPin, type Conditions } from './conditions';
+import { bagFor, carryOf, CLUBS, drinksOn, SCALE, type ClubId, type Drink } from './clubs';
 import { MAGNET_FT } from '../powerups';
 import { pour } from './drinks';
 import { Golfer, HANK_SPEC, reactionFor, type Reaction } from './golfer';
@@ -56,6 +56,8 @@ type Mode = 'fly' | 'aim' | 'meter' | 'swing' | 'roll' | 'done' | 'cart';
 
 // the ace's replay runs at this share of real time
 const REPLAY_SPEED = 0.4;
+// a drink that lasts the rest of the hole (not a count of swings)
+const HOLE_LONG = 99;
 
 // A floating name card over another member: their name, and what they made on this hole.
 function nameTag(name: string, score: string) {
@@ -407,6 +409,64 @@ export class Course3D {
     void this.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
   }
 
+  // ---------- the Committee's preview controls (src/screens/previewControls.ts) ----------
+  // wind and pin to play the next hole started with (null: the day's own)
+  lab: { wind?: { mph: number; toward: number } | null; pin?: number | null } = {};
+  private openControls: (() => void) | null = null;
+  private lastShot: { pos: V2; strokes: number } | null = null;
+  private dropping = false;
+  // a Controls button beside Holes
+  setControls(open: () => void) {
+    this.openControls = open;
+  }
+  // what the controls need to show
+  labState() {
+    return { hole: this.hole, wind: this.wind, canAct: this.mode === 'aim', canRetake: this.mode === 'aim' && !!this.lastShot, drink: this.drink?.kind ?? null };
+  }
+  // any drink, now: for the rest of the hole (the fireball: one swing)
+  pourNow(kind: Drink | null) {
+    this.drink = kind ? { kind, shots: drinksOn(this.hole?.id ?? '')[kind].swings ?? HOLE_LONG } : null;
+    this.showDrink();
+    if (this.mode === 'aim') this.toAim();
+  }
+  // put the ball back where the last shot was played from, and take the stroke off
+  retake() {
+    if (this.mode !== 'aim' || !this.lastShot) return;
+    this.pos = { ...this.lastShot.pos };
+    this.strokes = this.lastShot.strokes;
+    this.lastShot = null;
+    const el = this.overlay.querySelector('[data-strokes]');
+    if (el) el.textContent = String(this.strokes);
+    this.placeBall();
+    this.toAim();
+  }
+  // the next tap on the map drops the ball there
+  dropOnMap() {
+    if (this.mode !== 'aim') return;
+    this.dropping = true;
+    this.callout('Tap the map', 'The ball drops where you tap', 2600);
+    this.overlay.querySelector('.g3-mini')?.classList.add('dropping');
+  }
+  private dropAt(e: PointerEvent) {
+    const c = this.overlay.querySelector('.g3-mini') as HTMLCanvasElement | null;
+    if (!c || !this.dropping) return;
+    e.stopPropagation();
+    e.preventDefault();
+    this.dropping = false;
+    c.classList.remove('dropping');
+    const r = c.getBoundingClientRect();
+    const { x0, y0, x1, y1 } = this.hole.bounds;
+    const s = Math.min((c.width - 12) / (x1 - x0), (c.height - 12) / (y1 - y0));
+    const ox = (c.width - (x1 - x0) * s) / 2, oy = (c.height - (y1 - y0) * s) / 2;
+    const cx = ((e.clientX - r.left) / r.width) * c.width, cy = ((e.clientY - r.top) / r.height) * c.height;
+    const p = { x: x0 + (cx - ox) / s, y: y0 + (c.height - oy - cy) / s };
+    if (this.mode !== 'aim' || !inPoly(p, this.hole.border) || wetIn(this.hole, p)) return this.callout('Not there', 'Pick a dry spot inside the hole', 1600);
+    this.pos = p;
+    this.lastShot = null;
+    this.placeBall();
+    this.toAim();
+  }
+
   setHoleMenu(names: string[], pick: (i: number) => void) {
     this.menu = { names, pick };
   }
@@ -415,6 +475,8 @@ export class Course3D {
   // opts.strokes: a card picked up mid-hole starts again from the tee, keeping the strokes already played on it
   play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: Visit; of?: number; strokes?: number } = {}): Promise<HoleResult> {
     this.holesInRound = opts.of ?? this.holesInRound;
+    // a drink lasts the hole it was poured on
+    if (this.drink && this.drink.shots >= HOLE_LONG) this.drink = null;
     this.clearRead();
     this.replay = null;
     this.closeUntil = 0;
@@ -429,6 +491,12 @@ export class Course3D {
     const calm = { pin: hole.cup, mph: 0, toward: 0, accel: { x: 0, y: 0 } };
     // no wind on the felt: mini golf putts never leave the ground
     this.wind = this.drill ? (this.drill.wind ?? calm) : hole.putterOnly ? calm : conditionsFor(hole, todayInGameTz());
+    // the Committee's preview can set its own wind and pin (see lab)
+    if (this.lab.wind) {
+      const { mph, toward } = this.lab.wind;
+      this.wind = { pin: this.wind.pin, mph, toward, accel: { x: Math.sin(toward) * mph * WIND_PER_MPH, y: Math.cos(toward) * mph * WIND_PER_MPH } };
+    }
+    if (this.lab.pin != null && hole.pins?.[this.lab.pin]) this.wind = { ...this.wind, pin: hole.pins[this.lab.pin] };
     this.dayWind = this.wind;
     hole = withPin(hole, this.wind);
     this.hole = hole;
@@ -751,7 +819,7 @@ export class Course3D {
       <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-flash" data-flash aria-hidden="true"></div>
       <div class="g3-top">
-        <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button><button class="g3-pill g3-help" data-help aria-label="How to play">?</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}</div>
+        <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button><button class="g3-pill g3-help" data-help aria-label="How to play">?</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}${this.openControls ? '<button class="g3-pill g3-controls" data-controls>Controls</button>' : ''}</div>
         ${
           this.drill
             ? `<div class="g3-title"><small>${this.drill.eyebrow ?? 'Practice facility'}</small><b>${this.drill.title}</b><span><em data-station-name>${this.drill.stations[this.drill.at].name}</em>${this.drill.stations.length > 1 ? ' · <i data-dist></i>' : ''}</span></div>
@@ -807,6 +875,11 @@ export class Course3D {
     };
     if (this.drill && this.drill.stations.length > 1) q('[data-station]').onclick = () => this.nextStation();
     if (this.menu) q('[data-holes]').onclick = () => this.holeMenu();
+    if (this.openControls) {
+      q('[data-controls]').onclick = () => this.openControls?.();
+      // the map takes a tap only while a drop is waiting for one
+      q('.g3-mini').addEventListener('pointerdown', (e) => this.dropAt(e as PointerEvent));
+    }
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
       b.onclick = () => {
         if (this.mode !== 'aim' || b.disabled) return;
@@ -913,7 +986,7 @@ export class Course3D {
   private planFor(c: ClubId) {
     const [lo, hi] = CLUBS[c].carry;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    const reach = d / (this.boost() * lieFactor(this.hole, this.pos, c));
+    const reach = d / (this.boost() * (this.fx()?.clean ? 1 : lieFactor(this.hole, this.pos, c)));
     if (!this.hole.tour) return Math.max(0.15, Math.min(1, (reach - lo) / (hi - lo)));
     // on tour courses the plan is where the ball stops, not where it lands: on quick greens a chip runs out two or
     // three times its carry. The plan goes all the way down, so even a short chip can be aimed at the hole.
@@ -1040,8 +1113,8 @@ export class Course3D {
   private showDrink() {
     const el = this.overlay.querySelector('[data-drink]') as HTMLElement | null;
     if (!el) return;
-    el.hidden = !this.drink || this.drink.kind === 'water';
-    if (this.drink) el.innerHTML = `<b>${pour(this.drink.kind, this.hole).name}</b><span>${this.drink.shots} ${this.drink.shots === 1 ? 'swing' : 'swings'} left</span>`;
+    el.hidden = !this.drink || (this.drink.kind === 'water' && drinksOn(this.hole?.id ?? '').water.wind === 1);
+    if (this.drink) el.innerHTML = `<b>${pour(this.drink.kind, this.hole).name}</b><span>${this.drink.shots >= HOLE_LONG ? 'this hole' : `${this.drink.shots} ${this.drink.shots === 1 ? 'swing' : 'swings'} left`}</span>`;
   }
 
   // ---------- the beverage cart ----------
@@ -1049,8 +1122,8 @@ export class Course3D {
   private order(kind: Drink | null) {
     this.overlay.classList.remove('carting');
     if (kind) {
-      // a fireball is good for one swing; the other drinks for two
-      this.drink = { kind, shots: kind === 'fireball' ? 1 : 2 };
+      // a fireball is good for one swing; the other drinks for the rest of the hole
+      this.drink = { kind, shots: drinksOn(this.hole?.id ?? '')[kind].swings ?? HOLE_LONG };
       try {
         const k = 'ccc-drinks';
         const had = new Set<string>(JSON.parse(localStorage.getItem(k) || '[]'));
@@ -1352,7 +1425,11 @@ export class Course3D {
   }
 
   private boost() {
-    return this.drink ? DRINKS[this.drink.kind].boost : 1;
+    return this.drink ? drinksOn(this.hole?.id ?? '')[this.drink.kind].boost : 1;
+  }
+  // what the drink in hand does, if there's one
+  private fx() {
+    return this.drink ? drinksOn(this.hole?.id ?? '')[this.drink.kind] : null;
   }
 
   // ---------- the swing ----------
@@ -1390,7 +1467,7 @@ export class Course3D {
   // Tap 1: the power bar starts to fill. Your plan is the gold line on it.
   private startSwing() {
     if (this.mode !== 'aim' || this.club === 'putter') return;
-    const drink = this.drink ? DRINKS[this.drink.kind] : null;
+    const drink = this.drink ? drinksOn(this.hole?.id ?? '')[this.drink.kind] : null;
     this.mode = 'meter';
     this.meter = { phase: 'power', p: 0, d: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0 };
     const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
@@ -1403,8 +1480,8 @@ export class Course3D {
     m.classList.toggle('boost', kind === 'lager' || kind === 'fireball');
     m.classList.toggle('fireball', kind === 'fireball');
     const tag = this.overlay.querySelector('[data-swing-tag]') as HTMLElement;
-    tag.hidden = !drink || kind === 'water';
-    if (drink) tag.textContent = kind === 'palmer' ? 'Arnold Palmer · a touch slower' : kind === 'lager' ? 'Lager · +10% · swing into the fire' : kind === 'fireball' ? 'Fireball · +15% · swing into the fire' : kind === 'espresso' ? 'Espresso · quick needle, wide gold' : kind === 'transfusion' ? 'Transfusion · steady hands, a touch shorter' : '';
+    tag.hidden = !drink || (kind === 'water' && drink.wind === 1);
+    if (drink && kind) tag.textContent = `${pour(kind, this.hole).name} · ${drink.job.split(':')[0]}${drink.boost > 1 ? ' · swing into the fire' : ''}`;
     // righties have the meter on the left, out of the way of the golfer; lefties on the right
     m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.meterAt(this.power)));
@@ -1420,7 +1497,7 @@ export class Course3D {
     if (this.mode !== 'meter') return;
     const m = this.meter;
     if (m.phase === 'power') {
-      const drink = this.drink ? DRINKS[this.drink.kind] : null;
+      const drink = this.drink ? drinksOn(this.hole?.id ?? '')[this.drink.kind] : null;
       // the Short Pour (a Midway curse): however far you take it back, it's capped
       if (this.mods.powerCap && this.club !== 'putter') m.p = Math.min(m.p, this.mods.powerCap);
       m.phase = 'accuracy';
@@ -1472,8 +1549,10 @@ export class Course3D {
     // the swing's own error, before the lie adds any (the shot log keeps this one)
     const swingError = error;
     // out of thick rough it can come off the face anywhere
-    error += lieScatter(this.hole, this.pos, club, Math.random());
-    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind?.accel };
+    this.lastShot = { pos: { ...this.pos }, strokes: this.strokes };
+    const fx = full ? this.fx() : null;
+    if (!fx?.clean) error += lieScatter(this.hole, this.pos, club, Math.random());
+    const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind && fx && fx.wind !== 1 ? { x: this.wind.accel.x * fx.wind, y: this.wind.accel.y * fx.wind } : this.wind?.accel, cleanLie: !!fx?.clean };
     const r = simulate(this.hole, this.pos, shot);
     if (!this.practice && !this.drill)
       this.onShotLog?.({ c: club, p: Math.round(power * 100) / 100, e: Math.round(swingError * 100) / 100, f: [Math.round(this.pos.x), Math.round(this.pos.y)], t: [Math.round(r.end.x), Math.round(r.end.y)], l: surfaceAt(this.hole, this.pos), x: r.penalty ? 1 : 0, i: r.holed ? 1 : 0 });
@@ -1486,7 +1565,7 @@ export class Course3D {
     }
     this.onShot?.();
     if (this.drink && club !== 'putter' && !practice) {
-      this.drink.shots--;
+      if (this.drink.shots < HOLE_LONG) this.drink.shots--;
       if (this.drink.shots <= 0) this.drink = null;
       this.showDrink();
     }
@@ -2102,7 +2181,7 @@ export class Course3D {
         // the flight arc and a landing ring sized to the club's spread
         // the ring shows where the plan carries: on tour courses that's the real plan, however short
         const power = this.hole.tour ? this.power : Math.max(this.power, 0.6);
-        const plan = { angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost(), spin: this.spin, shape: this.shape };
+        const plan = { angle: this.aim, power, club: this.club, error: 0, clock: 0, boost: this.boost(), spin: this.spin, shape: this.shape, cleanLie: !!this.fx()?.clean };
         // out of a bunker the arc shows the opened face the shot will really use
         const v = launch({ ...plan, loft: escapeLoft(this.hole, this.pos, plan), boost: plan.boost * lieFactor(this.hole, this.pos, this.club) });
         const z0 = heightAt(this.hole, this.pos.x, this.pos.y);
@@ -2263,7 +2342,7 @@ export class Course3D {
       if (m.phase === 'power') {
         // fills faster toward the top; at the end of the overswing it stops on its own. With a lager or a fireball in
         // you the overswing is the fire, and the bar slows right down in it so you can stop it there
-        const fire = !!this.drink && DRINKS[this.drink.kind].boost > 1 && m.p > 1;
+        const fire = !!this.drink && drinksOn(this.hole?.id ?? '')[this.drink.kind].boost > 1 && m.p > 1;
         // the chipper and the wedge climb their stretched scale at a steady pace (see meterPos); the rest fill by power
         if (stretched(this.club)) {
           m.d = Math.min(OVERSWING, m.d + stretchRate(this.club) * m.speed * (fire ? 0.45 : 1) * dt);

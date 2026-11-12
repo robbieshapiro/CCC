@@ -1,4 +1,4 @@
-// Hole 2, Millennium Park (par 3, 180 yd): from the Great Lawn under the bandshell's trellis to a small green past
+// Hole 2, Millennium Park (par 3, 130 yd): from the Great Lawn under the bandshell's trellis to a small green past
 // Cloud Gate. The Bean sits short right of the green on its plaza (hit it and it'll send you anywhere), the ice rink
 // is short left (a ball skates on it), and the towers of Michigan Avenue stand along the left, in play.
 // The play: a mid iron at the left half of the green, over the plaza.
@@ -47,9 +47,11 @@ export const millennium: Hole = {
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.04,
-  yards: 180,
+  teeTip: 'A full iron. The Bean is short right and sends a ball anywhere.',
+  yards: 130,
   blurb: 'Over the plaza to a small green past the Bean. The fountain pool short left, the rink beyond it, Michigan Avenue left.',
-  tee: { x: 0, y: 0 },
+  // the tee is 82 ft up the Great Lawn since Nov 12: 130 yd, a full iron (it was 190, a soft wood)
+  tee: { x: 0, y: 82 },
   cup: { x: 6, y: 259 },
   pins: [{ x: 6, y: 259 }, { x: -8, y: 249 }, { x: 19, y: 264 }, { x: 2, y: 268 }],
   aim: 0.01,
@@ -62,7 +64,7 @@ export const millennium: Hole = {
   ],
   base: 'rough',
   regions: [
-    { poly: rect(-14, -14, 14, 14), surface: 'fairway' },
+    { poly: rect(-14, 68, 14, 96), surface: 'fairway' },
     // the Great Lawn round the tee, then the plaza, the rink and the walks
     { poly: blob(0, 60, 50, 50, 1, 0.05), surface: 'fairway' },
     { poly: PLAZA, surface: 'stone' },
@@ -75,7 +77,7 @@ export const millennium: Hole = {
   water: [{ poly: POOL, level: 8 - 0.4 }],
   terrain: [
     { kind: 'ramp', x0: -150, y0: -50, x1: 120, y1: 360, axis: 'y', h0: LAND, h1: LAND, op: 'set' },
-    { kind: 'disc', x: 0, y: 0, r: 16, h: LAND + 1.5, edge: 8, op: 'set' },
+    { kind: 'disc', x: 0, y: 82, r: 16, h: LAND + 1.5, edge: 8, op: 'set' },
     // the rink is sunk a little; the plaza rises gently to the green
     { kind: 'disc', x: -40, y: 176, r: 26, h: LAND - 1.2, edge: 4, op: 'set' },
     { kind: 'ramp', x0: -10, y0: 186, x1: 60, y1: 236, axis: 'y', h0: 0, h1: 0.8, op: 'add' },
@@ -99,7 +101,7 @@ export const millennium: Hole = {
     { x: 6, y: 256 },
   ],
   decor: [
-    { kind: 'teebox', x: 0, y: 0 },
+    { kind: 'teebox', x: 0, y: 82 },
     { kind: 'bean', x: BEAN.x, y: BEAN.y, rot: 0.3 },
     { kind: 'pritzker', x: 0, y: -120, rot: Math.PI },
     ...AVE.map((b) => b.decor),

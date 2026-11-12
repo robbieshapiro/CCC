@@ -42,16 +42,37 @@ export const carryOf = (club: ClubId, power: number, boost = 1) => {
   return (c[0] + (c[1] - c[0]) * power) * boost;
 };
 
-// Drinks from the beverage cart: they tweak the next two full swings.
+// Drinks from the beverage cart and Reginald's tray. Since Nov 12 each has one clear job and a real cost, and lasts the
+// rest of the hole (the fireball: one swing). `job` and `cost` are what the menu and the meter say.
+//   sweet: the gold's width; needle: how fast it comes back; boost: distance; wind: how much the wind moves the ball;
+//   clean: rough and sand play like fairway (no distance lost, nothing off the face)
 export type Drink = 'palmer' | 'lager' | 'espresso' | 'transfusion' | 'water' | 'fireball';
-export const DRINKS: Record<Drink, { name: string; blurb: string; sweet: number; boost: number; needle: number }> = {
-  palmer: { name: 'Arnold Palmer', blurb: 'Slower meter · 2 swings', sweet: 1, boost: 1, needle: 0.82 },
-  lager: { name: 'Clubhouse Lager', blurb: '+10% distance · 2 swings', sweet: 1, boost: 1.1, needle: 1.12 },
-  // a jittery needle, but a far bigger gold window: rewards a sharp tap
-  espresso: { name: 'Espresso', blurb: 'Quick needle, wide gold · 2 swings', sweet: 1.35, boost: 1, needle: 1.2 },
-  // the golfer's recovery drink (grape juice, ginger ale, a splash of vodka): steady hands, a little shorter
-  transfusion: { name: 'Transfusion', blurb: 'Steady hands, 5% shorter · 2 swings', sweet: 1.2, boost: 0.95, needle: 0.9 },
-  water: { name: 'Sparkling Water', blurb: 'Does nothing. Reginald approves.', sweet: 1, boost: 1, needle: 1 },
-  // on the cart's late visit: one swing only
-  fireball: { name: 'Fireball', blurb: '+15% distance · 1 swing', sweet: 1, boost: 1.15, needle: 1.2 },
+export type DrinkFx = { name: string; job: string; cost: string; blurb: string; sweet: number; boost: number; needle: number; wind: number; clean?: boolean; swings?: number };
+const drink = (name: string, job: string, cost: string, fx: Partial<DrinkFx> = {}): DrinkFx => ({
+  name, job, cost, blurb: `${job}. ${cost} · ${fx.swings === 1 ? '1 swing' : 'this hole'}`, sweet: 1, boost: 1, needle: 1, wind: 1, ...fx,
+});
+export const DRINKS: Record<Drink, DrinkFx> = {
+  palmer: drink('Arnold Palmer', 'Slow hands: the needle is 30% slower', '7% shorter', { needle: 0.7, boost: 0.93 }),
+  lager: drink('Clubhouse Lager', 'Long ball: 12% further', 'The wind moves it half as much again', { boost: 1.12, wind: 1.5 }),
+  espresso: drink('Espresso', 'Dialled in: the gold is 60% wider', 'A quicker needle', { sweet: 1.6, needle: 1.3 }),
+  // the golfer's recovery drink (grape juice, ginger ale, a splash of vodka)
+  transfusion: drink('Transfusion', 'Clean lie: rough and sand play like fairway', '5% shorter', { clean: true, boost: 0.95 }),
+  water: drink('Sparkling Water', 'Cuts the wind: it moves the ball half as much', '5% shorter', { wind: 0.5, boost: 0.95 }),
+  // on the cart's late visit, and the long drive's: one swing only (unchanged, so the long drive board plays the same)
+  fireball: drink('Fireball', 'One big one: 15% further', 'A quick needle', { boost: 1.15, needle: 1.2, swings: 1 }),
 };
+// The drinks as they were until Nov 12: a nudge to the meter for two swings. The Western Reserve keeps them until its
+// week closes (Nov 14), so the course in play doesn't change under the members mid-Open.
+const old = (name: string, job: string, fx: Partial<DrinkFx>): DrinkFx => ({ name, job, cost: '', blurb: `${job} · ${fx.swings === 1 ? '1 swing' : '2 swings'}`, sweet: 1, boost: 1, needle: 1, wind: 1, swings: 2, ...fx });
+const DRINKS_BEFORE: Record<Drink, DrinkFx> = {
+  palmer: old('Arnold Palmer', 'Slower meter', { needle: 0.82 }),
+  lager: old('Clubhouse Lager', '+10% distance', { boost: 1.1, needle: 1.12 }),
+  espresso: old('Espresso', 'Quick needle, wide gold', { sweet: 1.35, needle: 1.2 }),
+  transfusion: old('Transfusion', 'Steady hands, 5% shorter', { sweet: 1.2, boost: 0.95, needle: 0.9 }),
+  water: { ...old('Sparkling Water', 'Does nothing', {}), blurb: 'Does nothing. Reginald approves.' },
+  fireball: old('Fireball', '+15% distance', { boost: 1.15, needle: 1.2, swings: 1 }),
+};
+const RESERVE_HOLES = ['creekbend', 'theledges', 'maplelake', 'thequarry', 'thegorge'];
+const RESERVE_CLOSES = Date.parse('2026-11-15T05:00:00Z'); // midnight ET, Saturday Nov 14
+// which drinks a hole pours
+export const drinksOn = (holeId: string, now = Date.now()): Record<Drink, DrinkFx> => (RESERVE_HOLES.includes(holeId) && now < RESERVE_CLOSES ? DRINKS_BEFORE : DRINKS);
