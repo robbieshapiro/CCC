@@ -189,6 +189,7 @@ Last updated Nov 12, 2026 (the bar is a bar, and Mo knows the room; bolder drink
 - [x] #257: applied `pr_257_nominations` on Nov 11; `admin_nominations` answers (none yet), the four member and Committee functions run for the app and `clean_phone` stays private.
 - [ ] The Greenkeeper's task (`trig_01JdY2FF8WJpwgDBMv15z7fd`, Thursdays 7:23 am ET) is made but off: Robbie attaches the repo and the Supabase connector in the routines page (claude.ai > Routines), then switches it on.
 - [ ] After the Windy City's week (Nov 15 to 21): decide whether its wind goes back to 15 to 30 mph (`gale` in `src/golf3d/conditions.ts`), from what the Greenkeeper's Thursday read says.
+- [x] The Gators club is called UF (Nov 12): `oneoff_rename_gators_to_uf` changed `groups.name` only; its 14 seats, scores and sign-in code are as they were. A device signed in to it picks the new name up from its next snapshot.
 - [ ] Remove Robbie's Midway test round (`bar_scores` id 58, 9 strokes, Nov 10). Two tries timed out on the approval prompt; resend when Robbie says go, or he pastes the one-off block from the live-sql skill.
 - [x] #254: applied `pr_254_midway_curses`; `powerup_state` answers with `waiting`, `sentThisWeek` and `news`, and `admin_today` answers (9 in today).
 - [x] #253: applied `pr_253_prize_counter`; `powerup_state` answers and every member's `spent` is unchanged (Hunter 350, Marc 7,200, Robbie 5,000, Tyler 3,650).
@@ -352,7 +353,7 @@ Every counted stroke saved: club, power and accuracy, where it started and finis
 
 - **The Clubhouse opened up (agreed with Robbie Nov 12; the bar room and Mo's live lines shipped in #264).** It stays about the golf: no profiles, nothing about Robbie's work, friends of members only. Still to build, a PR each:
   - **Mo talks back and pours.** A short chat with Mo written by Claude (`api/mo.ts`, a daily cap per member, a few cents a conversation, cost noted here), and "Pour me one": a drink bought at the bar with club money that comes to the first tee of your next card. Both need SQL.
-  - **Across clubs.** Kudos and chirps to anyone in any club (today they stop at your own), and a club-against-club table for Kellogg, The Clergy and Gators (Mo already quotes each club's best card).
+  - **Across clubs.** Kudos and chirps to anyone in any club (today they stop at your own), and a club-against-club table for Kellogg, The Clergy and UF (Mo already quotes each club's best card).
 
 - **From the shot data, not yet acted on (Nov 11).**
   - Putting is very generous (1.3 putts a hole; 64% holed from 10 to 20 ft). It's the forgiving part of a hard game, so leave it until tee shots are fairer, then firm it up a step at a time.
