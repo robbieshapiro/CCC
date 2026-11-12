@@ -204,7 +204,7 @@ Last updated Nov 13, 2026 (the planner picks a week from a list, so it works on 
 - [x] #269: applied `pr_269_billiards` on Nov 13; `bil_start` and `bil_finish` are there for members. After a week, see how often members beat Mo (`casino` where game = 'billiards') and move `WOBBLE` in `src/billiards/mo.ts` if needed.
 - [x] #270: applied `pr_270_bar_settings` on Nov 13; blackjack and Pop-a-Shot are off, a member's `bar_gate` for blackjack says "That table's closed for now.", and `bar_open_games` tells a member they aren't the Committee.
 - [x] #271: applied `pr_271_planner` on Nov 13; `course_planner` answers with real results (the Highlands 59 rounds from 13 members at −0.7, the Caldera 45 at −1.6, the Western Reserve 31 from 8 at +1.7; best for each, Marc).
-- [ ] #272: after merge, apply `pr_272_design_room` (`room_courses`, `room_courses_list`, `room_save`, `room_delete`), then check `room_courses_list` answers `[]`.
+- [x] #272: `room_courses`, `room_courses_list`, `room_save`, `room_delete` pasted by Robbie on Nov 13 (the connector's prompt timed out twice); checked live: the table is there with RLS on and no rows, all three functions exist, anon can run them.
 - [ ] Remove Robbie's Midway test round (`bar_scores` id 58, 9 strokes, Nov 10). Two tries timed out on the approval prompt; resend when Robbie says go, or he pastes the one-off block from the live-sql skill.
 - [x] #254: applied `pr_254_midway_curses`; `powerup_state` answers with `waiting`, `sentThisWeek` and `news`, and `admin_today` answers (9 in today).
 - [x] #253: applied `pr_253_prize_counter`; `powerup_state` answers and every member's `spent` is unchanged (Hunter 350, Marc 7,200, Robbie 5,000, Tyler 3,650).
