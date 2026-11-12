@@ -52,12 +52,13 @@ const drink = (name: string, job: string, cost: string, fx: Partial<DrinkFx> = {
   name, job, cost, blurb: `${job}. ${cost} · ${fx.swings === 1 ? '1 swing' : 'this hole'}`, sweet: 1, boost: 1, needle: 1, wind: 1, ...fx,
 });
 export const DRINKS: Record<Drink, DrinkFx> = {
-  palmer: drink('Arnold Palmer', 'Slow hands: the needle is 30% slower', '7% shorter', { needle: 0.7, boost: 0.93 }),
-  lager: drink('Clubhouse Lager', 'Long ball: 12% further', 'The wind moves it half as much again', { boost: 1.12, wind: 1.5 }),
-  espresso: drink('Espresso', 'Dialled in: the gold is 60% wider', 'A quicker needle', { sweet: 1.6, needle: 1.3 }),
+  // (about doubled on Nov 12, the day they came in: Robbie wanted them bolder)
+  palmer: drink('Arnold Palmer', 'Slow hands: the needle moves at half speed', '12% shorter', { needle: 0.5, boost: 0.88 }),
+  lager: drink('Clubhouse Lager', 'Long ball: 25% further', 'The wind moves it twice as much', { boost: 1.25, wind: 2 }),
+  espresso: drink('Espresso', 'Dialled in: the gold is twice as wide', 'The needle is half as fast again', { sweet: 2, needle: 1.5 }),
   // the golfer's recovery drink (grape juice, ginger ale, a splash of vodka)
-  transfusion: drink('Transfusion', 'Clean lie: rough and sand play like fairway', '5% shorter', { clean: true, boost: 0.95 }),
-  water: drink('Sparkling Water', 'Cuts the wind: it moves the ball half as much', '5% shorter', { wind: 0.5, boost: 0.95 }),
+  transfusion: drink('Transfusion', 'Clean lie: rough and sand play like fairway', '8% shorter', { clean: true, boost: 0.92 }),
+  water: drink('Sparkling Water', 'Cuts the wind: it moves the ball a quarter as much', '10% shorter', { wind: 0.25, boost: 0.9 }),
   // on the cart's late visit, and the long drive's: one swing only (unchanged, so the long drive board plays the same)
   fireball: drink('Fireball', 'One big one: 15% further', 'A quick needle', { boost: 1.15, needle: 1.2, swings: 1 }),
 };

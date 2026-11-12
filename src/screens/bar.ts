@@ -6,7 +6,8 @@ import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
 import { gameName, scoreLabel, type BarGame } from '../bar';
 import { isHole } from '../designer/desk';
 import { bestTry, dailyShot, resultLabel } from '../daily';
-import { MO, staffChip } from '../staff';
+import { MO, staffFace } from '../staff';
+import { moKnows, type MoLine } from './mo';
 import { requireSession } from '../state';
 import { esc, golferHref } from '../ui';
 import { openPrizeCounter } from './prizecounter';
@@ -19,24 +20,49 @@ const top3 = (rows: { playerId?: string; name: string; label: string; mine: bool
         .join('')}</ol>`
     : '<p class="bar-empty">Nobody yet. Be first.</p>';
 
+// the back bar: a shelf of bottles, drawn
+function bottles() {
+  const cols = ['#7a3f1c', '#c98a3a', '#2f5d3a', '#8e2f4a', '#d9b77a', '#a8552a', '#9fd0e6', '#b5651d', '#e6d77a', '#5e1a2c', '#2b6d84', '#c4361b', '#e8c86a', '#4a2416'];
+  const each = cols.map((c, i) => {
+    const x = 6 + i * 22;
+    const h = 30 + ((i * 7) % 5) * 5;
+    const w = 11 + (i % 3) * 2;
+    return `<g transform="translate(${x} ${58 - h})"><rect x="${(w - 4) / 2}" y="0" width="4" height="${h * 0.34}" rx="1.4" fill="${c}"/><rect x="0" y="${h * 0.3}" width="${w}" height="${h * 0.7}" rx="2.6" fill="${c}"/><rect x="1.6" y="${h * 0.5}" width="${w - 3.2}" height="${h * 0.22}" fill="#f3e6cf" opacity="0.85"/><rect x="1.4" y="${h * 0.32}" width="1.6" height="${h * 0.6}" fill="#fff" opacity="0.22"/></g>`;
+  });
+  return `<svg viewBox="0 0 320 64" preserveAspectRatio="xMidYMax meet" aria-hidden="true">${each.join('')}<rect x="0" y="58" width="320" height="6" fill="#c9a24a"/><rect x="0" y="58" width="320" height="1.5" fill="#f1d58f"/></svg>`;
+}
+
 export function barPane(snap: Snapshot) {
   const me = snap.players.find((p) => p.id === snap.me)!;
   const shot = dailyShot(snap.today);
   return `
-    <div class="bar-page">
-      <section class="bar-head">
-        <p class="eyebrow">The Nineteenth Hole</p>
-        <h1>The bar</h1>
-        ${staffChip('mo', MO.welcome(me.name, snap.today))}
+    <div class="bar-page bar-room">
+      <section class="bar-back">
+        <div class="bar-lamps" aria-hidden="true"><i></i><i></i><i></i></div>
+        <p class="bar-sign"><small>The</small> Nineteenth Hole</p>
+        <div class="bar-shelf">${bottles()}</div>
+        <div class="bar-mo">
+          <span class="mo-face">${staffFace('mo', 84)}</span>
+          <div class="mo-says" aria-live="polite">
+            <b>Mo <small>behind the bar</small></b>
+            <p id="mo-line">${esc(MO.welcome(me.name, snap.today))}</p>
+            <div class="mo-acts"><a class="mo-btn" id="mo-go" hidden></a><button class="mo-btn ghost" id="mo-more" hidden>What else, Mo?</button></div>
+          </div>
+        </div>
+        <div class="bar-counter" aria-hidden="true"></div>
       </section>
+      <h2 class="bar-wall">On the wall</h2>
       <div class="bar-games">
         <a class="bar-game" href="#/daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
         <a class="bar-game midway" href="#/bar/midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game members" href="#/bar/members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
-      <button class="desk-cta prize-cta" data-prize><i>🎟️</i><div><b>The Prize Counter</b><span>Power-ups for the Midway, bought with your club money</span></div><em>›</em></button>
-      <a class="desk-cta" href="#/design"><i>✏️</i><div><b>Design a hole</b><span>Describe a golf hole. The architect builds it, you play it</span></div><em>›</em></a>
+      <h2 class="bar-wall">Through the back</h2>
+      <div class="bar-doors">
+        <button class="desk-cta prize-cta" data-prize><i>🎟️</i><div><b>The Prize Counter</b><span>Power-ups for the Midway, bought with your club money</span></div><em>›</em></button>
+        <a class="desk-cta" href="#/design"><i>✏️</i><div><b>Design a hole</b><span>Describe a golf hole. The architect builds it, you play it</span></div><em>›</em></a>
+      </div>
     </div>`;
 }
 
@@ -54,6 +80,26 @@ export async function fillBar(snap: Snapshot) {
   ]);
   // curses waiting for your next Midway round: the count, not who or what
   const waiting = (await api.powerupState(s).catch(() => null))?.waiting ?? 0;
+
+  // Mo has read the boards: he says the most useful thing first, and more if asked
+  const open = await api.openBoard(s).catch(() => null);
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const lines = moKnows({ snap, welcome: MO.welcome(me.name, snap.today), daily, drive, midway, waiting, open });
+  let at = lines.length > 1 ? 1 : 0;
+  const say = (l: MoLine) => {
+    const p = document.getElementById('mo-line');
+    const go = document.getElementById('mo-go') as HTMLAnchorElement | null;
+    if (!p || !go) return;
+    p.textContent = l.text;
+    go.hidden = !l.href;
+    if (l.href) (go.href = l.href), (go.textContent = l.cta ?? 'Go');
+  };
+  const more = document.getElementById('mo-more') as HTMLButtonElement | null;
+  if (more) {
+    more.hidden = lines.length < 3;
+    more.onclick = () => say(lines[(at = (at + 1) % lines.length)]);
+  }
+  say(lines[at]);
 
   // the Members' Course: how many holes this week, and until there are any, a way to build the first
   const card = document.querySelector<HTMLAnchorElement>('[data-members]');
