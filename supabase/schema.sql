@@ -3020,7 +3020,8 @@ $$;
 -- a birdie on every hole of a course of three or more holes ($750)
 create or replace function plaques_met(pr json) returns table (id text, amount int)
 language sql stable set search_path = public, extensions as $$
-  select c.id, c.amount from plaque_catalog() c where coalesce((pr->>c.field)::int, 0) >= c.need
+  -- (numeric: the long drive is kept to a decimal, e.g. 280.0)
+  select c.id, c.amount from plaque_catalog() c where coalesce((pr->>c.field)::numeric, 0) >= c.need
   union all
   select 'secret-' || z, 250 from json_array_elements_text(coalesce(pr->'secrets', '[]'::json)) z
   union all
