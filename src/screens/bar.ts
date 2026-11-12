@@ -7,7 +7,6 @@ import { gameName, scoreLabel, type BarGame } from '../bar';
 import { isHole } from '../designer/desk';
 import { bestTry, dailyShot, resultLabel } from '../daily';
 import { MO, staffFace } from '../staff';
-import { moKnows, type MoLine } from './mo';
 import { requireSession } from '../state';
 import { esc, golferHref } from '../ui';
 import { openPrizeCounter } from './prizecounter';
@@ -70,7 +69,7 @@ export function barPane(snap: Snapshot) {
           <div class="mo-says" aria-live="polite">
             <b>Mo <small>behind the bar</small></b>
             <p id="mo-line">${esc(MO.welcome(me.name, snap.today))}</p>
-            <div class="mo-acts"><a class="mo-btn" id="mo-go" hidden></a><button class="mo-btn ghost" id="mo-more" hidden>What else, Mo?</button></div>
+            <div class="mo-acts"><button class="mo-btn ghost" id="mo-more" hidden>Go on, Mo</button></div>
           </div>
         </div>
         <div class="bar-counter" aria-hidden="true"></div>
@@ -106,25 +105,17 @@ export async function fillBar(snap: Snapshot) {
   // curses waiting for your next Midway round: the count, not who or what
   const waiting = (await api.powerupState(s).catch(() => null))?.waiting ?? 0;
 
-  // Mo has read the boards: he says the most useful thing first, and more if asked
-  const open = await api.openBoard(s).catch(() => null);
-  const me = snap.players.find((p) => p.id === snap.me)!;
-  const lines = moKnows({ snap, welcome: MO.welcome(me.name, snap.today), daily, drive, midway, waiting, open });
-  let at = lines.length > 1 ? 1 : 0;
-  const say = (l: MoLine) => {
-    const p = document.getElementById('mo-line');
-    const go = document.getElementById('mo-go') as HTMLAnchorElement | null;
-    if (!p || !go) return;
-    p.textContent = l.text;
-    go.hidden = !l.href;
-    if (l.href) (go.href = l.href), (go.textContent = l.cta ?? 'Go');
-  };
+  // Mo: a hello, then banter on request, in a shuffled order so it doesn't repeat for a while
+  const lines = [...MO.banter].sort(() => Math.random() - 0.5);
+  let at = -1;
   const more = document.getElementById('mo-more') as HTMLButtonElement | null;
   if (more) {
-    more.hidden = lines.length < 3;
-    more.onclick = () => say(lines[(at = (at + 1) % lines.length)]);
+    more.hidden = false;
+    more.onclick = () => {
+      const p = document.getElementById('mo-line');
+      if (p) p.textContent = lines[(at = (at + 1) % lines.length)];
+    };
   }
-  say(lines[at]);
 
   // the Members' Course: how many holes this week, and until there are any, a way to build the first
   const card = document.querySelector<HTMLAnchorElement>('[data-members]');
