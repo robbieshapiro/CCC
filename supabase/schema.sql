@@ -2360,6 +2360,17 @@ create table if not exists bonus_grants (
 );
 alter table bonus_grants enable row level security;
 
+-- Trophy money: what each plaque paid a person (see claim_trophies further down)
+create table if not exists trophy_pay (
+  k text not null,
+  h text not null,
+  plaque text not null,
+  amount int not null default 0,
+  created_at timestamptz not null default now(),
+  primary key (k, h, plaque)
+);
+alter table trophy_pay enable row level security;
+
 create or replace function person_bonus(p players) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with seats as (select person_seats(p) as id),
@@ -2402,11 +2413,13 @@ language sql stable security definer set search_path = public, extensions as $$
       100 * (select count(*) from strokes where c <> 'putter' and i = 1 and coalesce(l, '') <> 'green' and nth > 1)::int as chipins,
       150 * (select count(distinct f) from rounds x cross join lateral unnest(x.feats) f where x.player_id in (select id from seats) and x.card and f = any (secret_feats()))::int as secrets,
       (select coalesce(sum(least(500, 100 * n)), 0) from (select dp.week, count(*) as n from design_plays dp join designs d on d.id = dp.design_id where d.player_id in (select id from seats) group by dp.week) w)::int as designs,
-      (select coalesce(sum(amount), 0) from bonus_grants g where g.k = lower(p.name) and g.h = p.pin_hash)::int as grants
+      (select coalesce(sum(amount), 0) from bonus_grants g where g.k = lower(p.name) and g.h = p.pin_hash)::int as grants,
+      -- plaques earned from Nov 12 (trophy_pay, above)
+      (select coalesce(sum(amount), 0) from trophy_pay t where t.k = lower(p.name) and t.h = p.pin_hash)::int as trophies
   )
   select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'shots', b.shots,
-    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants,
-    'total', b.rounds + b.streaks + b.ctp + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants) from b
+    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants, 'trophies', b.trophies,
+    'total', b.rounds + b.streaks + b.ctp + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 
@@ -2974,3 +2987,72 @@ grant execute on function nominate_friend(uuid, text, text) to anon;
 grant execute on function my_nominations(uuid) to anon;
 grant execute on function admin_nominations(uuid) to anon;
 grant execute on function decide_nomination(uuid, bigint, boolean) to anon;
+
+-- Trophy money (from Nov 12): a plaque earned from then on pays once, by its rung. Plaques already held on Nov 12 were
+-- recorded at $0 when this went in (the baseline), so only new ones pay. One person across their clubs (by name and
+-- PIN, as bonus_grants). Counted in person_bonus as 'trophies', so it lands in career earnings and the spending balance.
+-- (trophy_pay is made above, before person_bonus, which reads it)
+
+-- Every plaque: its id (as src/trophies.ts names it), the trophy_progress field it reads, what earns it, and what it
+-- pays. Keep in step with plaques() in src/trophies.ts and TROPHY_PAY there. A ladder pays $250, $750 and $2,000 by rung.
+create or replace function plaque_catalog() returns table (id text, field text, need int, amount int)
+language sql immutable as $$
+  values
+    ('titles1', 'titles', 1, 250), ('titles3', 'titles', 3, 750), ('titles5', 'titles', 5, 2000),
+    ('openwin', 'openwins', 1, 2000),
+    ('opentop1', 'opentop10', 1, 250), ('opentop5', 'opentop10', 5, 750), ('opentop10', 'opentop10', 10, 2000),
+    ('birdies10', 'birdies', 10, 250), ('birdies25', 'birdies', 25, 750), ('birdies100', 'birdies', 100, 2000),
+    ('eagles1', 'eagles', 1, 250), ('eagles5', 'eagles', 5, 750), ('eagles15', 'eagles', 15, 2000),
+    ('albatross', 'albatross', 1, 2000), ('ace', 'aces', 1, 750), ('aceclub', 'aces', 3, 2000),
+    ('underpar1', 'underpar', 1, 250), ('underpar5', 'underpar', 5, 750), ('underpar20', 'underpar', 20, 2000),
+    ('bogeyfree', 'bogeyfree', 1, 750),
+    ('cards10', 'cards', 10, 250), ('cards50', 'cards', 50, 750), ('cards100', 'cards', 100, 2000),
+    ('putt30', 'putts30', 1, 250), ('putt30x10', 'putts30', 10, 750), ('putt60', 'putts60', 1, 750),
+    ('chipins1', 'chipins', 1, 250), ('chipins5', 'chipins', 5, 750), ('chipins15', 'chipins', 15, 2000),
+    ('pinseeker', 'pinseeker', 1, 250),
+    ('drive325', 'longdrive', 325, 250), ('drive350', 'longdrive', 350, 750), ('drive400', 'longdrive', 400, 2000),
+    ('streak7', 'streak', 7, 250), ('streak30', 'streak', 30, 750),
+    ('ctp1', 'ctpwins', 1, 250), ('ctp5', 'ctpwins', 5, 750),
+    ('designer', 'designplayers', 10, 750)
+$$;
+
+-- The plaques a trophy_progress reading has earned, with what each pays: the catalogue, each hole's secret ($250), and
+-- a birdie on every hole of a course of three or more holes ($750)
+create or replace function plaques_met(pr json) returns table (id text, amount int)
+language sql stable set search_path = public, extensions as $$
+  select c.id, c.amount from plaque_catalog() c where coalesce((pr->>c.field)::int, 0) >= c.need
+  union all
+  select 'secret-' || z, 250 from json_array_elements_text(coalesce(pr->'secrets', '[]'::json)) z
+  union all
+  select 'master-' || b.key, 750 from json_each(coalesce(pr->'birdieHoles', '{}'::json)) b
+  where json_array_length(b.value) >= 3
+    and json_array_length(b.value) >= coalesce((select max(array_length(r.pars, 1)) from rounds r where r.course = b.key), 99)
+$$;
+
+-- Pay what's newly earned: called after a round, in the Trophy Room and after a bar game. Returns what it just paid.
+create or replace function claim_trophies(p_token uuid) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); pr json := trophy_progress(p_token); paid json;
+begin
+  if pr is null then return '[]'; end if;
+  with fresh as (
+    insert into trophy_pay (k, h, plaque, amount)
+    select lower(me.name), me.pin_hash, m.id, m.amount from plaques_met(pr) m
+    on conflict (k, h, plaque) do nothing
+    returning plaque, amount
+  )
+  select coalesce(json_agg(json_build_object('plaque', plaque, 'amount', amount)), '[]') into paid from fresh;
+  return paid;
+end $$;
+
+-- What each plaque paid this person (the Trophy Room shows it)
+create or replace function trophy_paid(p_token uuid) returns json
+language sql stable security definer set search_path = public, extensions as $$
+  select coalesce(json_object_agg(t.plaque, t.amount), '{}') from trophy_pay t, home_of(player_for(p_token)) me
+  where t.k = lower(me.name) and t.h = me.pin_hash
+$$;
+
+revoke all on function plaque_catalog() from public, anon, authenticated;
+revoke all on function plaques_met(json) from public, anon, authenticated;
+grant execute on function claim_trophies(uuid) to anon;
+grant execute on function trophy_paid(uuid) to anon;

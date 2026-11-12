@@ -157,6 +157,8 @@ export const supabaseApi: Api = {
   courseRecords: (s) => rpc<CourseRecord[]>('course_records', { p_token: s.token }),
   seasonStandings: (s) => rpc<Season>('season_standings', { p_token: s.token }),
   trophyProgress: (s, id) => rpc<TrophyProgress | null>('trophy_progress', { p_token: s.token, p_player: id ?? null }),
+  claimTrophies: (s) => rpc<{ plaque: string; amount: number }[]>('claim_trophies', { p_token: s.token }).catch(() => []),
+  trophyPaid: (s) => rpc<Record<string, number>>('trophy_paid', { p_token: s.token }).catch(() => ({})),
   golferCard: (s, id) => rpc<GolferCard | null>('golfer_card', { p_token: s.token, p_player: id }),
   submitFreeRound: (s, course, holes, pars) => rpc<void>('submit_free_round', { p_token: s.token, p_course: course, p_holes: holes, p_pars: pars }),
   adminKpis: (s) => rpc<AdminKpis>('admin_kpis', { p_token: s.token }),

@@ -11,6 +11,7 @@ import { moKnows, type MoLine } from './mo';
 import { requireSession } from '../state';
 import { esc, golferHref } from '../ui';
 import { openPrizeCounter } from './prizecounter';
+import { payTrophies } from './trophyroom';
 
 const top3 = (rows: { playerId?: string; name: string; label: string; mine: boolean }[]) =>
   rows.length
@@ -20,16 +21,39 @@ const top3 = (rows: { playerId?: string; name: string; label: string; mine: bool
         .join('')}</ol>`
     : '<p class="bar-empty">Nobody yet. Be first.</p>';
 
-// the back bar: a shelf of bottles, drawn
+// The back bar, drawn: two shelves, crowded and a bit untidy. Whiskey bottles (squat, square-shouldered, amber), wine
+// and gin, pints of stout settling with their cream heads, a tipped glass, a bar towel and the odd lime. Nothing red
+// and squeezy: Robbie said the first shelf looked like ketchup.
 function bottles() {
-  const cols = ['#7a3f1c', '#c98a3a', '#2f5d3a', '#8e2f4a', '#d9b77a', '#a8552a', '#9fd0e6', '#b5651d', '#e6d77a', '#5e1a2c', '#2b6d84', '#c4361b', '#e8c86a', '#4a2416'];
-  const each = cols.map((c, i) => {
-    const x = 6 + i * 22;
-    const h = 30 + ((i * 7) % 5) * 5;
-    const w = 11 + (i % 3) * 2;
-    return `<g transform="translate(${x} ${58 - h})"><rect x="${(w - 4) / 2}" y="0" width="4" height="${h * 0.34}" rx="1.4" fill="${c}"/><rect x="0" y="${h * 0.3}" width="${w}" height="${h * 0.7}" rx="2.6" fill="${c}"/><rect x="1.6" y="${h * 0.5}" width="${w - 3.2}" height="${h * 0.22}" fill="#f3e6cf" opacity="0.85"/><rect x="1.4" y="${h * 0.32}" width="1.6" height="${h * 0.6}" fill="#fff" opacity="0.22"/></g>`;
+  // a whiskey bottle: a square-shouldered body, a short neck, a cork, a cream label
+  const whiskey = (x: number, base: number, h: number, amber: string, tilt = 0) => {
+    const w = h * 0.42;
+    return `<g transform="translate(${x} ${base}) rotate(${tilt})"><rect x="${-w / 2}" y="${-h * 0.68}" width="${w}" height="${h * 0.68}" rx="1.6" fill="${amber}"/><rect x="${-w / 2 + 1}" y="${-h * 0.62}" width="1.4" height="${h * 0.5}" fill="#fff" opacity="0.25"/><path d="M${-w / 2} ${-h * 0.68} Q0 ${-h * 0.82} ${w / 2} ${-h * 0.68}Z" fill="${amber}"/><rect x="-2" y="${-h}" width="4" height="${h * 0.24}" fill="${amber}"/><rect x="-2.4" y="${-h - 2}" width="4.8" height="3" rx="1" fill="#7a5230"/><rect x="${-w / 2 + 1.5}" y="${-h * 0.45}" width="${w - 3}" height="${h * 0.22}" fill="#efe1c0"/><rect x="${-w / 2 + 3}" y="${-h * 0.4}" width="${w - 6}" height="1.2" fill="#3a2114" opacity="0.6"/></g>`;
+  };
+  // a tall bottle (wine, gin): round shoulders, a long neck
+  const tall = (x: number, base: number, h: number, glass: string, label: string, tilt = 0) => {
+    const w = h * 0.3;
+    return `<g transform="translate(${x} ${base}) rotate(${tilt})"><rect x="${-w / 2}" y="${-h * 0.62}" width="${w}" height="${h * 0.62}" rx="${w / 3}" fill="${glass}"/><rect x="-1.7" y="${-h}" width="3.4" height="${h * 0.42}" fill="${glass}"/><rect x="-2" y="${-h - 1.5}" width="4" height="2.5" fill="#d9b77a"/><rect x="${-w / 2 + 1}" y="${-h * 0.38}" width="${w - 2}" height="${h * 0.18}" fill="${label}"/><rect x="${-w / 2 + 1.2}" y="${-h * 0.58}" width="1.2" height="${h * 0.48}" fill="#fff" opacity="0.2"/></g>`;
+  };
+  // a pint of stout: black body, a cream head, the glass bulging near the top
+  const pint = (x: number, base: number, h = 20, settling = false) =>
+    `<g transform="translate(${x} ${base})"><path d="M-5 0 L-6 ${-h * 0.72} Q-6.6 ${-h * 0.86} -5.6 ${-h} L5.6 ${-h} Q6.6 ${-h * 0.86} 6 ${-h * 0.72} L5 0Z" fill="${settling ? '#5a3a26' : '#14100c'}"/><path d="M-5.6 ${-h} L5.6 ${-h} L5.9 ${-h * 0.86} L-5.9 ${-h * 0.86}Z" fill="#f2e6c9"/>${settling ? `<rect x="-5" y="${-h * 0.6}" width="10" height="${h * 0.6}" fill="#14100c" opacity="0.7"/>` : ''}<rect x="-4.4" y="${-h * 0.78}" width="1.2" height="${h * 0.7}" fill="#fff" opacity="0.18"/></g>`;
+  const AMBERS = ['#b8722c', '#c98a3a', '#8a4f1e', '#d79a4a', '#a35f22'];
+  const top: string[] = [], low: string[] = [];
+  // the top shelf: whiskey, mostly, in no particular order, a couple leaning
+  [12, 36, 54, 80, 100, 128, 150, 176, 198, 224, 246, 270, 294].forEach((x, i) => {
+    const h = 26 + ((i * 7) % 4) * 4;
+    if (i % 5 === 3) top.push(tall(x, 40, h + 6, i % 2 ? '#2f5d3a' : '#5e1a2c', '#e8dcc6', i === 8 ? -8 : 0));
+    else top.push(whiskey(x, 40, h, AMBERS[i % AMBERS.length], i === 5 ? 6 : 0));
   });
-  return `<svg viewBox="0 0 320 64" preserveAspectRatio="xMidYMax meet" aria-hidden="true">${each.join('')}<rect x="0" y="58" width="320" height="6" fill="#c9a24a"/><rect x="0" y="58" width="320" height="1.5" fill="#f1d58f"/></svg>`;
+  // the lower shelf: pints of stout (one still settling), a tipped tumbler, a bar towel, a few limes, more bottles
+  [20, 62, 156, 236].forEach((x, i) => low.push(pint(x, 84, 20, i === 2)));
+  [40, 110, 190, 280, 304].forEach((x, i) => low.push(i % 2 ? tall(x, 84, 30, '#1f4a3a', '#d9b77a') : whiskey(x, 84, 26, AMBERS[(i + 2) % AMBERS.length], i === 4 ? -10 : 0)));
+  low.push(`<g transform="translate(130 84) rotate(-78)"><path d="M-5 0 L-6 -12 L6 -12 L5 0Z" fill="#cfe6ea" opacity="0.55"/></g>`);
+  low.push(`<path d="M206 84 Q212 70 220 76 Q226 66 230 84Z" fill="#e8dcc6"/><path d="M210 84 Q214 76 219 79" stroke="#b8955a" stroke-width="1" fill="none"/>`);
+  low.push(`<circle cx="86" cy="81" r="3.2" fill="#8bbf3a"/><circle cx="92" cy="82" r="2.8" fill="#9fd04a"/><path d="M262 84 a4 4 0 0 1 8 0Z" fill="#8bbf3a"/>`);
+  const plank = (y: number) => `<rect x="0" y="${y}" width="320" height="5" fill="#6b4226"/><rect x="0" y="${y}" width="320" height="1.4" fill="#9a6a3e"/><rect x="0" y="${y + 5}" width="320" height="2" fill="#000" opacity="0.35"/>`;
+  return `<svg viewBox="0 0 320 92" preserveAspectRatio="xMidYMax meet" aria-hidden="true">${top.join('')}${plank(40)}${low.join('')}${plank(84)}</svg>`;
 }
 
 export function barPane(snap: Snapshot) {
@@ -128,6 +152,7 @@ export async function fillBar(snap: Snapshot) {
 // after a go: how it went, the week's board, and again or back to the bar
 export async function barSummary(game: BarGame, score: number | null, again: () => void, back: () => void, fun = false) {
   const b = await api.barBoard(requireSession(), game).catch(() => null);
+  void payTrophies();
   const sheet = document.createElement('div');
   sheet.className = 'practice-notes daily-summary';
   sheet.innerHTML = `

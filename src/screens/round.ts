@@ -15,6 +15,7 @@ import { courseFor, type Course } from '../golf3d/courses';
 import { conditionsFor } from '../golf3d/conditions';
 import { shoutSheet } from './shoutouts';
 import { store } from '../storage';
+import { payTrophies } from './trophyroom';
 import { bindPreviewControls, releaseNight, restoreNight } from './previewControls';
 import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
@@ -379,6 +380,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     try {
       await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots, card, shots: shotLog });
       progress(course.holes.length, true);
+      // a plaque this round earned pays now (trophy money, from Nov 12)
+      if (!preview && !dry) void payTrophies(el);
       if (shotsFor) store.remove(SHOTS_KEY);
     } catch (err) {
       posted = false;
