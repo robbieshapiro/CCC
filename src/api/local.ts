@@ -23,7 +23,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot'; mo?: number; score?: number }[] };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards'; mo?: number; score?: number }[] };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -1052,6 +1052,34 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       save(db);
     }
     return { ...bjViewLocal(db, me, h), bank: await localBank(session) };
+  },
+
+  // 8-ball, as bil_start and bil_finish do it
+  async bilStart(session, stake) {
+    if (stake < BJ_MIN || stake > BJ_MAX) throw new Error('Bets are $10 to $500.');
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    for (const x of db.casino ?? []) if (x.playerId === me.id && x.game === 'billiards' && x.payout === null) x.payout = 0;
+    save(db);
+    await casinoCheckLocal(session, stake);
+    const fresh = load();
+    const list = (fresh.casino ??= []);
+    const g = { id: list.length + 1, playerId: me.id, stake, payout: null as number | null, at: new Date().toISOString(), p: [], d: [], deck: [], doubled: false, outcome: null, game: 'billiards' as const };
+    list.push(g);
+    save(fresh);
+    return { id: g.id, stake, breaks: Math.random() < 0.5 ? ('you' as const) : ('mo' as const), bank: await localBank(session), lostToday: lostToday(fresh, me.id) };
+  },
+
+  async bilFinish(session, id, won) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const g = (db.casino ?? []).find((x) => x.id === id && x.playerId === me.id && x.game === 'billiards');
+    if (!g) throw new Error('No such game.');
+    if (g.payout !== null) throw new Error('That game is already settled.');
+    if (won && Date.now() - Date.parse(g.at) < 45_000) throw new Error('Nobody clears a table that fast. Not even Mo.');
+    g.payout = won ? g.stake + Math.floor((g.stake * 9) / 10) : 0;
+    save(db);
+    return { id, stake: g.stake, payout: g.payout, won, bank: await localBank(session), lostToday: lostToday(db, me.id) };
   },
 
   // Pop-a-Shot, as pas_start and pas_finish do it

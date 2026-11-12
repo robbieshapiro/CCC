@@ -6,6 +6,7 @@ import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
 import { blackjack } from './screens/blackjack';
 import { popashot } from './screens/popashot';
+import { billiards } from './screens/billiards';
 import { golfer, leaveGolfer } from './screens/golfer';
 import { home, newPeriod } from './screens/home';
 import { invite } from './screens/invite';
@@ -85,6 +86,7 @@ async function router() {
     if (page === 'playoff') return playoff(s);
     if (page === 'bar' && arg === 'blackjack') return blackjack(s);
     if (page === 'bar' && arg === 'popashot') return popashot(s);
+    if (page === 'bar' && arg === 'billiards') return billiards(s);
     if (page === 'bar') return arg === 'drive' || arg === 'members' || arg === 'midway' ? barRound(s, arg) : clubhouse(s, 'bar');
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     // the old Clubs tab became the Season
