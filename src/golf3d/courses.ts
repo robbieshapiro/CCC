@@ -30,6 +30,7 @@ import { oldkeep } from './holes/lab/oldkeep';
 import { summitrun } from './holes/lab/summitrun';
 import { theloop } from './holes/lab/theloop';
 import type { Hole, V2 } from './types';
+import { applyTweak, type Tweaks } from './tweaks';
 import { isWeek, nextStart } from '../day';
 
 // previewHoles: before it opens, members can practise this many of its holes (all of them if unset); the admin can
@@ -146,10 +147,33 @@ export const scheduleOf = () => schedule;
 // The Design Room's courses (room_courses, src/designer/room.ts): built in the app, loaded from the club at refresh
 let ROOM: Course[] = [];
 export const setRoomCourses = (cs: Course[]) => {
+  // the same courses as before: keep the built list, so a course stays the same object between refreshes
+  if (cs.length === ROOM.length && cs.every((c, i) => c === ROOM[i])) return;
   ROOM = cs;
+  live = null;
 };
 
-const playable = () => [...COURSES.filter((c) => !c.lab), ...ROOM];
+// The Committee's dials on the holes (course_tweaks, src/golf3d/tweaks.ts), applied to every course as it's handed out
+let tweaks: Tweaks = {};
+export const setTweaks = (t: Tweaks | null | undefined) => {
+  if (JSON.stringify(t ?? {}) === JSON.stringify(tweaks)) return;
+  tweaks = t ?? {};
+  live = null;
+};
+export const tweaksOf = () => tweaks;
+const tweakCourse = (c: Course): Course => {
+  const t = tweaks[c.id];
+  if (!t) return c;
+  const holes = c.holes.map((h, i) => applyTweak(h, t[String(i + 1)]));
+  const at = c.playoff ? c.holes.indexOf(c.playoff.hole) : -1;
+  return { ...c, holes, ...(c.playoff && at >= 0 ? { playoff: { ...c.playoff, hole: holes[at] } } : {}) };
+};
+let live: Course[] | null = null;
+const all = () => (live ??= [...COURSES, ...ROOM].map(tweakCourse));
+// a course as built, without the dials (the Committee Room shows both)
+export const asBuilt = (id: string) => COURSES.find((c) => c.id === id) ?? ROOM.find((c) => c.id === id);
+
+const playable = () => all().filter((c) => !c.lab);
 // the calendar alone: the latest course (not a draft) to open by this period
 export function calendarFor(period: string): Course {
   const sorted = playable()
@@ -170,7 +194,7 @@ export function courseFor(period: string, own = true): Course {
   return key && key >= cal.opens ? playable().find((c) => c.id === schedule[key])! : cal;
 }
 
-export const courseById = (id: string) => COURSES.find((c) => c.id === id) ?? ROOM.find((c) => c.id === id);
+export const courseById = (id: string) => all().find((c) => c.id === id);
 // Next week's course, if it's a different one: members can practise its first holes. Without a pick for next week,
 // the next course to open on the calendar.
 export function nextCourse(period: string): Course | undefined {
@@ -198,4 +222,4 @@ export const upcoming = (period: string) => playable().filter((c) => c.id !== co
 // Every course a week can play (not the lab's test holes), oldest first
 export const tourCourses = () => playable().sort((a, b) => a.opens.localeCompare(b.opens));
 // The Hole Lab's test holes
-export const labHoles = () => COURSES.filter((c) => c.lab);
+export const labHoles = () => all().filter((c) => c.lab);

@@ -51,6 +51,11 @@ export type Hole = {
   tee: V2;
   cup: V2;
   pins?: V2[]; // where the pin can be cut; one is picked each day
+  // the Committee's dials (src/golf3d/tweaks.ts): the pin spots left in the rotation, the most the wind may blow, and
+  // the time of day the hole is held at
+  pinsOn?: number[];
+  windCap?: number;
+  time?: 'day' | 'night';
   chipDrop?: number; // tour holes: share of the usual speed a shot from off the green can drop at, so a chip must die at the hole
   greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
   express?: { x: number; y: number; r: number; to: V2 };

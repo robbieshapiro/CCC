@@ -11,14 +11,29 @@ export type Conditions = {
   accel: V2; // ft/s² it pushes a ball in flight
   gust?: number; // storm days: the wind swings by up to this share either way from shot to shot
   rain?: boolean; // storm days: it's raining (the same for every hole that day)
+  cap?: number; // the Committee's wind cap on this hole, gusts included
 };
 
 // a 10 mph wind moves a mid-iron about 13 ft over its flight
 export const WIND_PER_MPH = 0.42;
 
 export function conditionsFor(h: Hole, day: string): Conditions {
+  const c = rawConditions(h, day);
+  return h.windCap == null ? c : capped({ ...c, cap: h.windCap });
+}
+
+// no stronger than the Committee's cap: the same direction, the speed held down
+function capped(c: Conditions): Conditions {
+  if (c.cap == null || c.mph <= c.cap) return c;
+  const k = c.mph ? c.cap / c.mph : 0;
+  return { ...c, mph: c.cap, accel: { x: c.accel.x * k, y: c.accel.y * k } };
+}
+
+function rawConditions(h: Hole, day: string): Conditions {
   const rng = makeRng(`${day}:${h.id}`);
-  const pins = h.pins?.length ? h.pins : [h.cup];
+  const all = h.pins?.length ? h.pins : [h.cup];
+  // the Committee can take spots out of the rotation; the draw is the same either way, so the wind doesn't change
+  const pins = h.pinsOn?.length && h.pins?.length ? h.pinsOn.map((i) => h.pins![i]).filter(Boolean) : all;
   const pin = pins[Math.floor(rng.next() * pins.length)];
   // mostly light, sometimes properly breezy; in storm country never calm, and often blowing hard
   const storm = h.weather === 'storm';
@@ -48,7 +63,7 @@ export function conditionsFor(h: Hole, day: string): Conditions {
 export function gusted(c: Conditions, r: number): Conditions {
   if (!c.gust) return c;
   const k = 1 + (r * 2 - 1) * c.gust;
-  return { ...c, mph: Math.round(c.mph * k), accel: { x: c.accel.x * k, y: c.accel.y * k } };
+  return capped({ ...c, mph: Math.round(c.mph * k), accel: { x: c.accel.x * k, y: c.accel.y * k } });
 }
 
 // The hole as played today: the pin moved to today's spot, and wet if it's raining.

@@ -1,7 +1,8 @@
 import { api, dropSession, getSession, listSessions, setSession } from './api';
 import type { DailyCrown, RoomCourse, Session, Snapshot } from './api/types';
 import { processSnapshot } from './nudges';
-import { setRoomCourses, setSchedule, type Course } from './golf3d/courses';
+import { setRoomCourses, setSchedule, setTweaks, type Course } from './golf3d/courses';
+import type { Tweaks } from './golf3d/tweaks';
 import { roomCourse } from './designer/room';
 import { store } from './storage';
 
@@ -31,7 +32,7 @@ export async function refresh(): Promise<Snapshot> {
   }
   const [snap, crown] = got;
   snap.crown = crown;
-  await Promise.all([loadSchedule(session), loadRoom(session)]);
+  await Promise.all([loadSchedule(session), loadRoom(session), loadTweaks(session)]);
   // a club renamed since this device signed in: keep the saved name (and the club switcher) up to date
   if (snap.groupName && snap.groupName !== session.groupName) setSession({ ...session, groupName: snap.groupName });
   current = snap;
@@ -52,6 +53,19 @@ async function loadSchedule(session: Session) {
     cached = null;
   }
   setSchedule(fresh ?? cached);
+}
+
+// The Committee's dials on the holes, kept on the device like the schedule
+async function loadTweaks(session: Session) {
+  const fresh = await api.courseTweaks(session).catch(() => null);
+  if (fresh) store.set('ccc-tweaks', JSON.stringify(fresh));
+  let cached: Tweaks | null = null;
+  try {
+    cached = JSON.parse(store.get('ccc-tweaks') ?? 'null');
+  } catch {
+    cached = null;
+  }
+  setTweaks(fresh ?? cached);
 }
 
 const roomBuilt = new Map<string, Course>();
