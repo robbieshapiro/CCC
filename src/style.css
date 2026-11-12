@@ -2206,3 +2206,11 @@ body.room-open { background: #030a12; }
 .tw-head small { font: 700 12px var(--font); letter-spacing: 0; text-transform: none; margin-left: 8px; }
 .adm-live .adm-chips { margin-bottom: 8px; }
 #adm-history[hidden], #live-box[hidden], #feed-clubs[hidden] { display: none; }
+/* next week's course, more prominent on home: a taller band, a bigger name, a full button */
+.preview-band { padding: 20px 18px; margin: 4px 0 18px; border-radius: 16px; box-shadow: 0 10px 26px -14px rgba(0, 0, 0, 0.55); }
+.preview-band .pb-icon { font-size: 40px; }
+.preview-band .pb-text b { font: 700 26px/1.1 var(--serif); }
+.preview-band .pb-go { padding: 11px 16px; font-size: 14px; }
+.preview-band.chicago { background: radial-gradient(110% 150% at 100% 0%, rgba(120, 160, 230, 0.4), transparent 58%), linear-gradient(120deg, #0d1730, #1c2f5c 55%, #35508f); border-color: #4a6aa8; }
+.preview-band.chicago .pb-go { background: #ffd23f; color: #0d1730; }
+@media (max-width: 520px) { .preview-band { flex-wrap: wrap; } .preview-band .pb-go { flex: 1 1 100%; text-align: center; } }

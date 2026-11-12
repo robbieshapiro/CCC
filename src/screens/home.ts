@@ -191,8 +191,8 @@ export function home(snap: Snapshot) {
         ${openPurseOn(snap.month) ? `<a class="season-link" href="#/clubhouse/season" id="season-link">🏆 ${snap.month.slice(0, 4)} Season standings</a>` : ''}
       </section>
       ${nominateTile()}
-      ${playTiles(snap)}
       ${previewBand(snap.month)}
+      ${playTiles(snap)}
       <p class="course-idea">Want to feature next week's course? <button class="link" data-course-idea>Submit an idea</button> to Reginald for review.</p>
       ${honoursPane(snap)}
       <section class="plaque">
@@ -323,9 +323,9 @@ const LOOKS = ['volcanic', 'coastal', 'autumn'];
 export const look = (c: Course) => (LOOKS.includes(c.holes[0]?.theme ?? '') ? ` ${c.holes[0].theme}` : '');
 const leaf = (c: Course) => (c.holes[0]?.theme === 'autumn' ? '🍁 ' : '');
 
-// Next week's course, between the Play card and the board: a warm band in the course's own colours (autumn leaves for
+// Next week's course, under the nomination tile and above More to play: a warm band in the course's own colours (autumn leaves for
 // the Western Reserve), counting down to its first day, with its practice as the button
-const THEME_ICON: Record<string, string> = { autumn: '🍁', volcanic: '🌋', coastal: '🌊' };
+const THEME_ICON: Record<string, string> = { autumn: '🍁', volcanic: '🌋', coastal: '🌊', chicago: '🏙️' };
 function previewBand(month: string) {
   const next = nextCourse(month);
   if (!next) return '';
@@ -335,7 +335,7 @@ function previewBand(month: string) {
   return `<a class="preview-band ${esc(theme)}" href="#/practice/${next.id}">
     <span class="pb-icon" aria-hidden="true">${THEME_ICON[theme] ?? '⛳'}</span>
     <span class="pb-text">
-      <small><span class="pb-lead">Coming up · </span><span data-countdown="${starts.getTime()}" data-done="Open now">opens in <em data-left>…</em></span></small>
+      <small><span class="pb-lead">Next week's course · </span><span data-countdown="${starts.getTime()}" data-done="Open now">opens in <em data-left>…</em></span></small>
       <b>${esc(shortName(next))}</b>
       <span>${n >= next.holes.length ? `Practise all ${n} holes` : `Practise ${n === 1 ? 'the first hole' : `the first ${n} holes`}`} before it counts</span>
     </span>
