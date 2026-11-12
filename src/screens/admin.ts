@@ -59,6 +59,7 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
       <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
       <div class="adm-pane" data-pane="courses">
         ${homeSections(`
+          ${todaySections()}
           <details class="adm-more">
             <summary>More numbers <small>purse, AI calls, players per day, week over week</small></summary>
             ${kpiSections()}
@@ -75,7 +76,6 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
         </section>
         ${nominationsSection()}
         <section class="adm-card" id="adm-holes" hidden></section>
-        ${todaySections()}
       </div>
       <div class="adm-pane" data-pane="bar" hidden>
         ${barSection()}
