@@ -72,6 +72,7 @@ export type Hole = {
   noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)
   theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn' | 'coastal' | 'florida' | 'city' | 'canyon' | 'alpine' | 'linksland' | 'chicago' | 'carnival';
   blurb?: string; // a line for the hole's intro card during the flyover
+  teeTip?: string; // what Hank says on this tee: the club the hole wants
   yards?: number; // the length shown on the intro card, if not the straight line from tee to cup
   putterOnly?: boolean; // mini golf: the putter is the only club
   flag?: string; // what the pin's flag says, if not the hole number
@@ -89,6 +90,9 @@ export type Hole = {
   // a ball that comes down on one is lost (penalty). top: the ridge, ft above the ground; a ball higher than that
   // sails over (a barn), where without it the roof reaches up for ever (a veranda under the clubhouse wall)
   roofs?: Roof[];
+  // a ball that lands on a roof rattles down to the foot of the building, no penalty (the Windy City); without it a
+  // roof keeps the ball
+  roofsGive?: boolean;
   ceilings?: { poly: V2[]; h: number }[]; // a cave roof this far above the ground: a ball that rises into it clips it and drops
   // a hole in the rock: a ball that rolls into it drops down a tunnel and comes out at `to` a moment later, at rest
   portals?: { id: string; x: number; y: number; r: number; to: V2; delay?: number }[];

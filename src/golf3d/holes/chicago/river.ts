@@ -11,8 +11,9 @@ import { building } from '../../looks/chicago';
 import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
 
 const LAND = 7;
-// the tee: on the roof of a riverside tower, 44 ft above the street
-const ROOF = { x0: -16, y0: -24, x1: 16, y1: 16, h: 44 };
+// the tee: on the roof of a riverside tower, 26 ft above the street (44 until Nov 12: from up there a perfect full
+// driver flew the landing area and found the river, as did 74% of members' real drives in the simulator)
+const ROOF = { x0: -16, y0: -24, x1: 16, y1: 16, h: 26 };
 const RIVER = 1;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
 const GREEN = { x: 30, y: 580, rx: 29, ry: 22 };
@@ -53,12 +54,13 @@ export const river: Hole = {
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.03,
+  teeTip: 'The river is left and long. Aim at the towers: they give the ball back.',
   yards: 420,
   blurb: 'Off a rooftop on Wacker. The river down the left, a boat slip across the landing area, then over the river to the corn cobs.',
   tee: { x: 0, y: 0 },
   cup: { x: 30, y: 583 },
   pins: [{ x: 30, y: 583 }, { x: 14, y: 570 }, { x: 48, y: 588 }, { x: 26, y: 595 }],
-  aim: 0.03,
+  aim: 0.1,
   bounds: { x0: -160, y0: -50, x1: 200, y1: 680 },
   border: [
     { x: -150, y: -46 },
@@ -78,7 +80,8 @@ export const river: Hole = {
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // a first leg to the slip, then a second up the right past it (both half as wide again since Nov 11)
     { poly: blob(6, 160, 34, 100, 1, 0.05), surface: 'fairway' },
-    { poly: blob(46, 400, 34, 60, 2, 0.06), surface: 'fairway' },
+    // (since Nov 12 it sits where drives off the roof finish: they fly past the first leg)
+    { poly: blob(40, 380, 44, 62, 2, 0.06), surface: 'fairway' },
     // the riverwalk along the bank, and Wacker Drive along the towers
     { poly: band(BANK.slice(0, 4), 4), surface: 'stone' },
     { poly: rect(66, -40, 84, 340), surface: 'path' },
@@ -104,6 +107,7 @@ export const river: Hole = {
   ],
   walls: TOWERS.flatMap((b) => b.walls),
   roofs: TOWERS.map((b) => b.roof),
+  roofsGive: true,
   posts,
   movers: [],
   pushes: [],
@@ -118,7 +122,8 @@ export const river: Hole = {
   decor: [
     { kind: 'teetower', x: 0, y: -4, size: [ROOF.x1 - ROOF.x0, ROOF.y1 - ROOF.y0, ROOF.h], scale: 71 },
     { kind: 'teebox', x: 0, y: 0 },
-    { kind: 'el', x: 0, y: 110, rot: 0, scale: 360, label: 'brown' },
+    // the L runs behind the tee now: with the tee lowered to 26 ft its deck crossed the hole at eye level
+    { kind: 'el', x: 0, y: -72, rot: 0, scale: 360, label: 'brown' },
     ...TOWERS.map((b) => b.decor),
     { kind: 'marina', x: -60, y: 760 },
     { kind: 'bascule', x: 160, y: 512, rot: 0, scale: 60 },

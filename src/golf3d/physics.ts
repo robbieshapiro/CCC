@@ -192,6 +192,24 @@ export function windExposure(vz: number) {
   return Math.max(0, Math.min(1, (apex - 3) / 20));
 }
 
+// Where a ball that landed on a roof comes down: just outside the nearest wall of the building that's on dry ground,
+// in bounds and not under another roof. Null when there's nowhere (then the roof keeps it).
+function offRoof(h: Hole, roof: { poly: V2[] }, p: V2, clock: number): V2 | null {
+  const cx = roof.poly.reduce((a, q) => a + q.x, 0) / roof.poly.length;
+  const cy = roof.poly.reduce((a, q) => a + q.y, 0) / roof.poly.length;
+  const spots = roof.poly.map((a, i) => {
+    const b = roof.poly[(i + 1) % roof.poly.length];
+    const len2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2 || 1;
+    const k = Math.max(0.08, Math.min(0.92, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / len2));
+    const e = { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+    const out = Math.hypot(e.x - cx, e.y - cy) || 1;
+    return { at: { x: e.x + ((e.x - cx) / out) * 5, y: e.y + ((e.y - cy) / out) * 5 }, d: Math.hypot(e.x - p.x, e.y - p.y) };
+  });
+  for (const s of spots.sort((a, b) => a.d - b.d))
+    if (inPoly(s.at, h.border) && !isWater(h, s.at, clock) && !h.roofs?.some((r) => inPoly(s.at, r.poly))) return s.at;
+  return null;
+}
+
 export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Result {
   let { x, y } = from;
   const shotLaunch = launch({ ...shot, loft: shot.loft ?? escapeLoft(h, from, shot), boost: (shot.boost ?? 1) * lieFactor(h, from, shot.club) });
@@ -273,9 +291,18 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         flying = false;
         sound('roof', 'wall');
       }
-      if (h.roofs?.some((r) => z - g2 > 4 && (r.top === undefined || z - g2 < r.top) && inPoly({ x, y }, r.poly))) {
+      const onRoof = h.roofs?.find((r) => z - g2 > 4 && (r.top === undefined || z - g2 < r.top) && inPoly({ x, y }, r.poly));
+      if (onRoof) {
         sounds.push({ t, s: 'wall' });
-        return finish(false, true);
+        // where roofs give the ball back, it rattles down to the foot of the building and lies there: no penalty
+        const foot = h.roofsGive ? offRoof(h, onRoof, { x, y }, clock) : null;
+        if (!foot) return finish(false, true);
+        if (keepFrames) frames.push({ x, y, z, t });
+        t += 0.7;
+        x = foot.x;
+        y = foot.y;
+        z = heightAt(h, x, y);
+        return finish(false, false);
       }
       if (z <= g2 && splash && flying && vz > 0 && Math.hypot(x - from.x, y - from.y) < 1.5) z = g2 + BALL_R;
       else if (z <= g2) {

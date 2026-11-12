@@ -15,7 +15,8 @@ const LAND = 6;
 const GREEN = { x: 38, y: 568, rx: 29, ry: 21 };
 const traps = [greenside(GREEN, 4, 560, 8, 10, 1, 3, 0), greenside(GREEN, 30, 600, 10, 5, 2, 3, 0)];
 // the harbour: a big bite out of the right half of the hole
-const HARBOUR = { x0: 6, y0: 300, x1: 200, y1: 450 };
+// (its near wall was at x 6 until Nov 12: a slight push off the tee found it, 30% of members' real drives)
+const HARBOUR = { x0: 28, y0: 300, x1: 200, y1: 450 };
 const BREAKWATER = band([{ x: 30, y: 462 }, { x: 70, y: 470 }], 6);
 
 const trees: Post[] = [
@@ -39,6 +40,7 @@ export const lakefront: Hole = {
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.03,
+  teeTip: 'The harbour cuts in on the right from halfway. Keep it up the left.',
   yards: 420,
   blurb: 'A beach hole on Lake Michigan. Miss the fairway and you are in the sand; the harbour bites in right, the Drive is out left.',
   tee: { x: 0, y: 0 },
@@ -58,7 +60,7 @@ export const lakefront: Hole = {
     // a sliver of rough round the tee, the fairways and the green, then the beach
     { poly: rect(-18, -18, 18, 18), surface: 'rough' },
     { poly: blob(-12, 190, 38, 116, 1, 0.05), surface: 'rough' },
-    { poly: blob(-18, 400, 30, 66, 2, 0.06), surface: 'rough' },
+    { poly: blob(-10, 378, 40, 92, 2, 0.06), surface: 'rough' },
     { poly: blob(14, 500, 40, 28, 3, 0.06), surface: 'rough' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 10, GREEN.ry + 10, 3, 0.06), surface: 'rough' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
@@ -66,13 +68,13 @@ export const lakefront: Hole = {
     // members hit 6% of fairways the week before)
     { poly: blob(-12, 190, 32, 110, 1, 0.05), surface: 'fairway' },
     // a ribbon up the left past the harbour, and the run-in to the green
-    { poly: blob(-18, 400, 24, 60, 2, 0.06), surface: 'fairway' },
+    { poly: blob(-10, 378, 34, 86, 2, 0.06), surface: 'fairway' },
     { poly: blob(14, 500, 34, 22, 3, 0.06), surface: 'fairway' },
     { poly: BREAKWATER, surface: 'fairway' },
     { poly: band([{ x: -46, y: -40 }, { x: -46, y: 650 }], 3), surface: 'path' },
     // the stone revetment along the water
     { poly: band([{ x: 78, y: -40 }, { x: 78, y: 290 }], 5), surface: 'stone' },
-    { poly: band([{ x: 0, y: 296 }, { x: 0, y: 452 }], 4), surface: 'stone' },
+    { poly: band([{ x: 22, y: 296 }, { x: 22, y: 452 }], 4), surface: 'stone' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     ...traps.map((t) => t.region),

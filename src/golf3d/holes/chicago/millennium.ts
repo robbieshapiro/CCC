@@ -86,6 +86,7 @@ export const millennium: Hole = {
   ],
   walls: AVE.flatMap((b) => b.walls),
   roofs: AVE.map((b) => b.roof),
+  roofsGive: true,
   posts,
   movers: [],
   pushes: [],
