@@ -1,5 +1,5 @@
-// What the cart and Reginald's tray pour, by course. The effects are the same everywhere (see DRINKS in clubs.ts: a
-// slower meter, a little more distance, a quick needle with wide gold, steady hands, nothing, a late-cart shot); each
+// What the cart and Reginald's tray pour, by course. The effects are the same everywhere (see DRINKS in clubs.ts: slow
+// hands, the long ball, dialled in, a clean lie, cutting the wind, and the late cart's one big swing); each
 // course names them after where it is, so the Windy City pours Malört and the Highlands a dram.
 import { DRINKS, type Drink } from './clubs';
 import type { Hole } from './types';
@@ -50,7 +50,7 @@ const MENUS: Record<string, Menu> = {
     fireball: { name: 'Mezcal shot', colour: '#e8e2c8', note: 'Smoky' },
   },
   chicago: {
-    palmer: { name: 'Italian beef, dipped', colour: '#8a5a33', note: 'Heavy. Slows you right down' },
+    palmer: { name: 'Italian beef, dipped', colour: '#8a5a33', note: 'Heavy' },
     lager: { name: 'Old Style tallboy', colour: '#e1b84f' },
     espresso: { name: 'Cold brew', colour: '#2e1c12' },
     transfusion: { name: 'The glizzy', colour: '#d23b2a', note: 'A Chicago dog. No ketchup' },

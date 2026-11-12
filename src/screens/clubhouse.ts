@@ -152,7 +152,7 @@ function how(snap: Snapshot) {
     ['🎯', 'Closest to the Pin', 'One shot, three tries, new every day.'],
     ['🍺', 'The bar', "The long drive and the Members' Course. New boards every Monday."],
     ['🏌️', 'Practice', `The range, the short game, and next ${per}’s course before it opens.`],
-    ['🥤', 'The cart', 'Drinks from the cart change your next swings.'],
+    ['🥤', 'The cart', 'Each drink from the cart does one thing for the rest of the hole, at a cost.'],
   ];
   const swing: [string, string, string][] = [
     ['👆', 'Aim', 'Drag left or right'],

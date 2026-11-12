@@ -12,6 +12,9 @@ import { esc, navigate } from '../ui';
 import { bindCardNote, cardNote, cardTile, tileState } from './cardnote';
 import { look } from './home';
 import { dryForget, dryToday } from './round';
+import { hasNight } from '../golf3d/kits';
+import { setNight } from './previewControls';
+import { store } from '../storage';
 
 const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 const rehearsed = (snap: Snapshot) => nextCourse(snap.month) ?? courseFor(snap.month);
@@ -30,7 +33,22 @@ const STEPS = [
 export function sundayCardSection(snap: Snapshot): string {
   const c = rehearsed(snap);
   const all = [courseFor(snap.month), ...upcoming(snap.month)];
+  const next = courseFor(nextStart(snap.month));
+  const nextIsNew = next.id !== courseFor(snap.month).id;
   return `
+    <section class="adm-card adm-next${look(next)}" id="adm-next">
+      <div class="adm-next-head">
+        <p class="eyebrow">${nextIsNew ? `Next week · opens ${esc(periodName(nextStart(snap.month)).replace(/^Week of /, ''))}` : 'Next week · carries on'}</p>
+        <h2>${esc(shortName(next))}</h2>
+        <p class="muted">${esc(next.tagline ?? '')}</p>
+      </div>
+      <ol class="adm-next-holes">${next.holes.map((h, i) => `<li><div><b>${i + 1}</b><span>${esc(h.name)}</span><em>Par ${h.par}${h.yards ? ` · ${h.yards} yd` : ''}</em></div></li>`).join('')}</ol>
+      <div class="adm-next-go">
+        <a class="btn big" href="#/preview/${next.id}" data-next-play>Play it, with the controls</a>
+        ${hasNight(next.holes[0]) ? `<div class="adm-chips" role="group" aria-label="Time of day"><small>Time</small><button data-next-night="day">☀️ Day</button><button data-next-night="night">🌙 Night</button><button data-next-night="">By the clock</button></div>` : ''}
+      </div>
+      <p class="fine">In play, the Controls button changes the time of day, the wind and the pin, pours any drink, sends out the cart or Reginald, puts a shot back, and drops the ball anywhere on the map. Holes jumps to any hole. Nothing is posted or paid.</p>
+    </section>
     <section class="adm-card adm-sunday" id="adm-sunday">
       <div class="adm-sunday-head">
         <p class="eyebrow">Rehearsal · ${esc(shortName(c))}</p>
@@ -187,6 +205,11 @@ export function bindSundayCard(snap: Snapshot) {
       };
   };
   draw();
+  // next week's course: day or night for the preview, remembered on this device
+  const nightBtns = [...document.querySelectorAll<HTMLButtonElement>('[data-next-night]')];
+  const showNight = () => nightBtns.forEach((b) => b.classList.toggle('on', (store.get('ccc-preview-night') ?? '') === b.dataset.nextNight));
+  nightBtns.forEach((b) => (b.onclick = () => (setNight(b.dataset.nextNight as 'day' | 'night' | ''), showNight())));
+  showNight();
   const go = document.querySelector<HTMLButtonElement>('[data-preview-go]');
   if (go) go.onclick = () => navigate(`#/preview/${document.querySelector<HTMLSelectElement>('#adm-preview')!.value}`);
 }

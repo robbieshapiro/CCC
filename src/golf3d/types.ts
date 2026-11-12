@@ -107,4 +107,4 @@ export type Hole = {
 // error: -1..1 from the swing meter (0 is pure). boost scales carry (drinks).
 // spin: -1 topspin .. 1 backspin. shape: -1 draw (bends left) .. 1 fade (bends right). wind: ft/s² while airborne.
 // loft: degrees, in place of the club's own (an opened face out of a bunker: see escapeLoft in physics.ts).
-export type Shot = { angle: number; power: number; club: ClubId; error: number; clock: number; boost?: number; spin?: number; shape?: number; wind?: V2; loft?: number };
+export type Shot = { angle: number; power: number; club: ClubId; error: number; clock: number; boost?: number; spin?: number; shape?: number; wind?: V2; loft?: number; cleanLie?: boolean };
