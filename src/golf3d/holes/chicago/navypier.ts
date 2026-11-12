@@ -44,11 +44,11 @@ export const navypier: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.03,
   teeTip: 'Water both sides. A good drive leaves a wood to the island, or an iron to the end of the pier.',
-  yards: 480,
+  yards: 500,
   blurb: 'Out the pier into the lake, water both sides, to an island green past the end. After a good drive: a wood at the island, or an iron to the end of the pier.',
-  // the tee is 70 ft out along the pier since Nov 12 (the hole was 590 yd): a good drive now leaves a wood to the
+  // the tee is 40 ft out along the pier since Nov 12 (the hole was 590 yd): a good drive now leaves a wood to the
   // island or an iron to the end of the pier
-  tee: { x: 0, y: 150 },
+  tee: { x: 0, y: 120 },
   cup: { x: 0, y: 803 },
   pins: [{ x: 0, y: 803 }, { x: -18, y: 789 }, { x: 19, y: 809 }, { x: -5, y: 817 }],
   aim: 0,
@@ -61,7 +61,7 @@ export const navypier: Hole = {
   ],
   base: 'rough',
   regions: [
-    { poly: rect(-12, 138, 12, 162), surface: 'fairway' },
+    { poly: rect(-12, 108, 12, 132), surface: 'fairway' },
     // the lawn at the foot of the pier, then the pier itself, its boardwalk, and the end
     { poly: blob(0, 40, 60, 40, 1, 0.05), surface: 'fairway' },
     // a strip down the pier, broken by the slip (half as wide again since Nov 11)
@@ -104,7 +104,7 @@ export const navypier: Hole = {
     { x: 0, y: 800 },
   ],
   decor: [
-    { kind: 'teebox', x: 0, y: 150 },
+    { kind: 'teebox', x: 0, y: 120 },
     HALL.decor,
     { kind: 'ferris', x: WHEEL.x, y: WHEEL.y, rot: Math.PI / 2 },
     { kind: 'walkers', x: -52, y: 400, rot: Math.PI / 2, scale: 560, size: [12, 0, 0] },

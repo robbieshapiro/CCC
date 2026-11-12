@@ -61,3 +61,18 @@ export const DRINKS: Record<Drink, DrinkFx> = {
   // on the cart's late visit, and the long drive's: one swing only (unchanged, so the long drive board plays the same)
   fireball: drink('Fireball', 'One big one: 15% further', 'A quick needle', { boost: 1.15, needle: 1.2, swings: 1 }),
 };
+// The drinks as they were until Nov 12: a nudge to the meter for two swings. The Western Reserve keeps them until its
+// week closes (Nov 14), so the course in play doesn't change under the members mid-Open.
+const old = (name: string, job: string, fx: Partial<DrinkFx>): DrinkFx => ({ name, job, cost: '', blurb: `${job} · ${fx.swings === 1 ? '1 swing' : '2 swings'}`, sweet: 1, boost: 1, needle: 1, wind: 1, swings: 2, ...fx });
+const DRINKS_BEFORE: Record<Drink, DrinkFx> = {
+  palmer: old('Arnold Palmer', 'Slower meter', { needle: 0.82 }),
+  lager: old('Clubhouse Lager', '+10% distance', { boost: 1.1, needle: 1.12 }),
+  espresso: old('Espresso', 'Quick needle, wide gold', { sweet: 1.35, needle: 1.2 }),
+  transfusion: old('Transfusion', 'Steady hands, 5% shorter', { sweet: 1.2, boost: 0.95, needle: 0.9 }),
+  water: { ...old('Sparkling Water', 'Does nothing', {}), blurb: 'Does nothing. Reginald approves.' },
+  fireball: old('Fireball', '+15% distance', { boost: 1.15, needle: 1.2, swings: 1 }),
+};
+const RESERVE_HOLES = ['creekbend', 'theledges', 'maplelake', 'thequarry', 'thegorge'];
+const RESERVE_CLOSES = Date.parse('2026-11-15T05:00:00Z'); // midnight ET, Saturday Nov 14
+// which drinks a hole pours
+export const drinksOn = (holeId: string, now = Date.now()): Record<Drink, DrinkFx> => (RESERVE_HOLES.includes(holeId) && now < RESERVE_CLOSES ? DRINKS_BEFORE : DRINKS);

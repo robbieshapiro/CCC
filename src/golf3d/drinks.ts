@@ -1,7 +1,7 @@
 // What the cart and Reginald's tray pour, by course. The effects are the same everywhere (see DRINKS in clubs.ts: slow
 // hands, the long ball, dialled in, a clean lie, cutting the wind, and the late cart's one big swing); each
 // course names them after where it is, so the Windy City pours Malört and the Highlands a dram.
-import { DRINKS, type Drink } from './clubs';
+import { drinksOn, type Drink } from './clubs';
 import type { Hole } from './types';
 
 type Pour = { name: string; colour: string; note?: string };
@@ -69,5 +69,5 @@ const menuOf = (h: Hole | null | undefined): Menu => {
 // a drink as this hole's course pours it: its name, what it does, and its colour on the tray
 export function pour(kind: Drink, h: Hole | null | undefined) {
   const p = menuOf(h)[kind];
-  return { name: p.name, colour: p.colour, blurb: p.note ? `${p.note} · ${DRINKS[kind].blurb}` : DRINKS[kind].blurb };
+  return { name: p.name, colour: p.colour, blurb: p.note ? `${p.note} · ${drinksOn(h?.id ?? '')[kind].blurb}` : drinksOn(h?.id ?? '')[kind].blurb };
 }

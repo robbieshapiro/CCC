@@ -1,7 +1,7 @@
 // The Committee's control centre in a course preview: change the conditions, pour any drink, call the cart, and move
 // the ball about, all while playing. Nothing here is on a member's card; it only shows in the Committee's preview.
 import type { Course3D, Visit } from '../golf3d/engine';
-import { DRINKS, type Drink } from '../golf3d/clubs';
+import { drinksOn, type Drink } from '../golf3d/clubs';
 import { pour } from '../golf3d/drinks';
 import { forceNight, hasNight } from '../golf3d/kits';
 import { store } from '../storage';
@@ -66,8 +66,8 @@ export function bindPreviewControls(game: Course3D, host: HTMLElement, restart: 
 
         <section>
           <h3>Drinks <em>poured now</em></h3>
-          <div class="pc-drinks">${(Object.keys(DRINKS) as Drink[])
-            .map((k) => `<button data-pour="${k}" class="${st.drink === k ? 'on' : ''}"><b>${esc(pour(k, h).name)}</b><span>${esc(DRINKS[k].job)}</span><i>${esc(DRINKS[k].cost)} · ${DRINKS[k].swings === 1 ? '1 swing' : 'this hole'}</i></button>`)
+          <div class="pc-drinks">${(Object.keys(drinksOn(h.id)) as Drink[])
+            .map((k) => `<button data-pour="${k}" class="${st.drink === k ? 'on' : ''}"><b>${esc(pour(k, h).name)}</b><span>${esc(drinksOn(h.id)[k].job)}</span><i>${esc(drinksOn(h.id)[k].cost)} · ${drinksOn(h.id)[k].swings === 1 ? '1 swing' : 'this hole'}</i></button>`)
             .join('')}</div>
           <div class="pc-row"><button data-pour="">Empty the glass</button></div>
           <label>Send someone out <em>restarts the hole</em></label>

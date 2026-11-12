@@ -10,7 +10,7 @@ import { ask, type AskOpts } from '../dialog';
 import { CartGirl, type Visitor } from './cartgirl';
 import { ReginaldTray } from './reginaldtray';
 import { conditionsFor, gusted, tempestOn, WIND_PER_MPH, withPin, type Conditions } from './conditions';
-import { bagFor, carryOf, CLUBS, DRINKS, SCALE, type ClubId, type Drink } from './clubs';
+import { bagFor, carryOf, CLUBS, drinksOn, SCALE, type ClubId, type Drink } from './clubs';
 import { MAGNET_FT } from '../powerups';
 import { pour } from './drinks';
 import { Golfer, HANK_SPEC, reactionFor, type Reaction } from './golfer';
@@ -425,7 +425,7 @@ export class Course3D {
   }
   // any drink, now: for the rest of the hole (the fireball: one swing)
   pourNow(kind: Drink | null) {
-    this.drink = kind ? { kind, shots: DRINKS[kind].swings ?? HOLE_LONG } : null;
+    this.drink = kind ? { kind, shots: drinksOn(this.hole?.id ?? '')[kind].swings ?? HOLE_LONG } : null;
     this.showDrink();
     if (this.mode === 'aim') this.toAim();
   }
@@ -1113,8 +1113,8 @@ export class Course3D {
   private showDrink() {
     const el = this.overlay.querySelector('[data-drink]') as HTMLElement | null;
     if (!el) return;
-    el.hidden = !this.drink;
-    if (this.drink) el.innerHTML = `<b>${pour(this.drink.kind, this.hole).name}</b><span>${this.drink.shots === 1 ? '1 swing left' : 'this hole'}</span>`;
+    el.hidden = !this.drink || (this.drink.kind === 'water' && drinksOn(this.hole?.id ?? '').water.wind === 1);
+    if (this.drink) el.innerHTML = `<b>${pour(this.drink.kind, this.hole).name}</b><span>${this.drink.shots >= HOLE_LONG ? 'this hole' : `${this.drink.shots} ${this.drink.shots === 1 ? 'swing' : 'swings'} left`}</span>`;
   }
 
   // ---------- the beverage cart ----------
@@ -1123,7 +1123,7 @@ export class Course3D {
     this.overlay.classList.remove('carting');
     if (kind) {
       // a fireball is good for one swing; the other drinks for the rest of the hole
-      this.drink = { kind, shots: DRINKS[kind].swings ?? HOLE_LONG };
+      this.drink = { kind, shots: drinksOn(this.hole?.id ?? '')[kind].swings ?? HOLE_LONG };
       try {
         const k = 'ccc-drinks';
         const had = new Set<string>(JSON.parse(localStorage.getItem(k) || '[]'));
@@ -1425,11 +1425,11 @@ export class Course3D {
   }
 
   private boost() {
-    return this.drink ? DRINKS[this.drink.kind].boost : 1;
+    return this.drink ? drinksOn(this.hole?.id ?? '')[this.drink.kind].boost : 1;
   }
   // what the drink in hand does, if there's one
   private fx() {
-    return this.drink ? DRINKS[this.drink.kind] : null;
+    return this.drink ? drinksOn(this.hole?.id ?? '')[this.drink.kind] : null;
   }
 
   // ---------- the swing ----------
@@ -1467,7 +1467,7 @@ export class Course3D {
   // Tap 1: the power bar starts to fill. Your plan is the gold line on it.
   private startSwing() {
     if (this.mode !== 'aim' || this.club === 'putter') return;
-    const drink = this.drink ? DRINKS[this.drink.kind] : null;
+    const drink = this.drink ? drinksOn(this.hole?.id ?? '')[this.drink.kind] : null;
     this.mode = 'meter';
     this.meter = { phase: 'power', p: 0, d: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0 };
     const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
@@ -1480,7 +1480,7 @@ export class Course3D {
     m.classList.toggle('boost', kind === 'lager' || kind === 'fireball');
     m.classList.toggle('fireball', kind === 'fireball');
     const tag = this.overlay.querySelector('[data-swing-tag]') as HTMLElement;
-    tag.hidden = !drink;
+    tag.hidden = !drink || (kind === 'water' && drink.wind === 1);
     if (drink && kind) tag.textContent = `${pour(kind, this.hole).name} · ${drink.job.split(':')[0]}${drink.boost > 1 ? ' · swing into the fire' : ''}`;
     // righties have the meter on the left, out of the way of the golfer; lefties on the right
     m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
@@ -1497,7 +1497,7 @@ export class Course3D {
     if (this.mode !== 'meter') return;
     const m = this.meter;
     if (m.phase === 'power') {
-      const drink = this.drink ? DRINKS[this.drink.kind] : null;
+      const drink = this.drink ? drinksOn(this.hole?.id ?? '')[this.drink.kind] : null;
       // the Short Pour (a Midway curse): however far you take it back, it's capped
       if (this.mods.powerCap && this.club !== 'putter') m.p = Math.min(m.p, this.mods.powerCap);
       m.phase = 'accuracy';
@@ -2342,7 +2342,7 @@ export class Course3D {
       if (m.phase === 'power') {
         // fills faster toward the top; at the end of the overswing it stops on its own. With a lager or a fireball in
         // you the overswing is the fire, and the bar slows right down in it so you can stop it there
-        const fire = !!this.drink && DRINKS[this.drink.kind].boost > 1 && m.p > 1;
+        const fire = !!this.drink && drinksOn(this.hole?.id ?? '')[this.drink.kind].boost > 1 && m.p > 1;
         // the chipper and the wedge climb their stretched scale at a steady pace (see meterPos); the rest fill by power
         if (stretched(this.club)) {
           m.d = Math.min(OVERSWING, m.d + stretchRate(this.club) * m.speed * (fire ? 0.45 : 1) * dt);
