@@ -67,7 +67,7 @@ function draw(snap: Snapshot, rows: RoomCourse[]) {
   closeRoom();
   render(`<div class="room">
     <header class="room-top">
-      <a class="room-back" href="#/admin">‹ Committee Room</a>
+      <a class="room-back" href="#/admin/courses">‹ Courses</a>
       <select id="room-pick" aria-label="Course">
         ${rows.map((r) => `<option value="${r.id}" ${r.id === w.id ? 'selected' : ''}>${esc(r.name)}${r.draft ? ' (draft)' : ''}</option>`).join('')}
         <option value="new" ${w.id === null ? 'selected' : ''}>＋ New course</option>

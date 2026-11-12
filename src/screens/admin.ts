@@ -1,8 +1,12 @@
-// The Committee Room, built around the game maker's job: designing, testing and scheduling a course each week.
-// Courses is home (src/screens/adminHome.ts: Jarvis's briefing, this week's course and how it's playing, then every
-// course week by week, each one opening to review, play, test and plan). Then three small rooms: Members (what's
-// waiting on you, the people, invites, who's in, the numbers), Bar and Tools. Each has its own address
-// (#/admin, #/admin/members, #/admin/course/<id>), so Back works. Every member name opens their card.
+// The Committee Room, for one person running the club. Four tabs, each thing in one place:
+//   Overview (#/admin): Jarvis's briefing, what's waiting on you, the Pulse (headline numbers, every club side by
+//     side, players per day), who's in today, one feed (today, live, or the last 7 days, by club), post a notice,
+//     and the rest of the numbers folded away.
+//   Courses (#/admin/courses, #/admin/course/<id>): every week's tile and each course's page (adminHome.ts).
+//   Members: what members have sent (feedback, friends put up, their holes), the members, invites, and the tools
+//     to bring someone in.
+//   Bar: the games' switches and takings.
+// Every member name opens their card.
 import { api, getSession, listSessions } from '../api';
 import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
@@ -19,8 +23,8 @@ import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
 import { chartSections, kpiSections, loadKpis } from './adminKpis';
 import { ask, copyBox, tell } from '../dialog';
-import { homeSections, loadHome, showCourse } from './adminHome';
-import { loadToday, todaySections } from './adminToday';
+import { coursesSections, loadHome, overviewSections, showCourse } from './adminHome';
+import { applyFeedFilter, loadToday, todaySections } from './adminToday';
 import { loadNominations, nominationsSection } from './nominate';
 import { bindNudge, nudgeSection } from './adminNudge';
 import { barSection, loadBar } from './adminBar';
@@ -44,7 +48,7 @@ const COLUMNS: { key: SortKey; label: string; num?: boolean; all?: boolean }[] =
 ];
 
 export function admin(snap: Snapshot, arg?: string, extra?: string) {
-  const tab: Tab = arg === 'members' || arg === 'bar' || arg === 'tools' ? arg : 'courses';
+  const tab: Tab = arg === 'members' || arg === 'bar' ? arg : arg === 'courses' || arg === 'course' ? 'courses' : 'overview';
   const course = arg === 'course' && extra ? extra : undefined;
   // moving about inside the Committee Room keeps the page (and its numbers): only the view changes
   const shell = document.getElementById('adm-shell');
@@ -57,16 +61,24 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
     ${header(snap.groupName, 'admin')}
     <main class="admin-page" id="adm-shell" data-group="${esc(requireSession().groupId)}">
       <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
-      <div class="adm-pane" data-pane="courses">
-        ${homeSections(`
-          ${todaySections()}
+      <div class="adm-pane" data-pane="overview">
+        ${overviewSections(
+          todaySections(),
+          `<section class="adm-card adm-do">
+            <div class="adm-actions"><button class="btn ghost" data-tool="notice">📣 Post a notice to members</button></div>
+            <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
+          </section>
           <details class="adm-more">
-            <summary>More numbers <small>purse, AI calls, players per day, week over week</small></summary>
+            <summary>More numbers <small>purse, Pro Shop, AI calls, week over week</small></summary>
             ${kpiSections()}
             ${chartSections()}
             <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
             <section class="adm-card" id="adm-daily-bars" hidden></section>
-          </details>`)}
+          </details>`,
+        )}
+      </div>
+      <div class="adm-pane" data-pane="courses" hidden>
+        ${coursesSections()}
       </div>
       <div class="adm-pane" data-pane="members" hidden>
         ${nudgeSection(snap)}
@@ -76,24 +88,20 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
         </section>
         ${nominationsSection()}
         <section class="adm-card" id="adm-holes" hidden></section>
-      </div>
-      <div class="adm-pane" data-pane="bar" hidden>
-        ${barSection()}
-      </div>
-      <div class="adm-pane" data-pane="tools" hidden>
+        <div id="adm-members-slot"></div>
         <section class="adm-card adm-do">
-          <h2>Tools</h2>
+          <h2>Bring someone in</h2>
           <div class="adm-actions">
-            <button class="btn" data-tool="notice">📣 Post a notice</button>
             <button class="btn" data-tool="invite">✉️ Invite someone</button>
             <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
             <a class="btn ghost" href="#/invite/preview">👀 Preview a new member's welcome</a>
-            <a class="btn ghost" href="#/room">🛰️ The Design Room</a>
           </div>
-          <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
           <div class="adm-tool" data-panel="invite" hidden>${inviteTool()}</div>
           <div class="adm-tool" data-panel="club" hidden>${clubMaker(true)}</div>
         </section>
+      </div>
+      <div class="adm-pane" data-pane="bar" hidden>
+        ${barSection()}
       </div>
       <div id="adm-body" hidden></div>
     </main>`);
@@ -384,8 +392,6 @@ function draw() {
   const body = document.getElementById('adm-body');
   const d = state.data;
   if (!body || !d) return;
-  // each person once across the clubs (the server's totals); added up from the clubs only if they're missing
-  const sum = (k: 'members' | 'active' | 'rounds' | 'practice' | 'newMembers') => d.totals?.[k] ?? d.clubs.reduce((a, c) => a + c[k], 0);
   const guests = d.clubs.reduce((a, c) => a + (c.guests ?? 0), 0);
   const many = d.clubs.length > 1;
   const todo = document.getElementById('adm-todo');
@@ -415,7 +421,6 @@ function draw() {
   body.innerHTML = `
     <section class="adm-card" data-goes="members">
       <div class="adm-head"><h2>Members</h2>${many ? `<div class="adm-chips">${['', ...d.clubs.map((c) => c.name)].map((c) => `<button data-club="${esc(c)}" class="${state.club === c ? 'on' : ''}">${c ? esc(c) : 'All'}</button>`).join('')}</div>` : ''}</div>
-      <p class="adm-sum">${sum('members')} members · ${sum('active')} active in the last 7 days · ${sum('rounds')} rounds · ${sum('practice')} practice sessions${sum('newMembers') ? ` · ${sum('newMembers')} new` : ''}</p>
       ${memberTable(d.members, many)}
       <p class="fine">Under each name, when they were last in. Days: days they opened the club, played or practised. Rds: rounds posted. Best: best round to par. Prac: practice sessions. Tap a name for their card.</p>
     </section>
@@ -423,11 +428,11 @@ function draw() {
       <h2>Invited, not joined yet <small>${d.invites.length}</small></h2>
       ${pending(d, many)}
     </section>
-    <section class="adm-card" data-goes="members">
-      <h2>History</h2>
-      <p class="adm-sum">${d.feed.length >= 1000 ? 'The latest 1,000' : `${d.feed.length} ${d.feed.length === 1 ? 'event' : 'events'}`} in the last 7 days</p>
-      ${feed(d, many)}
-    </section>`;
+`;
+  // the last 7 days, for the Overview feed's second view
+  const hist = document.getElementById('adm-history');
+  if (hist) hist.innerHTML = feed(d, many);
+  applyFeedFilter();
   // the Pulse on the Courses home: every club side by side over the last 7 days, and the total
   const pulse = document.getElementById('adm-pulse-clubs');
   if (pulse) {
@@ -482,10 +487,10 @@ function draw() {
 // ---------- the layout: tabs, with Overview (what needs you, then the numbers) first ----------
 
 const TABS = [
+  { id: 'overview', label: 'Overview' },
   { id: 'courses', label: 'Courses' },
   { id: 'members', label: 'Members' },
   { id: 'bar', label: 'Bar' },
-  { id: 'tools', label: 'Tools' },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
 function showTab(t: Tab, scrollTo?: string) {
@@ -496,7 +501,7 @@ function showTab(t: Tab, scrollTo?: string) {
 
 // each tab has its own address, so the phone's Back button walks back through them
 const tabHash = (t: Tab, scrollTo?: string) => {
-  if (t === 'courses') navigate('#/admin');
+  if (t === 'overview') navigate('#/admin');
   else navigate(`#/admin/${t}`);
   if (scrollTo) setTimeout(() => document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
 };
@@ -512,7 +517,7 @@ function arrange(body: HTMLElement) {
   document.querySelectorAll('[data-moved]').forEach((x) => x.remove());
   for (const el of [...body.querySelectorAll<HTMLElement>('[data-goes]')]) {
     el.dataset.moved = '1';
-    document.querySelector(`.adm-pane[data-pane="${el.dataset.goes}"]`)?.appendChild(el);
+    (document.getElementById('adm-members-slot') ?? document.querySelector(`.adm-pane[data-pane="${el.dataset.goes}"]`))?.appendChild(el);
   }
 }
 
@@ -527,8 +532,8 @@ function drawNeeds() {
   if (!home) return;
   const items: [number, string, () => void][] = [
     [needs.feedback, needs.feedback === 1 ? 'piece of feedback to answer' : 'pieces of feedback to answer', () => tabHash('members', 'adm-feedback-card')],
-    [needs.nopick, 'Next week has no course picked', () => document.getElementById('jv-coming')?.scrollIntoView({ behavior: 'smooth', block: 'start' })],
-    [needs.unplaced, needs.unplaced === 1 ? 'new course not on a week' : 'new courses not on a week', () => document.getElementById('jv-benchh')?.scrollIntoView({ behavior: 'smooth', block: 'start' })],
+    [needs.nopick, 'Next week has no course picked', () => tabHash('courses', 'jv-coming')],
+    [needs.unplaced, needs.unplaced === 1 ? 'new course not on a week' : 'new courses not on a week', () => tabHash('courses', 'jv-benchh')],
   ];
   const live = items.filter(([n]) => n > 0);
   home.hidden = !live.length;
