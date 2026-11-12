@@ -37,5 +37,7 @@ export const KITS: Record<string, Kit> = { florida, city, canyon, alpine, linksl
 let forcedNight: boolean | null = null;
 export const forceNight = (v: boolean | null) => (forcedNight = v);
 export const isNight = (d = new Date()) => forcedNight ?? (d.getHours() < 7 || d.getHours() >= 17);
+// this hole: the preview's choice first, then the Committee's dial for the hole (src/golf3d/tweaks.ts), then the clock
+export const nightFor = (h: { time?: 'day' | 'night' }, d = new Date()) => forcedNight ?? (h.time ? h.time === 'night' : isNight(d));
 export const hasNight = (h: Hole) => !!h.theme && !!KITS[`${h.theme}@night`];
 export const kitOf = (h: Hole): Kit | undefined => (h.theme ? KITS[h.theme] : undefined);

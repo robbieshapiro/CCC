@@ -3,10 +3,12 @@
 // coming weeks, the weeks gone by, and the bench (courses on no week). Each tile opens the course: review it, play
 // it, test it, and put it on a week.
 import { api } from '../api';
-import type { AdminKpis, CoursePlanner, HoleReport, Snapshot } from '../api/types';
+import type { AdminKpis, CoursePlanner, CourseRequest, HoleReport, Snapshot } from '../api/types';
+import { planCanvas } from '../designer/plan';
+import { applyTweak, FAIRWAY_STEPS, hasTweak, TEE_MAX, teeAt, teeOk, WIND_STEPS, type Tweak } from '../golf3d/tweaks';
 import { tell } from '../dialog';
 import { isWeek, nextStart, periodName, todayInGameTz } from '../day';
-import { courseById, courseFor, labHoles, nextCourse, scheduleOf, tourCourses, type Course } from '../golf3d/courses';
+import { asBuilt, courseById, courseFor, labHoles, nextCourse, scheduleOf, tourCourses, tweaksOf, type Course } from '../golf3d/courses';
 import { hasNight } from '../golf3d/kits';
 import { ratingOf } from '../golf3d/ratings';
 import { SCALE } from '../golf3d/clubs';
@@ -42,8 +44,8 @@ const style = (c: Course) => {
   return `--from:${a.from};--to:${a.to};--ink:${a.ink}`;
 };
 
-type Data = { kpis: AdminKpis | null; report: HoleReport[]; planner: CoursePlanner };
-let data: Data = { kpis: null, report: [], planner: { approved: {}, results: {} } };
+type Data = { kpis: AdminKpis | null; report: HoleReport[]; planner: CoursePlanner; requests: CourseRequest[] };
+let data: Data = { kpis: null, report: [], planner: { approved: {}, results: {} }, requests: [] };
 let snap0: Snapshot | null = null;
 let view: string | null = null; // a course id when one is open
 
@@ -54,12 +56,13 @@ export async function loadHome(snap: Snapshot, course?: string) {
   view = course ?? null;
   draw();
   const s = requireSession();
-  const [kpis, report, planner] = await Promise.all([
+  const [kpis, report, planner, requests] = await Promise.all([
     api.adminKpis(s).catch(() => null),
     api.adminHoles(s).catch(() => [] as HoleReport[]),
     api.coursePlanner(s).catch(() => ({ approved: {}, results: {} })),
+    api.courseRequests(s).catch(() => [] as CourseRequest[]),
   ]);
-  data = { kpis, report, planner };
+  data = { kpis, report, planner, requests };
   draw();
 }
 
@@ -159,7 +162,7 @@ function home(snap: Snapshot): string {
         <div><b>${played.length}<small>/${rows.length}</small></b><span>cards in</span></div>
         <div><b>${played.length ? toParLabel(played[0].toPar) : '–'}</b><span>leading</span></div>
         <div><b>${data.kpis?.rounds ?? '–'}</b><span>rounds</span></div>
-        <div><b>${notes.length}</b><span>${notes.length === 1 ? 'tweak' : 'tweaks'}</span></div>
+        <div><b>${notes.length}</b><span>to look at</span></div>
       </div>
       <span class="jv-open">Open ›</span>
     </button>
@@ -193,7 +196,7 @@ function weekTile(w: string, past = false): string {
     <span class="jv-emoji" aria-hidden="true">${artOf(c).emoji}</span>
     <b>${esc(short(c))}</b>
     <em>${c.holes.length} holes · par ${c.par}${r ? ` · slope ${r.slope}` : ''}</em>
-    <span class="jv-chips">${chip}${c.draft && !past ? `<i class="draft">${data.planner.approved[c.id] ? 'Approved' : 'Draft'}</i>` : ''}</span>
+    <span class="jv-chips">${chip}${Object.keys(tweaksOf()[c.id] ?? {}).length && !past ? '<i>🎛️ Tweaked</i>' : ''}${c.draft && !past ? `<i class="draft">${data.planner.approved[c.id] ? 'Approved' : 'Draft'}</i>` : ''}</span>
   </button>`;
 }
 
@@ -202,6 +205,7 @@ function benchTile(c: Course): string {
     <span class="jv-emoji" aria-hidden="true">${artOf(c).emoji}</span>
     <b>${esc(short(c).replace(/^Lab · /, ''))}</b>
     <em>${c.lab ? 'Hole Lab' : c.id.startsWith('room-') ? 'Design Room' : c.draft ? 'Draft' : 'Played before'} · par ${c.par}</em>
+    ${Object.keys(tweaksOf()[c.id] ?? {}).length ? '<span class="jv-chips"><i>🎛️ Tweaked</i></span>' : ''}
   </button>`;
 }
 
@@ -242,6 +246,9 @@ function detail(snap: Snapshot, c: Course): string {
       ${hasNight(c.holes[0]) ? `<div class="adm-chips" role="group" aria-label="Time of day"><small>Time</small><button data-night="day">☀️ Day</button><button data-night="night">🌙 Night</button><button data-night="">By the clock</button></div>` : ''}
       <p class="fine">In play, Controls sets the time of day, the wind and the pin, pours any drink, puts a shot back and drops the ball anywhere. Nothing is posted or paid.</p>
     </section>
+
+    ${c.lab ? '' : `<section class="jv-sec" id="jv-tweak"></section>`}
+    ${c.lab ? '' : askSection(c)}
 
     ${
       c.lab
@@ -316,5 +323,164 @@ function bind(el: HTMLElement, snap: Snapshot) {
       data.planner = await api.coursePlanner(requireSession()).catch(() => data.planner);
       draw();
     };
+  if (view && el.querySelector('#jv-tweak')) {
+    const c = asBuilt(view);
+    if (c) {
+      if (tw.course !== c.id) tw = { course: c.id, hole: 0, t: { ...(tweaksOf()[c.id]?.['1'] ?? {}) } };
+      drawTweak(c);
+    }
+  }
+  bindAsk(el);
   void snap;
+}
+
+// ---- the dials: one hole at a time, saved for everyone ----
+
+let tw: { course: string; hole: number; t: Tweak } = { course: '', hole: 0, t: {} };
+
+const same = (a: Tweak, b: Tweak) => JSON.stringify(clean(a)) === JSON.stringify(clean(b));
+// only the dials that are off "as built", in a fixed order
+function clean(t: Tweak): Tweak {
+  const o: Tweak = {};
+  if (t.tee) o.tee = t.tee;
+  if (t.fairway) o.fairway = t.fairway;
+  if (t.pins?.length) o.pins = [...t.pins].sort((a, b) => a - b);
+  if (t.wind != null) o.wind = t.wind;
+  if (t.time) o.time = t.time;
+  return o;
+}
+
+function drawTweak(c: Course) {
+  const el = document.getElementById('jv-tweak');
+  if (!el) return;
+  const n = tw.hole + 1;
+  const base = c.holes[tw.hole];
+  const saved = tweaksOf()[c.id]?.[String(n)] ?? {};
+  const t = tw.t;
+  const tee = t.tee ?? 0;
+  const teeSpot = tee ? teeAt(base, tee) : base.tee;
+  const teeBad = !!tee && !teeOk(base, teeSpot);
+  const shown = applyTweak(base, clean(t));
+  const pins = base.pins ?? [];
+  const on = (i: number) => !t.pins?.length || t.pins.includes(i);
+  const dirty = !same(t, saved);
+  const isNow = snap0 && courseFor(snap0.month).id === c.id;
+  const chip = <T,>(attr: string, v: T, label: string, cur: T) => `<button data-${attr}="${String(v)}" class="${cur === v ? 'on' : ''}">${label}</button>`;
+  el.innerHTML = `
+    <h3>Tweak <small>live for everyone once saved</small></h3>
+    <div class="jv-hole-tabs">${c.holes.map((_, i) => `<button data-twhole="${i}" class="${i === tw.hole ? 'on' : ''}">${i + 1}${hasTweak(tweaksOf()[c.id]?.[String(i + 1)]) ? '<i></i>' : ''}</button>`).join('')}</div>
+    <div class="jv-tweak">
+      <div class="jv-tw-plan" id="jv-tw-plan"></div>
+      <div class="jv-tw-dials">
+        <p class="jv-tw-name"><b>${n}. ${esc(base.name)}</b> · par ${base.par} · ${yardsOf(shown)} yd${shown.yards !== base.yards || tee ? ` <small>(as built ${yardsOf(base)})</small>` : ''}</p>
+        <label class="jv-dial"><span>Tee <output id="jv-tee-out">${tee ? `${Math.abs(tee)} yd ${tee > 0 ? 'back' : 'forward'}` : 'As built'}</output></span>
+          <input type="range" id="jv-tee" min="${-TEE_MAX}" max="${TEE_MAX}" step="5" value="${tee}"></label>
+        ${teeBad ? '<p class="jv-warn">That spot is off the property, wet or in sand. The tee stays where it was.</p>' : ''}
+        <div class="jv-dial"><span>Fairway</span><div class="adm-chips">${FAIRWAY_STEPS.map(([v, l]) => chip('fw', v, l, t.fairway ?? 0)).join('')}</div></div>
+        ${pins.length > 1 ? `<div class="jv-dial"><span>Pin spots in the rotation</span><div class="adm-chips">${pins.map((_, i) => `<button data-pin="${i}" class="${on(i) ? 'on' : ''}">Spot ${i + 1}</button>`).join('')}</div></div>` : ''}
+        <div class="jv-dial"><span>Wind</span><div class="adm-chips">${WIND_STEPS.map(([v, l]) => chip('wind', v, l, t.wind ?? null)).join('')}</div></div>
+        ${hasNight(base) ? `<div class="jv-dial"><span>Time of day</span><div class="adm-chips">${chip('time', '', 'By the clock', t.time ?? '')}${chip('time', 'day', 'Always day', t.time ?? '')}${chip('time', 'night', 'Always night', t.time ?? '')}</div></div>` : ''}
+        ${isNow && dirty ? '<p class="jv-warn">This is the course being played now: members who already have a card in played it as it was.</p>' : ''}
+        <div class="jv-acts">
+          <button class="btn" data-twsave ${dirty && !teeBad ? '' : 'disabled'}>${dirty ? 'Save this hole' : 'Saved'}</button>
+          ${hasTweak(saved) || dirty ? '<button class="link" data-twreset>Back to as built</button>' : ''}
+        </div>
+      </div>
+    </div>`;
+  try {
+    const dots = [
+      ...pins.map((p, i) => ({ p, color: on(i) ? '#ffd23f' : '#7c7c7c' })),
+      { p: shown.tee, color: '#ffffff' },
+      ...(tee ? [{ p: base.tee, color: '#9aa' }] : []),
+    ];
+    document.getElementById('jv-tw-plan')!.appendChild(planCanvas(shown, 220, dots));
+  } catch {
+    /* no canvas: the dials still work */
+  }
+  el.querySelectorAll<HTMLButtonElement>('[data-twhole]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        const i = Number(b.dataset.twhole);
+        tw = { course: c.id, hole: i, t: { ...(tweaksOf()[c.id]?.[String(i + 1)] ?? {}) } };
+        drawTweak(c);
+      }),
+  );
+  const teeIn = el.querySelector<HTMLInputElement>('#jv-tee')!;
+  teeIn.oninput = () => {
+    const v = Number(teeIn.value);
+    el.querySelector('#jv-tee-out')!.textContent = v ? `${Math.abs(v)} yd ${v > 0 ? 'back' : 'forward'}` : 'As built';
+  };
+  teeIn.onchange = () => ((tw.t = { ...tw.t, tee: Number(teeIn.value) || undefined }), drawTweak(c));
+  el.querySelectorAll<HTMLButtonElement>('[data-fw]').forEach((b) => (b.onclick = () => ((tw.t = { ...tw.t, fairway: Number(b.dataset.fw) || undefined }), drawTweak(c))));
+  el.querySelectorAll<HTMLButtonElement>('[data-wind]').forEach((b) => (b.onclick = () => ((tw.t = { ...tw.t, wind: b.dataset.wind === 'null' ? undefined : Number(b.dataset.wind) }), drawTweak(c))));
+  el.querySelectorAll<HTMLButtonElement>('[data-time]').forEach((b) => (b.onclick = () => ((tw.t = { ...tw.t, time: (b.dataset.time || undefined) as Tweak['time'] }), drawTweak(c))));
+  el.querySelectorAll<HTMLButtonElement>('[data-pin]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        const i = Number(b.dataset.pin);
+        const cur = tw.t.pins?.length ? tw.t.pins : pins.map((_, k) => k);
+        let next = cur.includes(i) ? cur.filter((k) => k !== i) : [...cur, i];
+        if (!next.length) return void tell('Keep at least one pin spot.');
+        if (next.length === pins.length) next = [];
+        tw.t = { ...tw.t, pins: next.length ? next : undefined };
+        drawTweak(c);
+      }),
+  );
+  const save = async (t: Tweak) => {
+    try {
+      const keep = clean(t);
+      await api.setCourseTweak(requireSession(), c.id, n, Object.keys(keep).length ? keep : null);
+      await refresh();
+      tw.t = { ...keep };
+    } catch (e) {
+      void tell("That didn't save", `<p>${esc((e as Error).message)}</p>`);
+    }
+    drawTweak(c);
+  };
+  el.querySelector<HTMLButtonElement>('[data-twsave]')!.onclick = () => void save(tw.t);
+  const reset = el.querySelector<HTMLButtonElement>('[data-twreset]');
+  if (reset) reset.onclick = () => void save({});
+}
+
+// ---- bigger changes: ask the Architect ----
+
+function askSection(c: Course): string {
+  const mine = data.requests.filter((r) => r.course === c.id);
+  return `<section class="jv-sec" id="jv-ask">
+    <h3>Ask the Architect</h3>
+    <p class="fine">For anything a dial can't do: move a hazard, reshape a green, add a hole. The Architect reads these on its next run and answers with a change to approve.</p>
+    <div class="jv-ask">
+      <select id="jv-ask-hole" aria-label="Which hole"><option value="">The whole course</option>${c.holes.map((h, i) => `<option value="${i + 1}">${i + 1}. ${esc(h.name)}</option>`).join('')}</select>
+      <textarea id="jv-ask-body" rows="3" maxlength="600" placeholder="Move the river bunker 10 yards left so the layup has room."></textarea>
+      <button class="btn" data-ask>Send to the Architect</button>
+    </div>
+    ${mine.length ? `<ul class="jv-reqs">${mine.map((r) => `<li class="${r.done ? 'done' : ''}"><span>${r.hole ? `<b>Hole ${r.hole}</b> ` : ''}${esc(r.body)}</span><button class="link" data-reqdone="${r.id}" data-to="${r.done ? '' : '1'}">${r.done ? 'Reopen' : '✓ Done'}</button></li>`).join('')}</ul>` : ''}
+  </section>`;
+}
+
+function bindAsk(el: HTMLElement) {
+  const send = el.querySelector<HTMLButtonElement>('[data-ask]');
+  if (send && view)
+    send.onclick = async () => {
+      const body = el.querySelector<HTMLTextAreaElement>('#jv-ask-body')!.value.trim();
+      const hole = Number(el.querySelector<HTMLSelectElement>('#jv-ask-hole')!.value) || null;
+      if (!body) return;
+      send.disabled = true;
+      try {
+        await api.addCourseRequest(requireSession(), view!, hole, body);
+        data.requests = await api.courseRequests(requireSession()).catch(() => data.requests);
+        draw();
+      } catch (e) {
+        send.disabled = false;
+        void tell("That didn't send", `<p>${esc((e as Error).message)}</p>`);
+      }
+    };
+  el.querySelectorAll<HTMLButtonElement>('[data-reqdone]').forEach(
+    (b) =>
+      (b.onclick = async () => {
+        await api.courseRequestDone(requireSession(), Number(b.dataset.reqdone), b.dataset.to === '1').catch(() => {});
+        data.requests = await api.courseRequests(requireSession()).catch(() => data.requests);
+        draw();
+      }),
+  );
 }

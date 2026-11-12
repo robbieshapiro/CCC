@@ -21,7 +21,7 @@ import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
 import { accuracyError, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, stretched, stretchRate, type MeterStyle } from './swing';
 import type { Hole, Shot, V2 } from './types';
-import { isNight, KITS } from './kits';
+import { KITS, nightFor } from './kits';
 
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
@@ -525,7 +525,7 @@ export class Course3D {
     this.sharpen(!!hole.tour);
     // the Caldera challenge's last days: a storm over the volcano (see tempestOn)
     const tempest = tempestOn(hole);
-    const look: Look = tempest ? 'tempest' : hole.theme && KITS[hole.theme] ? (KITS[`${hole.theme}@night`] && isNight() ? `${hole.theme}@night` : hole.theme) : hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? (hole.wet ? 'storm' : 'autumn') : hole.theme === 'coastal' ? 'coastal' : 'day';
+    const look: Look = tempest ? 'tempest' : hole.theme && KITS[hole.theme] ? (KITS[`${hole.theme}@night`] && nightFor(hole) ? `${hole.theme}@night` : hole.theme) : hole.theme === 'haunted' ? 'night' : hole.theme === 'links' ? 'links' : hole.theme === 'desert' ? 'desert' : hole.theme === 'autumn' ? (hole.wet ? 'storm' : 'autumn') : hole.theme === 'coastal' ? 'coastal' : 'day';
     if (this.look !== look) this.setLook(look);
     this.fitShadows();
     this.petalsFor(hole);

@@ -3465,3 +3465,91 @@ end $$;
 grant execute on function room_courses_list(uuid) to anon;
 grant execute on function room_save(uuid, bigint, text, text, jsonb, boolean) to anon;
 grant execute on function room_delete(uuid, bigint) to anon;
+
+-- The Committee's dials on a course's holes (from Nov 13; src/golf3d/tweaks.ts): tee back or forward, fairway width,
+-- the pin spots in rotation, a wind cap, day or night. Every member's app loads them and applies them as the course
+-- loads, so a change reaches everyone with no deploy. One row a hole; a hole with no dials has no row.
+create table if not exists course_tweaks (
+  course text not null check (char_length(course) between 1 and 40),
+  hole int not null check (hole between 1 and 18),
+  tweak jsonb not null check (jsonb_typeof(tweak) = 'object' and char_length(tweak::text) <= 400),
+  set_by uuid references players on delete set null,
+  set_at timestamptz not null default now(),
+  primary key (course, hole)
+);
+alter table course_tweaks enable row level security;
+
+-- every course's dials, for every member's app: course -> hole -> its dials
+create or replace function course_tweaks_list(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((select json_object_agg(course, holes) from (
+    select course, json_object_agg(hole::text, tweak) as holes from course_tweaks group by course) t), '{}');
+end $$;
+
+-- set one hole's dials (the Committee only); an empty set clears them
+create or replace function set_course_tweak(p_token uuid, p_course text, p_hole int, p_tweak jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
+  if p_hole not between 1 and 18 or char_length(coalesce(p_course, '')) not between 1 and 40 then raise exception 'No such hole.'; end if;
+  if p_tweak is null or p_tweak = '{}'::jsonb then
+    delete from course_tweaks where course = p_course and hole = p_hole;
+    return;
+  end if;
+  if jsonb_typeof(p_tweak) <> 'object' or char_length(p_tweak::text) > 400 then raise exception 'Those dials don''t look right.'; end if;
+  if abs(coalesce((p_tweak->>'tee')::numeric, 0)) > 30 then raise exception 'A tee moves 30 yards at most.'; end if;
+  if coalesce((p_tweak->>'fairway')::numeric, 0) not between -4 and 12 then raise exception 'That fairway width is off the dial.'; end if;
+  insert into course_tweaks (course, hole, tweak, set_by) values (p_course, p_hole, p_tweak, me.id)
+  on conflict (course, hole) do update set tweak = excluded.tweak, set_by = excluded.set_by, set_at = now();
+end $$;
+
+-- Changes too big for a dial: the Committee asks the Architect, who reads the open ones on its next run and answers
+-- with a PR (see .claude/skills/build-course and greenkeeper)
+create table if not exists course_requests (
+  id bigserial primary key,
+  course text not null check (char_length(course) between 1 and 40),
+  hole int check (hole between 1 and 18),
+  body text not null check (char_length(body) between 1 and 600),
+  done boolean not null default false,
+  created_by uuid references players on delete set null,
+  created_at timestamptz not null default now(),
+  done_at timestamptz
+);
+alter table course_requests enable row level security;
+
+create or replace function course_request_add(p_token uuid, p_course text, p_hole int, p_body text) returns bigint
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); v_id bigint;
+begin
+  if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
+  if char_length(trim(coalesce(p_body, ''))) not between 1 and 600 then raise exception 'Say what to change (up to 600 letters).'; end if;
+  insert into course_requests (course, hole, body, created_by) values (p_course, p_hole, trim(p_body), me.id) returning id into v_id;
+  return v_id;
+end $$;
+
+-- the Committee's requests, open first, then the last 20 done
+create or replace function course_requests_list(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can see that.'; end if;
+  return coalesce((select json_agg(json_build_object('id', r.id, 'course', r.course, 'hole', r.hole, 'body', r.body, 'done', r.done, 'createdAt', r.created_at) order by r.done, r.created_at desc)
+    from (select * from course_requests where not done union all (select * from course_requests where done order by done_at desc limit 20)) r), '[]');
+end $$;
+
+create or replace function course_request_done(p_token uuid, p_id bigint, p_done boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
+  update course_requests set done = p_done, done_at = case when p_done then now() end where id = p_id;
+end $$;
+
+grant execute on function course_tweaks_list(uuid) to anon;
+grant execute on function set_course_tweak(uuid, text, int, jsonb) to anon;
+grant execute on function course_request_add(uuid, text, int, text) to anon;
+grant execute on function course_requests_list(uuid) to anon;
+grant execute on function course_request_done(uuid, bigint, boolean) to anon;
