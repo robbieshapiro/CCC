@@ -14,7 +14,7 @@ import { inviteLink } from './invite';
 export function nominateTile() {
   return `<section class="nominate" id="nominate">
     <span class="nm-icon" aria-hidden="true">✉️</span>
-    <span class="nm-text"><b>Know someone who'd fit in?</b><small id="nm-line">Put them up for membership. Reginald does the rest.</small></span>
+    <span class="nm-text"><b>Know someone who'd love it here?</b><small id="nm-line">Put them up for membership. Reginald does the rest.</small></span>
     <button class="btn small" data-nominate>Nominate a friend</button>
   </section>`;
 }
