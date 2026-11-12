@@ -1159,6 +1159,56 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 @media (max-width: 640px) { .desk-card { grid-template-columns: 1fr; } }
 /* the bar: the Members' Course and the way into the Desk */
 .bar-game.members { background: linear-gradient(160deg, #fbf3df, #f3e6c4); }
+
+/* ---------- The bar room (Nov 12): a drawn bar. Wood, brass, warm lamps, Mo at the counter, chalkboards on the wall ---------- */
+.bar-room { gap: 0; padding: 0 0 18px; border-radius: 16px; overflow: hidden; color: #f3e6cf;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 46px),
+    linear-gradient(180deg, #2a1810, #3a2318 38%, #2c1a12);
+  box-shadow: inset 0 0 0 1px rgba(201, 162, 74, 0.35), 0 18px 40px -22px rgba(30, 14, 6, 0.8); }
+.bar-back { position: relative; padding: 0 16px; }
+.bar-lamps { display: flex; justify-content: space-around; height: 54px; pointer-events: none; }
+.bar-lamps i { position: relative; width: 2px; height: 26px; background: #1a0f0a; }
+.bar-lamps i::before { content: ''; position: absolute; left: -13px; top: 24px; width: 28px; height: 14px; border-radius: 14px 14px 3px 3px; background: linear-gradient(#c9a24a, #8a6514); }
+.bar-lamps i::after { content: ''; position: absolute; left: -90px; top: 30px; width: 182px; height: 190px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 208, 128, 0.34), rgba(255, 208, 128, 0)); animation: bar-glow 5s ease-in-out infinite alternate; }
+.bar-lamps i:nth-child(2)::after { animation-delay: -2s; }
+@keyframes bar-glow { to { opacity: 0.72; } }
+.bar-sign { position: relative; margin: 2px 0 10px; text-align: center; font: 700 34px/1 var(--serif); color: #f6d58a; letter-spacing: 0.01em; text-shadow: 0 0 18px rgba(246, 197, 106, 0.55), 0 2px 0 #5a3a12; }
+.bar-sign small { display: block; font: 800 11px var(--font); letter-spacing: 0.34em; text-transform: uppercase; color: #d9b77a; text-shadow: none; margin-bottom: 4px; }
+.bar-shelf { position: relative; height: 64px; margin: 0 -4px; padding: 0 6px; background: linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.18)); border-radius: 6px 6px 0 0; box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5); }
+.bar-shelf svg { display: block; width: 100%; height: 100%; }
+.bar-mo { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: end; padding: 14px 0 0; }
+.mo-face { display: grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #5a3a26, #2a1810); border: 3px solid #c9a24a; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); margin-bottom: -18px; position: relative; z-index: 2; }
+.mo-says { position: relative; margin-bottom: 12px; padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: #fbf4e0; color: var(--ink); box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.7); }
+.mo-says > b { font: 700 19px var(--serif); color: var(--green); }
+.mo-says > b small { font: 600 12px var(--font); color: var(--muted); margin-left: 6px; }
+.mo-says p { margin: 4px 0 0; font-size: 15px; line-height: 1.4; }
+.mo-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mo-acts:has(> [hidden]:first-child):has(> [hidden]:last-child) { display: none; }
+.mo-btn { font: 800 12px var(--font); letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--green); background: var(--green); color: #fff; text-decoration: none; cursor: pointer; }
+.mo-btn.ghost { background: transparent; color: var(--green); }
+.bar-counter { position: relative; z-index: 1; height: 22px; margin: 0 -16px; background: linear-gradient(180deg, #8a5a33, #5a3620 55%, #3a2114); border-top: 3px solid #c9a24a; box-shadow: 0 10px 18px -8px rgba(0, 0, 0, 0.7); }
+.bar-wall { margin: 22px 16px 10px; font: 800 11px var(--font); letter-spacing: 0.26em; text-transform: uppercase; color: #d9b77a; display: flex; align-items: center; gap: 10px; }
+.bar-wall::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(201, 162, 74, 0.6), rgba(201, 162, 74, 0)); }
+.bar-room .bar-games { padding: 0 16px; gap: 12px; }
+/* each game is a chalkboard in a wooden frame */
+.bar-room .bar-game, .bar-room .bar-game.members { background: linear-gradient(160deg, #24312c, #1a2420); color: #eef2ea; border: 5px solid #5a3620; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 0 40px rgba(0, 0, 0, 0.35), 0 8px 16px -10px rgba(0, 0, 0, 0.8); }
+.bar-room .bar-game b { color: #fff; font-size: 21px; }
+.bar-room .bar-game span { color: rgba(238, 242, 234, 0.72); }
+.bar-room .bar-game > p { color: #f6d58a; }
+.bar-room .bar-top li { border-top: 1px dashed rgba(238, 242, 234, 0.16); padding-top: 3px; }
+.bar-room .bar-top li b, .bar-room .bar-top a { color: #eef2ea; text-decoration: none; }
+.bar-room .bar-top li.me b, .bar-room .bar-top li.me a { color: #f6d58a; }
+.bar-room .bar-top em { color: #f6d58a; }
+.bar-room .bar-empty { color: rgba(238, 242, 234, 0.6); font-style: italic; }
+.bar-doors { display: grid; gap: 10px; padding: 0 16px; }
+.bar-room .desk-cta { background: linear-gradient(160deg, #4a2c1b, #3a2114); border: 1px solid rgba(201, 162, 74, 0.5); color: #f3e6cf; }
+.bar-room .desk-cta b { color: #f6d58a; }
+.bar-room .desk-cta span { color: rgba(243, 230, 207, 0.75); }
+.bar-room .desk-cta em { color: #c9a24a; }
+@media (min-width: 720px) { .bar-doors { grid-template-columns: 1fr 1fr; } .bar-sign { font-size: 44px; } }
+@media (prefers-reduced-motion: reduce) { .bar-lamps i::after { animation: none; } }
+
 .desk-cta { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 12px; margin-top: 10px; padding: 12px 14px; border-radius: 12px; border: 1px dashed #c9ad80; color: var(--ink); text-decoration: none; }
 .desk-cta i { font-style: normal; font-size: 24px; }
 .desk-cta b { display: block; font-family: var(--serif); font-size: 19px; color: var(--green); }
