@@ -3368,3 +3368,43 @@ revoke all on function bar_gate(players, text) from public, anon, authenticated;
 grant execute on function admin_bar(uuid) to anon;
 grant execute on function set_bar_game(uuid, text, boolean) to anon;
 grant execute on function bar_open_games(uuid) to anon;
+
+-- The Committee's course planner (Admin > Course): how members have really played each course, and which drafts the
+-- Committee has approved (a mark for the planner only: a draft can already be put on a week).
+create table if not exists course_notes (
+  course text primary key,
+  approved_at timestamptz,
+  approved_by uuid references players on delete set null
+);
+alter table course_notes enable row level security;
+
+create or replace function course_planner(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can see that.'; end if;
+  return json_build_object(
+    'approved', coalesce((select json_object_agg(course, approved_at) from course_notes where approved_at is not null), '{}'),
+    'results', coalesce((select json_object_agg(x.course, json_build_object('rounds', x.rounds, 'members', x.members, 'avg', x.avg,
+        'best', x.best, 'bestBy', x.best_by, 'weeks', x.weeks)) from (
+      select r.course, count(*) as rounds, count(distinct (home_of(p)).id) as members, round(avg(r.total - r.par), 1) as avg,
+        min(r.total - r.par) as best,
+        (select p2.name from rounds r2 join players p2 on p2.id = r2.player_id where r2.course = r.course and p2.role <> 'admin' and not p2.host_only
+          order by r2.total - r2.par, r2.created_at limit 1) as best_by,
+        array_agg(distinct r.month order by r.month) as weeks
+      from rounds r join players p on p.id = r.player_id
+      where p.role <> 'admin' and not p.host_only
+      group by r.course) x), '{}'));
+end $$;
+
+create or replace function set_course_approved(p_token uuid, p_course text, p_approved boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
+  insert into course_notes (course, approved_at, approved_by) values (p_course, case when p_approved then now() end, me.id)
+  on conflict (course) do update set approved_at = excluded.approved_at, approved_by = excluded.approved_by;
+end $$;
+
+grant execute on function course_planner(uuid) to anon;
+grant execute on function set_course_approved(uuid, text, boolean) to anon;

@@ -261,7 +261,9 @@ function safeShot(h: Hole, pos: V2, nav: (p: V2) => number, clock: number) {
   return best;
 }
 
-const SKILL = Number(process.env.SKILL ?? 1);
+const SKILL_NOW = { v: Number(process.env.SKILL ?? 1) };
+// (the rate mode switches it between runs)
+const SKILL_GET = () => SKILL_NOW.v;
 // tally: counts the putts, so the member mode can report the strokes to reach the green apart from them
 function novice(base: Hole, seed: string, tally?: { putts: number }) {
   // a random day: its pin and its wind, which a novice doesn't allow for
@@ -270,6 +272,7 @@ function novice(base: Hole, seed: string, tally?: { putts: number }) {
   const nav = navField(h);
   const rng = makeRng(seed);
   // SKILL scales every miss: 1 is the novice, lower is a steadier player (the member mode)
+  const SKILL = SKILL_GET();
   const gauss = () => SKILL * Math.sqrt(-2 * Math.log(rng.next() || 1e-9)) * Math.cos(2 * Math.PI * rng.next());
   let pos = h.tee;
   let s = 0;
@@ -568,8 +571,28 @@ if (mode === 'member') {
     const scores = Array.from({ length: seeds }, (_, i) => novice(h, `${h.id}:m${i}`, tally));
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
     const putts = tally.putts / seeds;
-    console.log(`MEMBER ${course.id} ${h.id} par ${h.par} skill ${SKILL} n ${seeds} avg ${avg.toFixed(2)} to-par ${(avg - h.par).toFixed(2)} to-green ${(avg - putts).toFixed(2)} putts ${putts.toFixed(2)} with-1.5-putts ${(avg - putts + 1.5 - h.par).toFixed(2)} scores ${scores.join(',')}`);
+    console.log(`MEMBER ${course.id} ${h.id} par ${h.par} skill ${SKILL_GET()} n ${seeds} avg ${avg.toFixed(2)} to-par ${(avg - h.par).toFixed(2)} to-green ${(avg - putts).toFixed(2)} putts ${putts.toFixed(2)} with-1.5-putts ${(avg - putts + 1.5 - h.par).toFixed(2)} scores ${scores.join(',')}`);
   }
+}
+// The CCC Rating and Slope (npm run check-holes -- rate, with QUICK=1 for speed): the robot plays every hole at member
+// skill (SKILL 1.15, what members swing like) and as a strong player (0.6), counting 1.5 putts a hole (members average
+// 1.3; the robot putts far worse). Prints one JSON line for src/golf3d/ratings.ts.
+if (mode === 'rate') {
+  const seeds = Number(process.env.SEEDS ?? 4);
+  const play = (skill: number) =>
+    holes.map((h) => {
+      const tally = { putts: 0 };
+      const was = SKILL_NOW.v;
+      SKILL_NOW.v = skill;
+      const scores = Array.from({ length: seeds }, (_, i) => novice(h, `${h.id}:r${skill}:${i}`, tally));
+      SKILL_NOW.v = was;
+      const avg = scores.reduce((a, b) => a + b, 0) / seeds;
+      return avg - tally.putts / seeds + 1.5 - h.par; // to par, with members' putting
+    });
+  const member = play(1.15);
+  const strong = play(0.6);
+  const r = (x: number) => Math.round(x * 10) / 10;
+  console.log(`RATE ${JSON.stringify({ course: course.id, at: new Date().toISOString().slice(0, 10), seeds, holes: holes.map((h, i) => ({ id: h.id, member: r(member[i]), strong: r(strong[i]) })) })}`);
 }
 if (mode === 'all' || mode === 'novice') {
   let over = 0;

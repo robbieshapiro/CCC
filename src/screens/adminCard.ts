@@ -4,16 +4,15 @@
 // forfeiting a card that was never finished. Below it, one picker to preview any course, and a test of the money note.
 import type { Snapshot } from '../api/types';
 import { ask, tell } from '../dialog';
-import { api } from '../api';
-import { courseFor, labHoles, tourCourses, nextCourse, scheduleOf, upcoming, type Course } from '../golf3d/courses';
+import { courseFor, labHoles, nextCourse, upcoming, type Course } from '../golf3d/courses';
 import { nextStart, periodName } from '../day';
-import { refresh, requireSession } from '../state';
 import { esc, navigate } from '../ui';
 import { bindCardNote, cardNote, cardTile, tileState } from './cardnote';
 import { look } from './home';
 import { dryForget, dryToday } from './round';
 import { hasNight } from '../golf3d/kits';
 import { setNight } from './previewControls';
+import { bindPlanner, plannerSection } from './planner';
 import { store } from '../storage';
 
 const shortName = (c: Course) => c.name.replace(/ Course$/, '');
@@ -69,7 +68,7 @@ export function sundayCardSection(snap: Snapshot): string {
         <ol class="adm-steps">${STEPS.map(([b, t]) => `<li><b>${b}</b><span>${t}</span></li>`).join('')}</ol>
       </div>
     </section>
-    ${weeksSection(snap)}
+    ${plannerSection()}
     ${labSection()}
     <section class="adm-card adm-previews">
       <h2>Preview a course</h2>
@@ -81,32 +80,6 @@ export function sundayCardSection(snap: Snapshot): string {
     </section>`;
 }
 
-// The weeks ahead: each one's course, picked here (course_schedule). Unpicked weeks follow the calendar in the code.
-// Only weeks still to come can change, so no board changes course under it.
-const COMMITTEE_WEEKS = 4;
-function weeksSection(snap: Snapshot) {
-  const weeks: string[] = [];
-  let p = snap.month;
-  for (let i = 0; i < COMMITTEE_WEEKS; i++) weeks.push((p = nextStart(p)));
-  const all = tourCourses();
-  const picks = scheduleOf();
-  return `
-    <section class="adm-card adm-weeks">
-      <h2>The weeks ahead</h2>
-      <p class="muted">Pick each week's course. It takes effect for everyone at once, no deploy, and carries on until the next pick or new course. A draft is fine once you're happy with it.</p>
-      <p class="adm-week-now"><b>${esc(periodName(snap.month))}</b> <span>${esc(courseFor(snap.month).name)} · playing now</span></p>
-      ${weeks
-        .map((w) => {
-          const cal = courseFor(w, false);
-          return `<label class="adm-week"><b>${esc(periodName(w))}</b>
-            <select data-week="${w}" aria-label="Course for ${esc(periodName(w))}">
-              <option value="">${esc(shortName(cal))} (carries on)</option>
-              ${all.map((c) => `<option value="${c.id}"${picks[w] === c.id ? ' selected' : ''}>${esc(shortName(c))}${c.draft ? ' (draft)' : ''}</option>`).join('')}
-            </select><small data-week-note="${w}"></small></label>`;
-        })
-        .join('')}
-    </section>`;
-}
 // The Hole Lab: single test holes in new looks, only for the Committee. Play one, then tell Claude which to build out.
 function labSection() {
   const lab = labHoles();
@@ -121,28 +94,8 @@ function labSection() {
     </section>`;
 }
 
-function bindWeeks() {
-  document.querySelectorAll<HTMLSelectElement>('select[data-week]').forEach((sel) => {
-    sel.onchange = async () => {
-      const week = sel.dataset.week!;
-      const note = document.querySelector<HTMLElement>(`[data-week-note="${week}"]`);
-      sel.disabled = true;
-      if (note) note.textContent = 'Saving…';
-      try {
-        await api.setCourseSchedule(requireSession(), week, sel.value || null);
-        await refresh();
-        if (note) note.textContent = 'Saved';
-      } catch (e) {
-        if (note) note.textContent = (e as Error).message || 'Could not save';
-      } finally {
-        sel.disabled = false;
-      }
-    };
-  });
-}
-
 export function bindSundayCard(snap: Snapshot) {
-  bindWeeks();
+  void bindPlanner(snap);
   const c = rehearsed(snap);
   const links = linksFor(c);
   const draw = () => {

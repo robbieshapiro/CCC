@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated } from './types';
+import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -158,6 +158,10 @@ export const supabaseApi: Api = {
   seasonStandings: (s) => rpc<Season>('season_standings', { p_token: s.token }),
   trophyProgress: (s, id) => rpc<TrophyProgress | null>('trophy_progress', { p_token: s.token, p_player: id ?? null }),
   bjState: (s) => rpc('bj_state', { p_token: s.token }),
+  coursePlanner: (s) => rpc<CoursePlanner>('course_planner', { p_token: s.token }).catch(() => ({ approved: {}, results: {} })),
+  setCourseApproved: async (s, course, approved) => {
+    await rpc('set_course_approved', { p_token: s.token, p_course: course, p_approved: approved });
+  },
   barGames: (s) => rpc<{ settings: Record<string, boolean>; committee: boolean }>('bar_open_games', { p_token: s.token }).catch(() => ({ settings: {}, committee: false })),
   adminBar: (s) => rpc('admin_bar', { p_token: s.token }),
   setBarGame: async (s, game, open) => {
