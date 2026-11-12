@@ -2068,3 +2068,47 @@ button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer;
 .bil-status { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
 .bil-status b { text-align: center; font-size: 13px; color: var(--ink); max-width: 200px; }
 .bil-status span:last-child { text-align: right; }
+
+/* ---------- Admin > Course: the planner (Nov 13). A lane of weeks, a shelf of course tiles; drag one onto a week ---------- */
+.pl-lane { list-style: none; margin: 0 -4px; padding: 4px 4px 10px; display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x proximity; }
+.pl-week { flex: 0 0 160px; scroll-snap-align: start; display: grid; grid-template-rows: auto 1fr; gap: 6px; padding: 8px; border-radius: 12px; border: 2px dashed var(--line); background: #fffdf7; transition: border-color 0.12s, background 0.12s; }
+.pl-week.now { border-style: solid; border-color: var(--gold); background: #fbf4e0; }
+.pl-week.set { border-style: solid; }
+.pl-week.over { border-color: var(--green); background: #e9f3ea; }
+.pl-week header { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.pl-week header b { font: 700 15px var(--serif); color: var(--green); }
+.pl-week header small { font-size: 11px; color: var(--muted); }
+.pl-x { border: 0; background: transparent; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; }
+.pl-empty { display: grid; place-items: center; text-align: center; min-height: 92px; border-radius: 8px; color: var(--muted); font-size: 13px; }
+.pl-empty small { font-size: 11px; opacity: 0.8; }
+.pl-shelf-h { margin: 14px 0 8px; font: 800 11px var(--font); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+.pl-shelf { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.pl-tile { border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid var(--line); box-shadow: 0 8px 18px -14px rgba(30, 20, 10, 0.6); cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; transition: transform 0.12s, box-shadow 0.12s; }
+.pl-tile.picked { outline: 3px solid var(--gold); transform: translateY(-2px); }
+.pl-art { position: relative; display: grid; gap: 2px; padding: 14px 14px 12px; color: var(--ink, #fff); background: radial-gradient(120% 120% at 100% 0%, var(--to), var(--from) 70%); min-height: 86px; }
+.pl-art::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 14px); pointer-events: none; }
+.pl-emoji { position: absolute; right: 10px; top: 6px; font-size: 40px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35)); }
+.pl-art b { font: 700 22px/1.1 var(--serif); color: var(--ink); padding-right: 46px; }
+.pl-art small { font-size: 12px; color: var(--ink); opacity: 0.85; }
+.pl-tile.small { cursor: grab; }
+.pl-tile.small .pl-art { min-height: 76px; padding: 10px; }
+.pl-tile.small .pl-art b { font-size: 16px; padding-right: 30px; }
+.pl-tile.small .pl-emoji { font-size: 26px; }
+.pl-body { display: grid; gap: 8px; padding: 10px 12px 12px; }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-chip { font-style: normal; font: 800 10px var(--font); letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #efe8d6; color: #6b5a3a; }
+.pl-chip.draft { background: #fbe3d6; color: #a3442e; }
+.pl-chip.ok { background: #dcefdc; color: #2f7a4a; }
+.pl-chip.new { background: #e3e9f6; color: #3a5a9a; }
+.pl-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0; }
+.pl-stats div { padding: 6px 8px; border-radius: 8px; background: #faf6ec; text-align: center; }
+.pl-stats dt { font: 800 9px var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.pl-stats dd { margin: 2px 0 0; font: 700 20px var(--serif); color: var(--green); }
+.pl-line { margin: 0; font-size: 12px; color: var(--muted); }
+.pl-holes { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; font-size: 12px; }
+.pl-holes em { font-style: normal; color: var(--muted); }
+.pl-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.pl-acts a, .pl-acts button { font: 800 12px var(--font); padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--green); text-decoration: none; cursor: pointer; }
+.pl-acts a:first-child { background: var(--green); color: #fff; border-color: var(--green); }
+.pl-fine { font-size: 11px; color: var(--muted); }
+.pl-ghost { position: fixed; z-index: 1000; pointer-events: none; transform: translate(-50%, -60%) rotate(-3deg); box-shadow: 0 18px 30px rgba(0, 0, 0, 0.35); opacity: 0.95; }

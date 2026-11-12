@@ -23,7 +23,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards'; mo?: number; score?: number }[]; barSettings?: Record<string, boolean> };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards'; mo?: number; score?: number }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -1053,6 +1053,30 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       save(db);
     }
     return { ...bjViewLocal(db, me, h), bank: await localBank(session) };
+  },
+
+  // the course planner, as course_planner does it
+  async coursePlanner(session) {
+    const db = load();
+    if (!playerByToken(db, session.token).admin) throw new Error('Only the committee can see that.');
+    const results: Record<string, { rounds: number; members: number; avg: number; best: number; bestBy: string | null; weeks: string[] }> = {};
+    const members = db.players.filter((p) => !p.admin && !p.host);
+    for (const c of [...new Set(db.rounds.map((r) => r.course))]) {
+      const rs = db.rounds.filter((r) => r.course === c && members.some((m) => m.id === r.playerId));
+      if (!rs.length) continue;
+      const best = rs.reduce((a, r) => (r.total - r.par < a.total - a.par ? r : a));
+      results[c] = { rounds: rs.length, members: new Set(rs.map((r) => r.playerId)).size, avg: Math.round((rs.reduce((a, r) => a + r.total - r.par, 0) / rs.length) * 10) / 10, best: best.total - best.par, bestBy: db.players.find((p) => p.id === best.playerId)?.name ?? null, weeks: [...new Set(rs.map((r) => r.month))].sort() };
+    }
+    return { approved: { ...(db.approved ?? {}) }, results };
+  },
+  async setCourseApproved(session, course, approved) {
+    const db = load();
+    if (!playerByToken(db, session.token).admin) throw new Error('Only the committee can do that.');
+    const next = { ...(db.approved ?? {}) };
+    if (approved) next[course] = new Date().toISOString();
+    else delete next[course];
+    db.approved = next;
+    save(db);
   },
 
   // which bar games are open: blackjack and Pop-a-Shot start closed, as bar_settings does on the server

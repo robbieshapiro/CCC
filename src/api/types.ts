@@ -222,6 +222,8 @@ export type CardToday = CardProgress & { done: boolean; n?: number; of?: number;
 // sentThisWeek: curses you've sent; news: the week's goings-on (see newsLine in src/powerups.ts)
 export type PowerupState = { locker: { id: number; kind: string }[]; waiting?: number; sentThisWeek?: number; news?: { kind: string; status: string; mine: boolean; who: string | null; at: string }[] };
 export type LandedCurse = { id: number; kind: string; from: string | null; via: string | null };
+export type CourseResult = { rounds: number; members: number; avg: number; best: number; bestBy: string | null; weeks: string[] };
+export type CoursePlanner = { approved: Record<string, string>; results: Record<string, CourseResult> };
 export type InvitePeek = { name: string; code: string; groupName: string; used: boolean };
 // Nominate a friend: a member puts someone up with a first name and a mobile number; the Committee approves (an
 // invitation to text them) or declines. A member sees only their own, waiting or joined (never a decline).
@@ -299,6 +301,9 @@ export interface Api {
   courseSchedule(session: Session): Promise<Record<string, string>>;
   // the admin picks a future week's course; null puts it back on the calendar
   setCourseSchedule(session: Session, period: string, course: string | null): Promise<void>;
+  // the course planner (course_planner, set_course_approved): members' real results by course, and approved drafts
+  coursePlanner(session: Session): Promise<CoursePlanner>;
+  setCourseApproved(session: Session, course: string, approved: boolean): Promise<void>;
   periodHonors(session: Session, period: string): Promise<Honors>;
   adminTrend(session: Session): Promise<TrendDay[]>;
   adminToday(session: Session): Promise<AdminToday>;
