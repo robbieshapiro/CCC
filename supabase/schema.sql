@@ -3224,3 +3224,48 @@ revoke all on function bj_settle(bigint) from public, anon, authenticated;
 grant execute on function bj_state(uuid) to anon;
 grant execute on function bj_deal(uuid, int) to anon;
 grant execute on function bj_act(uuid, bigint, text) to anon;
+
+-- Pop-a-Shot against Mo (from Nov 13): 30 seconds at the hoop, 2 points a basket and 3 in the last 8 seconds. Mo posts
+-- his score first; beat it and the stake comes back with 90% on top, tie and it comes back. The phone reports the score,
+-- so the server keeps it honest where it can: a game takes at least 28 seconds, no more than 10 minutes, and no score
+-- above 120. One game at a time; a game left unfinished is lost when the next one starts. Same limits as blackjack.
+create or replace function pas_start(p_token uuid, p_stake int) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); mo int; h casino;
+begin
+  if p_stake not between 10 and 500 then raise exception 'Bets are $10 to $500.'; end if;
+  update casino set payout = 0, settled_at = now(), state = state || '{"outcome": "left"}'
+  where player_id in (select person_seats(me)) and game = 'popashot' and payout is null;
+  perform casino_check(me, p_stake);
+  -- Mo's score: 36 to 64, in twos
+  mo := 36 + 2 * floor(random() * 15)::int;
+  insert into casino (player_id, game, stake, state) values (me.id, 'popashot', p_stake, jsonb_build_object('mo', mo))
+  returning * into h;
+  return json_build_object('id', h.id, 'mo', mo, 'stake', p_stake, 'bank', person_bank(me), 'lostToday', casino_lost_today(me));
+end $$;
+
+create or replace function pas_finish(p_token uuid, p_id bigint, p_score int) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); h casino; mo int; pay int; outcome text; secs numeric;
+begin
+  select * into h from casino where id = p_id and player_id in (select person_seats(me)) and game = 'popashot' for update;
+  if not found then raise exception 'No such game.'; end if;
+  if h.payout is not null then raise exception 'That game is already settled.'; end if;
+  secs := extract(epoch from now() - h.created_at);
+  if secs < 28 then raise exception 'That was quicker than the clock.'; end if;
+  if secs > 600 or p_score is null or p_score < 0 or p_score > 120 then
+    update casino set payout = 0, settled_at = now(), state = state || '{"outcome": "void"}' where id = h.id;
+    raise exception 'Mo didn''t believe that one. The stake stays on the bar.';
+  end if;
+  mo := (h.state->>'mo')::int;
+  if p_score > mo then outcome := 'win'; pay := h.stake + (h.stake * 9) / 10;
+  elsif p_score = mo then outcome := 'push'; pay := h.stake;
+  else outcome := 'lose'; pay := 0;
+  end if;
+  update casino set payout = pay, settled_at = now(), state = state || jsonb_build_object('score', p_score, 'outcome', outcome) where id = h.id;
+  return json_build_object('id', h.id, 'mo', mo, 'score', p_score, 'outcome', outcome, 'stake', h.stake, 'payout', pay,
+    'bank', person_bank(me), 'lostToday', casino_lost_today(me), 'best', (select max((state->>'score')::int) from casino where player_id in (select person_seats(me)) and game = 'popashot'));
+end $$;
+
+grant execute on function pas_start(uuid, int) to anon;
+grant execute on function pas_finish(uuid, bigint, int) to anon;
