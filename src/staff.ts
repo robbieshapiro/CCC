@@ -62,6 +62,25 @@ export const MO = {
       ],
       `${day}:${name}`,
     ),
+  // what Mo says when you lean on the bar: general banter, nothing about the boards (Robbie, Nov 13)
+  banter: [
+    "I've poured drinks for golfers for twenty years. Not one of them has ever hit a bad shot. Ask them.",
+    "The secret to a good round is low expectations. I've got plenty spare if you need some.",
+    "Someone asked for a lite beer last week. I'm still not over it.",
+    "Golf's the only game where the worst player gets the most exercise.",
+    "We don't do tabs. We do memories. Then we do tabs.",
+    "Fella in here blamed his slice on the moon. Full moon, to be fair.",
+    "Every putt's straight if you don't look at it.",
+    "The jukebox has three songs. All of them are about losing.",
+    "I'd tell you a golf joke but you'd only three-putt the punchline.",
+    "Hydrate. That's what the lime's for.",
+    "The house always wins. I am the house. I'm also the cleaner.",
+    "Mulligans are free in here. Out there, they cost you a drink.",
+    "Fore is just French for sorry.",
+    "If you're going to throw a club, throw it forward. Saves a walk.",
+    "Somebody left a putter in the gents in 2019. Still nobody's claimed it.",
+    "Last orders are whenever I get bored. You're safe for now.",
+  ],
 };
 
 // A member of staff's face, drawn simply in the club's style.

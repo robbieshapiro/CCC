@@ -8,6 +8,7 @@ import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
 import { earned, payOf, plaques } from '../trophies';
+import { BJ_MAX, BJ_MIN, bjSettle, bjValue, DAILY_LOSS, type BjOutcome, type BjView } from '../blackjack';
 import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
@@ -21,7 +22,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[] };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null }[] };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -71,6 +72,15 @@ async function bankOf(api: { snapshot(s: { token: string }): Promise<Snapshot> }
 }
 
 const uid = () => crypto.randomUUID();
+// blackjack in local mode: what a person's lost today, and settling a hand (as bj_settle does)
+const lostToday = (db: Db, id: string) =>
+  (db.casino ?? []).filter((x) => x.playerId === id && todayInGameTz(new Date(x.at)) === todayInGameTz()).reduce((a, x) => a + x.stake - (x.payout ?? 0), 0);
+function settleLocal(h: NonNullable<Db['casino']>[number]) {
+  const r = bjSettle(h.stake, h.p, h.d, h.deck, h.doubled);
+  h.d = r.dealer;
+  h.payout = r.payout;
+  h.outcome = r.outcome;
+}
 // a mobile number, tidied as clean_phone in schema.sql does it
 function cleanPhone(raw: string): string {
   const d = raw.replace(/\D/g, '');
@@ -241,6 +251,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       const ids = new Set(seats.map((x) => x.id));
       const got = [...new Set(seats.map((x) => x.groupId))].flatMap((g) => (g === me.groupId ? paid : paidIn(db, g, month))).filter((x) => ids.has(x.playerId));
       const bought = [...(db.purchases ?? []).filter((x) => ids.has(x.playerId)), ...(db.powerups ?? []).filter((x) => ids.has(x.ownerId)).map((x) => ({ playerId: x.ownerId, item: '', price: x.price }))];
+      // the net of every bet against Mo, as person_spent counts it
+      bought.push(...(db.casino ?? []).filter((x) => ids.has(x.playerId)).map((x) => ({ playerId: x.playerId, item: '', price: x.stake - (x.payout ?? 0) })));
       // the club bonuses, as person_bonus does on the server
       const rs = db.rounds.filter((r) => ids.has(r.playerId));
       const roundDays = rs.map((r) => todayInGameTz(new Date(r.createdAt)));
@@ -995,6 +1007,52 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return { year, standings: [...rows.values()].sort((a, b) => b.points - a.points || b.projected - a.projected || a.name.localeCompare(b.name)) };
   },
 
+  // blackjack against Mo, as bj_state, bj_deal and bj_act do it on the server
+  async bjState(session) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const h = (db.casino ?? []).find((x) => x.playerId === me.id && x.payout === null);
+    return h ? { ...bjViewLocal(db, me, h), bank: await localBank(session) } : { bank: await localBank(session), lostToday: lostToday(db, me.id) };
+  },
+
+  async bjDeal(session, stake) {
+    if (stake < BJ_MIN || stake > BJ_MAX) throw new Error('Bets are $10 to $500.');
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    if ((db.casino ?? []).some((x) => x.playerId === me.id && x.payout === null)) throw new Error('Finish the hand in front of you first.');
+    await casinoCheckLocal(session, stake);
+    const deck = Array.from({ length: 52 }, (_, i) => i).sort(() => Math.random() - 0.5);
+    const list = (db.casino ??= []);
+    const h = { id: list.length + 1, playerId: me.id, stake, payout: null as number | null, at: new Date().toISOString(), p: [deck[0], deck[2]], d: [deck[1], deck[3]], deck: deck.slice(4), doubled: false, outcome: null as BjOutcome | null };
+    list.push(h);
+    if (bjValue(h.p) === 21 || bjValue(h.d) === 21) settleLocal(h);
+    save(db);
+    return { ...bjViewLocal(db, me, h), bank: await localBank(session) };
+  },
+
+  async bjAct(session, id, action) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const h = (db.casino ?? []).find((x) => x.id === id && x.playerId === me.id);
+    if (!h) throw new Error('No such hand.');
+    if (h.payout === null) {
+      if (action === 'double') {
+        if (h.p.length !== 2) throw new Error('You can only double on your first two cards.');
+        save(db);
+        await casinoCheckLocal(session, h.stake);
+        h.stake *= 2;
+        h.doubled = true;
+        h.p.push(h.deck.shift()!);
+        settleLocal(h);
+      } else if (action === 'hit') {
+        h.p.push(h.deck.shift()!);
+        if (bjValue(h.p) >= 21) settleLocal(h);
+      } else settleLocal(h);
+      save(db);
+    }
+    return { ...bjViewLocal(db, me, h), bank: await localBank(session) };
+  },
+
   // trophy money, as claim_trophies does it: the first call records what's already held at $0 (the baseline)
   async claimTrophies(session) {
     const p = await this.trophyProgress(session);
@@ -1584,4 +1642,21 @@ function sampleSpec(prompt: string, change?: string): Design['spec'] {
   const text = `${prompt} ${change ?? ''}`.toLowerCase();
   const look = /desert|cact|canyon|mesa/.test(text) ? 'desert' : /links|sea|dune|scotland|wind/.test(text) ? 'links' : /lava|volcan|caldera|island/.test(text) ? 'caldera' : 'highlands';
   return { ...SAMPLES[look] };
+}
+
+// blackjack in local mode: the bank (earned less spent, as the snapshot has it), the bet checks, and the view
+async function localBank(session: { token: string }) {
+  const snap = await localApi.snapshot(session as Parameters<typeof localApi.snapshot>[0]);
+  const p = snap.players.find((x) => x.id === snap.me);
+  return (p?.earnings ?? 0) - (p?.spent ?? 0);
+}
+async function casinoCheckLocal(session: { token: string }, more: number) {
+  const db = load();
+  const me = homeOf(db, playerByToken(db, session.token));
+  if ((await localBank(session)) < more) throw new Error('Not enough in the bank for that.');
+  if (lostToday(db, me.id) + more > DAILY_LOSS) throw new Error("That would put you over $2,000 down today. Mo's cutting you off till tomorrow.");
+}
+function bjViewLocal(db: Db, me: DbPlayer, h: NonNullable<Db['casino']>[number]): BjView {
+  const done = h.payout !== null;
+  return { id: h.id, stake: h.stake, payout: h.payout, done, outcome: h.outcome, doubled: h.doubled, player: h.p, playerTotal: bjValue(h.p), dealer: done ? h.d : [h.d[0]], dealerTotal: bjValue(done ? h.d : [h.d[0]]), bank: 0, lostToday: lostToday(db, me.id) };
 }
