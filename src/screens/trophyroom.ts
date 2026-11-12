@@ -3,7 +3,8 @@
 import { api } from '../api';
 import type { TrophyProgress } from '../api/types';
 import { requireSession } from '../state';
-import { earned, near, plaques, type Plaque } from '../trophies';
+import { earned, near, payOf, plaques, type Plaque } from '../trophies';
+import { money } from '../purse';
 import { esc } from '../ui';
 
 const GROUPS: Plaque['group'][] = ['Titles', 'Scoring', 'Skill', 'Course feats', 'Club life'];
@@ -14,15 +15,22 @@ export function trophyPane() {
     <div id="tr-room"><p class="muted">Loading…</p></div>`;
 }
 
+// what each plaque has paid you (from Nov 12; the ones held before then show as earned, unpaid)
+let paid: Record<string, number> = {};
+
 function plaque(pl: Plaque, p: TrophyProgress) {
   const got = earned(pl, p);
   const have = Math.min(pl.have(p), pl.need);
   const bar = !got && pl.need > 1 ? `<span class="tr-bar"><i style="width:${Math.round(near(pl, p) * 100)}%"></i></span><small>${have} of ${pl.need}</small>` : '';
-  return `<div class="tr-plaque${got ? ' got' : ''}"><b>${esc(pl.name)}</b><span>${esc(pl.how)}</span>${got ? '<small class="tr-earned">Earned</small>' : bar}</div>`;
+  return `<div class="tr-plaque${got ? ' got' : ''}"><b>${esc(pl.name)}</b><span>${esc(pl.how)}</span>${got ? `<small class="tr-earned">Earned${paid[pl.id] ? ` · paid ${money(paid[pl.id])}` : ''}</small>` : `${bar}<small class="tr-pays">Pays ${money(payOf(pl.id))}</small>`}</div>`;
 }
 
 export async function fillTrophies() {
-  const p = await api.trophyProgress(requireSession()).catch(() => null);
+  // anything newly earned is paid first, so it shows here
+  const fresh = await payTrophies();
+  const [p, pd] = await Promise.all([api.trophyProgress(requireSession()).catch(() => null), api.trophyPaid(requireSession()).catch(() => ({}))]);
+  paid = pd;
+  void fresh;
   const el = document.getElementById('tr-room');
   const count = document.getElementById('tr-count');
   if (!el) return;
@@ -56,4 +64,17 @@ export function shelfHtml(p: TrophyProgress) {
   const got = all.filter((pl) => earned(pl, p));
   if (!got.length) return `<h2>Trophy shelf</h2><p class="muted">Nothing on the shelf yet.</p>`;
   return `<h2>Trophy shelf <small class="tr-of">${got.length} of ${all.length}</small></h2><div class="tr-shelf">${got.map((pl) => `<span class="tr-chip" title="${esc(pl.how)}">${esc(pl.name)}</span>`).join('')}</div>`;
+}
+
+// Pay any plaque newly earned, and say so: after a round, in the Trophy Room, after a bar game. `host`: where the
+// money note shows (the round's screen); without one, a toast.
+export async function payTrophies(host?: HTMLElement) {
+  const fresh = await api.claimTrophies(requireSession()).catch(() => []);
+  if (!fresh.length) return fresh;
+  const names = new Map(plaques().map((pl) => [pl.id, pl.name]));
+  const { coinPop } = await import('./round');
+  fresh
+    .filter((f) => f.amount > 0)
+    .forEach((f, i) => window.setTimeout(() => coinPop(host ?? document.body, f.amount, `Trophy: ${names.get(f.plaque) ?? 'a new plaque'}`, 'In the Trophy Room'), i * 2400));
+  return fresh;
 }

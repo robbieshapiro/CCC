@@ -1175,7 +1175,7 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 @keyframes bar-glow { to { opacity: 0.72; } }
 .bar-sign { position: relative; margin: 2px 0 10px; text-align: center; font: 700 34px/1 var(--serif); color: #f6d58a; letter-spacing: 0.01em; text-shadow: 0 0 18px rgba(246, 197, 106, 0.55), 0 2px 0 #5a3a12; }
 .bar-sign small { display: block; font: 800 11px var(--font); letter-spacing: 0.34em; text-transform: uppercase; color: #d9b77a; text-shadow: none; margin-bottom: 4px; }
-.bar-shelf { position: relative; height: 64px; margin: 0 -4px; padding: 0 6px; background: linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.18)); border-radius: 6px 6px 0 0; box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5); }
+.bar-shelf { position: relative; height: 96px; margin: 0 -4px; padding: 0 6px; background: linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.18)); border-radius: 6px 6px 0 0; box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5); }
 .bar-shelf svg { display: block; width: 100%; height: 100%; }
 .bar-mo { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: end; padding: 14px 0 0; }
 .mo-face { display: grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #5a3a26, #2a1810); border: 3px solid #c9a24a; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); margin-bottom: -18px; position: relative; z-index: 2; }
@@ -1884,6 +1884,7 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .tr-plaque.got { background: var(--paper); border-color: var(--gold); box-shadow: inset 0 0 0 3px #fbf8f0, inset 0 0 0 4px rgba(184, 149, 90, 0.55); }
 .tr-plaque.got b { color: var(--green); }
 .tr-earned { color: var(--gold); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.tr-pays { color: #8a6514; font-weight: 700; font-size: 12px; }
 .tr-bar { display: block; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 4px; }
 .tr-bar i { display: block; height: 100%; background: var(--gold); }
 .tr-next .tr-plaque { border-style: dashed; }

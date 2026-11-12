@@ -308,6 +308,9 @@ export interface Api {
   courseRecords(session: Session): Promise<CourseRecord[]>;
   seasonStandings(session: Session): Promise<Season>;
   trophyProgress(session: Session, playerId?: string): Promise<TrophyProgress | null>;
+  // trophy money (from Nov 12): pay what's newly earned, and what each plaque has paid
+  claimTrophies(session: Session): Promise<{ plaque: string; amount: number }[]>;
+  trophyPaid(session: Session): Promise<Record<string, number>>;
   golferCard(session: Session, playerId: string): Promise<GolferCard | null>;
   submitFreeRound(session: Session, course: string, holes: number[], pars: number[]): Promise<void>; // a classic course: never counts // today's golfers on the course, every club
   adminKpis(session: Session): Promise<AdminKpis>;

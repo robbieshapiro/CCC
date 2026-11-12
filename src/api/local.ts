@@ -7,6 +7,7 @@ import { BONUS, bonusOf, puttBonus, RAISE_FROM, SECRET_FEATS } from '../bonus';
 import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
+import { earned, payOf, plaques } from '../trophies';
 import { weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
@@ -20,7 +21,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[] };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[] };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -992,6 +993,30 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     // career earnings, as on each person's own card
     for (const row of rows.values()) row.earnings = (await this.golferCard(session, row.playerId))?.earnings ?? 0;
     return { year, standings: [...rows.values()].sort((a, b) => b.points - a.points || b.projected - a.projected || a.name.localeCompare(b.name)) };
+  },
+
+  // trophy money, as claim_trophies does it: the first call records what's already held at $0 (the baseline)
+  async claimTrophies(session) {
+    const p = await this.trophyProgress(session);
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    if (!p) return [];
+    const paid = ((db.trophyPay ??= {})[me.id] ??= {});
+    const first = !Object.keys(paid).length && !db.trophyBase?.includes(me.id);
+    const fresh: { plaque: string; amount: number }[] = [];
+    for (const pl of plaques()) {
+      if (!earned(pl, p) || pl.id in paid) continue;
+      paid[pl.id] = first ? 0 : payOf(pl.id);
+      if (!first) fresh.push({ plaque: pl.id, amount: paid[pl.id] });
+    }
+    if (!db.trophyBase?.includes(me.id)) (db.trophyBase ??= []).push(me.id);
+    save(db);
+    return fresh;
+  },
+
+  async trophyPaid(session) {
+    const db = load();
+    return { ...(db.trophyPay?.[homeOf(db, playerByToken(db, session.token)).id] ?? {}) };
   },
 
   // the Trophy Room's counts, as trophy_progress works them out on the server (from what local mode keeps)

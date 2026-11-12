@@ -55,5 +55,17 @@ export function plaques(): Plaque[] {
 }
 
 export const earned = (pl: Plaque, p: TrophyProgress) => pl.have(p) >= pl.need;
+
+// What a plaque pays when it's earned, from Nov 12 (plaque_catalog and plaques_met in supabase/schema.sql: keep in
+// step). A ladder pays $250, $750, $2,000 by rung; the big one-offs $2,000; a hole's secret $250; a course mastered $750.
+const PAY: Record<string, number> = {
+  titles1: 250, titles3: 750, titles5: 2000, openwin: 2000, opentop1: 250, opentop5: 750, opentop10: 2000,
+  birdies10: 250, birdies25: 750, birdies100: 2000, eagles1: 250, eagles5: 750, eagles15: 2000,
+  albatross: 2000, ace: 750, aceclub: 2000, underpar1: 250, underpar5: 750, underpar20: 2000, bogeyfree: 750,
+  cards10: 250, cards50: 750, cards100: 2000, putt30: 250, putt30x10: 750, putt60: 750,
+  chipins1: 250, chipins5: 750, chipins15: 2000, pinseeker: 250, drive325: 250, drive350: 750, drive400: 2000,
+  streak7: 250, streak30: 750, ctp1: 250, ctp5: 750, designer: 750,
+};
+export const payOf = (id: string) => PAY[id] ?? (id.startsWith('secret-') ? 250 : id.startsWith('master-') ? 750 : 0);
 // how close a locked plaque is, 0 to 1
 export const near = (pl: Plaque, p: TrophyProgress) => Math.min(1, pl.have(p) / pl.need);
