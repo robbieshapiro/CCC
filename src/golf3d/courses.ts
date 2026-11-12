@@ -113,7 +113,7 @@ const COURSES: Course[] = [
     draft: true,
     whatsNew: [
       'Chicago in November. Bring a coat.',
-      'The wind off the lake: 15 to 30 mph, and it gusts.',
+      'The wind off the lake: 10 to 20 mph, and it gusts.',
       'Buildings are in play. A roof keeps your ball.',
       'Greens are flatter, with some break.',
     ],

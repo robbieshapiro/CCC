@@ -255,8 +255,23 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const progress = (hole: number, finished = false) =>
     void started.then((id) => (id === null ? undefined : api.roundProgress(requireSession(), id, hole, finished).catch(() => {})));
   const feats = new Set<string>(resume?.feats ?? []);
-  // every counted stroke, by hole, posted with the card (a card picked up mid-round only has the holes played since)
+  // every counted stroke, by hole, posted with the card. A real card keeps its log on the device as it goes, so one
+  // picked up after leaving still posts the holes played before (they used to be lost: 4 of 29 cards in the week of Nov 8)
+  const SHOTS_KEY = 'ccc-card-shots';
+  const shotsFor = card && !dry ? `${snap.me}:${snap.today}:${full.id}` : '';
   const shotLog: RoundShot[] = [];
+  if (shotsFor && resume)
+    try {
+      const kept = JSON.parse(store.get(SHOTS_KEY) ?? 'null') as { card: string; shots: RoundShot[] } | null;
+      // only the strokes the card itself remembers: the holes finished, and those so far on the hole in play
+      if (kept?.card === shotsFor && Array.isArray(kept.shots)) {
+        const done = resume.scores.length;
+        shotLog.push(...kept.shots.filter((x) => x.h < done), ...kept.shots.filter((x) => x.h === done).slice(0, resume.shots));
+      }
+    } catch {
+      /* no log kept: the card posts what's played from here */
+    }
+  else if (shotsFor) store.remove(SHOTS_KEY);
   let holeAt = 0;
   // the Committee's preview is a rehearsal of next week: the reward moments fire as they will on a card, but nothing's paid
   const rehearsal = preview && !opts.practice && !opts.classic;
@@ -273,7 +288,19 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         if (s.c === 'putter' && puttBonus(ft)) coinPop(el, puttBonus(ft), ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', unpaid || `${ft} ft`);
         else if (s.c !== 'putter' && s.l !== 'green' && !first) coinPop(el, BONUS.chipin, 'Chip-in', unpaid || 'from off the green');
       }
-      if (!preview && shotLog.length < 150) shotLog.push({ ...s, h: holeAt });
+      // the first time a swing past 100% goes badly wrong, say what the red zone is (once a device)
+      if (s.p >= 1.05 && Math.abs(s.e) >= 0.5 && s.c !== 'putter' && !store.get('ccc-overswing-tip')) {
+        store.set('ccc-overswing-tip', '1');
+        const tip = document.createElement('p');
+        tip.className = 'shout-tip';
+        tip.textContent = 'That was an overswing. Past the 100% line the gold is smaller and the needle quicker. Stop the bar on the line for a full, safe swing.';
+        el.appendChild(tip);
+        window.setTimeout(() => tip.remove(), 9000);
+      }
+      if (!preview && shotLog.length < 150) {
+        shotLog.push({ ...s, h: holeAt });
+        if (shotsFor) store.set(SHOTS_KEY, JSON.stringify({ card: shotsFor, shots: shotLog }));
+      }
     };
   // secrets this member has found before (on any card), so only a first find pays
   const foundBefore = new Set(me.feats ?? []);
@@ -343,6 +370,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     try {
       await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots, card, shots: shotLog });
       progress(course.holes.length, true);
+      if (shotsFor) store.remove(SHOTS_KEY);
     } catch (err) {
       posted = false;
       // a round begun before midnight can't count on the new day: say so, rather than blame the connection

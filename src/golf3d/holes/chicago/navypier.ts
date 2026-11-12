@@ -61,9 +61,9 @@ export const navypier: Hole = {
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the lawn at the foot of the pier, then the pier itself, its boardwalk, and the end
     { poly: blob(0, 40, 60, 40, 1, 0.05), surface: 'fairway' },
-    // a narrow strip down the pier, broken by the slip
-    { poly: rect(-20, 100, 20, SLIP.y0), surface: 'fairway' },
-    { poly: rect(-20, SLIP.y1, 20, PIER_END - 4), surface: 'fairway' },
+    // a strip down the pier, broken by the slip (half as wide again since Nov 11)
+    { poly: rect(-30, 100, 30, SLIP.y0), surface: 'fairway' },
+    { poly: rect(-30, SLIP.y1, 30, PIER_END - 4), surface: 'fairway' },
     // the island: a ring of fairway round the green
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 14, GREEN.ry + 12, 5, 0.05), surface: 'fairway' },
     { poly: BOARDWALK, surface: 'wood' },
