@@ -317,6 +317,10 @@ export interface Api {
   // Pop-a-Shot against Mo (pas_start, pas_finish)
   pasStart(session: Session, stake: number): Promise<import('../popashot').PasStart>;
   pasFinish(session: Session, id: number, score: number): Promise<import('../popashot').PasEnd>;
+  // which bar games are open (bar_open_games), and the Committee's Bar tab (admin_bar, set_bar_game)
+  barGames(session: Session): Promise<{ settings: Record<string, boolean>; committee: boolean }>;
+  adminBar(session: Session): Promise<{ settings: Record<string, boolean>; week: { game: string; bets: number; players: number; staked: number; houseNet: number }[] }>;
+  setBarGame(session: Session, game: string, open: boolean): Promise<void>;
   // 8-ball against Mo (bil_start, bil_finish)
   bilStart(session: Session, stake: number): Promise<{ id: number; stake: number; breaks: 'you' | 'mo'; bank: number; lostToday: number }>;
   bilFinish(session: Session, id: number, won: boolean): Promise<{ id: number; stake: number; payout: number; won: boolean; bank: number; lostToday: number }>;

@@ -158,6 +158,11 @@ export const supabaseApi: Api = {
   seasonStandings: (s) => rpc<Season>('season_standings', { p_token: s.token }),
   trophyProgress: (s, id) => rpc<TrophyProgress | null>('trophy_progress', { p_token: s.token, p_player: id ?? null }),
   bjState: (s) => rpc('bj_state', { p_token: s.token }),
+  barGames: (s) => rpc<{ settings: Record<string, boolean>; committee: boolean }>('bar_open_games', { p_token: s.token }).catch(() => ({ settings: {}, committee: false })),
+  adminBar: (s) => rpc('admin_bar', { p_token: s.token }),
+  setBarGame: async (s, game, open) => {
+    await rpc('set_bar_game', { p_token: s.token, p_game: game, p_open: open });
+  },
   bilStart: (s, stake) => rpc('bil_start', { p_token: s.token, p_stake: stake }),
   bilFinish: (s, id, won) => rpc('bil_finish', { p_token: s.token, p_id: id, p_won: won }),
   pasStart: (s, stake) => rpc('pas_start', { p_token: s.token, p_stake: stake }),

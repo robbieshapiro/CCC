@@ -23,7 +23,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards'; mo?: number; score?: number }[] };
+type Db = { schedule?: Record<string, string>; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards'; mo?: number; score?: number }[]; barSettings?: Record<string, boolean> };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -1017,6 +1017,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
   },
 
   async bjDeal(session, stake) {
+    await gateLocal(session, 'blackjack');
     if (stake < BJ_MIN || stake > BJ_MAX) throw new Error('Bets are $10 to $500.');
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
@@ -1054,8 +1055,37 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return { ...bjViewLocal(db, me, h), bank: await localBank(session) };
   },
 
+  // which bar games are open: blackjack and Pop-a-Shot start closed, as bar_settings does on the server
+  async barGames(session) {
+    const db = load();
+    return { settings: { blackjack: false, popashot: false, ...(db.barSettings ?? {}) }, committee: !!playerByToken(db, session.token).admin };
+  },
+  async adminBar(session) {
+    const db = load();
+    if (!playerByToken(db, session.token).admin) throw new Error('Only the committee can see that.');
+    const week = new Map<string, { game: string; bets: number; players: Set<string>; staked: number; houseNet: number }>();
+    for (const x of db.casino ?? []) {
+      if (Date.now() - Date.parse(x.at) > 7 * 86_400_000) continue;
+      const k = x.game ?? 'blackjack';
+      const w = week.get(k) ?? { game: k, bets: 0, players: new Set<string>(), staked: 0, houseNet: 0 };
+      w.bets++;
+      w.players.add(x.playerId);
+      w.staked += x.stake;
+      w.houseNet += x.stake - (x.payout ?? 0);
+      week.set(k, w);
+    }
+    return { settings: (await this.barGames(session)).settings, week: [...week.values()].map((w) => ({ ...w, players: w.players.size })) };
+  },
+  async setBarGame(session, game, open) {
+    const db = load();
+    if (!playerByToken(db, session.token).admin) throw new Error('Only the committee can do that.');
+    db.barSettings = { ...(db.barSettings ?? {}), [game]: open };
+    save(db);
+  },
+
   // 8-ball, as bil_start and bil_finish do it
   async bilStart(session, stake) {
+    await gateLocal(session, 'billiards');
     if (stake < BJ_MIN || stake > BJ_MAX) throw new Error('Bets are $10 to $500.');
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
@@ -1084,6 +1114,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
 
   // Pop-a-Shot, as pas_start and pas_finish do it
   async pasStart(session, stake) {
+    await gateLocal(session, 'popashot');
     if (stake < BJ_MIN || stake > BJ_MAX) throw new Error('Bets are $10 to $500.');
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
@@ -1720,4 +1751,8 @@ async function casinoCheckLocal(session: { token: string }, more: number) {
 function bjViewLocal(db: Db, me: DbPlayer, h: NonNullable<Db['casino']>[number]): BjView {
   const done = h.payout !== null;
   return { id: h.id, stake: h.stake, payout: h.payout, done, outcome: h.outcome, doubled: h.doubled, player: h.p, playerTotal: bjValue(h.p), dealer: done ? h.d : [h.d[0]], dealerTotal: bjValue(done ? h.d : [h.d[0]]), bank: 0, lostToday: lostToday(db, me.id) };
+}
+async function gateLocal(session: { token: string }, game: string) {
+  const g = await localApi.barGames(session as Parameters<typeof localApi.barGames>[0]);
+  if (g.settings[game] === false && !g.committee) throw new Error("That table's closed for now.");
 }
