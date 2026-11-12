@@ -2071,7 +2071,7 @@ button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer;
 
 /* ---------- Admin > Course: the planner (Nov 13). A lane of weeks, a shelf of course tiles; drag one onto a week ---------- */
 .pl-lane { list-style: none; margin: 0 -4px; padding: 4px 4px 10px; display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x proximity; }
-.pl-week { flex: 0 0 160px; scroll-snap-align: start; display: grid; grid-template-rows: auto 1fr; gap: 6px; padding: 8px; border-radius: 12px; border: 2px dashed var(--line); background: #fffdf7; transition: border-color 0.12s, background 0.12s; }
+.pl-week { flex: 0 0 160px; scroll-snap-align: start; display: grid; grid-template-rows: auto auto 1fr; gap: 6px; padding: 8px; border-radius: 12px; border: 2px dashed var(--line); background: #fffdf7; transition: border-color 0.12s, background 0.12s; }
 .pl-week.now { border-style: solid; border-color: var(--gold); background: #fbf4e0; }
 .pl-week.set { border-style: solid; }
 .pl-week.over { border-color: var(--green); background: #e9f3ea; }
@@ -2081,6 +2081,7 @@ button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer;
 .pl-x { border: 0; background: transparent; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; }
 .pl-empty { display: grid; place-items: center; text-align: center; min-height: 92px; border-radius: 8px; color: var(--muted); font-size: 13px; }
 .pl-empty small { font-size: 11px; opacity: 0.8; }
+.pl-pick { width: 100%; min-width: 0; font: 700 13px var(--font); padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--green); }
 .pl-shelf-h { margin: 14px 0 8px; font: 800 11px var(--font); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
 .pl-shelf { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .pl-tile { border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid var(--line); box-shadow: 0 8px 18px -14px rgba(30, 20, 10, 0.6); cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; transition: transform 0.12s, box-shadow 0.12s; }
