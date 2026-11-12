@@ -29,7 +29,6 @@ const artOf = (c: Course) => ART[c.holes[0]?.theme ?? ''] ?? ART.links;
 const yards = (c: Course) => c.holes.reduce((a, h) => a + (h.yards ?? Math.round((Math.hypot(h.cup.x - h.tee.x, h.cup.y - h.tee.y) * SCALE) / 3)), 0);
 
 let info: CoursePlanner = { approved: {}, results: {} };
-let picked: string | null = null; // tap to pick, tap a week to place (phones)
 
 function tile(c: Course, opts: { small?: boolean; week?: string } = {}) {
   const a = artOf(c);
@@ -40,7 +39,7 @@ function tile(c: Course, opts: { small?: boolean; week?: string } = {}) {
     c.draft ? (approved ? '<i class="pl-chip ok">Approved</i>' : '<i class="pl-chip draft">Draft</i>') : '<i class="pl-chip">Released</i>',
     res ? `<i class="pl-chip">Played ${res.weeks.map((w) => periodName(w).replace(/^Week of /, '')).join(', ')}</i>` : '<i class="pl-chip new">Never played</i>',
   ].join('');
-  return `<article class="pl-tile${opts.small ? ' small' : ''}${picked === c.id ? ' picked' : ''}" data-course="${c.id}" ${opts.week ? `data-from-week="${opts.week}"` : ''} style="--from:${a.from};--to:${a.to};--ink:${a.ink}">
+  return `<article class="pl-tile${opts.small ? ' small' : ''}" data-course="${c.id}" ${opts.week ? `data-from-week="${opts.week}"` : ''} style="--from:${a.from};--to:${a.to};--ink:${a.ink}">
     <div class="pl-art"><span class="pl-emoji" aria-hidden="true">${a.emoji}</span><b>${esc(short(c))}</b><small>${c.holes.length} holes · par ${c.par} · ${yards(c).toLocaleString('en-US')} yd</small></div>
     ${
       opts.small
@@ -70,7 +69,7 @@ function tile(c: Course, opts: { small?: boolean; week?: string } = {}) {
 
 export function plannerSection() {
   return `<section class="adm-card pl" id="pl"><h2>Plan the weeks</h2>
-    <p class="muted">Drag a course onto a week. Drag it back to the shelf, or tap ×, to clear it. On a phone: tap a course, then tap a week. It takes effect for everyone at once.</p>
+    <p class="muted">Pick each week's course from its list. With a mouse you can also drag a course from the shelf onto a week. It takes effect for everyone at once.</p>
     <div id="pl-body"><p class="muted">Loading…</p></div></section>`;
 }
 
@@ -90,8 +89,11 @@ function draw(snap: Snapshot) {
         .map((w) => {
           const c = picks[w] ? all.find((x) => x.id === picks[w]) : null;
           const carries = courseFor(w, false);
-          return `<li class="pl-week${c ? ' set' : ''}" data-week="${w}"><header><b>${esc(periodName(w).replace(/^Week of /, ''))}</b>${c ? `<button class="pl-x" data-clear="${w}" aria-label="Clear this week">×</button>` : '<small>Carries on</small>'}</header>${
-            c ? tile(c, { small: true, week: w }) : `<div class="pl-empty">${esc(short(carries))}<br><small>drop a course here</small></div>`
+          return `<li class="pl-week${c ? ' set' : ''}" data-week="${w}"><header><b>${esc(periodName(w).replace(/^Week of /, ''))}</b>${c ? `<button class="pl-x" data-clear="${w}" aria-label="Clear this week">×</button>` : '<small>Carries on</small>'}</header>
+            <select class="pl-pick" data-week-pick="${w}" aria-label="Course for this week"><option value="">${c ? 'Carry on (clear the pick)' : `Carries on: ${esc(short(carries))}`}</option>${all
+              .map((x) => `<option value="${x.id}" ${c?.id === x.id ? 'selected' : ''}>${esc(short(x))}${x.draft ? ' (draft)' : ''}</option>`)
+              .join('')}</select>${
+            c ? tile(c, { small: true, week: w }) : `<div class="pl-empty">${esc(short(carries))}<br><small>carries on</small></div>`
           }</li>`;
         })
         .join('')}
@@ -108,7 +110,6 @@ async function place(snap: Snapshot, week: string, course: string | null) {
   } catch (e) {
     void tell("That didn't save", `<p>${esc((e as Error).message)}</p>`);
   }
-  picked = null;
   draw(snap);
 }
 
@@ -125,18 +126,13 @@ function bind(snap: Snapshot) {
         draw(snap);
       }),
   );
-  // tap a week with a course picked: put it there
-  body.querySelectorAll<HTMLElement>('.pl-week[data-week]').forEach(
-    (w) =>
-      (w.onclick = () => {
-        if (picked) void place(snap, w.dataset.week!, picked);
-      }),
-  );
-  // drag a tile (with the pointer, so it works on a phone too); a short press without moving is a tap
+  // each week's list: works on any device
+  body.querySelectorAll<HTMLSelectElement>('[data-week-pick]').forEach((sel) => (sel.onchange = () => void place(snap, sel.dataset.weekPick!, sel.value || null)));
+  // with a mouse, a tile can also be dragged onto a week (a finger scrolls the page instead)
   body.querySelectorAll<HTMLElement>('.pl-tile[data-course]').forEach((t) => {
     if (t.closest('.pl-week.now')) return;
     t.onpointerdown = (e) => {
-      if ((e.target as HTMLElement).closest('a, button')) return;
+      if (e.pointerType !== 'mouse' || (e.target as HTMLElement).closest('a, button, select')) return;
       const startX = e.clientX, startY = e.clientY;
       let ghost: HTMLElement | null = null;
       const move = (m: PointerEvent) => {
@@ -159,12 +155,7 @@ function bind(snap: Snapshot) {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         body.querySelectorAll('.pl-week.over').forEach((x) => x.classList.remove('over'));
-        if (!ghost) {
-          // a tap: pick it (or put it down again)
-          picked = picked === t.dataset.course ? null : t.dataset.course!;
-          body.querySelectorAll('.pl-tile').forEach((x) => x.classList.toggle('picked', (x as HTMLElement).dataset.course === picked && !x.closest('.pl-week')));
-          return;
-        }
+        if (!ghost) return;
         ghost.remove();
         const target = document.elementFromPoint(u.clientX, u.clientY);
         const week = target?.closest<HTMLElement>('.pl-week[data-week]')?.dataset.week;
