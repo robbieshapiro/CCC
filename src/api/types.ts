@@ -310,6 +310,10 @@ export interface Api {
   trophyProgress(session: Session, playerId?: string): Promise<TrophyProgress | null>;
   // trophy money (from Nov 12): pay what's newly earned, and what each plaque has paid
   claimTrophies(session: Session): Promise<{ plaque: string; amount: number }[]>;
+  // blackjack against Mo, for club money (bj_state, bj_deal, bj_act): the server deals and settles
+  bjState(session: Session): Promise<import('../blackjack').BjState>;
+  bjDeal(session: Session, stake: number): Promise<import('../blackjack').BjView>;
+  bjAct(session: Session, id: number, action: 'hit' | 'stand' | 'double'): Promise<import('../blackjack').BjView>;
   trophyPaid(session: Session): Promise<Record<string, number>>;
   golferCard(session: Session, playerId: string): Promise<GolferCard | null>;
   submitFreeRound(session: Session, course: string, holes: number[], pars: number[]): Promise<void>; // a classic course: never counts // today's golfers on the course, every club

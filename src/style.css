@@ -1995,3 +1995,43 @@ button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer;
 .prize-who { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: #fff; max-width: 100%; }
 .prize-who.need { border-color: #b0442e; }
 .prize-list li .prize-aim { grid-column: 2 / 4; }
+
+/* ---------- Blackjack against Mo (Nov 13): green felt, a wooden rail, cards and chips ---------- */
+.bj-page { display: grid; gap: 12px; padding-bottom: 24px; }
+.bj-back { color: var(--green); font-weight: 700; text-decoration: none; font-size: 14px; }
+.bj-table { position: relative; display: grid; gap: 10px; padding: 16px 14px 18px; border-radius: 120px 120px 18px 18px / 60px 60px 18px 18px; color: #eef2ea;
+  background: radial-gradient(ellipse at 50% 30%, #1d6b48, #0f4a31 70%, #0b3a26); border: 10px solid #5a3620; box-shadow: inset 0 0 0 2px rgba(241, 213, 143, 0.35), inset 0 0 60px rgba(0, 0, 0, 0.35), 0 16px 30px -18px rgba(30, 14, 6, 0.9); }
+.bj-mo { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
+.bj-face { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: #2a1810; border: 2px solid #c9a24a; }
+.bj-mo p { margin: 0; padding: 8px 12px; border-radius: 12px 12px 12px 3px; background: #fbf4e0; color: var(--ink); font-size: 14px; }
+.bj-hand { display: grid; justify-items: center; gap: 4px; min-height: 104px; }
+.bj-hand small { font-weight: 800; font-size: 13px; letter-spacing: 0.04em; color: #f6d58a; }
+.bj-cards { display: flex; justify-content: center; min-height: 84px; }
+.bj-card { position: relative; width: 58px; height: 82px; margin-left: -14px; border-radius: 7px; background: #fffdf7; color: #1c1c1c; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35); display: grid; place-items: center; animation: bj-in 0.28s ease-out both; animation-delay: calc(var(--i) * 0.08s); }
+.bj-card:first-child { margin-left: 0; }
+.bj-card.red { color: #b3202a; }
+.bj-card b { position: absolute; left: 6px; top: 4px; font: 800 15px var(--font); }
+.bj-card b.flip { left: auto; top: auto; right: 6px; bottom: 4px; transform: rotate(180deg); }
+.bj-card i { font-style: normal; font-size: 30px; }
+.bj-card.back { background: repeating-linear-gradient(45deg, #8e1b1b 0 6px, #6e1414 6px 12px); border: 3px solid #fffdf7; }
+@keyframes bj-in { from { transform: translateY(-18px) rotate(-6deg); opacity: 0; } }
+.bj-rules { margin: 0; text-align: center; font: 700 11px var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: rgba(241, 213, 143, 0.75); }
+.bj-result { margin: 0; min-height: 30px; text-align: center; font: 700 26px var(--serif); }
+.bj-result.won { color: #f6d58a; }
+.bj-result.lost { color: #ffb0a0; }
+.bj-rail { display: grid; gap: 12px; padding: 14px; border-radius: 14px; background: linear-gradient(160deg, #4a2c1b, #3a2114); color: #f3e6cf; }
+.bj-bank { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.bj-bank span { font: 800 11px var(--font); letter-spacing: 0.16em; text-transform: uppercase; color: #d9b77a; }
+.bj-bank b { font: 700 26px var(--serif); color: #fff; }
+.bj-bank small { color: rgba(243, 230, 207, 0.75); }
+.bj-chips { display: flex; justify-content: space-between; gap: 6px; }
+.bj-chips.locked { opacity: 0.45; pointer-events: none; }
+.bj-chip { width: 52px; height: 52px; border-radius: 50%; border: 4px dashed rgba(255, 255, 255, 0.85); font: 800 14px var(--font); color: #fff; cursor: pointer; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.45); transition: transform 0.12s; }
+.bj-chip.c10 { background: #3a6db0; } .bj-chip.c25 { background: #2f7a4a; } .bj-chip.c100 { background: #1c1c1c; } .bj-chip.c250 { background: #7a3f8e; } .bj-chip.c500 { background: #b3202a; }
+.bj-chip.on { transform: translateY(-6px); outline: 3px solid #f6d58a; outline-offset: 2px; }
+.bj-acts { display: flex; gap: 8px; }
+.bj-btn { flex: 1; padding: 14px 10px; border-radius: 10px; border: 1px solid rgba(243, 230, 207, 0.5); background: transparent; color: #f3e6cf; font: 800 14px var(--font); letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.bj-btn.gold { background: #f6c56a; color: #2a1c05; border-color: #f6c56a; }
+.bj-btn:disabled { opacity: 0.4; }
+.bj-fine { margin: 0; font-size: 12px; color: rgba(243, 230, 207, 0.65); }
+.bar-room .bar-game.cards > i { filter: drop-shadow(0 0 6px rgba(246, 197, 106, 0.4)); }

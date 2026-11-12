@@ -2480,10 +2480,26 @@ create or replace function powerup_held(p_kind text) returns boolean language sq
 create or replace function powerup_curse(p_kind text) returns boolean language sql immutable as $$ select p_kind in ('goggles', 'shortpour', 'lid', 'ironsonly', 'bouncer') $$;
 
 -- what a person has spent, across their seats: the Pro Shop and the Prize Counter
+-- Games against Mo: every bet, and what came back (see bj_deal and friends further down)
+create table if not exists casino (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade, -- the person's home seat
+  game text not null check (game in ('blackjack', 'popashot', 'billiards')),
+  stake int not null check (stake > 0),
+  payout int, -- null while the bet is open
+  state jsonb not null default '{}',
+  created_at timestamptz not null default now(),
+  settled_at timestamptz
+);
+alter table casino enable row level security;
+create index if not exists casino_player on casino (player_id, created_at);
+
 create or replace function person_spent(me players) returns int
 language sql stable security definer set search_path = public, extensions as $$
   select (coalesce((select sum(price) from purchases where player_id in (select person_seats(me))), 0)
-    + coalesce((select sum(price) from powerups where owner_id in (select person_seats(me))), 0))::int
+    + coalesce((select sum(price) from powerups where owner_id in (select person_seats(me))), 0)
+    -- the net of every bet against Mo (an open bet counts in full; a win counts as money back)
+    + coalesce((select sum(stake - coalesce(payout, 0)) from casino where player_id in (select person_seats(me))), 0))::int
 $$;
 revoke all on function person_spent(players) from public, anon, authenticated;
 
@@ -3057,3 +3073,154 @@ revoke all on function plaque_catalog() from public, anon, authenticated;
 revoke all on function plaques_met(json) from public, anon, authenticated;
 grant execute on function claim_trophies(uuid) to anon;
 grant execute on function trophy_paid(uuid) to anon;
+
+-- Games against Mo at the bar, for club money (from Nov 13): blackjack first, then Pop-a-Shot and 8-ball. It's play money:
+-- nobody can buy club money or cash it out (keep it that way). Every bet is a row: the stake comes out of the bank when
+-- it's placed (payout null), and what comes back is the payout (0 lost, the stake on a push, more on a win). The net
+-- counts in person_spent, so it moves the spending balance but never career earnings or rank. $10 to $500 a bet, at
+-- most $2,000 lost in a day (net, Eastern time), and never more than the bank holds. Cards are dealt on the server.
+-- (the casino table is made above, before person_spent, which reads it)
+
+-- what a person has lost to Mo today (net, Eastern time; open bets count in full)
+create or replace function casino_lost_today(me players) returns int
+language sql stable security definer set search_path = public, extensions as $$
+  select coalesce(sum(stake - coalesce(payout, 0)), 0)::int from casino
+  where player_id in (select person_seats(me)) and (created_at at time zone 'America/New_York')::date = game_today()
+$$;
+
+-- may this person put up this much more? (raises with the reason if not)
+create or replace function casino_check(me players, p_more int) returns void
+language plpgsql stable security definer set search_path = public, extensions as $$
+begin
+  if p_more is null or p_more <= 0 then raise exception 'Pick a stake.'; end if;
+  if person_bank(me) < p_more then raise exception 'Not enough in the bank for that.'; end if;
+  if casino_lost_today(me) + p_more > 2000 then
+    raise exception 'That would put you over $2,000 down today. Mo''s cutting you off till tomorrow.';
+  end if;
+end $$;
+
+-- a blackjack hand's value: aces count 11 unless that busts
+create or replace function bj_value(cards int[]) returns int
+language sql immutable as $$
+  select case when t.total + 10 <= 21 and t.aces > 0 then t.total + 10 else t.total end from (
+    select coalesce(sum(case when c % 13 = 0 then 1 when c % 13 >= 9 then 10 else c % 13 + 1 end), 0)::int as total,
+      count(*) filter (where c % 13 = 0)::int as aces
+    from unnest(cards) c
+  ) t
+$$;
+
+-- what the player sees: their cards, Mo's (the hole card hidden until it's over), the totals, and how it ended
+create or replace function bj_view(h casino, me players) returns json
+language sql stable security definer set search_path = public, extensions as $$
+  select json_build_object(
+    'id', h.id, 'stake', h.stake, 'payout', h.payout, 'done', h.payout is not null,
+    'outcome', h.state->>'outcome', 'doubled', coalesce((h.state->>'doubled')::boolean, false),
+    'player', h.state->'p', 'playerTotal', bj_value(array(select jsonb_array_elements_text(h.state->'p')::int)),
+    'dealer', case when h.payout is null then jsonb_build_array(h.state->'d'->0) else h.state->'d' end,
+    'dealerTotal', case when h.payout is null then bj_value(array[(h.state->'d'->>0)::int])
+      else bj_value(array(select jsonb_array_elements_text(h.state->'d')::int)) end,
+    'bank', person_bank(me), 'lostToday', casino_lost_today(me))
+$$;
+
+-- settle a hand: Mo draws to 17 (he stands on every 17), then pay. 3 to 2 on a blackjack, even money on a win, the
+-- stake back on a push, nothing on a loss. A doubled hand's stake is already doubled.
+create or replace function bj_settle(p_id bigint) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare h casino; deck int[]; p int[]; d int[]; pv int; dv int; pbj boolean; dbj boolean; outcome text; pay int;
+begin
+  select * into h from casino where id = p_id for update;
+  deck := array(select jsonb_array_elements_text(h.state->'deck')::int);
+  p := array(select jsonb_array_elements_text(h.state->'p')::int);
+  d := array(select jsonb_array_elements_text(h.state->'d')::int);
+  pv := bj_value(p);
+  pbj := pv = 21 and array_length(p, 1) = 2 and not coalesce((h.state->>'doubled')::boolean, false);
+  dbj := bj_value(d) = 21 and array_length(d, 1) = 2;
+  -- Mo plays his hand only if there's something to play against
+  if pv <= 21 and not pbj then
+    while bj_value(d) < 17 loop
+      d := d || deck[1];
+      deck := deck[2:];
+    end loop;
+  end if;
+  dv := bj_value(d);
+  if pv > 21 then outcome := 'bust'; pay := 0;
+  elsif pbj and dbj then outcome := 'push'; pay := h.stake;
+  elsif pbj then outcome := 'blackjack'; pay := h.stake + (h.stake * 3) / 2;
+  elsif dbj then outcome := 'mo-blackjack'; pay := 0;
+  elsif dv > 21 then outcome := 'mo-bust'; pay := h.stake * 2;
+  elsif pv > dv then outcome := 'win'; pay := h.stake * 2;
+  elsif pv = dv then outcome := 'push'; pay := h.stake;
+  else outcome := 'lose'; pay := 0;
+  end if;
+  update casino set payout = pay, settled_at = now(),
+    state = h.state || jsonb_build_object('deck', to_jsonb(deck), 'd', to_jsonb(d), 'outcome', outcome)
+  where id = p_id;
+end $$;
+
+-- the table as it stands: an open hand if there is one, the bank, and today's losses
+create or replace function bj_state(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); h casino;
+begin
+  select * into h from casino where player_id in (select person_seats(me)) and game = 'blackjack' and payout is null order by id desc limit 1;
+  if found then return bj_view(h, me); end if;
+  return json_build_object('bank', person_bank(me), 'lostToday', casino_lost_today(me));
+end $$;
+
+-- deal a hand: a fresh shuffled deck, two cards each; a blackjack on either side settles at once
+create or replace function bj_deal(p_token uuid, p_stake int) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); deck int[]; h casino;
+begin
+  if p_stake not between 10 and 500 then raise exception 'Bets are $10 to $500.'; end if;
+  if exists (select 1 from casino where player_id in (select person_seats(me)) and game = 'blackjack' and payout is null) then
+    raise exception 'Finish the hand in front of you first.';
+  end if;
+  perform casino_check(me, p_stake);
+  deck := array(select c from generate_series(0, 51) c order by random());
+  insert into casino (player_id, game, stake, state)
+  values (me.id, 'blackjack', p_stake, jsonb_build_object('p', to_jsonb(array[deck[1], deck[3]]), 'd', to_jsonb(array[deck[2], deck[4]]), 'deck', to_jsonb(deck[5:])))
+  returning * into h;
+  if bj_value(array[deck[1], deck[3]]) = 21 or bj_value(array[deck[2], deck[4]]) = 21 then
+    perform bj_settle(h.id);
+    select * into h from casino where id = h.id;
+  end if;
+  return bj_view(h, me);
+end $$;
+
+-- hit, stand or double down (on the first two cards: the stake doubles, one more card, then Mo plays)
+create or replace function bj_act(p_token uuid, p_id bigint, p_action text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); h casino; deck int[]; p int[];
+begin
+  select * into h from casino where id = p_id and player_id in (select person_seats(me)) and game = 'blackjack' for update;
+  if not found then raise exception 'No such hand.'; end if;
+  if h.payout is not null then return bj_view(h, me); end if;
+  deck := array(select jsonb_array_elements_text(h.state->'deck')::int);
+  p := array(select jsonb_array_elements_text(h.state->'p')::int);
+  if p_action = 'double' then
+    if array_length(p, 1) <> 2 then raise exception 'You can only double on your first two cards.'; end if;
+    perform casino_check(me, h.stake);
+    p := p || deck[1];
+    update casino set stake = stake * 2, state = state || jsonb_build_object('p', to_jsonb(p), 'deck', to_jsonb(deck[2:]), 'doubled', true) where id = h.id;
+    perform bj_settle(h.id);
+  elsif p_action = 'hit' then
+    p := p || deck[1];
+    update casino set state = state || jsonb_build_object('p', to_jsonb(p), 'deck', to_jsonb(deck[2:])) where id = h.id;
+    if bj_value(p) >= 21 then perform bj_settle(h.id); end if;
+  elsif p_action = 'stand' then
+    perform bj_settle(h.id);
+  else
+    raise exception 'Hit, stand or double.';
+  end if;
+  select * into h from casino where id = p_id;
+  return bj_view(h, me);
+end $$;
+
+revoke all on function casino_lost_today(players) from public, anon, authenticated;
+revoke all on function casino_check(players, int) from public, anon, authenticated;
+revoke all on function bj_view(casino, players) from public, anon, authenticated;
+revoke all on function bj_settle(bigint) from public, anon, authenticated;
+grant execute on function bj_state(uuid) to anon;
+grant execute on function bj_deal(uuid, int) to anon;
+grant execute on function bj_act(uuid, bigint, text) to anon;
