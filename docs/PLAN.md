@@ -199,7 +199,7 @@ Last updated Nov 13, 2026 (a Bar tab for the Committee; blackjack and Pop-a-Shot
 - [x] #267: applied `pr_267_blackjack` on Nov 13; `bj_state` answers with each member's bank (Eli $500, Zach $1,377), and `person_spent` is unchanged for everyone (no bets yet).
 - [x] #268: applied `pr_268_popashot` on Nov 13; `pas_start` and `pas_finish` are there for members. After a week, look at members' scores (`casino` where game = 'popashot') and move Mo's 36 to 64 if he wins too often or too rarely.
 - [x] #269: applied `pr_269_billiards` on Nov 13; `bil_start` and `bil_finish` are there for members. After a week, see how often members beat Mo (`casino` where game = 'billiards') and move `WOBBLE` in `src/billiards/mo.ts` if needed.
-- [ ] #270: after merge, apply `pr_270_bar_settings` (the `bar_settings` table with blackjack and Pop-a-Shot off, the gate, the new `bj_deal`, `pas_start` and `bil_start`, and the three Bar tab functions), then check a member gets "closed" from `bj_deal`.
+- [x] #270: applied `pr_270_bar_settings` on Nov 13; blackjack and Pop-a-Shot are off, a member's `bar_gate` for blackjack says "That table's closed for now.", and `bar_open_games` tells a member they aren't the Committee.
 - [ ] Remove Robbie's Midway test round (`bar_scores` id 58, 9 strokes, Nov 10). Two tries timed out on the approval prompt; resend when Robbie says go, or he pastes the one-off block from the live-sql skill.
 - [x] #254: applied `pr_254_midway_curses`; `powerup_state` answers with `waiting`, `sentThisWeek` and `news`, and `admin_today` answers (9 in today).
 - [x] #253: applied `pr_253_prize_counter`; `powerup_state` answers and every member's `spent` is unchanged (Hunter 350, Marc 7,200, Robbie 5,000, Tyler 3,650).
