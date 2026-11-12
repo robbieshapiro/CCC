@@ -14,14 +14,14 @@ const DECK = 6;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
 const GREEN = { x: 0, y: 800, rx: 32, ry: 24 };
 // the island green, out in the lake past the end of the pier
-const ISLAND = { x0: -62, y0: 752, x1: 62, y1: 846 };
+const ISLAND = { x0: -78, y0: 740, x1: 78, y1: 858 };
 const PIER_END = 690;
 const traps = [greenside(GREEN, -40, 806, 8, 9, 1, 3, 0), greenside(GREEN, 34, 826, 8, 7, 2, 3, 0)];
 const HALL = building(48, 250, 30, 160, 34, 90, 'flat');
 // a boat slip cut into the pier from the right where the second shot wants to land: carry it, or squeeze past on the
 // boardwalk side
-const SLIP = { x0: -14, y0: 400, x1: 80, y1: 446 };
-const BOARDWALK = band([{ x: -52, y: 120 }, { x: -52, y: PIER_END - 6 }], 4);
+const SLIP = { x0: 6, y0: 400, x1: 90, y1: 446 };
+const BOARDWALK = band([{ x: -66, y: 120 }, { x: -66, y: PIER_END - 6 }], 4);
 const WHEEL = { x: 46, y: 610 };
 
 const posts: Post[] = [
@@ -43,10 +43,12 @@ export const navypier: Hole = {
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.03,
-  teeTip: 'Water both sides of the pier. Smooth beats hard out here.',
-  yards: 590,
-  blurb: 'Out the pier into the lake, water both sides, to an island green past the end. Lay up on the pier or go for the island.',
-  tee: { x: 0, y: 0 },
+  teeTip: 'Water both sides. A good drive leaves a wood to the island, or an iron to the end of the pier.',
+  yards: 480,
+  blurb: 'Out the pier into the lake, water both sides, to an island green past the end. After a good drive: a wood at the island, or an iron to the end of the pier.',
+  // the tee is 70 ft out along the pier since Nov 12 (the hole was 590 yd): a good drive now leaves a wood to the
+  // island or an iron to the end of the pier
+  tee: { x: 0, y: 150 },
   cup: { x: 0, y: 803 },
   pins: [{ x: 0, y: 803 }, { x: -18, y: 789 }, { x: 19, y: 809 }, { x: -5, y: 817 }],
   aim: 0,
@@ -59,16 +61,18 @@ export const navypier: Hole = {
   ],
   base: 'rough',
   regions: [
-    { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
+    { poly: rect(-12, 138, 12, 162), surface: 'fairway' },
     // the lawn at the foot of the pier, then the pier itself, its boardwalk, and the end
     { poly: blob(0, 40, 60, 40, 1, 0.05), surface: 'fairway' },
     // a strip down the pier, broken by the slip (half as wide again since Nov 11)
-    { poly: rect(-30, 100, 30, SLIP.y0), surface: 'fairway' },
-    { poly: rect(-30, SLIP.y1, 30, PIER_END - 4), surface: 'fairway' },
+    { poly: rect(-44, 100, 30, SLIP.y0), surface: 'fairway' },
+    // the lane past the slip on the boardwalk side
+    { poly: rect(-44, SLIP.y0, SLIP.x0 - 4, SLIP.y1), surface: 'fairway' },
+    { poly: rect(-44, SLIP.y1, 44, PIER_END - 4), surface: 'fairway' },
     // the island: a ring of fairway round the green
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 14, GREEN.ry + 12, 5, 0.05), surface: 'fairway' },
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 26, GREEN.ry + 20, 5, 0.05), surface: 'fairway' },
     { poly: BOARDWALK, surface: 'wood' },
-    { poly: rect(56, 100, 66, PIER_END - 4), surface: 'stone' },
+    { poly: rect(72, 100, 82, PIER_END - 4), surface: 'stone' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     ...traps.map((t) => t.region),
@@ -78,7 +82,7 @@ export const navypier: Hole = {
     // the lake, and the land: the lawn at the foot, the pier straight out, the wider end round the green
     { kind: 'ramp', x0: -170, y0: -50, x1: 170, y1: 890, axis: 'y', h0: -6, h1: -6, op: 'set' },
     { kind: 'box', x0: -120, y0: -50, x1: 120, y1: 90, h: DECK, edge: 1, op: 'set' },
-    { kind: 'box', x0: -58, y0: 80, x1: 68, y1: PIER_END, h: DECK, edge: 1, op: 'set' },
+    { kind: 'box', x0: -74, y0: 80, x1: 86, y1: PIER_END, h: DECK, edge: 1, op: 'set' },
     { kind: 'box', x0: ISLAND.x0, y0: ISLAND.y0, x1: ISLAND.x1, y1: ISLAND.y1, h: DECK - 2, edge: 3, op: 'set' },
     { kind: 'box', x0: SLIP.x0, y0: SLIP.y0, x1: SLIP.x1, y1: SLIP.y1, h: -6, edge: 1, op: 'set' },
     ...chiGreen(GREEN, DECK - 2, [0.4, 0.5], [[-8, -6, 7, 0.25], [10, 6, 6, -0.2]]),
@@ -100,7 +104,7 @@ export const navypier: Hole = {
     { x: 0, y: 800 },
   ],
   decor: [
-    { kind: 'teebox', x: 0, y: 0 },
+    { kind: 'teebox', x: 0, y: 150 },
     HALL.decor,
     { kind: 'ferris', x: WHEEL.x, y: WHEEL.y, rot: Math.PI / 2 },
     { kind: 'walkers', x: -52, y: 400, rot: Math.PI / 2, scale: 560, size: [12, 0, 0] },

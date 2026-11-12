@@ -55,7 +55,7 @@ export const river: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.03,
   teeTip: 'The river is left and long. Aim at the towers: they give the ball back.',
-  yards: 420,
+  yards: 430,
   blurb: 'Off a rooftop on Wacker. The river down the left, a boat slip across the landing area, then over the river to the corn cobs.',
   tee: { x: 0, y: 0 },
   cup: { x: 30, y: 583 },
