@@ -39,6 +39,7 @@ export const lakefront: Hole = {
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.03,
+  teeTip: 'The harbour cuts in on the right from halfway. Keep it up the left.',
   yards: 420,
   blurb: 'A beach hole on Lake Michigan. Miss the fairway and you are in the sand; the harbour bites in right, the Drive is out left.',
   tee: { x: 0, y: 0 },
@@ -58,7 +59,7 @@ export const lakefront: Hole = {
     // a sliver of rough round the tee, the fairways and the green, then the beach
     { poly: rect(-18, -18, 18, 18), surface: 'rough' },
     { poly: blob(-12, 190, 38, 116, 1, 0.05), surface: 'rough' },
-    { poly: blob(-18, 400, 30, 66, 2, 0.06), surface: 'rough' },
+    { poly: blob(-20, 378, 32, 92, 2, 0.06), surface: 'rough' },
     { poly: blob(14, 500, 40, 28, 3, 0.06), surface: 'rough' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 10, GREEN.ry + 10, 3, 0.06), surface: 'rough' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
@@ -66,7 +67,7 @@ export const lakefront: Hole = {
     // members hit 6% of fairways the week before)
     { poly: blob(-12, 190, 32, 110, 1, 0.05), surface: 'fairway' },
     // a ribbon up the left past the harbour, and the run-in to the green
-    { poly: blob(-18, 400, 24, 60, 2, 0.06), surface: 'fairway' },
+    { poly: blob(-20, 378, 26, 86, 2, 0.06), surface: 'fairway' },
     { poly: blob(14, 500, 34, 22, 3, 0.06), surface: 'fairway' },
     { poly: BREAKWATER, surface: 'fairway' },
     { poly: band([{ x: -46, y: -40 }, { x: -46, y: 650 }], 3), surface: 'path' },

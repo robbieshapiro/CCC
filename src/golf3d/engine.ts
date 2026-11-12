@@ -1245,9 +1245,13 @@ export class Course3D {
     if (dist) dist.textContent = this.drill ? `${away(d, putt)}${slope}` : `${away(d, putt)} to the pin${slope}`;
     this.fitHud();
     const first = this.number === 1 && this.strokes === 0 && !this.drill;
+    // on a tee where the hole wants a particular club, Hank says so (the Windy City)
+    const teeTip = this.strokes === 0 && !this.drill && !this.practice ? this.hole.teeTip : undefined;
     const tip = this.number === 1 && this.strokes === 1 && want !== 'putter';
     this.hint(
-      first
+      teeTip
+        ? `Hank: ${teeTip}`
+        : first
         ? this.starter ? `Hank: ${this.starter}` : 'Drag to aim. Tap to swing.'
         : tip
           ? 'Drag the dot on the ball for spin, or to bend the shot. Mind the wind.'

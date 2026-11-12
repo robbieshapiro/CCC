@@ -114,7 +114,7 @@ const COURSES: Course[] = [
     whatsNew: [
       'Chicago in November. Bring a coat.',
       'The wind off the lake: 10 to 20 mph, and it gusts.',
-      'Buildings are in play. A roof keeps your ball.',
+      'Buildings are in play. A ball on a roof drops to the street, no penalty.',
       'Greens are flatter, with some break.',
     ],
     name: 'The Windy City',
