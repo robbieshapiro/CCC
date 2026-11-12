@@ -1,7 +1,8 @@
 import { api, dropSession, getSession, listSessions, setSession } from './api';
-import type { DailyCrown, Session, Snapshot } from './api/types';
+import type { DailyCrown, RoomCourse, Session, Snapshot } from './api/types';
 import { processSnapshot } from './nudges';
-import { setSchedule } from './golf3d/courses';
+import { setRoomCourses, setSchedule, type Course } from './golf3d/courses';
+import { roomCourse } from './designer/room';
 import { store } from './storage';
 
 let current: Snapshot | null = null;
@@ -30,7 +31,7 @@ export async function refresh(): Promise<Snapshot> {
   }
   const [snap, crown] = got;
   snap.crown = crown;
-  await loadSchedule(session);
+  await Promise.all([loadSchedule(session), loadRoom(session)]);
   // a club renamed since this device signed in: keep the saved name (and the club switcher) up to date
   if (snap.groupName && snap.groupName !== session.groupName) setSession({ ...session, groupName: snap.groupName });
   current = snap;
@@ -51,6 +52,30 @@ async function loadSchedule(session: Session) {
     cached = null;
   }
   setSchedule(fresh ?? cached);
+}
+
+const roomBuilt = new Map<string, Course>();
+// The Design Room's courses, kept on the device like the schedule (a week may be playing one)
+async function loadRoom(session: Session) {
+  const fresh = await api.roomCourses(session).catch(() => null);
+  if (fresh) store.set('ccc-room', JSON.stringify(fresh));
+  let rows: RoomCourse[] | null = fresh;
+  if (!rows)
+    try {
+      rows = JSON.parse(store.get('ccc-room') ?? 'null');
+    } catch {
+      rows = null;
+    }
+  const built: Course[] = [];
+  for (const r of rows ?? [])
+    try {
+      const key = `${r.id}:${r.updatedAt}`;
+      if (!roomBuilt.has(key)) roomBuilt.set(key, roomCourse(r));
+      built.push(roomBuilt.get(key)!);
+    } catch {
+      // a course that won't build is left out rather than breaking the club
+    }
+  setRoomCourses(built);
 }
 
 export function onSnapshot(fn: (s: Snapshot) => void): () => void {

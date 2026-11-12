@@ -59,6 +59,7 @@ function tile(c: Course, opts: { small?: boolean; week?: string } = {}) {
       <div class="pl-acts">
         <a href="#/preview/${c.id}">▶ Preview</a>
         <a href="#/practice/${c.id}">Practice</a>
+        ${c.id.startsWith('room-') ? `<a href="#/room/${c.id.slice(5)}">🛰️ Edit</a>` : ''}
         ${c.draft ? `<button data-approve="${c.id}">${approved ? 'Un-approve' : '✓ Approve'}</button>` : ''}
       </div>
       ${r ? `<small class="pl-fine">Robot rated ${esc(r.at)}</small>` : ''}

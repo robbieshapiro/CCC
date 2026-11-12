@@ -69,6 +69,7 @@ export function sundayCardSection(snap: Snapshot): string {
       </div>
     </section>
     ${plannerSection()}
+    <a class="adm-card adm-room-link" href="#/room"><span class="adm-room-glow">🛰️</span><span><b>The Design Room</b><small>Shape a course on the holo-table: the holes, the bunkers, the water, the trees. It plays as soon as it's saved.</small></span><span aria-hidden="true">›</span></a>
     ${labSection()}
     <section class="adm-card adm-previews">
       <h2>Preview a course</h2>

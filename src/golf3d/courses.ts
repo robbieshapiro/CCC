@@ -143,7 +143,13 @@ export const setSchedule = (s: Record<string, string> | null | undefined) => {
 };
 export const scheduleOf = () => schedule;
 
-const playable = () => COURSES.filter((c) => !c.lab);
+// The Design Room's courses (room_courses, src/designer/room.ts): built in the app, loaded from the club at refresh
+let ROOM: Course[] = [];
+export const setRoomCourses = (cs: Course[]) => {
+  ROOM = cs;
+};
+
+const playable = () => [...COURSES.filter((c) => !c.lab), ...ROOM];
 // the calendar alone: the latest course (not a draft) to open by this period
 export function calendarFor(period: string): Course {
   const sorted = playable()
@@ -164,7 +170,7 @@ export function courseFor(period: string, own = true): Course {
   return key && key >= cal.opens ? playable().find((c) => c.id === schedule[key])! : cal;
 }
 
-export const courseById = (id: string) => COURSES.find((c) => c.id === id);
+export const courseById = (id: string) => COURSES.find((c) => c.id === id) ?? ROOM.find((c) => c.id === id);
 // Next week's course, if it's a different one: members can practise its first holes. Without a pick for next week,
 // the next course to open on the calendar.
 export function nextCourse(period: string): Course | undefined {
