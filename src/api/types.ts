@@ -317,6 +317,9 @@ export interface Api {
   // Pop-a-Shot against Mo (pas_start, pas_finish)
   pasStart(session: Session, stake: number): Promise<import('../popashot').PasStart>;
   pasFinish(session: Session, id: number, score: number): Promise<import('../popashot').PasEnd>;
+  // 8-ball against Mo (bil_start, bil_finish)
+  bilStart(session: Session, stake: number): Promise<{ id: number; stake: number; breaks: 'you' | 'mo'; bank: number; lostToday: number }>;
+  bilFinish(session: Session, id: number, won: boolean): Promise<{ id: number; stake: number; payout: number; won: boolean; bank: number; lostToday: number }>;
   trophyPaid(session: Session): Promise<Record<string, number>>;
   golferCard(session: Session, playerId: string): Promise<GolferCard | null>;
   submitFreeRound(session: Session, course: string, holes: number[], pars: number[]): Promise<void>; // a classic course: never counts // today's golfers on the course, every club

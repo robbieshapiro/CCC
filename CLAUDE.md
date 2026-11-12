@@ -16,6 +16,7 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
 - `npm run check-api` if you touched `api/`.
 - `npm run check-holes` if you touched holes, terrain, physics or clubs. Its `greens` sweep (in `quick` and `all`) putts every green from all round every pin; never ship a course that fails it.
 - `npm run check-minigolf` if you touched mini golf or the putting bot.
+- `npm run check-pool` if you touched 8-ball (`src/billiards/`): Mo plays himself 200 times; every game must end, most with the 8 sunk last.
 
 ## Working notes (things agents keep relearning)
 

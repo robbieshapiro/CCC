@@ -3269,3 +3269,36 @@ end $$;
 
 grant execute on function pas_start(uuid, int) to anon;
 grant execute on function pas_finish(uuid, bigint, int) to anon;
+
+-- 8-ball against Mo (from Nov 13): a full game of 8-ball, played on the phone. Win and the stake comes back with 90% on
+-- top; lose and it's Mo's. The phone reports the result, so the server keeps it honest where it can: a game takes at
+-- least 45 seconds and no more than an hour, one at a time, and one left unfinished is lost when the next starts.
+create or replace function bil_start(p_token uuid, p_stake int) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); h casino;
+begin
+  if p_stake not between 10 and 500 then raise exception 'Bets are $10 to $500.'; end if;
+  update casino set payout = 0, settled_at = now(), state = state || '{"outcome": "left"}'
+  where player_id in (select person_seats(me)) and game = 'billiards' and payout is null;
+  perform casino_check(me, p_stake);
+  insert into casino (player_id, game, stake, state) values (me.id, 'billiards', p_stake, jsonb_build_object('breaks', case when random() < 0.5 then 'you' else 'mo' end))
+  returning * into h;
+  return json_build_object('id', h.id, 'stake', p_stake, 'breaks', h.state->>'breaks', 'bank', person_bank(me), 'lostToday', casino_lost_today(me));
+end $$;
+
+create or replace function bil_finish(p_token uuid, p_id bigint, p_won boolean) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); h casino; secs numeric; pay int;
+begin
+  select * into h from casino where id = p_id and player_id in (select person_seats(me)) and game = 'billiards' for update;
+  if not found then raise exception 'No such game.'; end if;
+  if h.payout is not null then raise exception 'That game is already settled.'; end if;
+  secs := extract(epoch from now() - h.created_at);
+  if p_won and secs < 45 then raise exception 'Nobody clears a table that fast. Not even Mo.'; end if;
+  pay := case when p_won and secs <= 3600 then h.stake + (h.stake * 9) / 10 else 0 end;
+  update casino set payout = pay, settled_at = now(), state = state || jsonb_build_object('outcome', case when pay > 0 then 'win' else 'lose' end) where id = h.id;
+  return json_build_object('id', h.id, 'stake', h.stake, 'payout', pay, 'won', pay > 0, 'bank', person_bank(me), 'lostToday', casino_lost_today(me));
+end $$;
+
+grant execute on function bil_start(uuid, int) to anon;
+grant execute on function bil_finish(uuid, bigint, boolean) to anon;
