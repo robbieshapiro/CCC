@@ -138,7 +138,7 @@ async function router() {
     // the old member card links land on the golfer card, the one card for anyone
     if (page === 'member' && arg) return golfer(s, arg);
     if (page === 'admin') {
-      if (s.admin) return admin(s);
+      if (s.admin) return admin(s, arg, extra);
       location.hash = '#/';
       return;
     }
