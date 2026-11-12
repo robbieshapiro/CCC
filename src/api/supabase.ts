@@ -158,6 +158,8 @@ export const supabaseApi: Api = {
   seasonStandings: (s) => rpc<Season>('season_standings', { p_token: s.token }),
   trophyProgress: (s, id) => rpc<TrophyProgress | null>('trophy_progress', { p_token: s.token, p_player: id ?? null }),
   bjState: (s) => rpc('bj_state', { p_token: s.token }),
+  pasStart: (s, stake) => rpc('pas_start', { p_token: s.token, p_stake: stake }),
+  pasFinish: (s, id, score) => rpc('pas_finish', { p_token: s.token, p_id: id, p_score: score }),
   bjDeal: (s, stake) => rpc('bj_deal', { p_token: s.token, p_stake: stake }),
   bjAct: (s, id, action) => rpc('bj_act', { p_token: s.token, p_id: id, p_action: action }),
   claimTrophies: (s) => rpc<{ plaque: string; amount: number }[]>('claim_trophies', { p_token: s.token }).catch(() => []),

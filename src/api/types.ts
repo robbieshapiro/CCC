@@ -314,6 +314,9 @@ export interface Api {
   bjState(session: Session): Promise<import('../blackjack').BjState>;
   bjDeal(session: Session, stake: number): Promise<import('../blackjack').BjView>;
   bjAct(session: Session, id: number, action: 'hit' | 'stand' | 'double'): Promise<import('../blackjack').BjView>;
+  // Pop-a-Shot against Mo (pas_start, pas_finish)
+  pasStart(session: Session, stake: number): Promise<import('../popashot').PasStart>;
+  pasFinish(session: Session, id: number, score: number): Promise<import('../popashot').PasEnd>;
   trophyPaid(session: Session): Promise<Record<string, number>>;
   golferCard(session: Session, playerId: string): Promise<GolferCard | null>;
   submitFreeRound(session: Session, course: string, holes: number[], pars: number[]): Promise<void>; // a classic course: never counts // today's golfers on the course, every club
