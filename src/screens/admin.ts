@@ -1,13 +1,14 @@
-// The Committee Room: four tabs, simplest first. Today (what needs you, the feedback inbox, who's in, the live feed,
-// then the numbers folded away), Course (the weeks ahead, the Hole Lab, previews, the hole report), Members (everyone,
-// invites, and the full history, over 7 days, the month or all time) and Tools. Every member name opens their card.
+// The Committee Room, built around the game maker's job: designing, testing and scheduling a course each week.
+// Courses is home (src/screens/adminHome.ts: Jarvis's briefing, this week's course and how it's playing, then every
+// course week by week, each one opening to review, play, test and plan). Then three small rooms: Members (what's
+// waiting on you, the people, invites, who's in, the numbers), Bar and Tools. Each has its own address
+// (#/admin, #/admin/members, #/admin/course/<id>), so Back works. Every member name opens their card.
 import { api, getSession, listSessions } from '../api';
 import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
 import { courseById } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
-import { store } from '../storage';
 import { buildHole, tidy } from '../designer/hole';
 import { isHole } from '../designer/desk';
 import { planCanvas } from '../designer/plan';
@@ -16,9 +17,9 @@ import { esc, golferHref, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
-import { chartSections, courseSections, kpiSections, loadHoleReport, loadKpis } from './adminKpis';
+import { chartSections, kpiSections, loadKpis } from './adminKpis';
 import { ask, copyBox, tell } from '../dialog';
-import { bindSundayCard, sundayCardSection } from './adminCard';
+import { homeSections, loadHome, showCourse } from './adminHome';
 import { loadToday, todaySections } from './adminToday';
 import { loadNominations, nominationsSection } from './nominate';
 import { bindNudge, nudgeSection } from './adminNudge';
@@ -42,37 +43,33 @@ const COLUMNS: { key: SortKey; label: string; num?: boolean; all?: boolean }[] =
   { key: 'allBest', label: 'Best', num: true, all: true },
 ];
 
-export function admin(snap: Snapshot) {
+export function admin(snap: Snapshot, arg?: string, extra?: string) {
+  const tab: Tab = arg === 'members' || arg === 'bar' || arg === 'tools' ? arg : 'courses';
+  const course = arg === 'course' && extra ? extra : undefined;
+  // moving about inside the Committee Room keeps the page (and its numbers): only the view changes
+  const shell = document.getElementById('adm-shell');
+  if (shell && shell.dataset.group === requireSession().groupId) {
+    showTab(tab);
+    if (tab === 'courses') showCourse(course ?? null);
+    return;
+  }
   render(`
     ${header(snap.groupName, 'admin')}
-    <main class="admin-page">
-      <div class="admin-top">
-        <div><p class="eyebrow">Committee only</p><h1>The Committee Room</h1></div>
-      </div>
+    <main class="admin-page" id="adm-shell" data-group="${esc(requireSession().groupId)}">
       <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
-      <div class="adm-pane" data-pane="today">
-        <div class="adm-needs" id="adm-needs"></div>
+      <div class="adm-pane" data-pane="courses">
+        ${homeSections()}
+      </div>
+      <div class="adm-pane" data-pane="members" hidden>
+        <div class="adm-needs" id="adm-needs-members"></div>
         ${nudgeSection(snap)}
         <section class="adm-card" id="adm-feedback-card" hidden>
           <h2>Feedback</h2>
           <div id="adm-todo"></div>
         </section>
         ${nominationsSection()}
-        ${todaySections()}
-        <details class="adm-more">
-          <summary>Numbers <small>purse, came back, AI calls, the charts</small></summary>
-          ${kpiSections()}
-          ${chartSections()}
-          <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
-          <section class="adm-card" id="adm-daily-bars" hidden></section>
-        </details>
-      </div>
-      <div class="adm-pane" data-pane="course" hidden>
-        ${sundayCardSection(snap)}
-        ${courseSections()}
         <section class="adm-card" id="adm-holes" hidden></section>
-      </div>
-      <div class="adm-pane" data-pane="members" hidden>
+        ${todaySections()}
       </div>
       <div class="adm-pane" data-pane="bar" hidden>
         ${barSection()}
@@ -85,16 +82,24 @@ export function admin(snap: Snapshot) {
             <button class="btn" data-tool="invite">✉️ Invite someone</button>
             <button class="btn ghost" data-tool="club">🏌️ Start a club</button>
             <a class="btn ghost" href="#/invite/preview">👀 Preview a new member's welcome</a>
+            <a class="btn ghost" href="#/room">🛰️ The Design Room</a>
           </div>
           <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
           <div class="adm-tool" data-panel="invite" hidden>${inviteTool()}</div>
           <div class="adm-tool" data-panel="club" hidden>${clubMaker(true)}</div>
         </section>
+        <details class="adm-more">
+          <summary>The numbers <small>purse, came back, AI calls, the charts</small></summary>
+          ${kpiSections()}
+          ${chartSections()}
+          <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
+          <section class="adm-card" id="adm-daily-bars" hidden></section>
+        </details>
       </div>
       <div id="adm-body" hidden></div>
     </main>`);
-  bindTabs();
-  bindSundayCard(snap);
+  bindTabs(tab);
+  void loadHome(snap, course);
   bindNudge(snap);
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
     b.onclick = () => {
@@ -115,7 +120,7 @@ export function admin(snap: Snapshot) {
   void load();
   void loadHoles(snap);
   void loadTrend();
-  void loadKpis().then(loadHoleReport);
+  void loadKpis();
 }
 
 // Members' golf holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
@@ -472,26 +477,28 @@ function draw() {
 // ---------- the layout: tabs, with Overview (what needs you, then the numbers) first ----------
 
 const TABS = [
-  { id: 'today', label: 'Today' },
-  { id: 'course', label: 'Course' },
+  { id: 'courses', label: 'Courses' },
   { id: 'members', label: 'Members' },
   { id: 'bar', label: 'Bar' },
   { id: 'tools', label: 'Tools' },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
-const TAB_KEY = 'ccc-adm-tab';
-
 function showTab(t: Tab, scrollTo?: string) {
   document.querySelectorAll<HTMLElement>('.adm-pane').forEach((p) => (p.hidden = p.dataset.pane !== t));
   document.querySelectorAll<HTMLButtonElement>('#adm-tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
-  store.set(TAB_KEY, t);
   if (scrollTo) document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function bindTabs() {
-  document.querySelectorAll<HTMLButtonElement>('#adm-tabs [data-tab]').forEach((b) => (b.onclick = () => showTab(b.dataset.tab as Tab)));
-  const saved = store.get(TAB_KEY) as Tab | null;
-  showTab(saved && TABS.some((t) => t.id === saved) ? saved : 'today');
+// each tab has its own address, so the phone's Back button walks back through them
+const tabHash = (t: Tab, scrollTo?: string) => {
+  if (t === 'courses') navigate('#/admin');
+  else navigate(`#/admin/${t}`);
+  if (scrollTo) setTimeout(() => document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+};
+
+function bindTabs(t: Tab) {
+  document.querySelectorAll<HTMLButtonElement>('#adm-tabs [data-tab]').forEach((b) => (b.onclick = () => tabHash(b.dataset.tab as Tab)));
+  showTab(t);
   drawNeeds();
 }
 
@@ -509,22 +516,32 @@ const needs = { feedback: 0, nominations: 0, holes: 0, invites: 0, unplayed: 0 }
 export const setNeeds = (k: keyof typeof needs, n: number) => ((needs[k] = n), drawNeeds());
 // the first line of Today: what's waiting on you, each a tap to where it's dealt with
 function drawNeeds() {
-  const tab = document.querySelector<HTMLButtonElement>('#adm-tabs [data-tab="today"]');
-  if (tab) tab.innerHTML = `Today${needs.feedback ? ` <span class="adm-badge">${needs.feedback}</span>` : ''}`;
-  const el = document.getElementById('adm-needs');
-  if (!el) return;
-  const items: [number, string, Tab, string][] = [
-    [needs.feedback, needs.feedback === 1 ? 'piece of feedback' : 'pieces of feedback', 'today', 'adm-feedback-card'],
-    [needs.nominations, needs.nominations === 1 ? 'friend put up' : 'friends put up', 'today', 'adm-nominations'],
-    [needs.holes, needs.holes === 1 ? 'hole to review' : 'holes to review', 'course', 'adm-holes'],
-    [needs.unplayed, needs.unplayed === 1 ? 'new member yet to play' : 'new members yet to play', 'members', ''],
-    [needs.invites, needs.invites === 1 ? 'invite not taken up' : 'invites not taken up', 'members', 'adm-invites'],
+  const waiting = needs.feedback + needs.nominations + needs.holes;
+  const tab = document.querySelector<HTMLButtonElement>('#adm-tabs [data-tab="members"]');
+  if (tab) tab.innerHTML = `Members${waiting ? ` <span class="adm-badge">${waiting}</span>` : ''}`;
+  const items: [number, string, string][] = [
+    [needs.feedback, needs.feedback === 1 ? 'piece of feedback' : 'pieces of feedback', 'adm-feedback-card'],
+    [needs.nominations, needs.nominations === 1 ? 'friend put up' : 'friends put up', 'adm-nominations'],
+    [needs.holes, needs.holes === 1 ? "member's hole to review" : "members' holes to review", 'adm-holes'],
+    [needs.unplayed, needs.unplayed === 1 ? 'new member yet to play' : 'new members yet to play', ''],
+    [needs.invites, needs.invites === 1 ? 'invite not taken up' : 'invites not taken up', 'adm-invites'],
   ];
   const live = items.filter(([n]) => n > 0);
-  el.innerHTML = live.length
-    ? `<span class="adm-needs-label">Needs you</span>${live.map(([n, label, tab, to]) => `<button data-need-tab="${tab}" data-need-to="${to}"><b>${n}</b> ${label}</button>`).join('')}`
-    : `<span class="adm-needs-label">Needs you</span><span class="muted">Nothing. The club runs itself today.</span>`;
-  el.querySelectorAll<HTMLButtonElement>('[data-need-tab]').forEach((b) => (b.onclick = () => showTab(b.dataset.needTab as Tab, b.dataset.needTo || undefined)));
+  // on the Courses home: only what's waiting, a tap to the Members room; in the Members room: the full list
+  const home = document.getElementById('adm-needs');
+  if (home) {
+    const urgent = live.slice(0, 3);
+    home.hidden = !urgent.length;
+    home.innerHTML = urgent.length ? `<span class="adm-needs-label">Waiting on you</span>${urgent.map(([n, label, to]) => `<button data-need-to="${to}"><b>${n}</b> ${label}</button>`).join('')}` : '';
+    home.querySelectorAll<HTMLButtonElement>('[data-need-to]').forEach((x) => (x.onclick = () => tabHash('members', x.dataset.needTo || undefined)));
+  }
+  const room = document.getElementById('adm-needs-members');
+  if (room) {
+    room.innerHTML = live.length
+      ? `<span class="adm-needs-label">Needs you</span>${live.map(([n, label, to]) => `<button data-need-to="${to}"><b>${n}</b> ${label}</button>`).join('')}`
+      : `<span class="adm-needs-label">Needs you</span><span class="muted">Nothing. The club runs itself today.</span>`;
+    room.querySelectorAll<HTMLButtonElement>('[data-need-to]').forEach((x) => (x.onclick = () => x.dataset.needTo && document.getElementById(x.dataset.needTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' })));
+  }
 }
 
 // a member's name, as a link to their card when the server sent who they are
