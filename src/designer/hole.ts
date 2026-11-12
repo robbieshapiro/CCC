@@ -110,6 +110,37 @@ function walker(line: V2[]) {
   return { at, total };
 }
 
+// The hole's frame, for the Design Room: where an (along, across) lands in feet, and back again, the green's centre,
+// and the hole's centre line (to draw)
+export function frameOf(raw: HoleSpec) {
+  const s = tidy(raw);
+  const L = s.yards * FT_PER_YD;
+  const line = centreLine(s, L);
+  const { at } = walker(line);
+  const wf = { narrow: 22, medium: 30, wide: 40 }[s.fairway.width];
+  const place = (along: number, across: number): V2 => {
+    const { p, dir } = at(along);
+    return { x: p.x + dir.y * across * wf, y: p.y - dir.x * across * wf };
+  };
+  // the nearest point on the centre line, then the distance off it in half-widths
+  const locate = (q: V2, max = 1.1): { along: number; across: number } => {
+    let best = { f: 0, d: Infinity };
+    for (let f = 0; f <= max + 1e-6; f += 0.005) {
+      const { p } = at(f);
+      const d = Math.hypot(q.x - p.x, q.y - p.y);
+      if (d < best.d) best = { f, d };
+    }
+    const { p, dir } = at(best.f);
+    const across = ((q.x - p.x) * dir.y - (q.y - p.y) * dir.x) / wf;
+    return { along: best.f, across };
+  };
+  const fin = at(1);
+  const green = { x: fin.p.x + fin.dir.y * s.green.across * wf * 0.8, y: fin.p.y - fin.dir.x * s.green.across * wf * 0.8 };
+  const centre: V2[] = [];
+  for (let f = 0; f <= 1 + 1e-6; f += 0.02) centre.push(at(f).p);
+  return { place, locate, green, centre, L, wf };
+}
+
 export type Built = { hole: Hole; warnings: string[] };
 
 export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {

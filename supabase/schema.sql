@@ -3408,3 +3408,60 @@ end $$;
 
 grant execute on function course_planner(uuid) to anon;
 grant execute on function set_course_approved(uuid, text, boolean) to anon;
+
+-- The Design Room (from Nov 13): courses the Committee shapes in the app, hole by hole, in the Design Desk's format
+-- (HoleSpec in src/designer/hole.ts). Saved here, so they play at once with no deploy: every member's app loads them
+-- as courses (id 'room-<id>'), and the planner can put one on a week. A draft only shows to the Committee's planner.
+create table if not exists room_courses (
+  id bigserial primary key,
+  name text not null check (char_length(name) between 1 and 40),
+  tagline text not null default '' check (char_length(tagline) <= 160),
+  holes jsonb not null check (jsonb_typeof(holes) = 'array' and jsonb_array_length(holes) between 1 and 9),
+  draft boolean not null default true,
+  created_by uuid references players on delete set null,
+  updated_at timestamptz not null default now()
+);
+alter table room_courses enable row level security;
+
+-- every Design Room course, for every member's app (a scheduled one has to load for everyone)
+create or replace function room_courses_list(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return coalesce((select json_agg(json_build_object('id', r.id, 'name', r.name, 'tagline', r.tagline, 'holes', r.holes, 'draft', r.draft,
+    'updatedAt', r.updated_at) order by r.id) from room_courses r), '[]');
+end $$;
+
+-- save a course (a new one when p_id is null); the Committee only. Returns its id.
+create or replace function room_save(p_token uuid, p_id bigint, p_name text, p_tagline text, p_holes jsonb, p_draft boolean) returns bigint
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); v_id bigint;
+begin
+  if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
+  if char_length(trim(coalesce(p_name, ''))) not between 1 and 40 then raise exception 'Give the course a name (up to 40 letters).'; end if;
+  if jsonb_typeof(p_holes) <> 'array' or jsonb_array_length(p_holes) not between 1 and 9 then raise exception 'A course has 1 to 9 holes.'; end if;
+  if p_id is null then
+    insert into room_courses (name, tagline, holes, draft, created_by) values (trim(p_name), left(coalesce(p_tagline, ''), 160), p_holes, coalesce(p_draft, true), me.id)
+    returning id into v_id;
+  else
+    update room_courses set name = trim(p_name), tagline = left(coalesce(p_tagline, ''), 160), holes = p_holes, draft = coalesce(p_draft, true), updated_at = now()
+    where id = p_id returning id into v_id;
+    if v_id is null then raise exception 'No such course.'; end if;
+  end if;
+  return v_id;
+end $$;
+
+-- delete a course nobody has played and that isn't on a week (the Committee only)
+create or replace function room_delete(p_token uuid, p_id bigint) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
+  if exists (select 1 from rounds where course = 'room-' || p_id) then raise exception 'Members have played it, so it stays. Mark it a draft instead.'; end if;
+  if exists (select 1 from course_schedule where course = 'room-' || p_id) then raise exception 'It''s on a week. Take it off the calendar first.'; end if;
+  delete from room_courses where id = p_id;
+end $$;
+
+grant execute on function room_courses_list(uuid) to anon;
+grant execute on function room_save(uuid, bigint, text, text, jsonb, boolean) to anon;
+grant execute on function room_delete(uuid, bigint) to anon;

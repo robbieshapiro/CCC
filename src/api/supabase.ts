@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner } from './types';
+import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, RoomCourse } from './types';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
 // a trailing slash or /rest/v1, or just the project ref.
@@ -142,6 +142,9 @@ export const supabaseApi: Api = {
   membersCourse: (s) => rpc<MembersHole[]>('members_course', { p_token: s.token }),
   openChampions: (s) => rpc<OpenChampion[]>('open_champions', { p_token: s.token }),
   dailyCrown: (s) => rpc<DailyCrown | null>('daily_crown', { p_token: s.token }),
+  roomCourses: (s) => rpc<RoomCourse[]>('room_courses_list', { p_token: s.token }),
+  roomSave: (s, c) => rpc<number>('room_save', { p_token: s.token, p_id: c.id, p_name: c.name, p_tagline: c.tagline, p_holes: c.holes, p_draft: c.draft }),
+  roomDelete: (s, id) => rpc<void>('room_delete', { p_token: s.token, p_id: id }),
   courseSchedule: (s) => rpc<Record<string, string>>('course_schedule', { p_token: s.token }),
   setCourseSchedule: (s, period, course) => rpc<void>('set_course_schedule', { p_token: s.token, p_period: period, p_course: course }),
   periodHonors: (s, period) => rpc<Honors>('period_honors', { p_token: s.token, p_period: period }),
