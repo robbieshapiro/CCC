@@ -262,7 +262,8 @@ function safeShot(h: Hole, pos: V2, nav: (p: V2) => number, clock: number) {
 }
 
 const SKILL = Number(process.env.SKILL ?? 1);
-function novice(base: Hole, seed: string) {
+// tally: counts the putts, so the member mode can report the strokes to reach the green apart from them
+function novice(base: Hole, seed: string, tally?: { putts: number }) {
   // a random day: its pin and its wind, which a novice doesn't allow for
   const today = conditionsFor(base, `sim:${seed}`);
   const h = withPin(base, today);
@@ -289,6 +290,7 @@ function novice(base: Hole, seed: string) {
     };
     const r = simulate(h, pos, shot, false);
     log.push(`${shot.club[0]}${r.holed ? '!' : r.penalty ? 'x' : ''}`);
+    if (tally && shot.club === 'putter') tally.putts++;
     if (r.holed) break;
     // water or out of bounds costs a stroke; on tour courses you drop where it went in, as in the game
     if (r.penalty) {
@@ -559,9 +561,14 @@ if (mode === 'all' || mode === 'greens') {
 if (mode === 'member') {
   const seeds = Number(process.env.SEEDS ?? 12);
   for (const h of holes) {
-    const scores = Array.from({ length: seeds }, (_, i) => novice(h, `${h.id}:m${i}`));
+    // At member skill the robot putts far worse than members do (they average 1.3 putts a hole: a putt has no meter
+    // to miss), so its total overstates a hole. `to green` is the strokes before the putter comes out, penalties
+    // included; add the members' real putts to that for what a hole will play like.
+    const tally = { putts: 0 };
+    const scores = Array.from({ length: seeds }, (_, i) => novice(h, `${h.id}:m${i}`, tally));
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-    console.log(`MEMBER ${course.id} ${h.id} par ${h.par} skill ${SKILL} n ${seeds} avg ${avg.toFixed(2)} to-par ${(avg - h.par).toFixed(2)} scores ${scores.join(',')}`);
+    const putts = tally.putts / seeds;
+    console.log(`MEMBER ${course.id} ${h.id} par ${h.par} skill ${SKILL} n ${seeds} avg ${avg.toFixed(2)} to-par ${(avg - h.par).toFixed(2)} to-green ${(avg - putts).toFixed(2)} putts ${putts.toFixed(2)} with-1.5-putts ${(avg - putts + 1.5 - h.par).toFixed(2)} scores ${scores.join(',')}`);
   }
 }
 if (mode === 'all' || mode === 'novice') {

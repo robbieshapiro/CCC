@@ -17,7 +17,7 @@ What to look for, and what it has meant so far (week of Nov 8, 29 cards):
 
 | Signal | Healthy | Nov 8 week | What to do when it's off |
 |---|---|---|---|
-| Members' average to par | about +1, best cards around -4 | +1.7 | Tune step 3 until the robot at member skill lands near +1 |
+| Members' average to par | about +1, best cards around -4 | +1.7 | Tune step 3 until the robot's `with-1.5-putts` adds up to about +1 for the course |
 | Fairways hit (par 4s and 5s) | 35 to 55% | 6% | Widen landing areas; don't thin the rough |
 | Drives swung past 100% | under 20% | 42%, over half of them full misses | It's the meter, not the course: say so in the note |
 | Putts a hole | 1.5 to 1.8 | 1.3 | Smaller or firmer greens, more break. One step at a time |
@@ -29,6 +29,8 @@ What to look for, and what it has meant so far (week of Nov 8, 29 cards):
 Also say how many members posted a card against the week before. Fewer members on a harder course is the thing Robbie most needs to hear.
 
 ## 2. Calibrate the robot
+
+Also check tee shots before anything else: query 3's `tee_shots_finish` and penalties. A hole where more than about 15% of tee shots cost a penalty is too tight off the tee however wide its fairway is (the Windy City's River penalised 74% of members' real drives in the simulator before it opened: a perfect full driver flew into the river).
 
 Run the `packed` query from `queries.sql`, rebuild the shot file and calibrate:
 
@@ -47,7 +49,9 @@ Next week's course is the pick in `course_schedule` for the coming Sunday (`sele
 COURSE=<id> SKILL=<calibrated> SEEDS=6 npm run check-holes -- member
 ```
 
-It takes about a minute a round a hole, so run it in the background and one course at a time. Also run this week's course the same way once, so you know how far the robot sits from the members' real average; carry that gap across when you read next week's number.
+It takes about a minute a round a hole, so run it in the background and one course at a time.
+
+**Read `with-1.5-putts`, not `to-par`.** At member skill the robot takes four or five putts on some greens, where members average 1.3 a hole (a putt has no meter to miss). Each line prints `to-green` (strokes before the putter comes out, penalties included) and `with-1.5-putts` (that plus 1.5 putts, against par): the second is the number to tune to. A score capped at par +3 hides how bad a hole is, so look at the `scores` too. Also run this week's course the same way once, so you know how far the robot sits from the members' real average; carry that gap across when you read next week's number.
 
 Tune only next week's course, in its hole files, toward a member average near +1:
 - too hard off the tee: wider fairway blobs (and the rough ring round them), a shorter carry, a kinder landing area;
