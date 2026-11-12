@@ -2036,6 +2036,19 @@ button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer;
 .bj-fine { margin: 0; font-size: 12px; color: rgba(243, 230, 207, 0.65); }
 .bar-room .bar-game.cards > i { filter: drop-shadow(0 0 6px rgba(246, 197, 106, 0.4)); }
 
+/* a bar game the Committee has closed: only the Committee sees it, marked */
+.bar-room .bar-game.closed { opacity: 0.75; border-style: dashed; }
+.bar-room .bar-game.closed > div:first-of-type::after { content: 'Committee only · closed to members'; font: 800 10px var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: #ffb0a0; margin-top: 4px; }
+.adm-bar-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.adm-bar-list li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fffdf7; }
+.adm-bar-list li > i { font-style: normal; font-size: 22px; }
+.adm-bar-list b { display: block; font-weight: 800; }
+.adm-bar-list small { color: var(--muted); font-size: 12px; }
+.adm-switch { position: relative; width: 50px; height: 28px; border-radius: 999px; border: 0; background: #c9c2b2; cursor: pointer; transition: background 0.15s; }
+.adm-switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.15s; }
+.adm-switch.on { background: var(--green); }
+.adm-switch.on::after { transform: translateX(22px); }
+
 /* ---------- Pop-a-Shot against Mo ---------- */
 .pas-page { display: grid; gap: 12px; padding-bottom: 24px; }
 .pas-head { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }

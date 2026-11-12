@@ -76,13 +76,13 @@ export function barPane(snap: Snapshot) {
       </section>
       <h2 class="bar-wall">On the wall</h2>
       <div class="bar-games">
-        <a class="bar-game" href="#/daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
-        <a class="bar-game midway" href="#/bar/midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
-        <a class="bar-game cards" href="#/bar/blackjack"><i>🃏</i><div><b>Blackjack</b><span>Against Mo, for club money · $10 to $500 a hand</span></div><p data-mine="blackjack">Pull up a stool</p></a>
-        <a class="bar-game cards" href="#/bar/popashot"><i>🏀</i><div><b>Pop-a-Shot</b><span>Thirty seconds at the hoop · beat Mo's score for club money</span></div><p data-mine="popashot">Mo's waiting</p></a>
-        <a class="bar-game cards" href="#/bar/billiards"><i>🎱</i><div><b>8-Ball</b><span>A full game against Mo · stripes or solids, for club money</span></div><p data-mine="billiards">Table's free</p></a>
-        <a class="bar-game" href="#/bar/drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
-        <a class="bar-game members" href="#/bar/members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
+        <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
+        <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
+        <a class="bar-game cards" href="#/bar/blackjack" data-game="blackjack"><i>🃏</i><div><b>Blackjack</b><span>Against Mo, for club money · $10 to $500 a hand</span></div><p data-mine="blackjack">Pull up a stool</p></a>
+        <a class="bar-game cards" href="#/bar/popashot" data-game="popashot"><i>🏀</i><div><b>Pop-a-Shot</b><span>Thirty seconds at the hoop · beat Mo's score for club money</span></div><p data-mine="popashot">Mo's waiting</p></a>
+        <a class="bar-game cards" href="#/bar/billiards" data-game="billiards"><i>🎱</i><div><b>8-Ball</b><span>A full game against Mo · stripes or solids, for club money</span></div><p data-mine="billiards">Table's free</p></a>
+        <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
+        <a class="bar-game members" href="#/bar/members" data-game="members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
       <h2 class="bar-wall">Through the back</h2>
       <div class="bar-doors">
@@ -107,6 +107,14 @@ export async function fillBar(snap: Snapshot) {
   // curses waiting for your next Midway round: the count, not who or what
   const waiting = (await api.powerupState(s).catch(() => null))?.waiting ?? 0;
 
+  // the games the Committee has closed: hidden from members; the Committee sees them, marked
+  void api.barGames(s).then(({ settings, committee }) => {
+    document.querySelectorAll<HTMLElement>('[data-game]').forEach((el) => {
+      const closed = settings[el.dataset.game!] === false;
+      el.hidden = closed && !committee;
+      el.classList.toggle('closed', closed && committee);
+    });
+  });
   // Mo: a hello, then banter on request, in a shuffled order so it doesn't repeat for a while
   const lines = [...MO.banter].sort(() => Math.random() - 0.5);
   let at = -1;

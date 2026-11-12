@@ -2494,6 +2494,31 @@ create table if not exists casino (
 alter table casino enable row level security;
 create index if not exists casino_player on casino (player_id, created_at);
 
+-- Which bar games are open to members (from Nov 13): the Committee switches each one on or off in the Committee Room's
+-- Bar tab. A game with no row is open. The Committee can always play a closed one (to try it). Blackjack and
+-- Pop-a-Shot start closed.
+create table if not exists bar_settings (
+  game text primary key,
+  open boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+alter table bar_settings enable row level security;
+insert into bar_settings (game, open) values ('blackjack', false), ('popashot', false) on conflict (game) do nothing;
+
+-- is this person the Committee (an admin seat in any club)?
+create or replace function is_committee(me players) returns boolean
+language sql stable security definer set search_path = public, extensions as $$
+  select exists (select 1 from players a where lower(a.name) = lower(me.name) and a.pin_hash = me.pin_hash and a.role = 'admin')
+$$;
+
+-- may this person play this bar game? (raises if not)
+create or replace function bar_gate(me players, p_game text) returns void
+language plpgsql stable security definer set search_path = public, extensions as $$
+begin
+  if coalesce((select open from bar_settings where game = p_game), true) or is_committee(me) then return; end if;
+  raise exception 'That table''s closed for now.';
+end $$;
+
 create or replace function person_spent(me players) returns int
 language sql stable security definer set search_path = public, extensions as $$
   select (coalesce((select sum(price) from purchases where player_id in (select person_seats(me))), 0)
@@ -3172,6 +3197,7 @@ create or replace function bj_deal(p_token uuid, p_stake int) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token)); deck int[]; h casino;
 begin
+  perform bar_gate(me, 'blackjack');
   if p_stake not between 10 and 500 then raise exception 'Bets are $10 to $500.'; end if;
   if exists (select 1 from casino where player_id in (select person_seats(me)) and game = 'blackjack' and payout is null) then
     raise exception 'Finish the hand in front of you first.';
@@ -3233,6 +3259,7 @@ create or replace function pas_start(p_token uuid, p_stake int) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token)); mo int; h casino;
 begin
+  perform bar_gate(me, 'popashot');
   if p_stake not between 10 and 500 then raise exception 'Bets are $10 to $500.'; end if;
   update casino set payout = 0, settled_at = now(), state = state || '{"outcome": "left"}'
   where player_id in (select person_seats(me)) and game = 'popashot' and payout is null;
@@ -3277,6 +3304,7 @@ create or replace function bil_start(p_token uuid, p_stake int) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token)); h casino;
 begin
+  perform bar_gate(me, 'billiards');
   if p_stake not between 10 and 500 then raise exception 'Bets are $10 to $500.'; end if;
   update casino set payout = 0, settled_at = now(), state = state || '{"outcome": "left"}'
   where player_id in (select person_seats(me)) and game = 'billiards' and payout is null;
@@ -3302,3 +3330,41 @@ end $$;
 
 grant execute on function bil_start(uuid, int) to anon;
 grant execute on function bil_finish(uuid, bigint, boolean) to anon;
+
+-- The Committee Room's Bar tab: every game's switch, and the last 7 days at Mo's tables (bets, players, staked, and
+-- what the house is up or down)
+create or replace function admin_bar(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can see that.'; end if;
+  return json_build_object(
+    'settings', coalesce((select json_object_agg(game, open) from bar_settings), '{}'),
+    'week', coalesce((select json_agg(w order by w.game) from (
+        select c.game, count(*) as bets, count(distinct c.player_id) as players, sum(c.stake)::int as staked,
+          sum(c.stake - coalesce(c.payout, 0))::int as "houseNet"
+        from casino c where c.created_at > now() - interval '7 days' group by c.game) w), '[]'));
+end $$;
+
+-- switch a bar game on or off (the Committee only)
+create or replace function set_bar_game(p_token uuid, p_game text, p_open boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
+  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members') then raise exception 'No such game.'; end if;
+  insert into bar_settings (game, open, updated_at) values (p_game, p_open, now())
+  on conflict (game) do update set open = excluded.open, updated_at = now();
+end $$;
+
+-- which bar games are open, for the bar page (everyone)
+create or replace function bar_open_games(p_token uuid) returns json
+language sql stable security definer set search_path = public, extensions as $$
+  select json_build_object('settings', coalesce((select json_object_agg(game, open) from bar_settings), '{}'), 'committee', is_committee(player_for(p_token)))
+$$;
+
+revoke all on function is_committee(players) from public, anon, authenticated;
+revoke all on function bar_gate(players, text) from public, anon, authenticated;
+grant execute on function admin_bar(uuid) to anon;
+grant execute on function set_bar_game(uuid, text, boolean) to anon;
+grant execute on function bar_open_games(uuid) to anon;

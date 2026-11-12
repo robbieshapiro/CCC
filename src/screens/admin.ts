@@ -22,6 +22,7 @@ import { bindSundayCard, sundayCardSection } from './adminCard';
 import { loadToday, todaySections } from './adminToday';
 import { loadNominations, nominationsSection } from './nominate';
 import { bindNudge, nudgeSection } from './adminNudge';
+import { barSection, loadBar } from './adminBar';
 
 // Members and History always cover the last 7 days: with a course a week, that's the week (all-time numbers are on
 // each golfer's card)
@@ -73,6 +74,9 @@ export function admin(snap: Snapshot) {
       </div>
       <div class="adm-pane" data-pane="members" hidden>
       </div>
+      <div class="adm-pane" data-pane="bar" hidden>
+        ${barSection()}
+      </div>
       <div class="adm-pane" data-pane="tools" hidden>
         <section class="adm-card adm-do">
           <h2>Tools</h2>
@@ -107,6 +111,7 @@ export function admin(snap: Snapshot) {
   bindNoticeTool();
   bindInviteTool();
   void loadToday();
+  void loadBar();
   void load();
   void loadHoles(snap);
   void loadTrend();
@@ -470,6 +475,7 @@ const TABS = [
   { id: 'today', label: 'Today' },
   { id: 'course', label: 'Course' },
   { id: 'members', label: 'Members' },
+  { id: 'bar', label: 'Bar' },
   { id: 'tools', label: 'Tools' },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
