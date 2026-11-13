@@ -8,7 +8,7 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
-import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, greenGallery, teeGallery } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery, teeGallery } from './common';
 
 const LAND = 6;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
@@ -112,7 +112,8 @@ export const lakefront: Hole = {
   decor: [
     // a few patrons (Nov 13)
     teeGallery({ x: 0, y: 0 }),
-    ...greenGallery(GREEN, 95, 240),
+    // on the lakefront trail, level with the green (the beach is in play, so nobody stands on it)
+    gallery(-46, 556, FACE.east, 90, 14, 1),
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'banner', x: -26, y: -20, label: 'THE WINDY CITY' },
     { kind: 'streetsign', x: -58, y: 8, rot: Math.PI / 2, label: 'LAKE SHORE DR' },

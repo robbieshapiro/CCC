@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { makeRng } from '../../seed';
 import type { Anim, Kit } from '../kits';
 import { mat, mesh } from '../props';
-import { heightAt } from '../terrain';
+import { heightAt, isWater, surfaceAt } from '../terrain';
 import type { Decor, Hole, Roof, V2, Wall } from '../types';
 
 const ROOF = '#8f8d87'; // gravel on the flat roofs
@@ -259,7 +259,8 @@ export function walkers(len: number, n: number, seed: number, anim: Anim) {
 // heads, cups), so a few hundred cost about what one golfer does. They face the group's front (+z), shuffle, and now
 // and then one hops and lifts a drink. lift: ft above the ground (a balcony, a roof). kind: 'deck' draws a balcony slab
 // and rail under them; 'stand' steps each row up behind the last (bleachers).
-export function gallery(len: number, n: number, rows: number, seed: number, anim: Anim, lift = 0, kind = '') {
+// ok: whether a spot (in the group's own x and z) is somewhere a patron may stand; the ones it turns down stay home.
+export function gallery(len: number, n: number, rows: number, seed: number, anim: Anim, lift = 0, kind = '', ok?: (x: number, z: number) => boolean) {
   const g = new THREE.Group();
   const rng = makeRng(`gallery:${seed}`);
   const coats = ['#1f2a44', '#5b1f24', '#2f3d2c', '#3a3a3a', '#7a5a3a', '#0e3386', '#0e3386', '#c2402f', '#d8d2c4', '#44506b', '#8a3b2a'];
@@ -271,7 +272,7 @@ export function gallery(len: number, n: number, rows: number, seed: number, anim
   const cols = Math.max(1, Math.ceil(n / rows));
   const gap = 2.6;
   const c = new THREE.Color();
-  const who = Array.from({ length: n }, (_, i) => {
+  const all = Array.from({ length: n }, (_, i) => {
     const r = i % rows;
     const col = Math.floor(i / rows);
     body.setColorAt(i, c.set(coats[Math.floor(rng.next() * coats.length)]));
@@ -286,6 +287,16 @@ export function gallery(len: number, n: number, rows: number, seed: number, anim
       hand: rng.next() < 0.5 ? -0.7 : 0.7,
     };
   });
+  // keep each one's coat and skin with them when some are turned away
+  const who = all.map((p, i) => ({ ...p, i })).filter((p) => !ok || ok(p.x, p.z));
+  const cb = new THREE.Color();
+  who.forEach((p, k) => {
+    body.getColorAt(p.i, cb);
+    body.setColorAt(k, cb);
+    head.getColorAt(p.i, cb);
+    head.setColorAt(k, cb);
+  });
+  for (const k of [body, head, cup]) k.count = who.length;
   const m = new THREE.Matrix4();
   const pose = (clock: number) => {
     who.forEach((p, i) => {
@@ -315,6 +326,21 @@ export function gallery(len: number, n: number, rows: number, seed: number, anim
     for (let x = -len / 2 - 1; x <= len / 2 + 1.01; x += (len + 2) / Math.max(2, Math.round(len / 6))) g.add(mesh(new THREE.BoxGeometry(0.2, 3, 0.2), mat('#1f1f1f'), false).translateX(x).translateY(lift + 1.5).translateZ(1.7));
   }
   return g;
+}
+
+// Patrons on the ground stay off the course: not on a fairway, a green or its fringe, in a bunker or in the water, nor
+// within a couple of feet of any of them, and not out of bounds on a roof either.
+function onGround(h: Hole, d: Decor) {
+  const c = Math.cos(d.rot ?? 0);
+  const s = Math.sin(d.rot ?? 0);
+  const off = new Set(['fairway', 'green', 'fringe', 'sand']);
+  const bad = (x: number, y: number) => off.has(surfaceAt(h, { x, y })) || isWater(h, { x, y });
+  return (lx: number, lz: number) => {
+    const x = d.x + lx * c + lz * s;
+    const y = d.y + lx * s - lz * c;
+    for (const [dx, dy] of [[0, 0], [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5]]) if (bad(x + dx, y + dy)) return false;
+    return true;
+  };
 }
 
 // Traffic on a road: cars and yellow cabs both ways along len ft
@@ -599,7 +625,7 @@ export const chicago: Kit = {
     else if (d.kind === 'pritzker') o = pritzker();
     else if (d.kind === 'bascule') o = bascule(d.scale ?? 60);
     else if (d.kind === 'el') o = el(d.scale ?? 300, anim, d.label === 'red' ? 'red' : 'brown');
-    else if (d.kind === 'gallery') o = gallery(d.scale ?? 40, d.size?.[0] ?? 12, d.size?.[1] ?? 1, Math.round(d.x * 7 + d.y * 3 + (d.size?.[2] ?? 0)), anim, d.size?.[2] ?? 0, d.label ?? '');
+    else if (d.kind === 'gallery') o = gallery(d.scale ?? 40, d.size?.[0] ?? 12, d.size?.[1] ?? 1, Math.round(d.x * 7 + d.y * 3 + (d.size?.[2] ?? 0)), anim, d.size?.[2] ?? 0, d.label ?? '', d.size?.[2] ? undefined : onGround(h, d));
     else if (d.kind === 'walkers') o = walkers(d.scale ?? 80, d.size?.[0] ?? 6, Math.round(d.x + d.y), anim);
     else if (d.kind === 'traffic') o = traffic(d.scale ?? 400, d.size?.[0] ?? 10, Math.round(d.x + d.y), anim);
     else if (d.kind === 'steam') o = steam(anim);
