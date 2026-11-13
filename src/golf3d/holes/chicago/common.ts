@@ -1,5 +1,5 @@
 // The Windy City's shared settings: late-fall turf as thick as the Western Reserve's, and kinder greens.
-import type { Hole, Piece, V2 } from '../../types';
+import type { Decor, Hole, Piece, V2 } from '../../types';
 import { greenComplex, type GreenSpec } from '../woods';
 
 // city stone, glass and steel: a ball that hits a tower, the Bean or a parked car comes back off it lively
@@ -32,3 +32,26 @@ export const chiGreenRegions = (g: GreenSpec, seed: number): Hole['regions'] => 
   { poly: outline(g, 4, seed), surface: 'fringe' },
   { poly: outline(g, 0, seed), surface: 'green' },
 ];
+
+// Patrons (Nov 13: a lot more of them, on every hole). All looks, nothing a ball can hit.
+// rot: the way a gallery faces. 0 is back down the hole (south), the rest follow.
+export const FACE = { south: 0, north: Math.PI, east: Math.PI / 2, west: -Math.PI / 2 };
+// a line of them: n along len ft centred on (x, y), in rows, lift ft up; kind 'deck' is a balcony, 'stand' bleachers
+export const gallery = (x: number, y: number, rot: number, len: number, n: number, rows = 2, lift = 0, kind?: 'deck' | 'stand'): Decor =>
+  ({ kind: 'gallery', x, y, rot, scale: len, size: [n, rows, lift], ...(kind ? { label: kind } : {}) });
+// a horseshoe of them round a green, clear of its bunkers, between two bearings (degrees: 0 is the green's right, 90
+// its back, 180 its left), facing the pin
+export function greenGallery(g: GreenSpec, from: number, to: number, deep = 3): Decor[] {
+  const out: Decor[] = [];
+  const step = 24;
+  for (let a = from + step / 2; a < to; a += step) {
+    const t = (a * Math.PI) / 180;
+    const x = g.x + Math.cos(t) * (g.rx + 26);
+    const y = g.y + Math.sin(t) * (g.ry + 26);
+    const len = ((Math.hypot(g.rx, g.ry) + 26) * step * Math.PI) / 180 * 0.8;
+    out.push(gallery(x, y, Math.atan2(-Math.cos(t), Math.sin(t)), len, Math.round(len / 2.4) * deep, deep));
+  }
+  return out;
+}
+// a knot of them behind a tee, watching the drive go
+export const teeGallery = (tee: V2): Decor => gallery(tee.x, tee.y - 15, FACE.north, 26, 16, 2);

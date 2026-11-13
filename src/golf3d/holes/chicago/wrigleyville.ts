@@ -11,7 +11,7 @@ import { blob, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery } from './common';
 
 const LAND = 6;
 // the tee: on a rooftop over the street, 40 ft up
@@ -170,6 +170,23 @@ export const wrigleyville: Hole = {
     { x: GREEN.x, y: GREEN.y },
   ],
   decor: [
+    // the patrons (Nov 13)
+    // Balconies on every building along Clark and Addison, two floors of them, packed and drinking
+    ...[12, 23].flatMap((up) => [
+      ...[40, 120, 200, 286].map((y) => gallery(52, y, FACE.west, 56, 13, 1, up, 'deck')),
+      ...[37.5, 114, 190].map((y) => gallery(-52, y, FACE.east, 56, 13, 1, up, 'deck')),
+      ...[60, -14, -90, -166, -242].map((x) => gallery(x, 330, FACE.south, 60, 14, 1, up, 'deck')),
+      gallery(-74, 230, FACE.north, 34, 8, 1, up, 'deck'),
+      gallery(-218.5, 230, FACE.north, 76, 18, 1, up, 'deck'),
+    ]),
+    // the rooftop bleachers across Addison, full
+    ...[-90, -166, -242].map((x) => gallery(x, 348, FACE.south, 60, 60, 4, 45, 'stand')),
+    // the sidewalks: both sides of Clark, both sides of Addison, and a knot on the tee's roof
+    ...[60, 170].map((y) => gallery(-48, y, FACE.east, 90, 30, 2)),
+    ...[60, 170, 280].map((y) => gallery(48, y, FACE.west, 90, 30, 2)),
+    ...[-200, -100, 0].map((x) => gallery(x, 326, FACE.south, 84, 30, 2)),
+    gallery(-76, 234, FACE.north, 40, 14, 2),
+    gallery(0, -24, FACE.north, 30, 14, 2),
     { kind: 'teetower', x: 0, y: -10, size: [ROOF.x1 - ROOF.x0, ROOF.y1 - ROOF.y0, ROOF.h], scale: 72 },
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'teetower', x: (TOP.x0 + TOP.x1) / 2, y: (TOP.y0 + TOP.y1) / 2, size: [TOP.x1 - TOP.x0, TOP.y1 - TOP.y0, TOP.h], scale: 73 },

@@ -8,7 +8,7 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery, greenGallery } from './common';
 
 const LAND = 7;
 // the tee: on the roof of a riverside tower, 26 ft above the street (44 until Nov 12: from up there a perfect full
@@ -122,6 +122,11 @@ export const river: Hole = {
     { x: 30, y: 580 },
   ],
   decor: [
+    // the patrons (Nov 13)
+    // on the tee's rooftop, along Wacker under the towers, and round the back of the green
+    gallery(0, -19, FACE.north, 24, 14, 2),
+    ...[40, 150, 260].map((y) => gallery(70, y, FACE.west, 96, 32, 2)),
+    ...greenGallery(GREEN, -20, 150),
     { kind: 'teetower', x: 0, y: -4, size: [ROOF.x1 - ROOF.x0, ROOF.y1 - ROOF.y0, ROOF.h], scale: 71 },
     { kind: 'teebox', x: 0, y: 0 },
     // the L runs behind the tee now: with the tee lowered to 26 ft its deck crossed the hole at eye level
