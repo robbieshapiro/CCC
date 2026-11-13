@@ -8,7 +8,7 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions } from './common';
 
 const LAND = 7;
 // the tee: on the roof of a riverside tower, 26 ft above the street (44 until Nov 12: from up there a perfect full
@@ -16,7 +16,9 @@ const LAND = 7;
 const ROOF = { x0: -16, y0: -24, x1: 16, y1: 16, h: 26 };
 const RIVER = 1;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
-const GREEN = { x: 30, y: 580, rx: 29, ry: 22 };
+// a fifth bigger again each way since Nov 13, and no longer a plain oval (see chiGreenRegions)
+const SEED = 3;
+const GREEN = { x: 30, y: 580, rx: 35, ry: 26 };
 const traps = [greenside(GREEN, 64, 590, 8, 8, 1, 3, 0), greenside(GREEN, 0, 610, 10, 6, 2, 3, 0)];
 const BANK: V2[] = [
   { x: -70, y: -60 },
@@ -52,7 +54,7 @@ export const river: Hole = {
   turf: CHI_TURF,
   wallBounce: CHI_WALLS,
   windByHeight: true,
-  chipDrop: 0.7,
+  ...CHI_CUP,
   greenFirm: 0.03,
   teeTip: 'The river is left and long. Aim at the towers: they give the ball back.',
   yards: 430,
@@ -78,16 +80,16 @@ export const river: Hole = {
     // the rooftop, gravel and the tee mat
     { poly: rect(ROOF.x0, ROOF.y0, ROOF.x1, ROOF.y1), surface: 'stone' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
+    // (Nov 13: both a quarter wider and longer again)
     // a first leg to the slip, then a second up the right past it (both half as wide again since Nov 11)
-    { poly: blob(6, 160, 34, 100, 1, 0.05), surface: 'fairway' },
+    { poly: blob(6, 165, 42, 118, 1, 0.05), surface: 'fairway' },
     // (since Nov 12 it sits where drives off the roof finish: they fly past the first leg)
-    { poly: blob(40, 380, 44, 62, 2, 0.06), surface: 'fairway' },
+    { poly: blob(40, 388, 54, 76, 2, 0.06), surface: 'fairway' },
     // the riverwalk along the bank, and Wacker Drive along the towers
     { poly: band(BANK.slice(0, 4), 4), surface: 'stone' },
     { poly: rect(66, -40, 84, 340), surface: 'path' },
     { poly: SLOT, surface: 'path' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
+    ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],
   water: [

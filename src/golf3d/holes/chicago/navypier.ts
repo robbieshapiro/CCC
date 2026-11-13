@@ -8,11 +8,13 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions } from './common';
 
 const DECK = 6;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
-const GREEN = { x: 0, y: 800, rx: 32, ry: 24 };
+// a fifth bigger again each way since Nov 13, and no longer a plain oval (see chiGreenRegions)
+const SEED = 5;
+const GREEN = { x: 0, y: 800, rx: 38, ry: 29 };
 // the island green, out in the lake past the end of the pier
 const ISLAND = { x0: -78, y0: 740, x1: 78, y1: 858 };
 const PIER_END = 690;
@@ -41,7 +43,7 @@ export const navypier: Hole = {
   turf: CHI_TURF,
   wallBounce: CHI_WALLS,
   windByHeight: true,
-  chipDrop: 0.7,
+  ...CHI_CUP,
   greenFirm: 0.03,
   teeTip: 'Water both sides. A good drive leaves a wood to the island, or an iron to the end of the pier.',
   yards: 500,
@@ -63,18 +65,17 @@ export const navypier: Hole = {
   regions: [
     { poly: rect(-12, 108, 12, 132), surface: 'fairway' },
     // the lawn at the foot of the pier, then the pier itself, its boardwalk, and the end
-    { poly: blob(0, 40, 60, 40, 1, 0.05), surface: 'fairway' },
-    // a strip down the pier, broken by the slip (half as wide again since Nov 11)
-    { poly: rect(-44, 100, 30, SLIP.y0), surface: 'fairway' },
+    { poly: blob(0, 40, 70, 46, 1, 0.05), surface: 'fairway' },
+    // a strip down the pier, broken by the slip (half as wide again since Nov 11, and out toward the boardwalk Nov 13)
+    { poly: rect(-56, 100, 30, SLIP.y0), surface: 'fairway' },
     // the lane past the slip on the boardwalk side
-    { poly: rect(-44, SLIP.y0, SLIP.x0 - 4, SLIP.y1), surface: 'fairway' },
-    { poly: rect(-44, SLIP.y1, 44, PIER_END - 4), surface: 'fairway' },
+    { poly: rect(-56, SLIP.y0, SLIP.x0 - 4, SLIP.y1), surface: 'fairway' },
+    { poly: rect(-56, SLIP.y1, 56, PIER_END - 4), surface: 'fairway' },
     // the island: a ring of fairway round the green
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 26, GREEN.ry + 20, 5, 0.05), surface: 'fairway' },
     { poly: BOARDWALK, surface: 'wood' },
     { poly: rect(72, 100, 82, PIER_END - 4), surface: 'stone' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
+    ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],
   water: [{ poly: rect(-166, -46, 166, 886), level: 0, look: 'sea', tide: { amp: 0.4, period: 8 } }],

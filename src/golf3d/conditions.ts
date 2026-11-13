@@ -41,8 +41,10 @@ function rawConditions(h: Hole, day: string): Conditions {
   // day's wind is 11 to 17 mph and a gust takes it no higher than 20 (it was built at 15 to 30, gusting to 39: with
   // members missing most fairways on a calm course, that was too much)
   if (h.weather === 'gale') {
-    const mph = Math.round(11 + rng.next() ** 0.8 * 6);
-    const toward = rng.next() * Math.PI * 2;
+    // one wind for the whole round (Nov 13): the day's draw, not the hole's, so it reads the same on every tee
+    const day1 = makeRng(`${day}:gale`);
+    const mph = Math.round(11 + day1.next() ** 0.8 * 6);
+    const toward = day1.next() * Math.PI * 2;
     return { pin, mph, toward, accel: { x: Math.sin(toward) * mph * WIND_PER_MPH, y: Math.cos(toward) * mph * WIND_PER_MPH }, gust: 0.18 };
   }
   // exposed holes on the island: a steady 11 to 14 mph that gusts between 10 and 15 from shot to shot

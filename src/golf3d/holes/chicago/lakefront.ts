@@ -8,11 +8,14 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
-import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions } from './common';
 
 const LAND = 6;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
-const GREEN = { x: 38, y: 568, rx: 29, ry: 21 };
+// a fifth bigger again each way since Nov 13, and no longer a plain oval (see chiGreenRegions)
+const SEED = 1;
+// (and a few feet in from the lake, so the bigger green stays clear of the water's edge)
+const GREEN = { x: 32, y: 564, rx: 35, ry: 25 };
 const traps = [greenside(GREEN, 4, 560, 8, 10, 1, 3, 0), greenside(GREEN, 30, 600, 10, 5, 2, 3, 0)];
 // the harbour: a big bite out of the right half of the hole
 // (its near wall was at x 6 until Nov 12: a slight push off the tee found it, 30% of members' real drives)
@@ -38,14 +41,14 @@ export const lakefront: Hole = {
   turf: CHI_TURF,
   wallBounce: CHI_WALLS,
   windByHeight: true,
-  chipDrop: 0.7,
+  ...CHI_CUP,
   greenFirm: 0.03,
   teeTip: 'The harbour cuts in on the right from halfway. Keep it left: the Drive is in play.',
   yards: 420,
   blurb: 'A beach hole on Lake Michigan. Miss the fairway and you are in the sand; the harbour bites in right, and Lake Shore Drive is in play on the left.',
   tee: { x: 0, y: 0 },
-  cup: { x: 38, y: 571 },
-  pins: [{ x: 38, y: 571 }, { x: 21, y: 560 }, { x: 55, y: 576 }, { x: 33, y: 582 }],
+  cup: { x: 32, y: 567 },
+  pins: [{ x: 32, y: 567 }, { x: 15, y: 556 }, { x: 49, y: 572 }, { x: 27, y: 578 }],
   aim: -0.02,
   bounds: { x0: -110, y0: -50, x1: 170, y1: 660 },
   border: [
@@ -60,17 +63,18 @@ export const lakefront: Hole = {
   regions: [
     // a sliver of rough round the tee, the fairways and the green, then the beach
     { poly: rect(-18, -18, 18, 18), surface: 'rough' },
-    { poly: blob(-12, 190, 38, 116, 1, 0.05), surface: 'rough' },
-    { poly: blob(-10, 378, 40, 92, 2, 0.06), surface: 'rough' },
-    { poly: blob(14, 500, 40, 28, 3, 0.06), surface: 'rough' },
+    { poly: blob(-12, 196, 46, 132, 1, 0.05), surface: 'rough' },
+    { poly: blob(-10, 384, 48, 102, 2, 0.06), surface: 'rough' },
+    { poly: blob(14, 506, 48, 36, 3, 0.06), surface: 'rough' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 10, GREEN.ry + 10, 3, 0.06), surface: 'rough' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
+    // (Nov 13: every leg a quarter wider and longer again)
     // the first leg up the left-centre, between the trail's maples and the harbour (half as wide again since Nov 11:
     // members hit 6% of fairways the week before)
-    { poly: blob(-12, 190, 32, 110, 1, 0.05), surface: 'fairway' },
+    { poly: blob(-12, 196, 40, 126, 1, 0.05), surface: 'fairway' },
     // a ribbon up the left past the harbour, and the run-in to the green
-    { poly: blob(-10, 378, 34, 86, 2, 0.06), surface: 'fairway' },
-    { poly: blob(14, 500, 34, 22, 3, 0.06), surface: 'fairway' },
+    { poly: blob(-10, 384, 42, 96, 2, 0.06), surface: 'fairway' },
+    { poly: blob(14, 506, 42, 30, 3, 0.06), surface: 'fairway' },
     { poly: BREAKWATER, surface: 'fairway' },
     { poly: band([{ x: -46, y: -40 }, { x: -46, y: 650 }], 3), surface: 'path' },
     // Lake Shore Drive: asphalt, in play (a ball bounces and runs on it)
@@ -78,8 +82,7 @@ export const lakefront: Hole = {
     // the stone revetment along the water
     { poly: band([{ x: 100, y: -40 }, { x: 100, y: 290 }], 5), surface: 'stone' },
     { poly: band([{ x: 22, y: 296 }, { x: 22, y: 452 }], 4), surface: 'stone' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
+    ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],
   water: [{ poly: rect(-60, -46, 166, 656), level: 0, look: 'sea', tide: { amp: 0.4, period: 9 } }],
@@ -89,7 +92,7 @@ export const lakefront: Hole = {
     { kind: 'box', x0: 106, y0: -60, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
     { kind: 'box', x0: HARBOUR.x0, y0: HARBOUR.y0, x1: HARBOUR.x1, y1: HARBOUR.y1, h: -6, edge: 1, op: 'set' },
     { kind: 'box', x0: -120, y0: 612, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
-    { kind: 'box', x0: 72, y0: 520, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
+    { kind: 'box', x0: 78, y0: 520, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
     { kind: 'hill', x: -20, y: 140, r: 40, h: 0.6 },
     ...chiGreen(GREEN, LAND, [0.5, 0.6], [[-8, -6, 7, 0.25], [10, 6, 6, -0.2]]),
     ...traps.flatMap((t) => t.pieces),
@@ -104,7 +107,7 @@ export const lakefront: Hole = {
     { x: 10, y: -30 },
     { x: -10, y: 240 },
     { x: -10, y: 440 },
-    { x: 38, y: 568 },
+    { x: 32, y: 564 },
   ],
   decor: [
     { kind: 'teebox', x: 0, y: 0 },

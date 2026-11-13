@@ -11,13 +11,15 @@ import { blob, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions } from './common';
 
 const LAND = 6;
 // the tee: on a rooftop over the street, 40 ft up
 const ROOF = { x0: -20, y0: -30, x1: 20, y1: 10, h: 40 };
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
-const GREEN = { x: 8, y: 520, rx: 29, ry: 21 };
+// a fifth bigger again each way since Nov 13, and no longer a plain oval (see chiGreenRegions)
+const SEED = 4;
+const GREEN = { x: 8, y: 520, rx: 35, ry: 25 };
 const traps = [greenside(GREEN, -26, 530, 8, 8, 1, 3, 0), greenside(GREEN, 40, 512, 8, 9, 2, 3, 0)];
 // [x, y, width, depth, rooftop bleachers?]
 const FLATS: [number, number, number, number, boolean][] = [
@@ -59,7 +61,7 @@ export const wrigleyville: Hole = {
   turf: CHI_TURF,
   wallBounce: CHI_WALLS,
   windByHeight: true,
-  chipDrop: 0.7,
+  ...CHI_CUP,
   greenFirm: 0.03,
   teeTip: 'A full drive stops in the rough short of the green and leaves a wedge. A roof drops a miss in the street.',
   yards: 385,
@@ -85,16 +87,15 @@ export const wrigleyville: Hole = {
     { poly: rect(ROOF.x0, ROOF.y0, ROOF.x1, ROOF.y1), surface: 'stone' },
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the street: a strip of turf down the middle, sidewalks either side
-    // the street's turf, split by the median (half as wide again since Nov 11: it stops short of the sidewalks)
-    { poly: blob(-2, 250, 32, 200, 1, 0.04), surface: 'fairway' },
+    // the street's turf, split by the median (half as wide again since Nov 11: it stops short of the sidewalks; a quarter wider again Nov 13, to the kerbs)
+    { poly: blob(-2, 244, 40, 210, 1, 0.03), surface: 'fairway' },
     // a band of rough across the street short of the green (Nov 12): a full drive used to run all the way on, now it
     // stops here and leaves a wedge
     { poly: blob(4, 446, 50, 26, 2, 0.06), surface: 'rough' },
     { poly: MEDIAN, surface: 'rough' },
     { poly: rect(-54, -40, -42, 460), surface: 'path' },
     { poly: rect(42, -40, 54, 460), surface: 'path' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
+    ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],
   water: [],

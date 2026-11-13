@@ -56,6 +56,8 @@ export type Hole = {
   pinsOn?: number[];
   windCap?: number;
   time?: 'day' | 'night';
+  cupEase?: number; // tour holes: how much firmer than usual any ball can be going and still drop (1.2: a fifth)
+  chipRoll?: number; // share of its usual pace a chip keeps when it lands (under 1: it runs out less)
   chipDrop?: number; // tour holes: share of the usual speed a shot from off the green can drop at, so a chip must die at the hole
   greenFirm?: number; // extra speed a ball keeps landing on this green: hold it with backspin
   express?: { x: number; y: number; r: number; to: V2 };
