@@ -295,7 +295,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       if (onRoof) {
         sounds.push({ t, s: 'wall' });
         // where roofs give the ball back, it rattles down to the foot of the building and lies there: no penalty
-        const foot = h.roofsGive ? offRoof(h, onRoof, { x, y }, clock) : null;
+        const foot = h.roofsGive ? (onRoof.foot ?? offRoof(h, onRoof, { x, y }, clock)) : null;
         if (!foot) return finish(false, true);
         if (keepFrames) frames.push({ x, y, z, t });
         t += 0.7;
@@ -331,7 +331,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         // a firm green lets a plain shot skip on; backspin is what holds it
         const firm = surf === 'green' ? (h.greenFirm ?? 0) : 0;
         const bite = club.keep + (1 - club.keep) * (1 - hard) + club.release * Math.max(0, -spin) + firm;
-        const keep = (flying ? Math.min(1, bite) : 1 - Math.min(0.4, -vzRel * 0.02)) * landing(surf);
+        const keep = (flying ? Math.min(1, bite) : 1 - Math.min(0.4, -vzRel * 0.02)) * landing(surf) * (flying && shot.club === 'chip' ? (h.chipRoll ?? 1) : 1);
         vx *= keep;
         vy *= keep;
         // backspin grabs on the first landing: it checks up, or zips back if there's enough of it
@@ -404,7 +404,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         // how far off dead centre its line runs: a centred putt can be firmer than one that catches the edge
         const v = Math.hypot(vx, vy) || 1;
         const off = Math.min(R, Math.abs(vx * (h.cup.y - y) - vy * (h.cup.x - x)) / v);
-        const cap = h.tour ? DROP_SPEED * (shot.club === 'putter' ? 1 : (h.chipDrop ?? 1)) * Math.sqrt(1 - (off / R) ** 2) : Infinity;
+        const cap = h.tour ? DROP_SPEED * (h.cupEase ?? 1) * (shot.club === 'putter' ? 1 : (h.chipDrop ?? 1)) * Math.sqrt(1 - (off / R) ** 2) : Infinity;
         if (Math.hypot(vx, vy) <= cap) {
           x = h.cup.x;
           y = h.cup.y;

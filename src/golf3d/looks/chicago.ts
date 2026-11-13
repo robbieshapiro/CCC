@@ -255,6 +255,68 @@ export function walkers(len: number, n: number, seed: number, anim: Anim) {
   return g;
 }
 
+// A gallery: n patrons standing along len ft, in rows, a beer in hand. Simple figures in three instanced meshes (bodies,
+// heads, cups), so a few hundred cost about what one golfer does. They face the group's front (+z), shuffle, and now
+// and then one hops and lifts a drink. lift: ft above the ground (a balcony, a roof). kind: 'deck' draws a balcony slab
+// and rail under them; 'stand' steps each row up behind the last (bleachers).
+export function gallery(len: number, n: number, rows: number, seed: number, anim: Anim, lift = 0, kind = '') {
+  const g = new THREE.Group();
+  const rng = makeRng(`gallery:${seed}`);
+  const coats = ['#1f2a44', '#5b1f24', '#2f3d2c', '#3a3a3a', '#7a5a3a', '#0e3386', '#0e3386', '#c2402f', '#d8d2c4', '#44506b', '#8a3b2a'];
+  const skins = ['#f0cfae', '#e5c3a2', '#c99872', '#9a6a48', '#6b4630'];
+  const lam = () => new THREE.MeshLambertMaterial();
+  const body = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.62, 2.6, 3, 6), lam(), n);
+  const head = new THREE.InstancedMesh(new THREE.SphereGeometry(0.52, 7, 6), lam(), n);
+  const cup = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.24, 0.18, 0.7, 6), new THREE.MeshLambertMaterial({ color: '#e8b33a' }), n);
+  const cols = Math.max(1, Math.ceil(n / rows));
+  const gap = 2.6;
+  const c = new THREE.Color();
+  const who = Array.from({ length: n }, (_, i) => {
+    const r = i % rows;
+    const col = Math.floor(i / rows);
+    body.setColorAt(i, c.set(coats[Math.floor(rng.next() * coats.length)]));
+    head.setColorAt(i, c.set(skins[Math.floor(rng.next() * skins.length)]));
+    return {
+      x: ((col + 0.5) / cols - 0.5) * len + (rng.next() - 0.5) * (len / cols) * 0.7,
+      y: lift + (kind === 'stand' ? r * 2.2 : 0),
+      z: -r * gap - (rng.next() - 0.5) * 0.8,
+      tall: 0.9 + rng.next() * 0.2,
+      phase: rng.next() * 40,
+      pace: 0.5 + rng.next() * 0.5,
+      hand: rng.next() < 0.5 ? -0.7 : 0.7,
+    };
+  });
+  const m = new THREE.Matrix4();
+  const pose = (clock: number) => {
+    who.forEach((p, i) => {
+      // mostly still; now and then a hop, the drink going up with it
+      const up = Math.max(0, Math.sin(clock * p.pace + p.phase)) ** 10;
+      const y = p.y + up * 0.7;
+      const sway = Math.sin(clock * 0.8 + p.phase) * 0.12;
+      m.makeScale(1, p.tall, 1).setPosition(p.x + sway, y + 1.95 * p.tall, p.z);
+      body.setMatrixAt(i, m);
+      m.makeScale(1, 1, 1).setPosition(p.x + sway, y + 4.35 * p.tall, p.z);
+      head.setMatrixAt(i, m);
+      m.setPosition(p.x + sway + p.hand, y + 2.9 * p.tall + up * 1.8, p.z + 0.7);
+      cup.setMatrixAt(i, m);
+    });
+    for (const k of [body, head, cup]) k.instanceMatrix.needsUpdate = true;
+  };
+  pose(0);
+  for (const k of [body, head, cup]) {
+    k.frustumCulled = false;
+    g.add(k);
+  }
+  anim.push((clock) => pose(clock));
+  if (kind === 'deck') {
+    const deep = rows * gap + 1.6;
+    g.add(mesh(new THREE.BoxGeometry(len + 2, 0.5, deep), mat('#3a3a3a')).translateY(lift - 0.25).translateZ(1.2 - deep / 2 + 0.6));
+    g.add(mesh(new THREE.BoxGeometry(len + 2, 0.25, 0.25), mat('#1f1f1f'), false).translateY(lift + 3).translateZ(1.7));
+    for (let x = -len / 2 - 1; x <= len / 2 + 1.01; x += (len + 2) / Math.max(2, Math.round(len / 6))) g.add(mesh(new THREE.BoxGeometry(0.2, 3, 0.2), mat('#1f1f1f'), false).translateX(x).translateY(lift + 1.5).translateZ(1.7));
+  }
+  return g;
+}
+
 // Traffic on a road: cars and yellow cabs both ways along len ft
 export function traffic(len: number, n: number, seed: number, anim: Anim) {
   const g = new THREE.Group();
@@ -537,6 +599,7 @@ export const chicago: Kit = {
     else if (d.kind === 'pritzker') o = pritzker();
     else if (d.kind === 'bascule') o = bascule(d.scale ?? 60);
     else if (d.kind === 'el') o = el(d.scale ?? 300, anim, d.label === 'red' ? 'red' : 'brown');
+    else if (d.kind === 'gallery') o = gallery(d.scale ?? 40, d.size?.[0] ?? 12, d.size?.[1] ?? 1, Math.round(d.x * 7 + d.y * 3 + (d.size?.[2] ?? 0)), anim, d.size?.[2] ?? 0, d.label ?? '');
     else if (d.kind === 'walkers') o = walkers(d.scale ?? 80, d.size?.[0] ?? 6, Math.round(d.x + d.y), anim);
     else if (d.kind === 'traffic') o = traffic(d.scale ?? 400, d.size?.[0] ?? 10, Math.round(d.x + d.y), anim);
     else if (d.kind === 'steam') o = steam(anim);

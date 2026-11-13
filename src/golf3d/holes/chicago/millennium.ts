@@ -7,11 +7,13 @@ import { blob, circle, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_TURF, CHI_WALLS, chiGreen } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery, greenGallery, teeGallery } from './common';
 
 const LAND = 8;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
-const GREEN = { x: 6, y: 256, rx: 24, ry: 17 };
+// a fifth bigger again each way since Nov 13, and no longer a plain oval (see chiGreenRegions)
+const SEED = 2;
+const GREEN = { x: 6, y: 256, rx: 29, ry: 21 };
 const traps = [greenside(GREEN, 40, 262, 8, 7, 1, 3, 0), greenside(GREEN, 4, 286, 10, 5, 2, 3, 0)];
 const BEAN = { x: 30, y: 206 };
 const PLAZA = blob(BEAN.x, BEAN.y, 30, 22, 4, 0.08);
@@ -45,7 +47,7 @@ export const millennium: Hole = {
   turf: CHI_TURF,
   wallBounce: CHI_WALLS,
   windByHeight: true,
-  chipDrop: 0.7,
+  ...CHI_CUP,
   greenFirm: 0.04,
   teeTip: 'A full iron. The Bean is short right and sends a ball anywhere.',
   yards: 130,
@@ -66,12 +68,11 @@ export const millennium: Hole = {
   regions: [
     { poly: rect(-14, 68, 14, 96), surface: 'fairway' },
     // the Great Lawn round the tee, then the plaza, the rink and the walks
-    { poly: blob(0, 60, 50, 50, 1, 0.05), surface: 'fairway' },
+    { poly: blob(0, 64, 58, 58, 1, 0.05), surface: 'fairway' },
     { poly: PLAZA, surface: 'stone' },
     { poly: RINK, surface: 'stone' },
     { poly: rect(-74, -40, -66, 320), surface: 'path' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
+    ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],
   water: [{ poly: POOL, level: 8 - 0.4 }],
@@ -101,6 +102,13 @@ export const millennium: Hole = {
     { x: 6, y: 256 },
   ],
   decor: [
+    // the patrons (Nov 13)
+    teeGallery({ x: 0, y: 82 }),
+    ...greenGallery(GREEN, 15, 165),
+    // round the Great Lawn, and along the walk
+    gallery(-58, 60, FACE.east, 80, 28, 2),
+    gallery(60, 60, FACE.west, 80, 28, 2),
+    gallery(-62, 190, FACE.east, 110, 36, 2),
     { kind: 'teebox', x: 0, y: 82 },
     { kind: 'bean', x: BEAN.x, y: BEAN.y, rot: 0.3 },
     { kind: 'pritzker', x: 0, y: -120, rot: Math.PI },
