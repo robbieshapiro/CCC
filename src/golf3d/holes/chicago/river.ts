@@ -122,10 +122,9 @@ export const river: Hole = {
     { x: 30, y: 580 },
   ],
   decor: [
-    // the patrons (Nov 13)
-    // on the tee's rooftop, along Wacker under the towers, and round the back of the green
-    gallery(0, -19, FACE.north, 24, 14, 2),
-    ...[40, 150, 260].map((y) => gallery(70, y, FACE.west, 96, 32, 2)),
+    // a few patrons (Nov 13)
+    // on the tee's rooftop, and round the back of the green
+    gallery(0, -19, FACE.north, 24, 8, 2),
     ...greenGallery(GREEN, -20, 150),
     { kind: 'teetower', x: 0, y: -4, size: [ROOF.x1 - ROOF.x0, ROOF.y1 - ROOF.y0, ROOF.h], scale: 71 },
     { kind: 'teebox', x: 0, y: 0 },

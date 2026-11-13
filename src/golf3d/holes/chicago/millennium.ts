@@ -7,7 +7,7 @@ import { blob, circle, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery, greenGallery, teeGallery } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, greenGallery, teeGallery } from './common';
 
 const LAND = 8;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
@@ -102,13 +102,9 @@ export const millennium: Hole = {
     { x: 6, y: 256 },
   ],
   decor: [
-    // the patrons (Nov 13)
+    // a few patrons (Nov 13)
     teeGallery({ x: 0, y: 82 }),
     ...greenGallery(GREEN, 15, 165),
-    // round the Great Lawn, and along the walk
-    gallery(-58, 60, FACE.east, 80, 28, 2),
-    gallery(60, 60, FACE.west, 80, 28, 2),
-    gallery(-62, 190, FACE.east, 110, 36, 2),
     { kind: 'teebox', x: 0, y: 82 },
     { kind: 'bean', x: BEAN.x, y: BEAN.y, rot: 0.3 },
     { kind: 'pritzker', x: 0, y: -120, rot: Math.PI },
