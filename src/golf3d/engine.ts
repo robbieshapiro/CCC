@@ -2070,25 +2070,41 @@ export class Course3D {
     for (let i = 0; i < 4; i++) window.setTimeout(() => this.puff(at.clone().add(new THREE.Vector3(0, -0.2, 0)), lava ? (i % 2 ? '#ff8a3d' : '#59524d') : '#dff0f4'), i * 150);
   }
 
-  // Anything standing between the camera and the golfer or ball turns see-through.
+  // Anything standing between the camera and the golfer or ball turns see-through. So does anything crowding the
+  // camera itself: a ball that only just clears a tree leaves the camera under its crown, or right beside it, and the
+  // top of the tree hung across the view of the next shot (a member's note, Nov 14). So the line that's checked starts
+  // well behind the camera and runs on a little past the ball, a crown counts as wider than its trunk's footprint, and
+  // anything within a few feet of the camera goes whether it's on that line or not.
   private fadeOccluders(dt: number) {
     const occ = this.world?.occluders ?? [];
     const cam = this.camera.position;
-    const targets = [this.ball.position, this.golfer.group.position.clone().add(new THREE.Vector3(0, 4, 0))];
+    const ball = this.ball.position;
+    const dx = ball.x - cam.x;
+    const dz = ball.z - cam.z;
+    const dl = Math.hypot(dx, dz) || 1;
+    const ux = dx / dl;
+    const uz = dz / dl;
+    const from = { x: cam.x - ux * 16, z: cam.z - uz * 16 };
+    const targets = [
+      { x: ball.x + ux * 22, z: ball.z + uz * 22 },
+      { x: this.golfer.group.position.x, z: this.golfer.group.position.z },
+    ];
     const want = new Set<THREE.Object3D>();
     if (this.mode !== 'fly')
       for (const o of occ) {
+        const reach = o.r * 1.5 + 4;
+        if (Math.hypot(cam.x - o.x, cam.z - o.z) < o.r + 14) {
+          want.add(o.obj);
+          continue;
+        }
         for (const t of targets) {
-          // closest approach of the camera->target segment to the occluder, in plan view
-          const ax = cam.x;
-          const az = cam.z;
-          const bx = t.x - ax;
-          const bz = t.z - az;
+          // closest approach of the line to the occluder, in plan view
+          const bx = t.x - from.x;
+          const bz = t.z - from.z;
           const len2 = bx * bx + bz * bz || 1;
-          const k = Math.max(0, Math.min(1, ((o.x - ax) * bx + (o.z - az) * bz) / len2));
-          if (k > 0.98) continue;
-          const d = Math.hypot(ax + bx * k - o.x, az + bz * k - o.z);
-          if (d < o.r) {
+          const k = Math.max(0, Math.min(1, ((o.x - from.x) * bx + (o.z - from.z) * bz) / len2));
+          const d = Math.hypot(from.x + bx * k - o.x, from.z + bz * k - o.z);
+          if (d < reach) {
             want.add(o.obj);
             break;
           }
@@ -2096,7 +2112,7 @@ export class Course3D {
       }
     for (const o of occ) {
       const cur = this.faded.get(o.obj) ?? 1;
-      const goal = want.has(o.obj) ? 0.22 : 1;
+      const goal = want.has(o.obj) ? 0.14 : 1;
       if (cur === goal) continue;
       const next = cur + (goal - cur) * Math.min(1, dt * 8);
       const v = Math.abs(next - goal) < 0.02 ? goal : next;
@@ -2104,6 +2120,9 @@ export class Course3D {
       o.obj.traverse((m) => {
         const mm = (m as THREE.Mesh).material as THREE.Material | undefined;
         if (!mm) return;
+        // a material built opaque draws opaque whatever its opacity says until it's rebuilt: this was why a faded
+        // tree still blocked the view
+        if (mm.transparent !== v < 1) mm.needsUpdate = true;
         mm.transparent = v < 1;
         mm.opacity = v;
         mm.depthWrite = v >= 1;
