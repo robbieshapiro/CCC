@@ -243,7 +243,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         : s === 'rough' && h.turf
           ? FRICTION.rough * h.turf.roughDrag
           : FRICTION[s];
-  const landing = (s: Surface) => (s === 'rough' && h.turf ? h.turf.roughKeep : LANDING[s]);
+  const landing = (s: Surface) => (s === 'rough' && h.turf ? h.turf.roughKeep : s === 'fairway' && h.turf?.fairwayKeep != null ? h.turf.fairwayKeep : LANDING[s]);
   const inCrown = new Set<number>(); // tree crowns the ball is passing through
   let lipped = false; // it has just caught the cup and spun out; it can't drop again on the same pass
   const vented = new Map<string, number>();

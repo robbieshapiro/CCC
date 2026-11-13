@@ -5,9 +5,10 @@ import { greenComplex, type GreenSpec } from '../woods';
 // city stone, glass and steel: a ball that hits a tower, the Bean or a parked car comes back off it lively
 export const CHI_WALLS = 0.86;
 // Late-fall turf, as thick as the Western Reserve's: the rough checks a landing ball (it still hops and runs a little),
-// a full club gets about 84% out of it and can come off the face anywhere; the fairways run firm, the greens a touch
-// slower than tour pace
-export const CHI_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.36, roughDrag: 1.3, roughLie: 0.84, roughScatter: 0.2, fairwayRoll: 0.9, greenRoll: 1.06, sandLie: 0.75, sandScatter: 0.3 };
+// a full club gets about 84% out of it and can come off the face anywhere; the greens a touch slower than tour pace.
+// The fairways are soft and wet in November (since Nov 14): a ball lands with a quarter less pace and rolls out
+// about half as far as it did (a full drive about 7 yd, was about 15)
+export const CHI_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.36, roughDrag: 1.3, roughLie: 0.84, roughScatter: 0.2, fairwayRoll: 1.6, fairwayKeep: 0.75, greenRoll: 1.06, sandLie: 0.75, sandScatter: 0.3 };
 
 // How the cup and the chipper play here (Nov 13, after the first practice rounds: too many lip-outs, chips running on).
 // chipDrop: with the pin in, a shot from off the green that comes at the hole straight on drops at well over a putt's

@@ -70,7 +70,8 @@ export type Hole = {
   // fairway friction against the usual tour fairway's (under 1 runs further). sandLie: share of the distance a wedge
   // gets out of a bunker (an iron gets less still); sandScatter: how far off the face a bunker shot can come.
   // greenRoll: green friction against the usual tour green's (under 1 is quicker).
-  turf?: { roughKeep: number; roughDrag: number; roughLie: number; roughScatter: number; fairwayRoll: number; greenRoll?: number; sandLie: number; sandScatter: number };
+  // fairwayKeep: share of its pace a ball keeps landing on the fairway (0.9 usually).
+  turf?: { roughKeep: number; roughDrag: number; roughLie: number; roughScatter: number; fairwayRoll: number; fairwayKeep?: number; greenRoll?: number; sandLie: number; sandScatter: number };
   windByHeight?: boolean; // wind scales with how high a shot climbs (none below 3 ft of apex, all of it from 23 ft), on its first flight only
   gusts?: boolean; // an exposed hole: a 10 to 15 mph wind every day, gusting from shot to shot (see conditions.ts)
   weather?: 'storm' | 'gale'; // autumn storms: a stronger, gusting wind, and rain on some days. gale: Chicago in November, 15 to 30 mph off the lake, gusting (see conditions.ts)
