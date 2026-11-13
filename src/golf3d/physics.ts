@@ -295,7 +295,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       if (onRoof) {
         sounds.push({ t, s: 'wall' });
         // where roofs give the ball back, it rattles down to the foot of the building and lies there: no penalty
-        const foot = h.roofsGive ? offRoof(h, onRoof, { x, y }, clock) : null;
+        const foot = h.roofsGive ? (onRoof.foot ?? offRoof(h, onRoof, { x, y }, clock)) : null;
         if (!foot) return finish(false, true);
         if (keepFrames) frames.push({ x, y, z, t });
         t += 0.7;

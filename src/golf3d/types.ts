@@ -21,7 +21,8 @@ export type Wall = { a: V2; b: V2; h: number; bounce?: number; look?: 'hedge' | 
 // soft: a tree crown. A ball flies through it, slowed and knocked about, and now and then it's caught and drops; only
 // the trunk (the lowest few feet) is solid.
 export type Post = { x: number; y: number; r: number; h: number; e?: number; soft?: boolean; look?: 'pine' | 'post' | 'wicket' | 'croquet' | 'column' | 'tree' | 'oak' | 'cypress' | 'rock' | 'palm' | 'tomb' | 'deadtree' | 'cauldron' | 'ghost' | 'cactus' | 'gorse' | 'maple' | 'monterey' | 'torrey' | 'lighthouse' | 'sabal' | 'cypressknee' | 'snowpine' | 'hoodoo' | 'tower' | 'streetlight' };
-export type Roof = { poly: V2[]; h: number; top?: number };
+// foot: where a ball that lands on it comes down, on a hole whose roofs give the ball back (else the nearest wall's foot)
+export type Roof = { poly: V2[]; h: number; top?: number; foot?: V2 };
 export type Region = { poly: V2[]; surface: Surface };
 // A lake or creek: its outline and the flat height of its surface. Ground inside that sits under the surface is wet.
 // The sea can run a tide and lava can pulse: the level swings by `amp` either way over `period` seconds of the hole clock.
