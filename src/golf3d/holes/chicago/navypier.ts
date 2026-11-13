@@ -8,7 +8,7 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
-import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery, greenGallery, teeGallery } from './common';
+import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, greenGallery, teeGallery } from './common';
 
 const DECK = 6;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
@@ -105,11 +105,9 @@ export const navypier: Hole = {
     { x: 0, y: 800 },
   ],
   decor: [
-    // the patrons (Nov 13)
+    // a few patrons (Nov 13)
     teeGallery({ x: 0, y: 120 }),
-    // the length of the boardwalk, the far rail, and all round the island green but the front
-    ...[190, 300, 480, 590].map((y) => gallery(-64, y, FACE.east, 96, 34, 2)),
-    ...[200, 330, 560].map((y) => gallery(66, y, FACE.west, 90, 26, 2)),
+    // round the island green but the front
     ...greenGallery(GREEN, -40, 220),
     { kind: 'teebox', x: 0, y: 120 },
     HALL.decor,
