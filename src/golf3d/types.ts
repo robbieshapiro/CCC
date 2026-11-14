@@ -104,6 +104,8 @@ export type Hole = {
   // a ball that lands on a roof rattles down to the foot of the building, no penalty (the Windy City); without it a
   // roof keeps the ball
   roofsGive?: boolean;
+  // a ball that comes to rest in one of these (a flat roof it can land and bounce on) is stuck: a penalty, played again
+  stuck?: V2[][];
   ceilings?: { poly: V2[]; h: number }[]; // a cave roof this far above the ground: a ball that rises into it clips it and drops
   // a hole in the rock: a ball that rolls into it drops down a tunnel and comes out at `to` a moment later, at rest
   portals?: { id: string; x: number; y: number; r: number; to: V2; delay?: number }[];

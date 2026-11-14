@@ -1784,7 +1784,7 @@ export class Course3D {
       this.setStrokes();
       this.onStroke?.(this.strokes);
       const last = r.frames[r.frames.length - 1];
-      const roof = this.hole.roofs?.some((rf) => inPoly(last, rf.poly));
+      const roof = this.hole.roofs?.some((rf) => inPoly(last, rf.poly)) || this.hole.stuck?.some((p) => inPoly(last, p));
       // tour courses: drop beside where it went in, as the real game does; classic courses play it again
       const drop = this.hole.tour && !roof ? dropPoint(this.hole, r.frames, s.from) : null;
       if (drop) this.pos = drop;
@@ -2362,9 +2362,16 @@ export class Course3D {
       const toCup = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
       const off = Math.abs(Math.atan2(Math.sin(toCup - this.aim), Math.cos(toCup - this.aim)));
       if (ball.y - cupZ > 30 && off < 0.4) {
-        // up over the golfer's shoulder, high enough to see over the lip
-        this.camPos.copy(ball).addScaledVector(dir, -12).add(new THREE.Vector3(0, 24, 0));
-        this.camLook.copy(w3(this.hole.cup.x, this.hole.cup.y, cupZ)).lerp(ball, 0.2);
+        if (ball.y - cupZ > 100) {
+          // a skyscraper tee (the River): high behind the golfer, looking steeply down the drop, so the golfer is at the
+          // foot of the frame and the hole, the water and the pin far below fill the rest
+          this.camPos.copy(ball).addScaledVector(dir, -22).add(new THREE.Vector3(0, 26, 0));
+          this.camLook.copy(ball).addScaledVector(dir, 150).add(new THREE.Vector3(0, -99, 0));
+        } else {
+          // up over the golfer's shoulder, high enough to see over the lip
+          this.camPos.copy(ball).addScaledVector(dir, -12).add(new THREE.Vector3(0, 24, 0));
+          this.camLook.copy(w3(this.hole.cup.x, this.hole.cup.y, cupZ)).lerp(ball, 0.2);
+        }
       }
     }
   }
