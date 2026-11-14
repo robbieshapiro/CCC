@@ -137,7 +137,7 @@ export const wrigleyville: Hole = {
     { kind: 'box', x0: ROOF.x0, y0: ROOF.y0, x1: ROOF.x1, y1: ROOF.y1, h: LAND + ROOF.h, edge: 1, op: 'set' },
     // the median's raised bed
     { kind: 'box', x0: -6, y0: 110, x1: 6, y1: 190, h: 1.2, edge: 1, op: 'add' },
-    ...chiGreen(GREEN, LAND, [-0.5, 0.4], [[-8, -5, 6, 0.25], [9, 5, 5, -0.2]]),
+    ...chiGreen(GREEN, LAND, [-0.5, 0.4], [[-8, -5, 6, 0.25], [9, 5, 5, -0.2]], 1.5),
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: [...blocks.flatMap((b) => b.walls), ...carWalls],
