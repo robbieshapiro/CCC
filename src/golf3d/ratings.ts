@@ -55,14 +55,16 @@ export const RATINGS: Record<string, Rated> = {
     ],
   },
   windycity: {
-    at: "2026-11-12",
+    at: "2026-11-14",
     seeds: 4,
     holes: [
-      { id: "lakefront", member: 1.3, strong: 1 },
-      { id: "millennium", member: 0.8, strong: 0.3 },
-      { id: "river", member: 3, strong: 0 },
-      { id: "wrigleyville", member: -0.2, strong: -0.2 },
-      { id: "navypier", member: 0.3, strong: -0.5 },
+      { id: "lakefront", member: 1, strong: 0.5 },
+      { id: "millennium", member: -0.2, strong: -0.2 },
+      { id: "lincolnpark", member: 2.8, strong: 0.5 },
+      { id: "river", member: 3.8, strong: 2 },
+      { id: "wrigleyville", member: 2.5, strong: 0 },
+      { id: "evanston", member: 3.5, strong: 1 },
+      { id: "navypier", member: 0.8, strong: 1.8 },
     ],
   },
 };
