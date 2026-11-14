@@ -19,7 +19,9 @@ import { thegorge } from './holes/thegorge';
 import { theledges } from './holes/theledges';
 import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
+import { evanston } from './holes/chicago/evanston';
 import { lakefront } from './holes/chicago/lakefront';
+import { lincolnpark } from './holes/chicago/lincolnpark';
 import { millennium } from './holes/chicago/millennium';
 import { navypier } from './holes/chicago/navypier';
 import { river } from './holes/chicago/river';
@@ -115,13 +117,15 @@ const COURSES: Course[] = [
     whatsNew: [
       'Chicago in November. Bring a coat.',
       'The wind off the lake: 10 to 20 mph, and it gusts.',
-      'Buildings are in play. A ball on a roof drops to the street, no penalty.',
-      'Greens are flatter, with some break.',
+      'Buildings are in play. Most roofs drop a ball to the street; on Wrigleyville, a ball that stops on the roof is a penalty.',
+      'Seven holes. Lincoln Park and Evanston are the hard ones: par is a good score.',
+      'Greens tilt: up to two and a half degrees.',
     ],
     name: 'The Windy City',
-    tagline: 'Five holes through Chicago in November: the lakefront, Millennium Park, the river, Wrigleyville and Navy Pier.',
-    holes: [lakefront, millennium, river, wrigleyville, navypier],
-    par: par([lakefront, millennium, river, wrigleyville, navypier]),
+    tagline: 'Seven holes through Chicago in November: the lakefront, Millennium Park, Lincoln Park, the river, Wrigleyville, Evanston and Navy Pier.',
+    // Lincoln Park and Evanston added Nov 14, built hard: a good score on either is par
+    holes: [lakefront, millennium, lincolnpark, river, wrigleyville, evanston, navypier],
+    par: par([lakefront, millennium, lincolnpark, river, wrigleyville, evanston, navypier]),
     playoff: { hole: navypier, from: { x: 0, y: 640 }, label: 'Off the end of the pier' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------
