@@ -569,5 +569,6 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       if (still > 0.1) break;
     } else still = 0;
   }
+  if (h.stuck?.some((p) => inPoly({ x, y }, p))) return finish(false, true);
   return finish(false, false);
 }

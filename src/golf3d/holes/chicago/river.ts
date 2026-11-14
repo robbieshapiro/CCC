@@ -1,4 +1,4 @@
-// Hole 3, The River (par 4, 545 yd, 200 ft down): off a skyscraper on Wacker Drive, along the Chicago River's south bank and across it
+// Hole 3, The River (par 4, 600 yd, 200 ft down): off a skyscraper on Wacker Drive, along the Chicago River's south bank and across it
 // to a green under Marina City's corn cobs. The river runs the whole left side, then turns and crosses in front of the green; towers stand
 // along the right, in play, and the brown line's el rattles across overhead off the tee.
 // The play: a wood over the slip, then an iron over the water. A perfect drive carries the river.
@@ -11,13 +11,14 @@ import { building } from '../../looks/chicago';
 import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery, greenGallery } from './common';
 
 const LAND = 7;
-// the tee: on top of a skyscraper on Wacker, 200 ft above the street (440 on the card), set back down the street so
-// that only a perfect full driver (flush, full power, on the pin) just carries the river onto the green. A wood, from
-// up there, carries the slip to the second fairway and leaves an iron over the river: that's the play. (It was a 26 ft
-// roof at the river's bend until Nov 14.)
+// the tee: on top of a skyscraper on Wacker, 200 ft above the street (440 on the card), set well back down the street
+// (Nov 14, twice: from the first spot downwind drives flew the green). A perfect full driver carries the river only with
+// a strong wind behind it (about 15 mph or more); on a calm day it's wet. A wood carries the slip to the second fairway
+// and leaves a long iron or a wood over the river: that's the play.
 // TEE: where the tee is, back down Wacker from the river's bend
-const TEE = { x: 0, y: -164 };
-const ROOF = { x0: TEE.x - 16, y0: TEE.y - 24, x1: TEE.x + 16, y1: TEE.y + 16, h: 200 };
+const TEE = { x: 0, y: -240 };
+// (the tee sits at the roof's front edge, so the drop opens right in front of you)
+const ROOF = { x0: TEE.x - 16, y0: TEE.y - 36, x1: TEE.x + 16, y1: TEE.y + 4, h: 200 };
 const RIVER = 1;
 // bigger greens, for longer putts (about a third bigger each way since Nov 10)
 // a fifth bigger again each way since Nov 13, and no longer a plain oval (see chiGreenRegions)
@@ -60,8 +61,8 @@ export const river: Hole = {
   windByHeight: true,
   ...CHI_CUP,
   greenFirm: 0.03,
-  teeTip: 'A long way down. A wood over the slip leaves an iron over the river. Only a perfect drive carries the river.',
-  yards: 545,
+  teeTip: 'A long way down. A wood over the slip, then over the river. Only a perfect drive with the wind behind it carries the river.',
+  yards: 600,
   blurb: 'Off a skyscraper on Wacker, 200 feet up. The river down the left, a boat slip across the fairway, then over the river to the corn cobs.',
   tee: { ...TEE },
   cup: { x: 30, y: 583 },
@@ -130,7 +131,7 @@ export const river: Hole = {
     // on the tee's rooftop, and round the back of the green
     gallery(TEE.x, TEE.y - 19, FACE.north, 24, 8, 2),
     ...greenGallery(GREEN, -20, 150),
-    { kind: 'teetower', x: TEE.x, y: TEE.y - 4, size: [ROOF.x1 - ROOF.x0, ROOF.y1 - ROOF.y0, ROOF.h], scale: 71 },
+    { kind: 'teetower', x: (ROOF.x0 + ROOF.x1) / 2, y: (ROOF.y0 + ROOF.y1) / 2, size: [ROOF.x1 - ROOF.x0, ROOF.y1 - ROOF.y0, ROOF.h], scale: 71 },
     { kind: 'teebox', x: TEE.x, y: TEE.y },
     // the L runs behind the tee now: with the tee lowered to 26 ft its deck crossed the hole at eye level
     { kind: 'el', x: 0, y: TEE.y - 72, rot: 0, scale: 360, label: 'brown' },

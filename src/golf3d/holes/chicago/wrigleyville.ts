@@ -3,12 +3,12 @@
 // before), with a whole block of three-flats inside the corner.
 // The play: a wood or a long iron up Clark to the corner (a full driver runs through it into the buildings across
 // Addison), then a mid iron down Addison to the green.
-// The gamble: drive the green. It's a 350 ft carry over the whole block (about 255 yd on the card), and the block's far
-// edge is set where only a flush driver at full power is still above the roofs. Anything less lands on a roof and
-// comes back down on Clark, level with where it hit, no penalty: you play on to the corner from there. The corner
-// building on Clark reaches on up like the rest of the street, so there's no cutting the corner short either.
+// The gamble: drive the green. It's a 350 ft carry over the whole block (about 255 yd on the card), and only a flush
+// full driver gets there. The block is one flat rooftop, 40 ft up: a ball that lands on it bounces and runs like it
+// would on any hard roof, and one that runs off the far edge drops onto Addison and plays on. One that stops up there
+// is stuck: a penalty stroke, play it again (Nov 14; before, every roof handed the ball back to Clark).
 import { blob, rect } from '../../terrain';
-import type { Hole, Post, V2 } from '../../types';
+import type { Hole, Post } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
 import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery } from './common';
@@ -24,21 +24,25 @@ const ADDISON = EDGE + 52;
 const SEED = 4;
 const GREEN = { x: -185, y: ADDISON + 2, rx: 35, ry: 25 };
 const traps = [greenside(GREEN, -240, ADDISON + 8, 7, 9, 1, 3, 0), greenside(GREEN, -130, ADDISON + 32, 8, 5, 2, 3, 0)];
-// The block inside the corner, wall to wall with no gaps between: [x, y, width, depth]. A ball can fly over these (their roofs stop at the roofline, where
-// the street's other buildings reach on up), and one that comes down on them rattles to the foot.
+// The block inside the corner, one flat roof wall to wall, and the buildings that make it up: [x, y, width, depth].
+const BLOCK_H = 40;
+const BLOCK_ROOF = rect(-262, 0, -54, EDGE);
 const BLOCK: [number, number, number, number][] = [
   [-74, 37.5, 40, 75],
   [-74, 113.5, 40, 77],
-  [-102, EDGE / 2, 16, EDGE], // filling what was the alley (Nov 14: no playing from inside the block)
+  [-74, 208, 40, 112],
+  [-102, EDGE / 2, 16, EDGE],
   [-142.5, 32.5, 65, 65],
   [-142.5, 117.5, 65, 105],
+  [-142.5, 217, 65, 94],
   [-218.5, 57.5, 87, 115],
+  [-218.5, 189.5, 87, 149],
 ];
-// The row along Addison. [x, y, width, depth, can a ball fly over it?]: not the corner building on Clark.
-const ROW: [number, number, number, number, boolean][] = [
-  [-74, 208, 40, 112, false],
-  [-142.5, 217, 65, 94, true],
-  [-218.5, 189.5, 87, 149, true],
+// its walls, a foot out from the roof's edge on the two street sides: a ball that flies into the side of the block
+// bounces off it; one rolling off the roof's edge (just over them) drops to the street
+const blockWalls = [
+  { a: { x: -53, y: -1 }, b: { x: -53, y: EDGE + 1 }, h: BLOCK_H - 2, look: 'hidden' as const },
+  { a: { x: -53, y: EDGE + 1 }, b: { x: -263, y: EDGE + 1 }, h: BLOCK_H - 2, look: 'hidden' as const },
 ];
 // the rest of the street: [x, y, width, depth, rooftop bleachers?]
 const FLATS: [number, number, number, number, boolean][] = [
@@ -53,17 +57,7 @@ const FLATS: [number, number, number, number, boolean][] = [
   [-166, 390, 72, 44, true],
   [-242, 390, 72, 44, true],
 ];
-// a ball that comes down on the block comes back to Clark, on the fairway level with where it hit (not past the corner)
-const DOWN = (p: V2): V2 => ({ x: -30, y: Math.max(40, Math.min(EDGE - 24, p.y)) });
-const inside = BLOCK.map(([x, y, w, d], i) => {
-  const b = building(x, y, w, d, 40, i + 80, 'flat');
-  return { ...b, roof: { ...b.roof, top: 41, foot: DOWN } };
-});
-const row = ROW.map(([x, y, w, d, over], i) => {
-  const b = building(x, y, w, d, 40, i + 90, 'flat');
-  return { ...b, roof: { ...b.roof, foot: DOWN, ...(over ? { top: 41 } : {}) } };
-});
-const blocks = [...inside, ...row, ...FLATS.map(([x, y, w, d, top], i) => building(x, y, w, d, 40, i + 60, top ? 'rooftop' : 'flat'))];
+const blocks = FLATS.map(([x, y, w, d, top], i) => building(x, y, w, d, 40, i + 60, top ? 'rooftop' : 'flat'));
 
 // cars parked along the curbs, in play: their sides are walls a ball bounces off. [x, y, along Addison?]
 const CARS: [number, number, boolean][] = [[-35, 60, false], [-35, 130, false], [35, 80, false], [35, 150, false], [35, 215, false], [-60, 349, true], [-130, 349, true], [20, 349, true]];
@@ -91,9 +85,9 @@ export const wrigleyville: Hole = {
   windByHeight: true,
   ...CHI_CUP,
   greenFirm: 0.03,
-  teeTip: 'Lay up to the corner with a wood, then turn left for the green. Only a monster drive, flush and flat out, carries the block.',
+  teeTip: 'Lay up to the corner with a wood, then turn left. Over the block, it has to bounce off the far side: stop on the roof and it is a penalty.',
   yards: 365,
-  blurb: 'Up Clark Street off a rooftop, then hard left down Addison to Wrigley Field. A block of buildings fills the corner. Only a monster drive clears it.',
+  blurb: 'Up Clark Street off a rooftop, then hard left down Addison to Wrigley Field. A block of buildings fills the corner: go over it and pray it bounces off.',
   tee: { x: 0, y: 0 },
   cup: { x: -185, y: 321 },
   pins: [{ x: -185, y: 321 }, { x: -202, y: 310 }, { x: -168, y: 326 }, { x: -190, y: 332 }],
@@ -125,6 +119,8 @@ export const wrigleyville: Hole = {
     { poly: rect(42, -40, 54, 368), surface: 'path' },
     { poly: rect(-262, EDGE, -42, EDGE + 12), surface: 'path' },
     { poly: rect(-262, 356, 42, 368), surface: 'path' },
+    // the block's roof: a green roof (Chicago has hundreds), planted thick, so a ball that lands on it mostly sits down
+    { poly: BLOCK_ROOF, surface: 'rough' },
     ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],
@@ -137,11 +133,15 @@ export const wrigleyville: Hole = {
     { kind: 'box', x0: ROOF.x0, y0: ROOF.y0, x1: ROOF.x1, y1: ROOF.y1, h: LAND + ROOF.h, edge: 1, op: 'set' },
     // the median's raised bed
     { kind: 'box', x0: -6, y0: 110, x1: 6, y1: 190, h: 1.2, edge: 1, op: 'add' },
+    // the block, raised to its roof
+    { kind: 'box', x0: -262, y0: 0, x1: -54, y1: EDGE, h: LAND + BLOCK_H, edge: 1, op: 'set' },
     ...chiGreen(GREEN, LAND, [-0.5, 0.4], [[-8, -5, 6, 0.25], [9, 5, 5, -0.2]], 1.5),
     ...traps.flatMap((t) => t.pieces),
   ],
-  walls: [...blocks.flatMap((b) => b.walls), ...carWalls],
+  walls: [...blocks.flatMap((b) => b.walls), ...blockWalls, ...carWalls],
   roofs: blocks.map((b) => b.roof),
+  // a ball that comes to rest on the block's roof is stuck up there: a penalty
+  stuck: [BLOCK_ROOF],
   roofsGive: true,
   posts,
   movers: [],
@@ -166,6 +166,8 @@ export const wrigleyville: Hole = {
     { kind: 'teetower', x: 0, y: -10, size: [ROOF.x1 - ROOF.x0, ROOF.y1 - ROOF.y0, ROOF.h], scale: 72 },
     { kind: 'teebox', x: 0, y: 0 },
     ...blocks.map((b) => b.decor),
+    // the block's buildings, under its roof
+    ...BLOCK.map(([x, y, w, d], i) => ({ kind: 'teetower', x, y, size: [w, d, BLOCK_H] as [number, number, number], scale: 80 + i })),
     ...CARS.map(([x, y, across]) => ({ kind: 'car', x, y, rot: across ? 0 : Math.PI / 2 + (x < 0 ? Math.PI : 0) })),
     { kind: 'el', x: 112, y: 160, rot: Math.PI / 2, scale: 500, label: 'red' },
     { kind: 'wrigley', x: -330, y: ADDISON, rot: -Math.PI / 2 },
