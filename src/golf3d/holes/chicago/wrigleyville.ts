@@ -5,10 +5,10 @@
 // Addison), then a mid iron down Addison to the green.
 // The gamble: drive the green. It's a 350 ft carry over the whole block (about 255 yd on the card), and the block's far
 // edge is set where only a flush driver at full power is still above the roofs. Anything less lands on a roof and
-// rattles down into the far end of the alley, no penalty: from there it's a chip up the alley to Addison. The corner
+// comes back down on Clark, level with where it hit, no penalty: you play on to the corner from there. The corner
 // building on Clark reaches on up like the rest of the street, so there's no cutting the corner short either.
 import { blob, rect } from '../../terrain';
-import type { Hole, Post } from '../../types';
+import type { Hole, Post, V2 } from '../../types';
 import { greenside } from '../woods';
 import { building } from '../../looks/chicago';
 import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, FACE, gallery } from './common';
@@ -24,23 +24,21 @@ const ADDISON = EDGE + 52;
 const SEED = 4;
 const GREEN = { x: -185, y: ADDISON + 2, rx: 35, ry: 25 };
 const traps = [greenside(GREEN, -240, ADDISON + 8, 7, 9, 1, 3, 0), greenside(GREEN, -130, ADDISON + 32, 8, 5, 2, 3, 0)];
-// the alley through the block, open onto Addison
-const ALLEY = { x0: -110, y0: 60, x1: -94, y1: EDGE };
-// The block inside the corner: [x, y, width, depth]. A ball can fly over these (their roofs stop at the roofline, where
+// The block inside the corner, wall to wall with no gaps between: [x, y, width, depth]. A ball can fly over these (their roofs stop at the roofline, where
 // the street's other buildings reach on up), and one that comes down on them rattles to the foot.
 const BLOCK: [number, number, number, number][] = [
   [-74, 37.5, 40, 75],
-  [-74, 114, 40, 70],
-  [-102, 29, 16, 58], // closes the alley's south end
+  [-74, 113.5, 40, 77],
+  [-102, EDGE / 2, 16, EDGE], // filling what was the alley (Nov 14: no playing from inside the block)
   [-142.5, 32.5, 65, 65],
-  [-142.5, 118, 65, 104],
+  [-142.5, 117.5, 65, 105],
   [-218.5, 57.5, 87, 115],
 ];
 // The row along Addison. [x, y, width, depth, can a ball fly over it?]: not the corner building on Clark.
 const ROW: [number, number, number, number, boolean][] = [
   [-74, 208, 40, 112, false],
   [-142.5, 217, 65, 94, true],
-  [-218.5, 190, 87, 148, true],
+  [-218.5, 189.5, 87, 149, true],
 ];
 // the rest of the street: [x, y, width, depth, rooftop bleachers?]
 const FLATS: [number, number, number, number, boolean][] = [
@@ -55,13 +53,11 @@ const FLATS: [number, number, number, number, boolean][] = [
   [-166, 390, 72, 44, true],
   [-242, 390, 72, 44, true],
 ];
-// a ball that comes down on the block rattles down the back stairs into the alley's far end: no penalty, but from there
-// it's a chip up the alley to Addison (the buildings on Clark give theirs back to the nearest street, as elsewhere)
-const DOWN = { x: (ALLEY.x0 + ALLEY.x1) / 2, y: ALLEY.y0 + 20 };
-const facesClark = (x: number, y: number) => x > -94 && y < 150;
+// a ball that comes down on the block comes back to Clark, on the fairway level with where it hit (not past the corner)
+const DOWN = (p: V2): V2 => ({ x: -30, y: Math.max(40, Math.min(EDGE - 24, p.y)) });
 const inside = BLOCK.map(([x, y, w, d], i) => {
   const b = building(x, y, w, d, 40, i + 80, 'flat');
-  return { ...b, roof: { ...b.roof, top: 41, ...(facesClark(x, y) ? {} : { foot: DOWN }) } };
+  return { ...b, roof: { ...b.roof, top: 41, foot: DOWN } };
 });
 const row = ROW.map(([x, y, w, d, over], i) => {
   const b = building(x, y, w, d, 40, i + 90, 'flat');
@@ -103,7 +99,8 @@ export const wrigleyville: Hole = {
   pins: [{ x: -185, y: 321 }, { x: -202, y: 310 }, { x: -168, y: 326 }, { x: -190, y: 332 }],
   aim: 0,
   bounds: { x0: -340, y0: -50, x1: 140, y1: 460 },
-  // the two streets and the block between them (the alley is in play)
+  // the two streets and the block between them (the block is solid buildings wall to wall, every roof giving the ball
+  // back to Clark: nobody plays from inside it)
   border: [
     { x: -54, y: -46 },
     { x: 54, y: -46 },
@@ -128,8 +125,6 @@ export const wrigleyville: Hole = {
     { poly: rect(42, -40, 54, 368), surface: 'path' },
     { poly: rect(-262, EDGE, -42, EDGE + 12), surface: 'path' },
     { poly: rect(-262, 356, 42, 368), surface: 'path' },
-    // the alley's cinders
-    { poly: rect(ALLEY.x0, ALLEY.y0, ALLEY.x1, ALLEY.y1), surface: 'rough' },
     ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],

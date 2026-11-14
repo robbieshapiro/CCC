@@ -210,6 +210,9 @@ html:has(.g3), body:has(.g3) { overflow: hidden; overscroll-behavior: none; }
 .g3-focus.on { opacity: 1; }
 .g3-hint { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); text-align: center; font-weight: 700; font-size: 14px; padding: 8px 14px; border-radius: 999px; background: rgba(15, 42, 31, 0.6); }
 .g3-hint:empty { display: none; }
+.g3-hint { transition: opacity 0.6s; }
+.g3-hint.gone { opacity: 0; pointer-events: none; }
+.g3-howto-tip { font-size: 14px; background: rgba(0, 0, 0, 0.06); border-radius: 10px; padding: 8px 10px; }
 .g3-bottom {
   position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 28px max(14px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));

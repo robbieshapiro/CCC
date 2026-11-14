@@ -13,11 +13,12 @@ export const CHI_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.36, roughDrag:
 // How the cup and the chipper play here (Nov 13, after the first practice rounds: too many lip-outs, chips running on).
 // chipDrop: with the pin in, a shot from off the green that comes at the hole straight on drops at well over a putt's
 // pace. cupEase: a putt can be a touch firmer and still fall. chipRoll: a chip keeps a tenth less of its pace landing.
-export const CHI_CUP: Pick<Hole, 'chipDrop' | 'cupEase' | 'chipRoll'> = { chipDrop: 1.7, cupEase: 1.2, chipRoll: 0.9 };
+// greenSpin (Nov 14): spin does a third more on the greens, backspin and topspin alike.
+export const CHI_CUP: Pick<Hole, 'chipDrop' | 'cupEase' | 'chipRoll' | 'greenSpin'> = { chipDrop: 1.7, cupEase: 1.2, chipRoll: 0.9, greenSpin: 1.35 };
 
 // A Windy City green: mostly flat, a tilt and one or two soft rolls so there's some break to read (a third more of
-// both since Nov 13)
-const BREAK = 1.35;
+// both since Nov 13, and 60% more than built since Nov 14)
+const BREAK = 1.6;
 export const chiGreen = (g: GreenSpec, base: number, tilt: [number, number], rolls: [number, number, number, number][] = []): Piece[] =>
   greenComplex(g, base, { lift: 1, edge: 9, tilt: [tilt[0] * BREAK, tilt[1] * BREAK], rolls: rolls.map(([x, y, r, h]) => [x, y, r, h * BREAK]) });
 

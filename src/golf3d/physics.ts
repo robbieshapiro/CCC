@@ -295,7 +295,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
       if (onRoof) {
         sounds.push({ t, s: 'wall' });
         // where roofs give the ball back, it rattles down to the foot of the building and lies there: no penalty
-        const foot = h.roofsGive ? (onRoof.foot ?? offRoof(h, onRoof, { x, y }, clock)) : null;
+        const foot = h.roofsGive ? (typeof onRoof.foot === 'function' ? onRoof.foot({ x, y }) : (onRoof.foot ?? offRoof(h, onRoof, { x, y }, clock))) : null;
         if (!foot) return finish(false, true);
         if (keepFrames) frames.push({ x, y, z, t });
         t += 0.7;
@@ -330,16 +330,23 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         const spin = shot.spin ?? 0;
         // a firm green lets a plain shot skip on; backspin is what holds it
         const firm = surf === 'green' ? (h.greenFirm ?? 0) : 0;
-        const bite = club.keep + (1 - club.keep) * (1 - hard) + club.release * Math.max(0, -spin) + firm;
+        // greenSpin: how much more spin does on this hole's greens, both ways (backspin bites, topspin releases)
+        const gs = surf === 'green' ? (h.greenSpin ?? 1) : 1;
+        const bite = club.keep + (1 - club.keep) * (1 - hard) + club.release * Math.max(0, -spin) * gs + firm;
         const keep = (flying ? Math.min(1, bite) : 1 - Math.min(0.4, -vzRel * 0.02)) * landing(surf) * (flying && shot.club === 'chip' ? (h.chipRoll ?? 1) : 1);
         vx *= keep;
         vy *= keep;
+        // topspin on a green that takes more spin: it releases, running on harder than the landing alone gives it
+        if (flying && spin < 0 && gs > 1) {
+          vx *= 1 + (gs - 1) * 0.4 * -spin;
+          vy *= 1 + (gs - 1) * 0.4 * -spin;
+        }
         // backspin grabs on the first landing: it checks up, or zips back if there's enough of it
         if (flying && spin > 0) {
           const sp = Math.hypot(vx, vy);
           // tour turf is cut tight and grabs a spinning ball harder
-          const check = club.check * spin * GRIP[surf] * (0.35 + 0.65 * shot.power) * (h.tour ? TOUR_BITE : 1);
-          const next = Math.max(sp - check, -0.35 * check); // it can spin back, but only a little
+          const check = club.check * spin * GRIP[surf] * (0.35 + 0.65 * shot.power) * (h.tour ? TOUR_BITE : 1) * gs;
+          const next = Math.max(sp - check, -0.35 * check * gs); // it can spin back, but only a little
           if (sp > 1e-6) {
             vx *= next / sp;
             vy *= next / sp;

@@ -819,7 +819,7 @@ export class Course3D {
       <div class="g3-focus" data-focus aria-hidden="true"></div>
       <div class="g3-flash" data-flash aria-hidden="true"></div>
       <div class="g3-top">
-        <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button><button class="g3-pill g3-help" data-help aria-label="How to play">?</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}${this.openControls ? '<button class="g3-pill g3-controls" data-controls>Controls</button>' : ''}</div>
+        <div class="g3-left"><button class="g3-pill" data-quit>${this.leaveText || 'Leave'}</button><button class="g3-pill g3-help" data-help aria-label="How to play">?</button>${this.menu ? '<button class="g3-pill" data-holes>Holes</button>' : ''}${this.drill ? '' : '<button class="g3-pill" data-flyover>Flyover</button>'}${this.openControls ? '<button class="g3-pill g3-controls" data-controls>Controls</button>' : ''}</div>
         ${
           this.drill
             ? `<div class="g3-title"><small>${this.drill.eyebrow ?? 'Practice facility'}</small><b>${this.drill.title}</b><span><em data-station-name>${this.drill.stations[this.drill.at].name}</em>${this.drill.stations.length > 1 ? ' · <i data-dist></i>' : ''}</span></div>
@@ -875,6 +875,11 @@ export class Course3D {
     };
     if (this.drill && this.drill.stations.length > 1) q('[data-station]').onclick = () => this.nextStation();
     if (this.menu) q('[data-holes]').onclick = () => this.holeMenu();
+    // fly the hole again, any time you're lining up a shot
+    if (!this.drill)
+      q('[data-flyover]').onclick = () => {
+        if (this.mode === 'aim') this.startFlyover();
+      };
     if (this.openControls) {
       q('[data-controls]').onclick = () => this.openControls?.();
       // the map takes a tap only while a drop is waiting for one
@@ -1065,7 +1070,7 @@ export class Course3D {
     const card = document.createElement('div');
     card.className = 'g3-howto';
     card.innerHTML = `<div class="g3-howto-card" role="dialog" aria-label="${head[0]}">
-      <h2>${head[0]}</h2><p>${head[1]}</p>
+      <h2>${head[0]}</h2><p>${head[1]}</p>${!this.drill && this.hole?.teeTip ? `<p class="g3-howto-tip"><b>Hank on this hole:</b> ${this.hole.teeTip}</p>` : ''}
       <ol>${
         this.howTo === 'minigolf'
           ? `<li><i>👆</i><b>Aim</b><span>Drag left or right</span></li>
@@ -1086,10 +1091,17 @@ export class Course3D {
     card.onclick = (e) => e.target === card && go();
   }
 
+  // A line under the play: Hank's word on the tee, a first-shot tip. It shows for a few seconds after the flyover, then
+  // fades so the swing has the room (the ? button shows the tee's word again).
   private hint(text: string) {
     const el = this.overlay.querySelector('[data-hint]') as HTMLElement | null;
-    if (el) el.textContent = text;
+    if (!el) return;
+    window.clearTimeout(this.hintTimer);
+    el.classList.remove('gone');
+    el.textContent = text;
+    if (text) this.hintTimer = window.setTimeout(() => el.classList.add('gone'), 4500);
   }
+  private hintTimer = 0;
 
   callout(text: string, sub = '', ms = 1800) {
     const el = this.overlay.querySelector('[data-callout]') as HTMLElement | null;
@@ -1275,6 +1287,25 @@ export class Course3D {
     this.snapCamera();
   }
 
+  // The line a shot starts on: the pin if nothing tall stands between, else the furthest point on the hole's flyover
+  // line ahead of here that's in clear sight.
+  private openLine() {
+    const h = this.hole;
+    const p = this.pos;
+    const at = (q: V2) => Math.atan2(q.x - p.x, q.y - p.y);
+    // walls a building's height: a fence or a cart's side doesn't count
+    const tall = h.walls.filter((w) => w.h >= 12);
+    const cross = (a: V2, b: V2, c: V2, d: V2) => {
+      const o = (p1: V2, p2: V2, p3: V2) => (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
+      return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+    };
+    const clear = (q: V2) => !tall.some((w) => cross(p, q, w.a, w.b));
+    if (!tall.length || clear(h.cup)) return at(h.cup);
+    const toCup = Math.hypot(h.cup.x - p.x, h.cup.y - p.y);
+    const ahead = h.flyover.filter((q) => Math.hypot(h.cup.x - q.x, h.cup.y - q.y) < toCup && clear(q));
+    return ahead.length ? at(ahead.reduce((a, b) => (Math.hypot(h.cup.x - b.x, h.cup.y - b.y) < Math.hypot(h.cup.x - a.x, h.cup.y - a.y) ? b : a))) : at(h.cup);
+  }
+
   private toAim() {
     // the tide (or the lava) has come up over the ball: a free drop uphill, somewhere it stays dry
     const over = wetIn(this.hole, this.pos, this.clock);
@@ -1301,8 +1332,9 @@ export class Course3D {
       const speed = this.overlay.querySelector('[data-wind-speed]');
       if (speed) speed.textContent = `${this.wind.mph} mph`;
     }
-    // after the tee shot, every shot starts lined up on the pin
-    if (this.strokes > 0) this.aim = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
+    // after the tee shot, every shot starts lined up on the pin, unless a building stands in the way (a dogleg round a
+    // city block): then down the hole, at the furthest point of its flyover line you can see from here
+    if (this.strokes > 0) this.aim = this.openLine();
     const { allowed, want, d } = this.lie();
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => {
       b.disabled = !allowed.includes(b.dataset.club as ClubId);
@@ -2316,15 +2348,20 @@ export class Course3D {
     const dir = this.mode === 'roll' ? this.follow.clone() : new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim));
     const long = this.club === 'driver' || this.club === 'wood' || this.club === 'iron';
     const back = this.mode === 'roll' ? (flying ? 34 : 20) : long ? 20 : this.club === 'wedge' ? 17 : 14;
-    const up = this.mode === 'roll' ? (flying ? 20 : 12) : long ? 12 : 9.5;
+    // lining up: down behind the golfer, about head height and a bit (lowered Nov 14: it sat high, looking down on them)
+    const up = this.mode === 'roll' ? (flying ? 20 : 12) : long ? 8.5 : 7;
     this.camPos.copy(ball).addScaledVector(dir, -back).add(new THREE.Vector3(0, up + this.power * 2, 0));
     const ground = heightAt(this.hole, this.camPos.x, -this.camPos.z);
     this.camPos.y = Math.max(this.camPos.y, ground + 3.5);
-    this.camLook.copy(ball).addScaledVector(dir, long && this.mode !== 'roll' ? 40 : 16).add(new THREE.Vector3(0, -2, 0));
+    this.camLook.copy(ball).addScaledVector(dir, long && this.mode !== 'roll' ? 40 : 16).add(new THREE.Vector3(0, this.mode === 'roll' ? -2 : 0, 0));
     // on a tour course with the green far below (the summit tee), look down at the pin rather than out at the far wall
     if (this.hole.tour && this.mode !== 'roll') {
       const cupZ = heightAt(this.hole, this.hole.cup.x, this.hole.cup.y);
-      if (ball.y - cupZ > 30) {
+      // (only when the pin is roughly down the line you're aiming: off a high tee at a dogleg, Wrigleyville's roof, it
+      // swung the view round across the buildings to the green)
+      const toCup = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
+      const off = Math.abs(Math.atan2(Math.sin(toCup - this.aim), Math.cos(toCup - this.aim)));
+      if (ball.y - cupZ > 30 && off < 0.4) {
         // up over the golfer's shoulder, high enough to see over the lip
         this.camPos.copy(ball).addScaledVector(dir, -12).add(new THREE.Vector3(0, 24, 0));
         this.camLook.copy(w3(this.hole.cup.x, this.hole.cup.y, cupZ)).lerp(ball, 0.2);
