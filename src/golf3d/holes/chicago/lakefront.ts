@@ -25,9 +25,9 @@ const BREAKWATER = band([{ x: 30, y: 462 }, { x: 70, y: 470 }], 6);
 const trees: Post[] = [
   // maples along the trail, crowding the left edge of the fairway
   ...[40, 110, 180, 250, 320, 390, 460, 530].map((y, i) => ({ x: -40 + (i % 2) * 4, y, r: 6, h: 24 + (i % 3) * 4, soft: true, look: 'maple' as const })),
-  // a pair on the bank where the harbour starts, pinching the landing area
+  // one on the bank where the harbour starts, pinching the landing area
   { x: 14, y: 286, r: 6, h: 26, soft: true, look: 'maple' },
-  { x: 2, y: 262, r: 5, h: 22, soft: true, look: 'maple' },
+  // (a shorter one stood in front of it at 2, 262 until Nov 14: it caught straight drives that looked well over it)
 ];
 const lights: Post[] = [[-54, 30], [-54, 200], [-54, 370], [-54, 540]].map(([x, y]) => ({ x, y, r: 0.4, h: 16, look: 'streetlight' as const }));
 
