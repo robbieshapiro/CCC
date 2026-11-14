@@ -84,7 +84,7 @@ export const millennium: Hole = {
     { kind: 'ramp', x0: -10, y0: 186, x1: 60, y1: 236, axis: 'y', h0: 0, h1: 0.8, op: 'add' },
     // the pool, sunk a few inches into the plaza
     { kind: 'box', x0: -44, y0: 214, x1: 2, y1: 236, h: -1.2, edge: 0.6, op: 'add' },
-    ...chiGreen(GREEN, LAND, [0.4, 0.6], [[-6, -4, 6, 0.2], [8, 5, 5, -0.2]]),
+    ...chiGreen(GREEN, LAND, [0.4, 0.6], [[-6, -4, 6, 0.2], [8, 5, 5, -0.2]], 2.5),
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: AVE.flatMap((b) => b.walls),

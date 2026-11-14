@@ -86,7 +86,7 @@ export const navypier: Hole = {
     { kind: 'box', x0: -74, y0: 80, x1: 86, y1: PIER_END, h: DECK, edge: 1, op: 'set' },
     { kind: 'box', x0: ISLAND.x0, y0: ISLAND.y0, x1: ISLAND.x1, y1: ISLAND.y1, h: DECK - 2, edge: 3, op: 'set' },
     { kind: 'box', x0: SLIP.x0, y0: SLIP.y0, x1: SLIP.x1, y1: SLIP.y1, h: -6, edge: 1, op: 'set' },
-    ...chiGreen(GREEN, DECK - 2, [0.4, 0.5], [[-8, -6, 7, 0.25], [10, 6, 6, -0.2]]),
+    ...chiGreen(GREEN, DECK - 2, [0.4, 0.5], [[-8, -6, 7, 0.25], [10, 6, 6, -0.2]], 2.5),
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: HALL.walls,

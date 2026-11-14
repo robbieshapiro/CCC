@@ -94,7 +94,7 @@ export const lakefront: Hole = {
     { kind: 'box', x0: -120, y0: 612, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
     { kind: 'box', x0: 78, y0: 520, x1: 220, y1: 700, h: -6, edge: 1, op: 'set' },
     { kind: 'hill', x: -20, y: 140, r: 40, h: 0.6 },
-    ...chiGreen(GREEN, LAND, [0.5, 0.6], [[-8, -6, 7, 0.25], [10, 6, 6, -0.2]]),
+    ...chiGreen(GREEN, LAND, [0.5, 0.6], [[-8, -6, 7, 0.25], [10, 6, 6, -0.2]], 1.5),
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: [],

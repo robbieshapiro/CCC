@@ -16,11 +16,15 @@ export const CHI_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.36, roughDrag:
 // greenSpin (Nov 14): spin does a third more on the greens, backspin and topspin alike.
 export const CHI_CUP: Pick<Hole, 'chipDrop' | 'cupEase' | 'chipRoll' | 'greenSpin'> = { chipDrop: 1.7, cupEase: 1.2, chipRoll: 0.9, greenSpin: 1.35 };
 
-// A Windy City green: mostly flat, a tilt and one or two soft rolls so there's some break to read (a third more of
-// both since Nov 13, and 60% more than built since Nov 14)
+// A Windy City green: a tilt and one or two soft rolls. deg: how steeply the whole green tilts, in degrees, along the
+// tilt's own direction (Nov 14: they read under 1 degree, too easy; now 1.5 to 2.5, so a few greens ask for a real
+// read). The rolls are 60% more than built.
 const BREAK = 1.6;
-export const chiGreen = (g: GreenSpec, base: number, tilt: [number, number], rolls: [number, number, number, number][] = []): Piece[] =>
-  greenComplex(g, base, { lift: 1, edge: 9, tilt: [tilt[0] * BREAK, tilt[1] * BREAK], rolls: rolls.map(([x, y, r, h]) => [x, y, r, h * BREAK]) });
+export const chiGreen = (g: GreenSpec, base: number, tilt: [number, number], rolls: [number, number, number, number][] = [], deg = 1.5): Piece[] => {
+  const box = 2 * (Math.max(g.rx, g.ry) + 6 + 9);
+  const k = (box * Math.tan((deg * Math.PI) / 180)) / (Math.hypot(tilt[0], tilt[1]) || 1);
+  return greenComplex(g, base, { lift: 1, edge: 9, tilt: [tilt[0] * k, tilt[1] * k], rolls: rolls.map(([x, y, r, h]) => [x, y, r, h * BREAK]) });
+};
 
 // Its outline: not an oval. Two slow waves round the edge give each green its own lobes and waists (a kidney, a
 // peanut, a tongue), up to a sixth in or out; the fringe follows it 4 ft out. seed: the hole's own shape.
