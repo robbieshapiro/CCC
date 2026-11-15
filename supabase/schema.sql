@@ -1746,13 +1746,18 @@ language sql stable as $$
     or exists (select 1 from round_starts n where n.player_id = rs.player_id and n.started_at > rs.started_at))
 $$;
 
--- p_card: start one of today's cards, or carry on with the one already going
+-- p_card: start one of today's cards, or carry on with the one already going. p_pars (from Nov 15): the holes the app
+-- has for the course; a card won't open on an out-of-date version of it, so nobody plays a whole card that can't count
 drop function if exists start_round(uuid, text);
-create or replace function start_round(p_token uuid, p_course text, p_card boolean default false) returns bigint
+drop function if exists start_round(uuid, text, boolean);
+create or replace function start_round(p_token uuid, p_course text, p_card boolean default false, p_pars int[] default null) returns bigint
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); new_id bigint; c round_starts;
 begin
   if p_card and cards_on() then
+    if p_pars is not null and exists (select 1 from course_pars cp where cp.course = p_course and cp.pars <> p_pars) then
+      raise exception 'The course has changed since your app opened. Close the app and open it again, then play your card on the new course.';
+    end if;
     me := play_seat(me);
     if card_in(me) then raise exception 'All of today''s cards are in. Practise as much as you like.'; end if;
     c := card_of(me);
@@ -1844,7 +1849,7 @@ begin
     )
   );
 end $$;
-grant execute on function start_round(uuid, text, boolean) to anon;
+grant execute on function start_round(uuid, text, boolean, int[]) to anon;
 grant execute on function card_today(uuid) to anon;
 grant execute on function card_progress(uuid, bigint, int[], int, jsonb, text[]) to anon;
 grant execute on function round_progress(uuid, bigint, int, boolean) to anon;

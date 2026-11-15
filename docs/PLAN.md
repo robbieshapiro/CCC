@@ -28,7 +28,7 @@ Last updated Nov 15, 2026 (today's cards score by their own par, stale cards ref
 
 | PR | What |
 |---|---|
-| #301 | Today's cards shows each card's own score against its own par, as the board does (it worked par out from this week's course, so Tyler's card from an old app read +3 there and +2 on the board). The server refuses a card played on an out-of-date version of the course, asking the member to close and reopen the app (course_pars now holds each live course's holes as they are, and check-holes fails if it falls out of step with the code). "All of today's cards are in" (was "Both"). |
+| #301 | Today's cards shows each card's own score against its own par, as the board does (it worked par out from this week's course, so Tyler's card from an old app read +3 there and +2 on the board). A card won't open on an out-of-date version of the course: the app reloads first if a newer version is live, and the server refuses to open a card whose holes don't match (a refusal at posting stays as the backstop for older apps) (course_pars now holds each live course's holes as they are, and check-holes fails if it falls out of step with the code). "All of today's cards are in" (was "Both"). |
 | #300 | The app checks for a new version once a minute (was every 30 seconds) and whenever you move to a new page, never in the middle of a round or a game; the club's data refreshes once a minute again. |
 | #299 | Club notices are drop-downs: the first sentence as a headline with More, the whole notice when opened, and the x to close it as before. Posted live at all three clubs (Nov 15): the Western Reserve's payouts, and "close the app and reopen it once" for the self-updating app. |
 | #298 | Everyone's app keeps itself current: each build is stamped with its version (`scripts/stamp-version.mjs`, Vercel's commit), the live one is at `/version.json`, and the app checks it on opening and every 30 seconds, reloading when a newer one is live (never mid-round or mid-game: it waits until you leave). The club's data refreshes every 30 seconds and on reopening too (was 60). Before this, an app left open since the day before posted two cards on the old five-hole Windy City (Tyler, Nov 15). |
@@ -222,7 +222,7 @@ Last updated Nov 15, 2026 (today's cards score by their own par, stale cards ref
 
 ## Setup status
 
-- [ ] #301's SQL applied live: course_field, submit_round, start_round, and the windycity row in course_pars.
+- [ ] #301's SQL applied live: course_field, submit_round, start_round (now with p_pars; the old three-argument one dropped), and the windycity row in course_pars.
 - [x] #296: applied `pr_296_three_cards` on Nov 14; `cards_a_day()` returns 3.
 - [x] #294: applied `pr_294_bigger_pot` on Nov 14 at about 9:30 pm ET; `open_per_player` 1000 and `open_purse_floor` 25000 answer, and members' bonuses show `weeks: 250` for the week of Nov 8 (banks up $250).
 - [x] #257: applied `pr_257_nominations` on Nov 11; `admin_nominations` answers (none yet), the four member and Committee functions run for the app and `clean_phone` stays private.

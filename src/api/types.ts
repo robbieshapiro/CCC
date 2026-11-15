@@ -350,7 +350,8 @@ export interface Api {
   adminKpis(session: Session): Promise<AdminKpis>;
   // a counted round's start, how far it got, and whether it finished
   // card: today's card (the same one all day, so a card cut short picks up where it left off)
-  startRound(session: Session, course: string, card?: boolean): Promise<number | null>;
+  // pars: the holes the app has for the course, so a card won't open on an out-of-date version of it
+  startRound(session: Session, course: string, card?: boolean, pars?: number[]): Promise<number | null>;
   roundProgress(session: Session, id: number, hole: number, finished: boolean): Promise<void>;
   // daily cards (from Nov 8): null before they start
   cardToday(session: Session): Promise<CardToday | null>;
