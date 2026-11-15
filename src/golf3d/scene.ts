@@ -78,7 +78,9 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
     // mowing patterns
     g.fillStyle = hex(surface, 0.035);
     if (surface === 'green') {
-      for (let d = Math.floor((x0 + y0) / 10) * 10 - (y1 - y0); d < x1 + y1; d += 10) {
+      // (to x1 plus the hole's whole length: a hole whose bounds start well below zero, the River's tee set far back, lost
+      // its stripes on the green's far side when this stopped at x1 + y1)
+      for (let d = Math.floor((x0 + y0) / 10) * 10 - (y1 - y0); d < x1 + (y1 - y0) + 10; d += 10) {
         g.beginPath();
         g.moveTo(d, y0);
         g.lineTo(d + 5, y0);
