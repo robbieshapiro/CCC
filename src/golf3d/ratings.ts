@@ -63,7 +63,6 @@ export const RATINGS: Record<string, Rated> = {
       { id: "lincolnpark", member: 2.8, strong: 0.5 },
       { id: "river", member: 3.8, strong: 2 },
       { id: "wrigleyville", member: 2.5, strong: 0 },
-      { id: "evanston", member: 3.5, strong: 1 },
       { id: "navypier", member: 0.8, strong: 1.8 },
     ],
   },
