@@ -109,10 +109,9 @@ const COURSES: Course[] = [
   },
   {
     id: 'windycity',
-    // Chicago in late November, built from the Hole Lab's city: the week of Nov 22. A draft until Robbie has played
-    // it; he puts it on the calendar from Admin > Course > The weeks ahead.
-    opens: '2026-11-22',
-    draft: true,
+    // Chicago in late November, built from the Hole Lab's city. Released for the week of Nov 15 (Robbie picked it for
+    // that week in Admin on Nov 12, and played it through); no longer a draft, so its plaques show.
+    opens: '2026-11-15',
     whatsNew: [
       'Chicago in November. Bring a coat.',
       'The wind off the lake: 10 to 20 mph, and it gusts.',
