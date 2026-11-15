@@ -14,7 +14,8 @@ export const CHI_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.36, roughDrag:
 // chipDrop: with the pin in, a shot from off the green that comes at the hole straight on drops at well over a putt's
 // pace. cupEase: a putt can be a touch firmer and still fall. chipRoll: a chip keeps a tenth less of its pace landing.
 // greenSpin (Nov 14): spin does a third more on the greens, backspin and topspin alike.
-export const CHI_CUP: Pick<Hole, 'chipDrop' | 'cupEase' | 'chipRoll' | 'greenSpin'> = { chipDrop: 1.7, cupEase: 1.2, chipRoll: 0.9, greenSpin: 1.35 };
+// obWhenLanding (Nov 15): out of bounds where the ball lands, so a building beyond the line gives it back off its wall.
+export const CHI_CUP: Pick<Hole, 'chipDrop' | 'cupEase' | 'chipRoll' | 'greenSpin' | 'obWhenLanding'> = { chipDrop: 1.7, cupEase: 1.2, chipRoll: 0.9, greenSpin: 1.35, obWhenLanding: true };
 
 // A Windy City green: a tilt and one or two soft rolls. deg: how steeply the whole green tilts, in degrees, along the
 // tilt's own direction (Nov 14: they read under 1 degree, too easy; now 1.5 to 2.5, so a few greens ask for a real

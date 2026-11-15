@@ -1,41 +1,82 @@
-// Hole 3, Lincoln Park (par 4, 415 yd): from the lawn by the Conservatory, round the South Pond lagoon to a green on a
-// spit of land out in North Pond, the lake and the skyline beyond. Built Nov 14 to be hard: a good score here is par.
-// The lagoon runs diagonally across the hole from front right to back left (a cape hole): the more of it you bite off,
-// the shorter the second, and a driver goes in it. The first fairway is a narrow strip up the left between the oaks
-// and the water. The green sits on a peninsula with water short, right and long; the only miss is the bank left.
-// The play: a wood or a long iron up the left strip, then a long iron or a wood over the lagoon's far arm to the
-// peninsula. No secret.
-import { blob, rect } from '../../terrain';
-import type { Hole, Post } from '../../types';
-import { greenside } from '../woods';
+// Hole 3, Lincoln Park (par 4, 410 yd): through Lincoln Park Zoo. From the lawn by the Conservatory up a narrow
+// fairway between two enclosures, the giraffes and zebras on the savanna left and the elephant's yard right, a little
+// dogleg right past the Lion House to a small green with the flamingos on the bank beside it. Rebuilt Nov 15 (it was a
+// water hole round the lagoons; it played oddly).
+// The animals wander their enclosures and are in play: a ball that hits one bounces off it. The enclosures are fenced
+// with a low rail and are trampled dirt and long grass: they play like waste bunkers. The Lion House stands right of the green: brick, a ball comes back off it.
+// The play: a wood or a driver down the left-centre, short of the fairway bunker, then a mid iron to the green.
+// No secret.
+import { band, blob, rect } from '../../terrain';
+import type { Hole, Mover, Post, V2, Wall } from '../../types';
+import { bunker, FAIRWAY_DEPTH, greenside } from '../woods';
+import { building } from '../../looks/chicago';
 import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, greenGallery, teeGallery } from './common';
 
 const LAND = 6;
-const POND = LAND - 1; // the water's surface, a foot below the turf
 const SEED = 6;
-// a smaller green than the rest of the course, out on its spit
-const GREEN = { x: 30, y: 560, rx: 26, ry: 19 };
-const traps = [greenside(GREEN, -26, 548, 7, 9, 1, 3, 0)];
-// the South Pond lagoon, sweeping across the hole from front right to back left
-const LAGOON = [
-  { x: 220, y: 70 },
-  { x: 150, y: 200 },
-  { x: 76, y: 305 },
-  { x: -30, y: 368 },
-  { x: -170, y: 396 },
+const GREEN = { x: 46, y: 548, rx: 24, ry: 18 };
+const traps = [
+  greenside(GREEN, 6, 566, 8, 10, 1, 3, 0),
+  greenside(GREEN, 78, 528, 9, 7, 2, 3, 0),
+  greenside(GREEN, 30, 506, 10, 5, 3, 3, 0),
+  // a fairway bunker in the right half where a good drive lands
+  bunker(12, 300, 11, 9, 4, FAIRWAY_DEPTH, 0),
 ];
-// the strip up the left, between the oaks and the water
-const FIRST = blob(-44, 215, 42, 110, 1, 0.05);
-// the far side of the lagoon, where the second is played from
-const SECOND = blob(-24, 458, 52, 30, 2, 0.05);
+// the fairway: up the middle, then bending right to the green
+const LINE: V2[] = [
+  { x: 0, y: 10 },
+  { x: -6, y: 180 },
+  { x: 0, y: 330 },
+  { x: 24, y: 450 },
+  { x: 40, y: 512 },
+];
+// the enclosures: the savanna on the left, the elephant yard on the right
+const SAVANNA = { x0: -190, y0: 100, x1: -34, y1: 470 };
+const YARD = { x0: 38, y0: 150, x1: 200, y1: 420 };
+// the Lion House, right of the green, and the Conservatory behind the tee
+const LIONS = building(140, 540, 70, 50, 34, 81, 'flat');
+const GLASS = building(0, -80, 110, 40, 30, 82, 'flat');
+
+// a low rail round each enclosure: a rolling ball stops at it, a flying one sails over
+const rail = (r: { x0: number; y0: number; x1: number; y1: number }): Wall[] => {
+  const c = [{ x: r.x0, y: r.y0 }, { x: r.x1, y: r.y0 }, { x: r.x1, y: r.y1 }, { x: r.x0, y: r.y1 }];
+  return c.map((a, i) => ({ a, b: c[(i + 1) % 4], h: 3, look: 'rail' as const }));
+};
+
+// An animal walking a slow loop in its enclosure: an ellipse round (cx, cy), radii rx, ry, one lap in `lap` seconds.
+// r and h: the post a ball bounces off.
+const walker = (id: string, look: Mover['look'], cx: number, cy: number, rx: number, ry: number, lap: number, phase: number, r: number, h: number): Mover => ({
+  id,
+  look,
+  at: (t) => {
+    const a = (t / lap) * Math.PI * 2 + phase;
+    const pos = { x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry };
+    // heading: along the direction of travel, as an angle from +x
+    const heading = Math.atan2(Math.cos(a) * ry, -Math.sin(a) * rx);
+    return { walls: [], posts: [{ ...pos, r, h, look: 'post' }], pos, heading };
+  },
+});
+
+const animals: Mover[] = [
+  // the savanna: two giraffes and a small herd of zebras, working along the fence by the fairway
+  walker('giraffe1', 'giraffe', -90, 220, 34, 70, 70, 0, 1.6, 13),
+  walker('giraffe2', 'giraffe', -110, 360, 40, 50, 84, 2, 1.6, 13),
+  walker('zebra1', 'zebra', -80, 300, 26, 40, 46, 1, 1.4, 5),
+  walker('zebra2', 'zebra', -86, 306, 26, 40, 46, 1.4, 1.4, 5),
+  walker('zebra3', 'zebra', -74, 296, 26, 40, 46, 1.8, 1.4, 5),
+  // the elephant, slowly round its yard
+  walker('elephant', 'elephant', 120, 280, 44, 90, 110, 3, 3.6, 9),
+  // flamingos on the bank short left of the green, shuffling about
+  walker('flamingo1', 'flamingo', -8, 520, 8, 6, 30, 0, 0.6, 4),
+  walker('flamingo2', 'flamingo', -12, 528, 7, 5, 26, 2, 0.6, 4),
+  walker('flamingo3', 'flamingo', -4, 512, 6, 6, 34, 4, 0.6, 4),
+];
 
 const posts: Post[] = [
-  // oaks crowding the left of the first fairway, and a few on the far bank
-  ...[60, 130, 200, 270].map((y, i) => ({ x: -98 + (i % 2) * 6, y, r: 8, h: 30 + (i % 2) * 6, soft: true, look: 'oak' as const })),
-  ...[[-110, 440], [-70, 500], [70, 430]].map(([x, y], i) => ({ x, y, r: 7, h: 28 + i * 3, soft: true, look: 'oak' as const })),
-  // maples along the lagoon's near bank, short of the green and by the tee
-  ...[[40, 60], [70, 130], [-140, 520]].map(([x, y], i) => ({ x, y, r: 6, h: 24 + i * 2, soft: true, look: 'maple' as const })),
-  ...[[-130, 40], [-130, 300], [-150, 480]].map(([x, y]) => ({ x, y, r: 0.4, h: 16, look: 'streetlight' as const })),
+  // oaks along the enclosures and round the green
+  ...[[-36, 70], [40, 90], [-40, 480], [100, 470], [86, 610], [-30, 620]].map(([x, y], i) => ({ x, y, r: 7, h: 28 + (i % 3) * 3, soft: true, look: 'oak' as const })),
+  ...[[-170, 40], [-170, 520], [190, 120], [190, 480]].map(([x, y], i) => ({ x, y, r: 6, h: 24 + i * 2, soft: true, look: 'maple' as const })),
+  ...[[-150, 0], [150, 0], [-150, 600], [196, 600]].map(([x, y]) => ({ x, y, r: 0.4, h: 16, look: 'streetlight' as const })),
 ];
 
 export const lincolnpark: Hole = {
@@ -50,66 +91,66 @@ export const lincolnpark: Hole = {
   windByHeight: true,
   ...CHI_CUP,
   greenFirm: 0.05,
-  teeTip: 'A driver finds the lagoon. A wood up the left strip, then everything over the water to the spit. Miss left of the green, never right.',
-  yards: 415,
-  blurb: 'Round the South Pond lagoon to a green out on a spit in North Pond. Water short, right and long. A good score here is par.',
+  teeTip: 'Through the zoo. Down the left-centre short of the bunker, between the giraffes and the elephant. The animals are in play.',
+  yards: 410,
+  blurb: 'Through Lincoln Park Zoo: giraffes and zebras left, the elephant right, the Lion House by the green. The animals are in play.',
   tee: { x: 0, y: 0 },
-  cup: { x: 30, y: 563 },
-  pins: [{ x: 30, y: 563 }, { x: 16, y: 553 }, { x: 44, y: 568 }, { x: 26, y: 574 }],
-  aim: -0.18,
-  bounds: { x0: -180, y0: -50, x1: 210, y1: 660 },
+  cup: { x: 46, y: 551 },
+  pins: [{ x: 46, y: 551 }, { x: 30, y: 541 }, { x: 62, y: 556 }, { x: 40, y: 562 }],
+  aim: 0,
+  bounds: { x0: -200, y0: -110, x1: 210, y1: 660 },
   border: [
-    { x: -176, y: -46 },
+    { x: -196, y: -46 },
     { x: 206, y: -46 },
-    { x: 206, y: 656 },
-    { x: -176, y: 656 },
+    { x: 206, y: 640 },
+    { x: -196, y: 640 },
   ],
   base: 'rough',
   regions: [
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
-    { poly: FIRST, surface: 'fairway' },
-    { poly: SECOND, surface: 'fairway' },
-    // the path along the left, and the neck of the spit out to the green
-    { poly: rect(-150, -40, -142, 640), surface: 'path' },
+    { poly: band(LINE, 19), surface: 'fairway' },
+    // the zoo's paths, round the enclosures
+    { poly: rect(-34, 90, -26, 480), surface: 'path' },
+    { poly: rect(30, 140, 38, 430), surface: 'path' },
+    // the enclosures: trampled dirt and long grass
+    { poly: rect(SAVANNA.x0, SAVANNA.y0, SAVANNA.x1, SAVANNA.y1), surface: 'sand' },
+    { poly: blob(-110, 250, 50, 90, 2, 0.1), surface: 'rough' },
+    { poly: rect(YARD.x0, YARD.y0, YARD.x1, YARD.y1), surface: 'sand' },
+    { poly: blob(130, 300, 40, 60, 3, 0.1), surface: 'rough' },
     ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],
-  water: [
-    // the lagoon and North Pond: water wherever the ground is below the surface
-    { poly: [{ x: 210, y: -10 }, { x: 210, y: 340 }, { x: 60, y: 395 }, { x: -20, y: 415 }, { x: -180, y: 440 }, { x: -180, y: 345 }, { x: -60, y: 325 }, { x: 30, y: 275 }, { x: 110, y: 140 }, { x: 160, y: -10 }], level: POND },
-    { poly: rect(-180, 496, 210, 660), level: POND },
-  ],
+  water: [],
   terrain: [
-    { kind: 'ramp', x0: -180, y0: -50, x1: 210, y1: 660, axis: 'y', h0: LAND, h1: LAND, op: 'set' },
+    { kind: 'ramp', x0: -200, y0: -110, x1: 210, y1: 660, axis: 'y', h0: LAND, h1: LAND, op: 'set' },
     { kind: 'disc', x: 0, y: 0, r: 14, h: LAND + 1.5, edge: 6, op: 'set' },
-    { kind: 'channel', pts: LAGOON, width: 78, depth: 7 },
-    // North Pond: everything past the second fairway, but for the spit
-    { kind: 'box', x0: -180, y0: 500, x1: 210, y1: 660, h: POND - 5, edge: 6, op: 'set' },
-    // the neck of the spit, out from the far bank to the green
-    { kind: 'box', x0: -8, y0: 480, x1: 26, y1: 540, h: LAND, edge: 3, op: 'set' },
-    // and the bank left of the green: the one place to miss it
-    { kind: 'box', x0: -60, y0: 500, x1: 0, y1: 580, h: LAND, edge: 5, op: 'set' },
-    ...chiGreen(GREEN, LAND, [0.5, 0.6], [[-7, -5, 6, 0.25], [8, 5, 5, -0.2]], 2.5),
+    // the green sits up on a rise, falling away to the bunkers
+    { kind: 'hill', x: GREEN.x, y: GREEN.y, r: 60, h: 2.5 },
+    ...chiGreen(GREEN, LAND + 2.5, [0.5, 0.6], [[-7, -5, 6, 0.25], [8, 5, 5, -0.2]], 2.5),
     ...traps.flatMap((t) => t.pieces),
   ],
-  walls: [],
+  walls: [...rail(SAVANNA), ...rail(YARD), ...LIONS.walls, ...GLASS.walls],
+  roofs: [LIONS.roof, GLASS.roof],
+  roofsGive: true,
   posts,
-  movers: [],
+  movers: animals,
   pushes: [],
   zones: [],
   secret: { name: '', zone: '', hint: '' },
   flyover: [
     { x: 0, y: -30 },
-    { x: -50, y: 200 },
-    { x: -24, y: 440 },
+    { x: -6, y: 200 },
+    { x: 10, y: 400 },
     { x: GREEN.x, y: GREEN.y },
   ],
   decor: [
-    // a few patrons
     teeGallery({ x: 0, y: 0 }),
-    ...greenGallery(GREEN, 120, 200),
+    ...greenGallery(GREEN, 60, 120),
     { kind: 'teebox', x: 0, y: 0 },
-    { kind: 'walkers', x: -146, y: 300, rot: Math.PI / 2, scale: 600, size: [10, 0, 0] },
+    LIONS.decor,
+    GLASS.decor,
+    { kind: 'walkers', x: -30, y: 280, rot: Math.PI / 2, scale: 300, size: [10, 0, 0] },
+    { kind: 'walkers', x: 34, y: 280, rot: Math.PI / 2, scale: 240, size: [8, 0, 0] },
     { kind: 'lake', x: 700, y: 300, rot: Math.PI / 2, scale: 6 },
     { kind: 'hancock', x: 400, y: -1600 },
     { kind: 'willis', x: -100, y: -2600 },

@@ -31,7 +31,7 @@ export type Water = { poly: V2[]; level: number; look?: 'lake' | 'sea' | 'lava' 
 export type Zone = { id: string; poly: V2[] };
 
 // Things that move on the hole clock. `at(t)` returns their collision shapes at time t.
-export type Mover = { id: string; look: 'swan' | 'cart' | 'scythe' | 'ghost' | 'jaw'; at: (t: number) => { walls: Wall[]; posts: Post[]; pos: V2; heading: number; open?: number } };
+export type Mover = { id: string; look: 'swan' | 'cart' | 'scythe' | 'ghost' | 'jaw' | 'giraffe' | 'elephant' | 'zebra' | 'flamingo'; at: (t: number) => { walls: Wall[]; posts: Post[]; pos: V2; heading: number; open?: number } };
 // `erupt` (geysers and blowholes): while it returns a velocity, a ball rolling over the vent is thrown with it.
 export type Push = {
   id: string;
@@ -104,6 +104,9 @@ export type Hole = {
   // a ball that lands on a roof rattles down to the foot of the building, no penalty (the Windy City); without it a
   // roof keeps the ball
   roofsGive?: boolean;
+  // out of bounds is judged where the ball lands, not the moment it crosses the line in the air, so a ball can fly at a
+  // building beyond the line, hit its wall and ricochet back into play (the Windy City, since Nov 15)
+  obWhenLanding?: boolean;
   // a ball that comes to rest in one of these (a flat roof it can land and bounce on) is stuck: a penalty, played again
   stuck?: V2[][];
   ceilings?: { poly: V2[]; h: number }[]; // a cave roof this far above the ground: a ball that rises into it clips it and drops
