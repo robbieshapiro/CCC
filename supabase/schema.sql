@@ -1705,9 +1705,9 @@ alter table round_starts add column if not exists shots int not null default 0;
 alter table round_starts add column if not exists spots jsonb;
 alter table round_starts add column if not exists feats text[] not null default '{}';
 
--- Two cards a day per person (from Nov 10), not per club: one to warm up, one to go at it; the better one is the day's
--- score. A guest's cards in one club are their cards in every club they play in (person_seats).
-create or replace function cards_a_day() returns int language sql immutable as $$ select 2 $$;
+-- Three cards a day per person (from Nov 15; two from Nov 10), not per club; the best one is the day's score. A guest's
+-- cards in one club are their cards in every club they play in (person_seats).
+create or replace function cards_a_day() returns int language sql immutable as $$ select 3 $$;
 -- the card in progress today, if one is open (started and not posted yet)
 create or replace function card_of(me players) returns round_starts
 language sql stable security definer set search_path = public, extensions as $$

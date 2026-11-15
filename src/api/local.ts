@@ -327,7 +327,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     if (total < course.par) feats.push('underpar');
     const spots = r.spots?.length === holes.length ? r.spots.map((p) => (p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null)) : null;
     const today = todayInGameTz();
-    // daily cards: two a day count, the better one is the day's score
+    // daily cards: three a day count, the best one is the day's score
     const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
     if (cardsOn(month) && db.rounds.filter((x) => seats.has(x.playerId) && x.month === month && todayInGameTz(new Date(x.createdAt)) === today).length >= CARDS_A_DAY)
       throw new Error("Both of today's cards are in. Practise as much as you like.");
@@ -910,7 +910,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const me = playSeat(db, playerByToken(db, session.token));
     const today = todayInGameTz();
     const cards = (db.cards ??= []);
-    // two cards a day per person, whichever club they're played in; one open at a time
+    // three cards a day per person, whichever club they're played in; one open at a time
     const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
     const c = cards.find((x) => seats.has(x.playerId) && x.day === today && !x.done);
     if (db.rounds.filter((x) => seats.has(x.playerId) && todayInGameTz(new Date(x.createdAt)) === today && cardsOn(x.month)).length >= CARDS_A_DAY)

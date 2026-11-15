@@ -114,7 +114,7 @@ function cardIn(snap: Snapshot, dry?: Course, at?: CardToday) {
   render(`<main class="narrow card-in">
     <p class="eyebrow">${esc((dry ?? courseFor(snap.month)).name)}${dry ? ' · rehearsal' : ''}</p>
     <h1>${away ? away.head : "Both of today's cards are in"}</h1>
-    ${hostChip(away ? 'Two cards a day, whichever clubs you play them in. Practice here is open, and nobody counts it.' : 'Two cards a day, and your better one is on the board. The course is open for practice until midnight. Nobody counts those.', 'dry')}
+    ${hostChip(away ? 'Three cards a day, whichever clubs you play them in. Practice here is open, and nobody counts it.' : 'Three cards a day, and your best one is on the board. The course is open for practice until midnight. Nobody counts those.', 'dry')}
     ${away && !at!.done ? `<div class="summary-actions"><a class="btn" href="#/" data-go-club="${esc(at!.clubId ?? '')}">${away.go}</a></div>` : ''}
     <div class="summary-actions"><a class="btn" href="${dry ? `#/preview/${dry.id}` : '#/round/practice'}">Practice round</a><a class="btn ghost" href="${dry ? '#/admin' : '#/'}">${dry ? 'Back to the Committee Room' : 'Back to the club'}</a></div>
     ${dry ? '<p class="fine">This is what a member sees after their card on Sunday. Nothing was posted. <button class="link" data-dry-reset>Deal a fresh card and rehearse again</button></p>' : ''}
@@ -448,7 +448,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         <tr>${course.holes.map((_, i) => scores[i]).map((s, i) => s === undefined ? '<td class="num">–</td>' : `<td class="num" title="${scoreName(s, course.holes[i].par)}"><span class="sc ${scoreClass(s, course.holes[i].par)}">${s}</span></td>`).join('')}<td class="num tot">${total}</td></tr></tbody></table>`}
       ${
         opts.practice
-          ? hostChip(!livePractice ? "Nobody's counting. It counts once it opens." : !cardsOn(snap.month) ? "Nobody's counting." : cardInToday ? "Nobody's counting. Today's cards are in; tomorrow brings two more." : cardsInToday ? "Nobody's counting. Your second card is still waiting." : "Nobody's counting. Today's cards are still waiting.", 'dry')
+          ? hostChip(!livePractice ? "Nobody's counting. It counts once it opens." : !cardsOn(snap.month) ? "Nobody's counting." : cardInToday ? "Nobody's counting. Today's cards are in; tomorrow brings three more." : cardsInToday ? "Nobody's counting. Your next card is still waiting." : "Nobody's counting. Today's cards are still waiting.", 'dry')
           : preview
             ? hostChip('A private look before the members get at it. I shall say nothing.', 'dry')
             : hostChip(REGINALD.round(toParLabel(toPar), best), best ? 'pleased' : 'dry', 'reg-note')
@@ -458,7 +458,7 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         ${bonusLine}${classicLine}
         ${!preview && posted && !opts.practice ? row('Trophies', '', 'trophy-line', true) : ''}
       </dl>
-      ${opts.practice ? '' : `<p class="fine">${opts.classic ? 'Free play on a classic course: it counts for the course record only.' : dry ? 'A rehearsal: nothing posted or paid.' : rehearsal ? 'A rehearsal of the card: nothing posted or paid.' : preview ? 'Preview round, not counted.' : posted ? (card ? (another ? `Card ${cardNo} of ${today?.of ?? CARDS_A_DAY} posted. One more today: your better card counts.` : `Card ${cardNo} of ${today?.of ?? CARDS_A_DAY} posted. Your better card counts today: ${toParLabel(dayBest)}.`) : 'Posted to the board.') : esc(notPosted)}</p>`}
+      ${opts.practice ? '' : `<p class="fine">${opts.classic ? 'Free play on a classic course: it counts for the course record only.' : dry ? 'A rehearsal: nothing posted or paid.' : rehearsal ? 'A rehearsal of the card: nothing posted or paid.' : preview ? 'Preview round, not counted.' : posted ? (card ? (another ? `Card ${cardNo} of ${today?.of ?? CARDS_A_DAY} posted. ${(today?.of ?? CARDS_A_DAY) - cardNo === 1 ? 'One more' : `${(today?.of ?? CARDS_A_DAY) - cardNo} more`} today: your best card counts.` : `Card ${cardNo} of ${today?.of ?? CARDS_A_DAY} posted. Your best card counts today: ${toParLabel(dayBest)}.`) : 'Posted to the board.') : esc(notPosted)}</p>`}
       <div class="summary-actions pair"><button class="btn" data-back>Done</button><button class="btn ghost" data-again>${another ? `Card ${cardNo + 1}` : card ? 'Practice' : opts.practice ? 'Again' : 'Play again'}</button></div>
       <p class="sum-links"><button class="link" data-share-score>${opts.practice ? (canShare() ? 'Send to the group' : 'Copy for the group chat') : canShare() ? 'Share score' : 'Copy score'}</button><span aria-hidden="true">·</span>${asking ? '<button class="link" data-reg-open>Tell Reginald how it played</button>' : '<button class="link" data-feedback>Leave feedback</button>'}</p>
       ${

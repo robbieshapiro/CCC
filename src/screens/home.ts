@@ -115,7 +115,7 @@ export function home(snap: Snapshot) {
   const host = !!snap.players.find((p) => p.id === snap.me)?.host;
   // daily cards: one counts a day; once today's is in, the course is open for practice
   const cards = cardsOn(snap.month) && !host;
-  // all of today's cards in (two a day, the better one counts)
+  // all of today's cards in (three a day, the best one counts)
   const todays = snap.rounds.filter((r) => r.playerId === snap.me && r.month === snap.month && todayInGameTz(new Date(r.createdAt)) === snap.today);
   const cardIn = cards && todays.length >= CARDS_A_DAY;
   const dayCards: CardToday | null = cardIn

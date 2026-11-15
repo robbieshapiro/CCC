@@ -24,7 +24,7 @@ export type TileState = 'fresh' | 'going' | 'in' | 'elsewhere';
 export const tileState = (t: CardToday | null, cardIn: boolean): TileState =>
   t?.club ? 'elsewhere' : cardIn || t?.done ? 'in' : t && (t.scores.length || t.shots) ? 'going' : 'fresh';
 
-// A card is going at another of the member's clubs: two cards a day, whichever clubs they're played in
+// A card is going at another of the member's clubs: three cards a day, whichever clubs they're played in
 export function elsewhereLine(t: CardToday): { head: string; line: string; go: string } {
   const club = esc(t.club ?? 'your other club');
   return t.done
@@ -32,7 +32,7 @@ export function elsewhereLine(t: CardToday): { head: string; line: string; go: s
     : { head: `Your card is going at ${club}`, line: `Finish it there <b>before midnight ET</b>.`, go: `Continue at ${club}` };
 }
 
-// "Card 2 of 2", and the line about the better card counting
+// "Card 2 of 3", and the line about the best card counting
 const nth = (t: CardToday | null) => Math.min((t?.n ?? 0) + 1, t?.of ?? CARDS_A_DAY);
 const bestSoFar = (t: CardToday | null) => (t?.best != null ? ` (${toParLabel(t.best)})` : '');
 
@@ -41,20 +41,20 @@ const bestSoFar = (t: CardToday | null) => (t?.best != null ? ` (${toParLabel(t.
 export function cardTile(state: TileState, course: Course, t: CardToday | null, links: { play: string; practice: string }): string {
   if (state === 'elsewhere' && t) {
     const e = elsewhereLine(t);
-    return `<div class="card-going"><p class="eyebrow">Two cards a day, in any club</p><b>${e.head}</b></div>
+    return `<div class="card-going"><p class="eyebrow">Three cards a day, in any club</p><b>${e.head}</b></div>
       ${t.done ? `<a class="btn big" href="${links.practice}">Practice round</a>` : `<a class="btn big" href="#/" data-go-club="${esc(t.clubId ?? '')}">${e.go}</a>`}
       <p class="fine card-line">${e.line}${t.done ? '' : ` <a href="${links.practice}">Practise here</a>`}</p>`;
   }
   if (state === 'in')
-    return `<a class="btn big" href="${links.practice}">Practice round</a><p class="fine card-line">Both of today's cards are in. Your better one counts${bestSoFar(t)}. New ones at midnight.</p>`;
+    return `<a class="btn big" href="${links.practice}">Practice round</a><p class="fine card-line">All of today's cards are in. Your best one counts${bestSoFar(t)}. New ones at midnight.</p>`;
   if (state === 'going' && t)
     return `<div class="card-going"><p class="eyebrow">Card ${nth(t)} of ${t.of ?? CARDS_A_DAY} · in progress</p><b>${esc(cardStatus(course, t.scores, t.shots))}</b></div>
       <a class="btn big" href="${links.play}">Continue card ${nth(t)}</a>
       <p class="fine card-line">Finish it <b>before midnight ET</b>, or this card is forfeited. Practice opens once it's in.</p>`;
-  // one card in: the second is waiting
+  // a card or two in: the next is waiting
   if (t?.n)
-    return `<a class="btn big" href="${links.play}">Play card ${nth(t)} of ${t.of ?? CARDS_A_DAY}</a><p class="fine card-line">Card 1 is in${bestSoFar(t)}. Your better card counts. <a href="${links.practice}">Practise first</a></p>`;
-  return `<a class="btn big" href="${links.play}" data-card-note>Play today's card</a><p class="fine card-line">Two cards a day. Your better one counts. <a href="${links.practice}">Practise first</a></p>`;
+    return `<a class="btn big" href="${links.play}">Play card ${nth(t)} of ${t.of ?? CARDS_A_DAY}</a><p class="fine card-line">${t.n === 1 ? 'Card 1 is' : `${t.n} cards are`} in${bestSoFar(t)}. Your best card counts. <a href="${links.practice}">Practise first</a></p>`;
+  return `<a class="btn big" href="${links.play}" data-card-note>Play today's card</a><p class="fine card-line">Three cards a day. Your best one counts. <a href="${links.practice}">Practise first</a></p>`;
 }
 
 // The note before a fresh card: two choices that look nothing alike, so nobody starts the real thing by mistake.
@@ -69,7 +69,7 @@ export function cardNote(): Promise<'card' | 'practice' | null> {
         <span class="cn-tag">Counts</span>
         <b>Play today's card</b>
         <ul>
-          <li>Two cards a day. The better one goes on the board and the Open.</li>
+          <li>Three cards a day. The best one goes on the board and the Open.</li>
           <li>Each locks at its first swing. No restarts.</li>
           <li>Leave mid-round and it's saved on the hole you're on.</li>
           <li>Finish it before midnight ET, or that card is forfeited.</li>
