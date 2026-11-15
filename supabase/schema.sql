@@ -273,12 +273,12 @@ revoke all on function club_payouts(uuid) from public, anon, authenticated;
 -- week, however many clubs they play in, on one board; $250 in for each of them (at least $10,000 a week) and the top ten paid as above. Ties
 -- share; the Open has no playoff. Each person is paid once, on their home seat (the club the Open lists them under).
 create or replace function open_purse_from() returns text language sql immutable as $$ select '2026-11-08' $$;
--- what each player puts into the Open purse (src/purse.ts OPEN_PER_PLAYER): $250, so the winner of a 25-player week
--- takes about $1,900 and the shop stays a chase as the club grows
-create or replace function open_per_player() returns int language sql immutable as $$ select 250 $$;
--- the least the Open purse is worth in a week anyone plays (src/purse.ts OPEN_FLOOR): $10,000, so a quiet week of 15
--- still pays the winner about $3,000; past 40 players the $250 a head takes over
-create or replace function open_purse_floor() returns int language sql immutable as $$ select 10000 $$;
+-- what each player puts into the Open purse (src/purse.ts OPEN_PER_PLAYER): $1,000 (raised Nov 14 from $250, the week
+-- of Nov 8 included: the Pro Shop's typical piece is about $1,400)
+create or replace function open_per_player() returns int language sql immutable as $$ select 1000 $$;
+-- the least the Open purse is worth in a week anyone plays (src/purse.ts OPEN_FLOOR): $25,000 (was $10,000), so a quiet
+-- week still pays the winner about $7,800; past 25 players the $1,000 a head takes over
+create or replace function open_purse_floor() returns int language sql immutable as $$ select 25000 $$;
 create or replace function open_payouts()
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
 language sql stable security definer set search_path = public, extensions as $$
@@ -2433,11 +2433,13 @@ language sql stable security definer set search_path = public, extensions as $$
       (select coalesce(sum(least(500, 100 * n)), 0) from (select dp.week, count(*) as n from design_plays dp join designs d on d.id = dp.design_id where d.player_id in (select id from seats) group by dp.week) w)::int as designs,
       (select coalesce(sum(amount), 0) from bonus_grants g where g.k = lower(p.name) and g.h = p.pin_hash)::int as grants,
       -- plaques earned from Nov 12 (trophy_pay, above)
-      (select coalesce(sum(amount), 0) from trophy_pay t where t.k = lower(p.name) and t.h = p.pin_hash)::int as trophies
+      (select coalesce(sum(amount), 0) from trophy_pay t where t.k = lower(p.name) and t.h = p.pin_hash)::int as trophies,
+      -- $250 for every week (from Nov 8) with a counted card, whoever you are on the board (src/bonus.ts BONUS.week)
+      250 * (select count(distinct x.month) from rounds x where x.player_id in (select id from seats) and x.card and x.month >= '2026-11-08')::int as weeks
   )
   select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'shots', b.shots,
-    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants, 'trophies', b.trophies,
-    'total', b.rounds + b.streaks + b.ctp + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies) from b
+    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks,
+    'total', b.rounds + b.streaks + b.ctp + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies + b.weeks) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 
