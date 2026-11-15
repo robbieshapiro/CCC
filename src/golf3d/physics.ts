@@ -560,7 +560,7 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         }
       }
     }
-    if (!inPoly({ x, y }, h.border)) return finish(false, true);
+    if ((!h.obWhenLanding || !air) && !inPoly({ x, y }, h.border)) return finish(false, true);
     // secret routes count when you roll them (or putt into a jump), not when you fly over them
     if (!air || shot.club === 'putter') for (const zn of h.zones) if (!zones.has(zn.id) && inPoly({ x, y }, zn.poly)) zones.add(zn.id);
     if (keepFrames && step % 4 === 0) frames.push({ x, y, z, t });

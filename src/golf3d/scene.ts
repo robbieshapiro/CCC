@@ -9,6 +9,7 @@ import { brewFx, HAUNTED_FLOOR, HAUNTED_SURFACE, hauntedDecor, hauntedGrounds, h
 import * as stands from './stands';
 import { AUTUMN_FLOOR, AUTUMN_SURFACE, autumnDecor, autumnFrame, BARN_RED, gableRoof, maple, strawTerraces } from './autumn';
 import { wildlife } from './wildlife';
+import { zooAnimal } from './zoo';
 import { COASTAL_SURFACE, coastalDecor, coastalFrame, lighthouse, montereyCypress, torreyPine, PACIFIC, PACIFIC_BED, SANDSTONE, surf } from './coastal';
 import { mat, mesh, P } from './props';
 import { gradAt, heightAt, inPoly, levelOf, surfaceAt, wetIn } from './terrain';
@@ -721,7 +722,7 @@ export function buildWorld(h: Hole, number: number): World {
   // movers
   for (const m of h.movers) {
     if (hauntedMover(h, m, root, anim)) continue;
-    const o = m.look === 'swan' ? props.swan() : props.cart();
+    const o = m.look === 'swan' ? props.swan() : (zooAnimal(m.look) ?? props.cart());
     root.add(o);
     anim.push((clock) => {
       const s = m.at(clock);
