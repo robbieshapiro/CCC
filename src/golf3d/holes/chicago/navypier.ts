@@ -1,4 +1,4 @@
-// Hole 5, Navy Pier (par 5, 590 yd): the finish, straight out the pier into Lake Michigan with the lake on both sides
+// Hole 6, Navy Pier (par 5, 650 yd): the finish, straight out the pier into Lake Michigan with the lake on both sides
 // all the way and the wind off the water. The pier's long hall stands on the right halfway out (its roof loses a
 // ball), the Centennial Wheel turns beside the fairway, and the pier stops short: the green is on an island out in the
 // lake, nothing but water round it. Willis Tower watches from the skyline back on shore.
@@ -25,6 +25,8 @@ const HALL = building(48, 250, 30, 160, 34, 90, 'flat');
 const SLIP = { x0: 6, y0: 400, x1: 90, y1: 446 };
 const BOARDWALK = band([{ x: -66, y: 120 }, { x: -66, y: PIER_END - 6 }], 4);
 const WHEEL = { x: 46, y: 610 };
+// the tee: back on the lawn at the foot of the pier (Nov 15: from 40 ft out on the pier, 500 yd, it played like a par 4)
+const TEE = { x: 0, y: -80 };
 
 const posts: Post[] = [
   // the wheel's legs stand in play
@@ -45,27 +47,25 @@ export const navypier: Hole = {
   windByHeight: true,
   ...CHI_CUP,
   greenFirm: 0.03,
-  teeTip: 'Water both sides. A good drive leaves a wood to the island, or an iron to the end of the pier.',
-  yards: 500,
-  blurb: 'Out the pier into the lake, water both sides, to an island green past the end. After a good drive: a wood at the island, or an iron to the end of the pier.',
-  // the tee is 40 ft out along the pier since Nov 12 (the hole was 590 yd): a good drive now leaves a wood to the
-  // island or an iron to the end of the pier
-  tee: { x: 0, y: 120 },
+  teeTip: 'Three shots: a drive down the pier, a layup short of the slip or past it, then a wedge over the water to the island.',
+  yards: 650,
+  blurb: 'From the lawn at the foot of the pier, all the way out into the lake, water both sides, to an island green past the end. A true three-shotter.',
+  tee: { ...TEE },
   cup: { x: 0, y: 803 },
   pins: [{ x: 0, y: 803 }, { x: -18, y: 789 }, { x: 19, y: 809 }, { x: -5, y: 817 }],
   aim: 0,
-  bounds: { x0: -170, y0: -50, x1: 170, y1: 890 },
+  bounds: { x0: -170, y0: -150, x1: 170, y1: 890 },
   border: [
-    { x: -166, y: -46 },
-    { x: 166, y: -46 },
+    { x: -166, y: -146 },
+    { x: 166, y: -146 },
     { x: 166, y: 886 },
     { x: -166, y: 886 },
   ],
   base: 'rough',
   regions: [
-    { poly: rect(-12, 108, 12, 132), surface: 'fairway' },
+    { poly: rect(TEE.x - 12, TEE.y - 12, TEE.x + 12, TEE.y + 12), surface: 'fairway' },
     // the lawn at the foot of the pier, then the pier itself, its boardwalk, and the end
-    { poly: blob(0, 40, 70, 46, 1, 0.05), surface: 'fairway' },
+    { poly: blob(0, 10, 70, 80, 1, 0.05), surface: 'fairway' },
     // a strip down the pier, broken by the slip (half as wide again since Nov 11, and out toward the boardwalk Nov 13)
     { poly: rect(-56, 100, 30, SLIP.y0), surface: 'fairway' },
     // the lane past the slip on the boardwalk side
@@ -78,11 +78,11 @@ export const navypier: Hole = {
     ...chiGreenRegions(GREEN, SEED),
     ...traps.map((t) => t.region),
   ],
-  water: [{ poly: rect(-166, -46, 166, 886), level: 0, look: 'sea', tide: { amp: 0.4, period: 8 } }],
+  water: [{ poly: rect(-166, -146, 166, 886), level: 0, look: 'sea', tide: { amp: 0.4, period: 8 } }],
   terrain: [
     // the lake, and the land: the lawn at the foot, the pier straight out, the wider end round the green
-    { kind: 'ramp', x0: -170, y0: -50, x1: 170, y1: 890, axis: 'y', h0: -6, h1: -6, op: 'set' },
-    { kind: 'box', x0: -120, y0: -50, x1: 120, y1: 90, h: DECK, edge: 1, op: 'set' },
+    { kind: 'ramp', x0: -170, y0: -150, x1: 170, y1: 890, axis: 'y', h0: -6, h1: -6, op: 'set' },
+    { kind: 'box', x0: -120, y0: -150, x1: 120, y1: 90, h: DECK, edge: 1, op: 'set' },
     { kind: 'box', x0: -74, y0: 80, x1: 86, y1: PIER_END, h: DECK, edge: 1, op: 'set' },
     { kind: 'box', x0: ISLAND.x0, y0: ISLAND.y0, x1: ISLAND.x1, y1: ISLAND.y1, h: DECK - 2, edge: 3, op: 'set' },
     { kind: 'box', x0: SLIP.x0, y0: SLIP.y0, x1: SLIP.x1, y1: SLIP.y1, h: -6, edge: 1, op: 'set' },
@@ -98,7 +98,7 @@ export const navypier: Hole = {
   zones: [{ id: 'boardwalk', poly: BOARDWALK }],
   secret: { name: 'The Boardwalk', zone: 'boardwalk', hint: 'The planked walk down the left edge of the pier runs fast. Land one on it.' },
   flyover: [
-    { x: 0, y: -40 },
+    { x: 0, y: TEE.y - 40 },
     { x: 0, y: 300 },
     { x: 10, y: 600 },
     { x: 0, y: 690 },
@@ -106,10 +106,10 @@ export const navypier: Hole = {
   ],
   decor: [
     // a few patrons (Nov 13)
-    teeGallery({ x: 0, y: 120 }),
+    teeGallery(TEE),
     // round the island green but the front
     ...greenGallery(GREEN, -40, 220),
-    { kind: 'teebox', x: 0, y: 120 },
+    { kind: 'teebox', x: TEE.x, y: TEE.y },
     HALL.decor,
     { kind: 'ferris', x: WHEEL.x, y: WHEEL.y, rot: Math.PI / 2 },
     { kind: 'walkers', x: -52, y: 400, rot: Math.PI / 2, scale: 560, size: [12, 0, 0] },
