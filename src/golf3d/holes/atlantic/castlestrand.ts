@@ -1,4 +1,4 @@
-// Hole 3, Castle Strand (par 5, 605 yd as shown): the finisher. Up the coast with the Atlantic all down the right,
+// Hole 3, Castle Strand (par 5, 610 yd as shown): the finisher. Up the coast with the Atlantic all down the right,
 // to a green on the cliff edge under the ruined castle.
 // The play: a drive up the fairway on the cliff top, a second up to the pots, a short iron in.
 // The bail-out: left is always land. The green tips toward the sea, so leave it below the hole on the left.
@@ -56,7 +56,7 @@ export const castlestrand: Hole = {
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.06,
-  yards: 605,
+  yards: 610,
   blurb: 'Up the cliff top with the sea all down your right, to a green on the edge under the castle.',
   tee: { x: 0, y: 0 },
   cup: { x: 56, y: 824 },
