@@ -548,6 +548,14 @@ main.invite { max-width: none; min-height: 100svh; padding-block: 32px; place-it
 .notice-from b { font-family: var(--serif); font-size: 19px; color: var(--green); }
 .notice-from small { color: var(--muted); font-size: 12px; }
 .notice-body { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.notice-drop { flex: 1; min-width: 0; }
+.notice-drop > summary { list-style: none; cursor: pointer; }
+.notice-drop > summary::-webkit-details-marker { display: none; }
+.notice-head { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.notice-more { font-style: normal; font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-left: 8px; white-space: nowrap; }
+.notice-more::after { content: ' ▾'; }
+.notice-drop[open] .notice-more { display: none; }
+.notice-drop .notice-body { margin-top: 6px; }
 .notice-x { position: absolute; top: 6px; right: 8px; border: 0; background: none; cursor: pointer; font-size: 22px; line-height: 1; color: var(--muted); padding: 4px 8px; }
 .notice-composer { display: grid; gap: 12px; border-top: 3px solid var(--gold); }
 .notice-composer p { margin: 4px 0 0; }
