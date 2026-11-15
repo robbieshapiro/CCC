@@ -1,5 +1,6 @@
 // Club notices: the admin posts news to every member, signed as Reginald or as themselves.
-// Members see live notices at the top of the home page and can dismiss each one on their device.
+// Members see live notices at the top of the home page, each a drop-down they can open and close (and dismiss with the
+// x on their device).
 import { api } from '../api';
 import type { Notice } from '../api/types';
 import { reginaldSvg } from '../host';
@@ -57,12 +58,19 @@ export async function bindNotices() {
       box.hidden = !show.length;
       box.innerHTML = show
         .map(
-          (n) => `<article class="notice">
+          (n) => {
+            // a drop-down: its first sentence as the headline, the whole notice when opened (Nov 15)
+            const cut = n.body.search(/[.!?](\s|$)/);
+            const head = cut > 0 && cut < 140 ? n.body.slice(0, cut + 1) : n.body.length > 120 ? `${n.body.slice(0, 117).trimEnd()}...` : n.body;
+            const more = head !== n.body;
+            return `<article class="notice">
             ${n.asReginald ? `<span class="host-face">${reginaldSvg('dry', 46)}</span>` : ''}
-            <div><p class="notice-from"><b>${n.asReginald ? 'Reginald' : esc(n.author ?? 'The Committee')}</b><small>${day(n.createdAt)}</small></p>
-            <p class="notice-body">${esc(n.body)}</p></div>
-            <button class="notice-x" data-dismiss="${n.id}" aria-label="Dismiss">×</button>
-          </article>`,
+            <details class="notice-drop"${more ? '' : ' open'}><summary><p class="notice-from"><b>${n.asReginald ? 'Reginald' : esc(n.author ?? 'The Committee')}</b><small>${day(n.createdAt)}</small></p>
+            <p class="notice-head">${esc(head)}${more ? '<i class="notice-more" aria-hidden="true">More</i>' : ''}</p></summary>
+            ${more ? `<p class="notice-body">${esc(n.body.slice(head.length).trim())}</p>` : ''}</details>
+            <button class="notice-x" data-dismiss="${n.id}" aria-label="Close this notice">×</button>
+          </article>`;
+          },
         )
         .join('');
       box.querySelectorAll<HTMLButtonElement>('[data-dismiss]').forEach((b) => {
