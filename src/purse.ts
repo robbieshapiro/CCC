@@ -9,10 +9,11 @@ export const PER_PLAYER = 1000;
 export const SHARES = [0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725];
 
 export const purseOf = (field: number) => field * PER_PLAYER;
-// the Open purse, from Nov 8: $250 a player (open_per_player in supabase/schema.sql), so it stays a chase as the club grows,
-// and never less than $10,000 once anyone plays (open_purse_floor), so a quiet week still pays like an event
-export const OPEN_PER_PLAYER = 250;
-export const OPEN_FLOOR = 10_000;
+// the Open purse, from Nov 8: $1,000 a player (open_per_player in supabase/schema.sql), and never less than $25,000 once
+// anyone plays (open_purse_floor), so a quiet week still pays like an event. Raised Nov 14 from $250 and $10,000 (the
+// first week's payout included): the Pro Shop's typical piece is about $1,400 and its top rack $10,000 and up.
+export const OPEN_PER_PLAYER = 1000;
+export const OPEN_FLOOR = 25_000;
 export const openPurseOf = (field: number) => (field ? Math.max(field * OPEN_PER_PLAYER, OPEN_FLOOR) : 0);
 
 // rows: each member with a round, their rank (ties share it). winner: who won a playoff for first, if one was played.

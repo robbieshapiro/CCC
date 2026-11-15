@@ -279,7 +279,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           const weeks = new Map<string, number>();
           for (const x of db.designPlays ?? []) if (mine.has(x.design)) weeks.set(x.week, (weeks.get(x.week) ?? 0) + 1);
           const designs = [...weeks.values()].reduce((a, n) => a + Math.min(BONUS.designWeek, n * BONUS.designPlay), 0);
-          return { putts, chipins, secrets, designs };
+          const cardWeeks = cards.map((r) => r.month);
+          return { putts, chipins, secrets, designs, cardWeeks };
         })(),
       });
       return { earnings: got.reduce((a, x) => a + x.payout, 0), top10s: got.length, spent: bought.reduce((a, x) => a + x.price, 0), owned: [...new Set(bought.map((x) => x.item).filter(Boolean))], bonus };
