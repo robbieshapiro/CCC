@@ -1322,6 +1322,9 @@ export class Course3D {
       this.callout(over.look === 'lava' ? "The lava's come up" : "The tide's in", 'Free drop, uphill', 1800);
     }
     // practice is only on offer before the first counted stroke of the round
+    // the Flyover button is for the tee shot only
+    const fly = this.overlay.querySelector('[data-flyover]') as HTMLElement | null;
+    if (fly) fly.hidden = this.strokes > 0;
     const practice = this.overlay.querySelector('[data-practice]') as HTMLElement | null;
     if (practice) practice.hidden = !!this.drill || !(this.number === 1 && this.strokes === 0);
     this.mode = 'aim';
@@ -2365,8 +2368,10 @@ export class Course3D {
         if (ball.y - cupZ > 100) {
           // a skyscraper tee (the River): high behind the golfer, looking steeply down the drop, so the golfer is at the
           // foot of the frame and the hole, the water and the pin far below fill the rest
-          this.camPos.copy(ball).addScaledVector(dir, -22).add(new THREE.Vector3(0, 26, 0));
-          this.camLook.copy(ball).addScaledVector(dir, 150).add(new THREE.Vector3(0, -99, 0));
+          // (Nov 15: closer to level with the golfer, 12 ft up and 16 back, tilted about 20 degrees down: still enough to
+          // see over the roof's edge to the fairways below)
+          this.camPos.copy(ball).addScaledVector(dir, -16).add(new THREE.Vector3(0, 12, 0));
+          this.camLook.copy(ball).addScaledVector(dir, 150).add(new THREE.Vector3(0, -48, 0));
         } else {
           // up over the golfer's shoulder, high enough to see over the lip
           this.camPos.copy(ball).addScaledVector(dir, -12).add(new THREE.Vector3(0, 24, 0));
