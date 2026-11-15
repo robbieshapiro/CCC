@@ -4,7 +4,7 @@ import { clubPurse, money, OPEN_FLOOR, openPurseOf, placeLabel, purseOf } from '
 import type { Snapshot, CardToday } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
-import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz, CARDS_A_DAY } from '../day';
+import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz, CARDS_A_DAY, nextShown } from '../day';
 import { bindOpen } from './open';
 import { bindLive, liveCards, liveNow } from './live';
 import { bindPlayTiles, playTiles } from './playtiles';
@@ -319,7 +319,7 @@ const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 // The week's course dresses the Play hero, the board and its countdown: ember red for the Caldera, Pacific blue and a
 // sunset for the coast
 // and fall orange with a maple leaf for the Western Reserve
-const LOOKS = ['volcanic', 'coastal', 'autumn'];
+const LOOKS = ['volcanic', 'coastal', 'autumn', 'chicago'];
 export const look = (c: Course) => (LOOKS.includes(c.holes[0]?.theme ?? '') ? ` ${c.holes[0].theme}` : '');
 const leaf = (c: Course) => (c.holes[0]?.theme === 'autumn' ? '🍁 ' : '');
 
@@ -328,7 +328,8 @@ const leaf = (c: Course) => (c.holes[0]?.theme === 'autumn' ? '🍁 ' : '');
 const THEME_ICON: Record<string, string> = { autumn: '🍁', volcanic: '🌋', coastal: '🌊', chicago: '🏙️' };
 function previewBand(month: string) {
   const next = nextCourse(month);
-  if (!next) return '';
+  // not until Thursday: the week's own course has the stage until then
+  if (!next || !nextShown(todayInGameTz())) return '';
   const theme = next.holes[0]?.theme ?? '';
   const starts = periodClosesAt(month);
   const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);

@@ -14,6 +14,8 @@ export const FIRST_WEEK = '2026-11-08';
 
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const weekday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay(); // 0 Sunday
+// Next week's course is shown to members (the practice band, its practice) from Thursday of the week before (Nov 15)
+export const nextShown = (today: string) => weekday(today) >= 4;
 
 // Three cards a day (from Nov 15; two from Nov 10). The best card is the day's score (cards_a_day() in SQL)
 export const CARDS_A_DAY = 3;

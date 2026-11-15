@@ -119,7 +119,7 @@ const COURSES: Course[] = [
       'Six holes, with Lincoln Park Zoo: the animals are in play.',
       'Greens tilt: up to two and a half degrees.',
     ],
-    name: 'The Windy City',
+    name: 'The Windy City Classic',
     tagline: 'Six holes through Chicago in November: the lakefront, Millennium Park, Lincoln Park, the river, Wrigleyville and Navy Pier.',
     // Lincoln Park added Nov 14 (the zoo since Nov 15); Evanston was added with it and taken out Nov 15
     holes: [lakefront, millennium, lincolnpark, river, wrigleyville, navypier],
