@@ -1,6 +1,6 @@
 // What the cart and Reginald's tray pour, by course. The effects are the same everywhere (see DRINKS in clubs.ts: slow
 // hands, the long ball, dialled in, a clean lie, cutting the wind, and the late cart's one big swing); each
-// course names them after where it is, so the Windy City pours Malört and the Highlands a dram.
+// course names them after where it is, so the Windy City pours Malört, the Highlands a dram and the Atlantic Links a pint of stout.
 import { drinksOn, type Drink } from './clubs';
 import type { Hole } from './types';
 
@@ -48,6 +48,14 @@ const MENUS: Record<string, Menu> = {
     transfusion: { name: 'Glass of cab', colour: '#5e1a2c' },
     water: { name: 'Sparkling water', colour: '#bfe3ec' },
     fireball: { name: 'Mezcal shot', colour: '#e8e2c8', note: 'Smoky' },
+  },
+  linksland: {
+    palmer: { name: 'Tea and brown bread', colour: '#b9773a', note: 'Settling' },
+    lager: { name: 'A pint of stout', colour: '#1c1412' },
+    espresso: { name: 'Irish coffee', colour: '#4a2e1c', note: 'Cream on top' },
+    transfusion: { name: 'Hot whiskey', colour: '#c98a3a', note: 'Cloves and lemon' },
+    water: { name: 'Red lemonade', colour: '#c8452e' },
+    fireball: { name: 'A drop of poitín', colour: '#eef0ea', note: 'Go easy' },
   },
   chicago: {
     palmer: { name: 'Italian beef, dipped', colour: '#8a5a33', note: 'Heavy' },

@@ -19,6 +19,9 @@ import { thegorge } from './holes/thegorge';
 import { theledges } from './holes/theledges';
 import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
+import { sheepwalk } from './holes/atlantic/sheepwalk';
+import { punchbowl } from './holes/atlantic/punchbowl';
+import { castlestrand } from './holes/atlantic/castlestrand';
 import { lakefront } from './holes/chicago/lakefront';
 import { lincolnpark } from './holes/chicago/lincolnpark';
 import { millennium } from './holes/chicago/millennium';
@@ -125,6 +128,18 @@ const COURSES: Course[] = [
     holes: [lakefront, millennium, lincolnpark, river, wrigleyville, navypier],
     par: par([lakefront, millennium, lincolnpark, river, wrigleyville, navypier]),
     playoff: { hole: navypier, from: { x: 0, y: 640 }, label: 'Off the end of the pier' },
+  },
+  {
+    id: 'atlanticlinks',
+    // the west coast of Ireland, in the Hole Lab's links look: the Architect's draft for the week of Nov 29. A draft
+    // until Robbie has played it: then drop `draft` and it opens on the Sunday below.
+    opens: '2026-11-29',
+    draft: true,
+    name: 'The Atlantic Links',
+    tagline: 'Three holes on the west coast of Ireland. Dunes, an old stone wall, and a castle over the sea.',
+    holes: [sheepwalk, punchbowl, castlestrand],
+    par: par([sheepwalk, punchbowl, castlestrand]),
+    playoff: { hole: castlestrand, from: { x: 68, y: 590 }, label: 'Off the headland' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------
   ...(
