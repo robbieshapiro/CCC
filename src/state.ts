@@ -1,3 +1,4 @@
+import { checkVersion } from './version';
 import { api, dropSession, getSession, listSessions, setSession } from './api';
 import type { DailyCrown, RoomCourse, Session, Snapshot } from './api/types';
 import { processSnapshot } from './nudges';
@@ -98,9 +99,20 @@ export function onSnapshot(fn: (s: Snapshot) => void): () => void {
 }
 
 let timer = 0;
+// Everyone's app keeps current: the club's data and the app's own version, every 30 seconds and whenever it's
+// opened again (it was every 60 seconds, and the app itself only updated on a full restart)
 export function startPolling() {
   clearInterval(timer);
-  timer = window.setInterval(() => {
+  const tick = () => {
+    checkVersion();
     if (getSession()) refresh().catch(() => {});
-  }, 60_000);
+  };
+  timer = window.setInterval(tick, 30_000);
+  checkVersion();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') tick();
+  });
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) tick();
+  });
 }
