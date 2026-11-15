@@ -154,7 +154,7 @@ export const supabaseApi: Api = {
   courseSchedule: (s) => rpc<Record<string, string>>('course_schedule', { p_token: s.token }),
   setCourseSchedule: (s, period, course) => rpc<void>('set_course_schedule', { p_token: s.token, p_period: period, p_course: course }),
   periodHonors: (s, period) => rpc<Honors>('period_honors', { p_token: s.token, p_period: period }),
-  startRound: (s, course, card) => rpc<number | null>('start_round', card ? { p_token: s.token, p_course: course, p_card: true } : { p_token: s.token, p_course: course }),
+  startRound: (s, course, card, pars) => rpc<number | null>('start_round', card ? { p_token: s.token, p_course: course, p_card: true, ...(pars ? { p_pars: pars } : {}) } : { p_token: s.token, p_course: course }),
   // a database without daily cards yet reads as no cards
   cardToday: (s) => rpc<CardToday | null>('card_today', { p_token: s.token }).catch(() => null),
   cardProgress: (s, id, c) => rpc<void>('card_progress', { p_token: s.token, p_id: id, p_scores: c.scores, p_shots: c.shots, p_spots: c.spots, p_feats: c.feats }),

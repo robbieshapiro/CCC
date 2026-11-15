@@ -330,7 +330,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     // daily cards: three a day count, the best one is the day's score
     const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
     if (cardsOn(month) && db.rounds.filter((x) => seats.has(x.playerId) && x.month === month && todayInGameTz(new Date(x.createdAt)) === today).length >= CARDS_A_DAY)
-      throw new Error("Both of today's cards are in. Practise as much as you like.");
+      throw new Error("All of today's cards are in. Practise as much as you like.");
     if (cardsOn(month) && (db.cards ?? []).some((c) => seats.has(c.playerId) && c.playerId !== me.id && c.day === today && !c.done))
       throw new Error("Today's card is going at another club. Finish it there.");
     db.rounds.push({ playerId: me.id, groupId: me.groupId, month, course: course.id, holes, total, par: course.par, feats, spots, shots: r.shots?.slice(0, 150), createdAt: new Date().toISOString() });
@@ -914,7 +914,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const seats = new Set(db.players.filter((p) => p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin).map((p) => p.id));
     const c = cards.find((x) => seats.has(x.playerId) && x.day === today && !x.done);
     if (db.rounds.filter((x) => seats.has(x.playerId) && todayInGameTz(new Date(x.createdAt)) === today && cardsOn(x.month)).length >= CARDS_A_DAY)
-      throw new Error("Both of today's cards are in. Practise as much as you like.");
+      throw new Error("All of today's cards are in. Practise as much as you like.");
     if (c && c.playerId !== me.id) throw new Error("Today's card is going at another club. Finish it there.");
     if (c) return c.id;
     const id = cards.length + 1;
