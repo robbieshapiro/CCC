@@ -614,7 +614,8 @@ export const chicago: Kit = {
       // under the tee's surface and its walls a foot outside the block, hanging down to the street
       o = new THREE.Group();
       const t = tower(d.size[0] + 2, d.size[1] + 2, d.size[2], d.scale ?? 0);
-      t.position.y = -d.size[2] - 0.4;
+      // (its roof cap stands a foot proud of the walls: sunk so the cap sits just under the tee, not over the golfer's feet)
+      t.position.y = -d.size[2] - 1.15;
       o.add(t);
     }
     else if (d.kind === 'willis') o = willis();
