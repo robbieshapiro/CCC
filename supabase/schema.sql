@@ -657,7 +657,7 @@ create or replace function submit_round(p_token uuid, p_course text, p_holes int
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := play_seat(player_for(p_token)); n int := coalesce(array_length(p_holes, 1), 0); clean int[] := '{}'; i int; par int := 0; f text[]; sp jsonb;
 begin
-  if cards_on() and card_in(me) then raise exception 'Both of today''s cards are in. Practise as much as you like.'; end if;
+  if cards_on() and card_in(me) then raise exception 'All of today''s cards are in. Practise as much as you like.'; end if;
   -- from the daily cards, a round only counts as the card started today on that course: a round begun before midnight
   -- (last week's course, or yesterday's card) can't land on the new day's board or use up its card
   if cards_on() and (card_of(me)).player_id <> me.id then raise exception 'Today''s card is going at another club. Finish it there.'; end if;
@@ -666,6 +666,11 @@ begin
   end if;
   if n not between 1 and 9 or n <> coalesce(array_length(p_pars, 1), 0) then raise exception 'That round is not a full card.'; end if;
   if char_length(coalesce(p_course, '')) not between 1 and 40 then raise exception 'Unknown course.'; end if;
+  -- a card played on an out-of-date version of the course (an app left open across a change to its holes) doesn't count
+  -- (from Nov 15: course_pars holds each live course's holes as they are now)
+  if exists (select 1 from course_pars cp where cp.course = p_course and cp.pars <> p_pars) then
+    raise exception 'The course has changed since your app opened. Close the app and open it again, then play your card on the new course.';
+  end if;
   for i in 1..n loop
     if p_pars[i] not between 2 and 6 then raise exception 'Bad par on hole %.', i; end if;
     clean := clean || greatest(1, least(p_pars[i] + 3, p_holes[i]));
@@ -940,7 +945,7 @@ begin
       select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.group_id as home_group, p.avatar
       from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
     ), done as (
-      select distinct on (pe.home_id) pe.home_id, rd.holes, rd.spots, false as going, rd.created_at as at
+      select distinct on (pe.home_id) pe.home_id, rd.holes, rd.spots, false as going, rd.created_at as at, rd.par
       from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
       join rounds rd on rd.player_id = p.id and rd.course = p_course and rd.created_at >= t0
       where jsonb_typeof(rd.spots) = 'array'
@@ -948,15 +953,16 @@ begin
     ), going as (
       -- anyone who opened today's card and hasn't posted it counts as out on the course, from the moment they open it
       select distinct on (pe.home_id) pe.home_id, coalesce(rs.scores, '{}') as holes,
-        case when jsonb_typeof(rs.spots) = 'array' then rs.spots else '[]'::jsonb end as spots, true as going, rs.started_at as at
+        case when jsonb_typeof(rs.spots) = 'array' then rs.spots else '[]'::jsonb end as spots, true as going, rs.started_at as at, null::int as par
       from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h
       join round_starts rs on rs.player_id = p.id and rs.card and not rs.finished and rs.course = p_course and rs.started_at >= t0
       order by pe.home_id, rs.started_at desc
     ), field as (
       select * from going union all select * from done d where not exists (select 1 from going g where g.home_id = d.home_id)
     ), rows as (
-      select pe.home_id, pe.name, club_label(pe.k, pe.h, pe.home_group) as club, pe.avatar, f.holes, f.spots, f.going, f.at,
+      select pe.home_id, pe.name, club_label(pe.k, pe.h, pe.home_group) as club, pe.avatar, f.holes, f.spots, f.going, f.at, f.par,
         (select d.holes from done d where d.home_id = f.home_id) as best_holes, (select d.at from done d where d.home_id = f.home_id) as best_at,
+        (select d.par from done d where d.home_id = f.home_id) as best_par,
         (select count(*) from players p join rounds rd on rd.player_id = p.id and rd.course = p_course and rd.created_at >= t0
           where lower(p.name) = pe.k and p.pin_hash = pe.h)::int as cards,
         (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = pe.k and p2.pin_hash = pe.h and not p2.host_only) as local_id,
@@ -965,7 +971,7 @@ begin
     )
     select json_agg(json_build_object('playerId', r.home_id, 'name', r.name, 'club', r.club, 'avatar', r.avatar, 'holes', r.holes,
         'spots', r.spots, 'going', r.going, 'at', r.at, 'mine', r.mine, 'localId', r.local_id,
-        'best', r.best_holes, 'bestAt', r.best_at, 'cards', r.cards) order by r.local_id is null, r.at desc)
+        'best', r.best_holes, 'bestAt', r.best_at, 'cards', r.cards, 'par', r.par, 'bestPar', r.best_par) order by r.local_id is null, r.at desc)
     from (select * from rows order by local_id is null, at desc limit 30) r
   ), '[]');
 end $$;
@@ -1748,7 +1754,7 @@ declare me players := player_for(p_token); new_id bigint; c round_starts;
 begin
   if p_card and cards_on() then
     me := play_seat(me);
-    if card_in(me) then raise exception 'Both of today''s cards are in. Practise as much as you like.'; end if;
+    if card_in(me) then raise exception 'All of today''s cards are in. Practise as much as you like.'; end if;
     c := card_of(me);
     if c.player_id <> me.id then raise exception 'Today''s card is going at %. Finish it there.', (select g.name from groups g join players p on p.group_id = g.id where p.id = c.player_id); end if;
     if c.id is not null then return c.id; end if;
@@ -2338,6 +2344,10 @@ delete from shop_items where id in ('sequin', 'stud', 'blackdiamond') and id not
 create table if not exists course_pars (course text primary key, pars int[] not null);
 alter table course_pars enable row level security;
 insert into course_pars (course, pars) values ('highlands', '{5,3,4}'), ('caldera', '{4,5,5,3,4,4}'), ('pacificbluffs', '{4,5,3}')
+on conflict (course) do update set pars = excluded.pars;
+-- each live course's holes as they are now: submit_round refuses a card played on an older version (Nov 15). Keep it in
+-- step with src/golf3d/courses.ts whenever a course's holes change (the check in check-holes compares them).
+insert into course_pars (course, pars) values ('windycity', '{4,3,4,4,4,5}')
 on conflict (course) do update set pars = excluded.pars;
 
 -- every past day's Closest to the Pin winner across all clubs, as a person (lower name, PIN hash), ranked as
