@@ -215,7 +215,7 @@ Last updated Nov 15, 2026 (a bigger pot: $25,000 a week and $250 a card week; th
 
 ## Setup status
 
-- [ ] #294's SQL applied live (open_per_player, open_purse_floor, person_bonus): before midnight ET Nov 14 so the week of Nov 8 pays at the new rate.
+- [x] #294: applied `pr_294_bigger_pot` on Nov 14 at about 9:30 pm ET; `open_per_player` 1000 and `open_purse_floor` 25000 answer, and members' bonuses show `weeks: 250` for the week of Nov 8 (banks up $250).
 - [x] #257: applied `pr_257_nominations` on Nov 11; `admin_nominations` answers (none yet), the four member and Committee functions run for the app and `clean_phone` stays private.
 - [ ] The Greenkeeper's task (`trig_01JdY2FF8WJpwgDBMv15z7fd`, Thursdays 7:23 am ET) is made but off: Robbie attaches the repo and the Supabase connector in the routines page (claude.ai > Routines), then switches it on.
 - [ ] After the Windy City's week (Nov 15 to 21): decide whether its wind goes back to 15 to 30 mph (`gale` in `src/golf3d/conditions.ts`), from what the Greenkeeper's Thursday read says.
