@@ -139,7 +139,7 @@ const COURSES: Course[] = [
     tagline: 'Three holes on the west coast of Ireland. Dunes, an old stone wall, and a castle over the sea.',
     holes: [sheepwalk, punchbowl, castlestrand],
     par: par([sheepwalk, punchbowl, castlestrand]),
-    playoff: { hole: castlestrand, from: { x: 68, y: 590 }, label: 'Off the headland' },
+    playoff: { hole: castlestrand, from: { x: 40, y: 680 }, label: 'Under the castle' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------
   ...(

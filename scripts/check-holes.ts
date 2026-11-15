@@ -212,7 +212,7 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   // the Atlantic Links: a putt along the sheep track through the gate, off the bank behind the green, a drive onto the hard sand
   sheepwalk: { from: { x: 2, y: 398 }, clubs: ['putter', 'chip'], angles: [4, 24] },
   punchbowl: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-6, 6] },
-  castlestrand: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [8, 22], near: 300 },
+  castlestrand: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [14, 30], near: 340 },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
