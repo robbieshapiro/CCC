@@ -99,15 +99,15 @@ export function onSnapshot(fn: (s: Snapshot) => void): () => void {
 }
 
 let timer = 0;
-// Everyone's app keeps current: the club's data and the app's own version, every 30 seconds and whenever it's
-// opened again (it was every 60 seconds, and the app itself only updated on a full restart)
+// Everyone's app keeps current: the club's data and the app's own version, once a minute and whenever it's opened
+// again (the version is also checked on every move to a new page: src/version.ts)
 export function startPolling() {
   clearInterval(timer);
   const tick = () => {
     checkVersion();
     if (getSession()) refresh().catch(() => {});
   };
-  timer = window.setInterval(tick, 30_000);
+  timer = window.setInterval(tick, 60_000);
   checkVersion();
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') tick();

@@ -1,5 +1,6 @@
 // Keeping everyone's app current (Nov 15). Each build carries its version (scripts/stamp-version.mjs), and the live
-// one is at /version.json. On opening the app and every 30 seconds it checks; if a newer version is live it reloads,
+// one is at /version.json. On opening the app, on moving to a new page, and once a minute it checks (every 30 seconds
+// was too much, Nov 15); if a newer version is live it reloads,
 // but never in the middle of a round or a game: it waits until you leave it (a card in progress picks up where it
 // left off anyway). Before this, an app left open for a day kept playing last week's version of the course.
 const MINE = import.meta.env.VITE_COMMIT ?? 'dev';
@@ -35,7 +36,10 @@ export async function checkVersion() {
   if (!busy()) reload(live);
 }
 
-// leaving a round or a game with a newer version waiting: reload then
+// moving to a new page: reload if a newer version is already known to be waiting (leaving a round or a game, say),
+// otherwise check for one, unless the new page is a round or a game
 window.addEventListener('hashchange', () => {
-  if (stale && !busy()) reload(live);
+  if (busy()) return;
+  if (stale) reload(live);
+  else checkVersion();
 });
