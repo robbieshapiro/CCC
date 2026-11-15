@@ -92,7 +92,7 @@ const COURSES: Course[] = [
     // then; it never counts.
     opens: '2026-11-08',
     whatsNew: [
-      'Two cards a day count, and the better one is your score for the day. Each locks at its first swing.',
+      'Three cards a day count, and the best one is your score for the day. Each locks at its first swing.',
       'Thick rough. Find the fairway.',
       'Quick, tiered greens.',
       'Light wind. It moves high shots more than low ones.',

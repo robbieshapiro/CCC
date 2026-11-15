@@ -14,11 +14,14 @@ import { CHI_CUP, CHI_TURF, CHI_WALLS, chiGreen, chiGreenRegions, greenGallery, 
 
 const LAND = 6;
 const SEED = 6;
-const GREEN = { x: 46, y: 548, rx: 24, ry: 18 };
+// a small green, up on its rise and ringed in sand (smaller and tighter since Nov 15: it played about par)
+const GREEN = { x: 46, y: 548, rx: 19, ry: 14 };
 const traps = [
-  greenside(GREEN, 6, 566, 8, 10, 1, 3, 0),
-  greenside(GREEN, 78, 528, 9, 7, 2, 3, 0),
-  greenside(GREEN, 30, 506, 10, 5, 3, 3, 0),
+  greenside(GREEN, 6, 566, 8, 10, 1, 3.4, 0, 2),
+  greenside(GREEN, 78, 528, 9, 7, 2, 3.4, 0, 2),
+  greenside(GREEN, 30, 506, 10, 5, 3, 3.4, 0, 2),
+  greenside(GREEN, 70, 580, 9, 6, 5, 3.4, 0, 2),
+  greenside(GREEN, 40, 594, 10, 5, 6, 3.4, 0, 2),
   // a fairway bunker in the right half where a good drive lands
   bunker(12, 300, 11, 9, 4, FAIRWAY_DEPTH, 0),
 ];
@@ -96,7 +99,7 @@ export const lincolnpark: Hole = {
   blurb: 'Through Lincoln Park Zoo: giraffes and zebras left, the elephant right, the Lion House by the green. The animals are in play.',
   tee: { x: 0, y: 0 },
   cup: { x: 46, y: 551 },
-  pins: [{ x: 46, y: 551 }, { x: 30, y: 541 }, { x: 62, y: 556 }, { x: 40, y: 562 }],
+  pins: [{ x: 46, y: 551 }, { x: 36, y: 544 }, { x: 56, y: 553 }, { x: 43, y: 558 }],
   aim: 0,
   bounds: { x0: -200, y0: -110, x1: 210, y1: 660 },
   border: [
@@ -108,7 +111,7 @@ export const lincolnpark: Hole = {
   base: 'rough',
   regions: [
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
-    { poly: band(LINE, 19), surface: 'fairway' },
+    { poly: band(LINE, 15), surface: 'fairway' },
     // the zoo's paths, round the enclosures
     { poly: rect(-34, 90, -26, 480), surface: 'path' },
     { poly: rect(30, 140, 38, 430), surface: 'path' },
@@ -126,7 +129,7 @@ export const lincolnpark: Hole = {
     { kind: 'disc', x: 0, y: 0, r: 14, h: LAND + 1.5, edge: 6, op: 'set' },
     // the green sits up on a rise, falling away to the bunkers
     { kind: 'hill', x: GREEN.x, y: GREEN.y, r: 60, h: 2.5 },
-    ...chiGreen(GREEN, LAND + 2.5, [0.5, 0.6], [[-7, -5, 6, 0.25], [8, 5, 5, -0.2]], 2.5),
+    ...chiGreen(GREEN, LAND + 2.5, [0.5, 0.6], [[-5, -4, 5, 0.25], [6, 4, 4, -0.2]], 2.5),
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: [...rail(SAVANNA), ...rail(YARD), ...LIONS.walls, ...GLASS.walls],

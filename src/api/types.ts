@@ -219,8 +219,8 @@ export type HoleReport = {
 };
 // Today's card: whether it's in, and where one in progress stands (holes done, strokes on the hole being played)
 export type CardProgress = { scores: number[]; shots: number; spots: (Spot | null)[]; feats: string[] };
-// club/clubId: set when a card is going at another of the member's clubs, or all of today's cards are in there (two a day per person)
-// done: all of today's cards are in; n: how many are in; of: cards a day; best: the better card's to-par so far
+// club/clubId: set when a card is going at another of the member's clubs, or all of today's cards are in there (three a day per person)
+// done: all of today's cards are in; n: how many are in; of: cards a day; best: the best card's to-par so far
 export type CardToday = CardProgress & { done: boolean; n?: number; of?: number; best?: number | null; id: number | null; course: string | null; club?: string | null; clubId?: string | null };
 // locker: yours to use; waiting: curses waiting for your next counting round (what and who stay a surprise);
 // sentThisWeek: curses you've sent; news: the week's goings-on (see newsLine in src/powerups.ts)
