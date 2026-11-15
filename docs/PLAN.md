@@ -28,7 +28,7 @@ Last updated Nov 15, 2026 (the River's green striped, Navy Pier 650 yd; a bigger
 
 | PR | What |
 |---|---|
-| #296 | The River's green is striped again (the green's mowing stripes stopped short on a hole whose map starts far behind the tee, which the River's moved-back tee made). Navy Pier is a true par 5: the tee is back on the lawn at the foot of the pier, 650 yd (was 500, played like a par 4). |
+| #295 | The River's green is striped again (the green's mowing stripes stopped short on a hole whose map starts far behind the tee, which the River's moved-back tee made). Navy Pier is a true par 5: the tee is back on the lawn at the foot of the pier, 650 yd (was 500, played like a par 4). |
 | #294 | A bigger pot: the Open purse is $1,000 a player and never less than $25,000 a week (was $250 and $10,000), from the week of Nov 8's payout on; and $250 to everyone who posts a counted card in a week, wherever they finish (side money, in the Pro Shop's "Weeks played"). For the week of Nov 8 (11 on the board) the winner takes about $7,400 where it was $3,000, and tenth about $1,100. |
 | #293 | The Windy City is released: no longer a draft, opening Nov 15 on the calendar as well as on the Committee's schedule, so its plaques (each hole's secret, Mastered the Windy City) show in the Trophy Room. |
 | #292 | Rooftop tees: the building's roof cap no longer pokes up over the golfer's feet and club. The skyscraper tee (the River) is viewed closer to level with the golfer, 12 ft up and 16 back, still tilted enough to see the fairways below. The Flyover button shows on the tee shot only, on every course. |
