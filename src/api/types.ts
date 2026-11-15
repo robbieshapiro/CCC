@@ -122,7 +122,7 @@ export type OpenRow = { playerId: string; name: string; club: string; mine: bool
 // Today's field on a course, every club (course_field): a card in, or the holes so far of one in progress
 // playerId: the person as the Open names them; mine: you; at: when the card went in, or was started
 // best: their better card in today (also while they're out on another); cards: how many of today's cards they've posted
-export type FieldRow = { best?: number[] | null; bestAt?: string | null; cards?: number; playerId: string; name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; at: string; mine: boolean; localId: string | null };
+export type FieldRow = { best?: number[] | null; bestAt?: string | null; cards?: number; par?: number | null; bestPar?: number | null; playerId: string; name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; at: string; mine: boolean; localId: string | null };
 // A course's record over every round ever played on it, every club (course_records): free play on a classic course counts
 export type CourseRecord = { course: string; toPar: number; holders: { name: string; club: string }[] | null; mine: number | null; rounds: number; champions: { name: string; club: string; toPar: number }[] };
 // Season points, FedEx Cup style (season_standings): banked from closed weeks, projected from this week's place
@@ -350,7 +350,8 @@ export interface Api {
   adminKpis(session: Session): Promise<AdminKpis>;
   // a counted round's start, how far it got, and whether it finished
   // card: today's card (the same one all day, so a card cut short picks up where it left off)
-  startRound(session: Session, course: string, card?: boolean): Promise<number | null>;
+  // pars: the holes the app has for the course, so a card won't open on an out-of-date version of it
+  startRound(session: Session, course: string, card?: boolean, pars?: number[]): Promise<number | null>;
   roundProgress(session: Session, id: number, hole: number, finished: boolean): Promise<void>;
   // daily cards (from Nov 8): null before they start
   cardToday(session: Session): Promise<CardToday | null>;

@@ -1,3 +1,4 @@
+import { freshBeforeCard } from '../version';
 // A full round: every hole of this period's course in one go, then the card goes up on the board. From Nov 8 that's
 // today's card: one a day counts, locked at the first swing, and picked up where it left off if it's cut short.
 // A preview round (the admin, every hole of a course still to come) and a practice round (any member: the first few
@@ -165,10 +166,16 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     if (today?.club) return cardIn(snap, undefined, today);
     if (today?.done) return cardIn(snap);
     if (today) {
+      // an app on an out-of-date version reloads before the card opens, so nobody plays a card that can't count
+      if (await freshBeforeCard()) return;
       try {
-        cardId = await api.startRound(requireSession(), full.id, true);
+        cardId = await api.startRound(requireSession(), full.id, true, full.holes.map((h) => h.par));
       } catch (err) {
         if (/already in|cards are in|going at/i.test((err as Error).message)) return cardIn(snap);
+        if (/course has changed/i.test((err as Error).message)) {
+          render(`<main class="narrow"><h1>The course has changed</h1><p class="muted">It changed since your app opened. Reload to play today's card on the new course. Nothing has been played, and your card is still waiting.</p><button class="btn big" onclick="location.reload()">Reload</button></main>`);
+          return;
+        }
       }
     }
   }

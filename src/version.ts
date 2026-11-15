@@ -22,6 +22,14 @@ function reload(live: string) {
 }
 
 let live = '';
+// Before a card opens: a newer version waiting means reload now, while nothing has been played (true: reloading)
+export async function freshBeforeCard(): Promise<boolean> {
+  await checkVersion();
+  if (!stale) return false;
+  reload(live);
+  return true;
+}
+
 export async function checkVersion() {
   if (MINE === 'dev') return;
   try {
