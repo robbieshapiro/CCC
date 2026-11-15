@@ -2217,3 +2217,15 @@ body.room-open { background: #030a12; }
 .preview-band.chicago { background: radial-gradient(110% 150% at 100% 0%, rgba(120, 160, 230, 0.4), transparent 58%), linear-gradient(120deg, #0d1730, #1c2f5c 55%, #35508f); border-color: #4a6aa8; }
 .preview-band.chicago .pb-go { background: #ffd23f; color: #0d1730; }
 @media (max-width: 520px) { .preview-band { flex-wrap: wrap; } .preview-band .pb-go { flex: 1 1 100%; text-align: center; } }
+
+/* The Windy City Classic: dark city blue, the lake at night, a gold light (Nov 15) */
+.play-hero.chicago { background: radial-gradient(90% 70% at 100% 105%, rgba(255, 210, 63, 0.22), transparent 62%), radial-gradient(110% 150% at 100% 0%, rgba(120, 160, 230, 0.32), transparent 58%), linear-gradient(160deg, #0b1428, #142650 55%, #22407a); box-shadow: 0 12px 34px -12px rgba(11, 20, 40, 0.65); }
+.play-hero.chicago .btn.big { background: #ffd23f; border-color: #ffd23f; color: #0d1730; }
+.play-hero.chicago .btn.big:hover { background: #ffde6e; }
+.play-hero.chicago .play-main .eyebrow, .play-hero.chicago .play-reg b { color: #ffd23f; }
+.play-hero.chicago .play-main .muted { color: #c6d3ec; }
+.board.chicago { --felt: #13244a; background: linear-gradient(160deg, #0d1a36, #132650 60%, #1a3062); border-color: #070e1e; }
+.board.chicago td.who em, .board.chicago .scorecard tr.par td { color: #a9bbdd; }
+.countdown.chicago { background: linear-gradient(90deg, #13244a, #2c4a8a); color: #eef3ff; }
+.whats-new.chicago .wn-card { border-top-color: #2c4a8a; background: linear-gradient(180deg, #eef2fb, var(--paper) 40%); }
+.pm-classic.chicago { background: linear-gradient(160deg, #0b1428, #142650 55%, #22407a); }

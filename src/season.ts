@@ -8,4 +8,8 @@ export const seasonPoints = (place: number) => SEASON_POINTS[place - 1] ?? SEASO
 // then that week's Open
 export const seasonEventName = (courseName: string, period: string) =>
   period < '2026-11-08' ? `The ${courseName.replace(/^The /, '').replace(/ Course$/, '')}` : openName(courseName, period);
-export const openName = (courseName: string, period: string) => `The ${period.slice(0, 4)} ${courseName.replace(/^The /, '').replace(/ Course$/, '')} Open`;
+// (a course already named as an event, "the Windy City Classic", isn't an Open as well)
+export const openName = (courseName: string, period: string) => {
+  const n = courseName.replace(/^The /, '').replace(/ Course$/, '');
+  return `The ${period.slice(0, 4)} ${n}${/ (Classic|Open|Invitational)$/.test(n) ? '' : ' Open'}`;
+};
