@@ -12,11 +12,8 @@ import { inviteLink } from './invite';
 // ---------- members ----------
 
 export function nominateTile() {
-  return `<section class="nominate" id="nominate">
-    <span class="nm-icon" aria-hidden="true">✉️</span>
-    <span class="nm-text"><b>Know someone who'd love it here?</b><small id="nm-line">Put them up for membership. Reginald does the rest.</small></span>
-    <button class="btn small" data-nominate>Nominate a friend</button>
-  </section>`;
+  // just the button (Nov 16: the question and the pitch were too much)
+  return `<section class="nominate" id="nominate"><button class="btn ghost small" data-nominate>Nominate a friend</button></section>`;
 }
 
 // the tile's second line: a friend who joined lately, or one still with the Committee
