@@ -28,7 +28,7 @@ Last updated Nov 16, 2026 (Nominate a friend is just a button; today's cards sco
 
 | PR | What |
 |---|---|
-| #302 | Nominate a friend is just the button on home, no question or pitch around it. |
+| #303 | Nominate a friend is just the button on home, no question or pitch around it. |
 | #301 | Today's cards shows each card's own score against its own par, as the board does (it worked par out from this week's course, so Tyler's card from an old app read +3 there and +2 on the board). A card won't open on an out-of-date version of the course: the app reloads first if a newer version is live, and the server refuses to open a card whose holes don't match (a refusal at posting stays as the backstop for older apps) (course_pars now holds each live course's holes as they are, and check-holes fails if it falls out of step with the code). "All of today's cards are in" (was "Both"). |
 | #300 | The app checks for a new version once a minute (was every 30 seconds) and whenever you move to a new page, never in the middle of a round or a game; the club's data refreshes once a minute again. |
 | #299 | Club notices are drop-downs: the first sentence as a headline with More, the whole notice when opened, and the x to close it as before. Posted live at all three clubs (Nov 15): the Western Reserve's payouts, and "close the app and reopen it once" for the self-updating app. |
