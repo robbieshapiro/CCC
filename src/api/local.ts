@@ -18,6 +18,7 @@ import { CURSES_A_WEEK, LOCKER_MAX, powerOf } from '../powerups';
 import type { Tweaks } from '../golf3d/tweaks';
 import { ACE_ADD, ACE_SEED, ACE_SWINGS } from '../acepot';
 import { BACK_ODDS, backLine, daysLeft, priceField } from '../book';
+import { UTH_ANTES, UTH_TRIPS, uthSettle, type UthStage, type UthView } from '../uth';
 import { MAX_OVER_PAR, type CourseRequest, type AgentNote, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type Snapshot, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
@@ -26,7 +27,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { aceSwings?: { playerId: string; day: string; holed: boolean; ft: number | null; pot: number; payout: number; at: string }[]; schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book'; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
+type Db = { aceSwings?: { playerId: string; day: string; holed: boolean; ft: number | null; pot: number; payout: number; at: string }[]; schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book' | 'uth'; uth?: { cards: number[]; ante: number; trips: number; play: number; stage: UthStage; result: UthView['result'] }; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -1210,6 +1211,68 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return { id, stake: g.stake, payout: g.payout, won, bank: await localBank(session), lostToday: lostToday(db, me.id) };
   },
 
+  // Ultimate Texas Hold'em, as uth_state, uth_deal and uth_act do it
+  async uthState(session) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const h = (db.casino ?? []).filter((x) => x.game === 'uth' && x.playerId === me.id && x.payout === null).pop();
+    return { hand: h ? uthViewLocal(db, me, h, await localBank(session)) : null, bank: await localBank(session), lostToday: lostToday(db, me.id) };
+  },
+
+  async uthDeal(session, ante, trips) {
+    await gateLocal(session, 'uth');
+    if (!UTH_ANTES.includes(ante)) throw new Error('The Ante is $10, $25, $50 or $100.');
+    if (!UTH_TRIPS.includes(trips)) throw new Error('Trips is $10, $25 or $50, or none.');
+    let db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    if ((db.casino ?? []).some((x) => x.game === 'uth' && x.playerId === me.id && x.payout === null)) throw new Error('Finish the hand in front of you first.');
+    await casinoCheckLocal(session, 2 * ante + trips);
+    db = load();
+    const deck = [...Array(52).keys()];
+    for (let i = 51; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    const list = (db.casino ??= []);
+    const h = { id: list.length + 1, playerId: me.id, stake: 2 * ante + trips, payout: null as number | null, at: new Date().toISOString(), p: [], d: [], deck: [], doubled: false, outcome: null, game: 'uth' as const, uth: { cards: deck.slice(0, 9), ante, trips, play: 0, stage: 'pre' as UthStage, result: null } };
+    list.push(h);
+    save(db);
+    return uthViewLocal(db, me, h, await localBank(session));
+  },
+
+  async uthAct(session, id, action) {
+    let db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    let h = (db.casino ?? []).find((x) => x.id === id && x.game === 'uth' && x.playerId === me.id);
+    if (!h || !h.uth) throw new Error('No such hand.');
+    if (h.payout !== null) throw new Error('That hand is over.');
+    const u = h.uth;
+    const mult = u.stage === 'pre' && action === 'play4' ? 4 : u.stage === 'pre' && action === 'play3' ? 3 : u.stage === 'flop' && action === 'play2' ? 2 : u.stage === 'river' && action === 'play1' ? 1 : 0;
+    const settle = (folded: boolean) => {
+      const r = uthSettle(u.ante, u.trips, u.play, u.cards.slice(0, 2), u.cards.slice(2, 4), u.cards.slice(4, 9), folded);
+      u.stage = 'done';
+      u.result = r;
+      h!.payout = r.payout;
+    };
+    if (mult) {
+      await casinoCheckLocal(session, mult * u.ante);
+      db = load();
+      h = db.casino!.find((x) => x.id === id)!;
+      Object.assign(h.uth!, u);
+      h.stake += mult * u.ante;
+      h.uth!.play = mult * u.ante;
+      const v = h.uth!;
+      const r = uthSettle(v.ante, v.trips, v.play, v.cards.slice(0, 2), v.cards.slice(2, 4), v.cards.slice(4, 9), false);
+      v.stage = 'done';
+      v.result = r;
+      h.payout = r.payout;
+    } else if (action === 'check' && (u.stage === 'pre' || u.stage === 'flop')) u.stage = u.stage === 'pre' ? 'flop' : 'river';
+    else if (action === 'fold' && u.stage === 'river') settle(true);
+    else throw new Error("You can't do that now.");
+    save(db);
+    return uthViewLocal(db, me, h, await localBank(session));
+  },
+
   // Mo's Book, as book_state, book_bet and book_settle do it
   async bookState(session) {
     const db = load();
@@ -1942,6 +2005,12 @@ async function casinoCheckLocal(session: { token: string }, more: number) {
 function bjViewLocal(db: Db, me: DbPlayer, h: NonNullable<Db['casino']>[number]): BjView {
   const done = h.payout !== null;
   return { id: h.id, stake: h.stake, payout: h.payout, done, outcome: h.outcome, doubled: h.doubled, player: h.p, playerTotal: bjValue(h.p), dealer: done ? h.d : [h.d[0]], dealerTotal: bjValue(done ? h.d : [h.d[0]]), bank: 0, lostToday: lostToday(db, me.id) };
+}
+// a hand as the phone may see it, as uth_view does: Mo's cards and the rest of the board only as the hand reaches them
+function uthViewLocal(db: Db, me: DbPlayer, h: NonNullable<Db['casino']>[number], bank: number): UthView {
+  const u = h.uth!;
+  const shown = u.stage === 'pre' ? 0 : u.stage === 'flop' ? 3 : 5;
+  return { id: h.id, stage: u.stage, ante: u.ante, trips: u.trips, play: u.play, player: u.cards.slice(0, 2), dealer: u.stage === 'done' ? u.cards.slice(2, 4) : [], board: u.cards.slice(4, 4 + shown), result: u.result, bank, lostToday: lostToday(db, me.id) };
 }
 // Mo's Book: the field as book_field prices it (people by name and PIN, their home seat the first they joined with)
 function bookFieldLocal(db: Db) {
