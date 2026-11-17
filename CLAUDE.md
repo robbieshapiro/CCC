@@ -8,6 +8,16 @@ A private online golf club for friends: a 3D course each month, a daily Closest 
 2. Work from the latest `main`. If your branch is behind `origin/main`, merge main in before you start. The session-start hook warns you when it is.
 3. Keep to what was asked. Ideas go in the plan's "Next up", not into the PR.
 
+## Autopilot (since Nov 17, 2026)
+
+The club runs itself. Robbie gets involved only when he wants to.
+
+- **In chat, just build.** Do what he asked, run the checks, open the PR, merge it yourself when `checks` is green, apply its SQL live, verify, then tell him in a line or two that it's live. Never ask him to say merge. Ask a question only when a request could go two very different ways.
+- **Who may write live data:** a merged PR's SQL; a one-off Robbie asked for in chat; the agents' named duties (a note in the Committee Room, a new course's `course_pars` row, the Steward's Sunday payout notice). Nothing else. Never drop, delete or rewrite live data unasked.
+- **The agents** (scheduled tasks, fresh sessions, phone notifications off): the Architect (Sundays) builds the course two weeks out and ships it; the Greenkeeper (Thursdays) tunes next week's course to the shot data and ships it; the Steward (daily) checks the club, posts the payout notice on Sundays and checks next week's course on Saturdays. Their skills are in `.claude/skills/`.
+- **Every agent run ends with a note in the Committee Room** (Admin > Overview, "From the agents": `select agent_note(agent, title, body, link, needs_you)`), never with "go look at a PR". A new course's note links `#/preview/<id>` so he can play it from Admin. `needs_you` only when something is stuck.
+- **Weekly courses:** 5 to 9 holes, a different count from the week before, at the difficulty members liked (the Caldera and the Windy City Classic: member +1.2 to +1.8 a hole on the CCC Rating). Not drafts: `opens` its Sunday puts it on. Robbie can swap any week in Admin > Course > "The weeks ahead".
+
 ## Before you push
 
 The Checks workflow runs all of this on every PR and has to pass before merging. Run them yourself first anyway.
@@ -27,7 +37,7 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
   - start it with `su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/tmp/pg/data -o '-p 5433 -k /var/tmp/pg' -l /var/tmp/pg/log start"`;
   - connect with `PGOPTIONS='-c search_path=public,extensions' psql -h /var/tmp/pg -p 5433`;
   - pipe files in with `cat file | su postgres -c "psql ..."`, because the postgres user can't read the scratchpad.
-- **Live SQL: use the `live-sql` skill** (`.claude/skills/live-sql/`) for anything touching the live database: applying a PR's SQL, one-off data fixes, and reading live data. Writes run without a prompt (allowed in `.claude/settings.json`): Robbie's go-ahead is saying merge (for a PR's SQL) or asking for the change in chat (a one-off). Never write live data otherwise.
+- **Live SQL: use the `live-sql` skill** (`.claude/skills/live-sql/`) for anything touching the live database: applying a PR's SQL, one-off data fixes, and reading live data. Writes run without a prompt (allowed in `.claude/settings.json`). Who may write is under Autopilot above. Never write live data otherwise.
 - **The Architect can review a PR.** Fire its scheduled task (`fire_trigger`) with extra text saying "review, don't build", naming the PR and the checks to run. It posts one comment on the PR, and takes 30 to 60 minutes.
 
 ## Conventions
@@ -46,10 +56,10 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
 
 The `live-sql` skill has the full steps; the short version:
 
-Claude applies database changes itself through the Supabase connector (project "CCC", id `xixfekrwgyknbzttyrtp`), with no approval prompt since Nov 17: the prompt only showed inside the chat for a minute and Robbie never saw it. His "merge" is the go-ahead for a PR's SQL. Robbie no longer pastes SQL.
+Claude applies database changes itself through the Supabase connector (project "CCC", id `xixfekrwgyknbzttyrtp`), with no approval prompt since Nov 17: the prompt only showed inside the chat for a minute and Robbie never saw it. A merged PR is the go-ahead for its SQL. Robbie no longer pastes SQL.
 
 1. Test first, every time: start a scratch Postgres (`/usr/lib/postgresql/16/bin`; create the `anon` and `authenticated` roles), load the whole `supabase/schema.sql`, seed what the change touches, and check the result. Then load it again on top to prove it re-runs.
-2. Apply to live only after the PR merges (or when Robbie says): just that PR's statements, as copied from `schema.sql`, with `apply_migration` named after the PR (e.g. `pr_118_purse`).
+2. Apply to live right after the PR merges (or when Robbie says): just that PR's statements, as copied from `schema.sql`, with `apply_migration` named after the PR (e.g. `pr_118_purse`).
 3. Verify right after with a read-only `select` (the function is there and says what it should; the rows look right), and tick the box in the plan.
 4. One-off data changes (like the Boomtown merge) are a single all-or-nothing `do` block that checks what it's about to touch and stops, changing nothing, on any surprise. They go in the PR description, not `schema.sql`.
 5. Read-only queries are fine any time to check something. Never drop, delete or rewrite live data unless Robbie asked for that change.

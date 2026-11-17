@@ -3590,3 +3590,37 @@ grant execute on function set_course_tweak(uuid, text, int, jsonb) to anon;
 grant execute on function course_request_add(uuid, text, int, text) to anon;
 grant execute on function course_requests_list(uuid) to anon;
 grant execute on function course_request_done(uuid, bigint, boolean) to anon;
+
+-- From the agents (Nov 17): every scheduled agent (the Architect, the Greenkeeper, the Steward) ends its run with a
+-- note here instead of a phone notification, and the Committee reads them at the top of the Committee Room. link: where
+-- to go (a course's preview, '#/preview/<id>', or a PR's URL). needs_you: something only Robbie can sort out.
+create table if not exists agent_notes (
+  id bigserial primary key,
+  agent text not null check (char_length(agent) between 1 and 40),
+  title text not null check (char_length(title) between 1 and 160),
+  body text check (char_length(body) <= 2000),
+  link text check (char_length(link) <= 300),
+  needs_you boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table agent_notes enable row level security;
+
+-- for the agents, through the Supabase connector (no grant to the app)
+create or replace function agent_note(p_agent text, p_title text, p_body text default null, p_link text default null, p_needs_you boolean default false) returns bigint
+language sql security definer set search_path = public, extensions as $$
+  insert into agent_notes (agent, title, body, link, needs_you) values (left(p_agent, 40), left(p_title, 160), left(p_body, 2000), left(p_link, 300), coalesce(p_needs_you, false))
+  returning id
+$$;
+revoke all on function agent_note(text, text, text, text, boolean) from public, anon, authenticated;
+
+-- the last 20 notes, for the Committee: anything that needs Robbie first
+create or replace function agent_notes_list(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  if not is_committee(me) then raise exception 'Only the committee can see that.'; end if;
+  return coalesce((select json_agg(json_build_object('id', n.id, 'agent', n.agent, 'title', n.title, 'body', n.body, 'link', n.link,
+      'needsYou', n.needs_you, 'at', n.created_at) order by n.created_at desc)
+    from (select * from agent_notes order by created_at desc limit 20) n), '[]');
+end $$;
+grant execute on function agent_notes_list(uuid) to anon;
