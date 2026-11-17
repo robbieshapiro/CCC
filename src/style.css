@@ -2168,3 +2168,23 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
   .adm-tabs { gap: 2px; }
   .adm-tabs button { flex: 1 1 auto; padding: 8px 6px; font-size: 13px; }
 }
+
+/* Mo's Book (Nov 17): the field with its prices, back yourself, your bets */
+.book-sec { display: grid; gap: 10px; padding: 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); }
+.book-sec h2 { margin: 0; font: 700 20px var(--serif); color: var(--green); }
+.book-sec h2 small { font: 600 12px var(--font); color: var(--muted); margin-left: 6px; }
+.book-sec p { margin: 0; }
+.book-closed { padding: 8px 10px; border-radius: 8px; background: #fff4dc; font-size: 14px; }
+.book-field, .book-bets { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.book-field li, .book-bets li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: #fff; border: 1px solid var(--line); }
+.book-bets li { grid-template-columns: 1fr auto; }
+.book-field li.me { border-color: var(--gold); }
+.book-field li div, .book-bets li div { display: grid; gap: 1px; min-width: 0; }
+.book-field small, .book-bets small { color: var(--muted); font-size: 12px; }
+.book-field em { font: 800 18px var(--font); font-style: normal; color: var(--green); font-variant-numeric: tabular-nums; }
+.book-field .btn.small { padding: 8px 10px; font-size: 12px; white-space: nowrap; }
+.book-bets em { font-style: normal; font-weight: 800; font-size: 13px; }
+.book-bets em.won { color: #1f7a3a; }
+.book-bets em.lost { color: #b3261e; }
+.book-bets em.open { color: var(--muted); }
+#book-body { display: grid; gap: 12px; }

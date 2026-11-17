@@ -16,6 +16,7 @@ import { card, leaveCard } from './screens/card';
 import { leaveShop } from './screens/shop';
 import { aceRound, barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { playoff } from './screens/playoff';
+import { book } from './screens/book';
 import { clubhouse, isAboutPart, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
@@ -86,6 +87,7 @@ async function router() {
     if (page === 'daily') return dailyRound(s);
     if (page === 'playoff') return playoff(s);
     if (page === 'bar' && arg === 'ace') return aceRound(s);
+    if (page === 'bar' && arg === 'book') return book(s);
     if (page === 'bar' && arg === 'blackjack') return blackjack(s);
     if (page === 'bar' && arg === 'popashot') return popashot(s);
     if (page === 'bar' && arg === 'billiards') return billiards(s);

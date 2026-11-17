@@ -17,6 +17,7 @@ import { SAMPLES } from '../designer/samples';
 import { CURSES_A_WEEK, LOCKER_MAX, powerOf } from '../powerups';
 import type { Tweaks } from '../golf3d/tweaks';
 import { ACE_SEED, ACE_STAKE, ACE_SWINGS } from '../acepot';
+import { BACK_ODDS, backLine, daysLeft, priceField } from '../book';
 import { MAX_OVER_PAR, type CourseRequest, type AgentNote, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type Snapshot, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
@@ -25,7 +26,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot'; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
+type Db = { schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book'; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -1187,6 +1188,60 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return { id, stake: g.stake, payout: g.payout, won, bank: await localBank(session), lostToday: lostToday(db, me.id) };
   },
 
+  // Mo's Book, as book_state, book_bet and book_settle do it
+  async bookState(session) {
+    const db = load();
+    bookSettleLocal(db);
+    save(db);
+    const me = homeOf(db, playerByToken(db, session.token));
+    const week = periodOf(todayInGameTz());
+    const field = bookFieldLocal(db);
+    const myKey = `${me.name.toLowerCase()}|${me.pin}`;
+    const mine = field.find((f) => f.key === myKey);
+    const seats = new Set(db.players.filter((p) => `${p.name.toLowerCase()}|${p.pin}` === myKey).map((p) => p.id));
+    const posted = db.rounds.some((r) => r.month === week && seats.has(r.playerId));
+    const bets = (db.casino ?? []).filter((x) => x.game === 'book' && x.book && seats.has(x.playerId));
+    const backed = bets.some((x) => x.book!.week === week && x.book!.kind === 'back');
+    const open = daysLeft(week, todayInGameTz()) > 1;
+    const prior = mine?.prior ?? null;
+    return {
+      week,
+      open,
+      field: field.map((f) => ({ playerId: f.home, name: f.name, posted: f.posted, odds: f.odds, mine: f.key === myKey })).sort((a, b) => a.odds - b.odds || a.name.localeCompare(b.name)),
+      back: {
+        line: prior === null ? null : backLine(prior),
+        can: prior !== null && !posted && !backed && open,
+        why: backed ? "You're backed this week." : posted ? 'Mo only takes it before your first card of the week.' : prior === null ? 'Mo needs a week of your cards first.' : !open ? "The book's closed till Sunday." : null,
+      },
+      bets: bets.map((x) => ({ id: x.id, kind: x.book!.kind, week: x.book!.week, pick: x.book!.pickName, line: x.book!.line, odds: x.book!.odds, stake: x.stake, payout: x.payout, at: x.at })).reverse(),
+      bank: await localBank(session),
+    };
+  },
+
+  async bookBet(session, kind, pick, stake) {
+    await gateLocal(session, 'book');
+    if (stake < BJ_MIN || stake > BJ_MAX) throw new Error('Bets are $10 to $500.');
+    const week = periodOf(todayInGameTz());
+    if (daysLeft(week, todayInGameTz()) <= 1) throw new Error("The book's closed till Sunday.");
+    await casinoCheckLocal(session, stake);
+    const st = await this.bookState(session);
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const list = (db.casino ??= []);
+    const row = (book: NonNullable<NonNullable<Db['casino']>[number]['book']>) =>
+      list.push({ id: list.length + 1, playerId: me.id, stake, payout: null, at: new Date().toISOString(), p: [], d: [], deck: [], doubled: false, outcome: null, game: 'book', book });
+    if (kind === 'winner') {
+      const f = st.field.find((x) => x.playerId === pick);
+      if (!f) throw new Error("Mo's not taking bets on them this week.");
+      row({ kind, week, pick: f.playerId, pickName: f.name, line: null, odds: f.odds });
+    } else {
+      if (!st.back.can || st.back.line === null) throw new Error(st.back.why ?? "Mo won't take that one.");
+      row({ kind, week, pick: null, pickName: null, line: st.back.line, odds: BACK_ODDS });
+    }
+    save(db);
+    return this.bookState(session);
+  },
+
   // the Ace Pot, as ace_state and ace_swing do it
   async aceState(session) {
     const db = load();
@@ -1868,6 +1923,50 @@ async function casinoCheckLocal(session: { token: string }, more: number) {
 function bjViewLocal(db: Db, me: DbPlayer, h: NonNullable<Db['casino']>[number]): BjView {
   const done = h.payout !== null;
   return { id: h.id, stake: h.stake, payout: h.payout, done, outcome: h.outcome, doubled: h.doubled, player: h.p, playerTotal: bjValue(h.p), dealer: done ? h.d : [h.d[0]], dealerTotal: bjValue(done ? h.d : [h.d[0]]), bank: 0, lostToday: lostToday(db, me.id) };
+}
+// Mo's Book: the field as book_field prices it (people by name and PIN, their home seat the first they joined with)
+function bookFieldLocal(db: Db) {
+  const week = periodOf(todayInGameTz());
+  const from = new Date(Date.parse(`${week}T12:00:00Z`) - 21 * 86_400_000).toISOString().slice(0, 10);
+  const people = new Map<string, DbPlayer[]>();
+  for (const p of [...db.players].sort((a, b) => a.joined.localeCompare(b.joined))) people.set(`${p.name.toLowerCase()}|${p.pin}`, [...(people.get(`${p.name.toLowerCase()}|${p.pin}`) ?? []), p]);
+  const rs = db.rounds.filter((r) => r.month.length === 10 && r.month >= '2026-11-08' && r.month >= from && r.month <= week);
+  const holesNow = rs.filter((r) => r.month === week).map((r) => r.holes.length)[0] ?? 6;
+  const out: { key: string; home: string; name: string; posted: number | null; prior: number | null }[] = [];
+  for (const [key, ps] of people) {
+    const mine = rs.filter((r) => ps.some((p) => p.id === r.playerId));
+    if (!mine.length) continue;
+    const best = new Map<string, { tp: number; holes: number }>();
+    for (const r of mine) {
+      const b = best.get(r.month);
+      if (!b || r.total - r.par < b.tp) best.set(r.month, { tp: r.total - r.par, holes: r.holes.length });
+    }
+    const before = [...best.entries()].filter(([m, b]) => m < week && b.holes);
+    out.push({ key, home: ps[0].id, name: ps[0].name, posted: best.get(week)?.tp ?? null, prior: before.length ? (before.reduce((a, [, b]) => a + b.tp / b.holes, 0) / before.length) * holesNow : null });
+  }
+  return priceField(out, daysLeft(week, todayInGameTz()));
+}
+// pay the bets on weeks that have closed: a winner on the week's best card (ties split), backing yourself on your best
+function bookSettleLocal(db: Db) {
+  const week = periodOf(todayInGameTz());
+  const key = (id: string) => {
+    const p = db.players.find((x) => x.id === id);
+    return p ? `${p.name.toLowerCase()}|${p.pin}` : '';
+  };
+  for (const x of db.casino ?? []) {
+    if (x.game !== 'book' || !x.book || x.payout !== null || x.book.week >= week) continue;
+    const rs = db.rounds.filter((r) => r.month === x.book!.week);
+    const best = new Map<string, number>();
+    for (const r of rs) best.set(key(r.playerId), Math.min(best.get(key(r.playerId)) ?? 99, r.total - r.par));
+    if (x.book.kind === 'winner') {
+      const top = Math.min(...best.values());
+      const firsts = [...best.entries()].filter(([, v]) => v === top).map(([k]) => k);
+      x.payout = firsts.includes(key(x.book.pick ?? '')) ? Math.floor((x.stake * x.book.odds) / firsts.length) : 0;
+    } else {
+      const mine = best.get(key(x.playerId));
+      x.payout = mine === undefined ? x.stake : mine < (x.book.line ?? 0) ? Math.floor(x.stake * BACK_ODDS) : 0;
+    }
+  }
 }
 // the Ace Pot: $1,000 and every miss since the last ace, as ace_pot does
 function acePotLocal(db: Db) {
