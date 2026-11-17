@@ -1,6 +1,7 @@
 // The Ace Pot (Nov 17): one par 3 a day, the same for every club, picked by the date from the week's course (any course's
-// par 3s if the week has none). $50 a swing, three swings a day. Every miss goes in the pot; a hole-in-one takes the
-// lot, and the pot starts again at $1,000. One pot across every club. ace_swing and ace_state in supabase/schema.sql.
+// par 3s if the week has none). Three swings a day, and the club puts up the money: the pot starts at $1,000 and the
+// club adds $50 for every miss. A hole-in-one takes the lot (a club bonus) and the pot starts again. One pot across
+// every club. ace_swing and ace_state in supabase/schema.sql.
 // Aces come about once in 60 swings (Closest to the Pin and par 3s in rounds, Nov 2026), so the pot is worth about
 // $4,000 when it goes.
 import { conditionsFor, type Conditions } from './golf3d/conditions';
@@ -10,7 +11,7 @@ import { periodOf } from './day';
 import type { Hole, V2 } from './golf3d/types';
 import { makeRng } from './seed';
 
-export const ACE_STAKE = 50;
+export const ACE_ADD = 50; // what the club adds to the pot for every miss
 export const ACE_SWINGS = 3;
 export const ACE_SEED = 1000;
 

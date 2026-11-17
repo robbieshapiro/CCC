@@ -2457,6 +2457,17 @@ create table if not exists trophy_pay (
 );
 alter table trophy_pay enable row level security;
 
+-- the Ace Pot's swings (made here, before person_bonus reads them; the rest is with the Ace Pot further down)
+create table if not exists ace_swings (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  day date not null,
+  holed boolean not null default false,
+  ft numeric(7, 1),
+  pot int not null,
+  payout int not null default 0,
+  created_at timestamptz not null default now()
+);
 create or replace function person_bonus(p players) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with seats as (select person_seats(p) as id),
@@ -2492,6 +2503,8 @@ language sql stable security definer set search_path = public, extensions as $$
       -- Closest to the Pin and the long drive: the day's top three (daily_prize)
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from ctp_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from drive_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as drive,
+      -- the Ace Pot, when you ace it (the club puts up the pot)
+      (select coalesce(sum(a.payout), 0) from ace_swings a where a.player_id in (select id from seats))::int as acepot,
       -- birdie $100, eagle $500, albatross $1,000, ace $2,500 (src/bonus.ts) for holes from Nov 10 2026; before that the
       -- old rates, $25, $100 (an albatross too) and $500: the raise isn't paid back
       (select coalesce(sum(case when created_at >= timestamp '2026-11-10 00:00' at time zone 'America/New_York'
@@ -2507,9 +2520,9 @@ language sql stable security definer set search_path = public, extensions as $$
       -- $250 for every week (from Nov 8) with a counted card, whoever you are on the board (src/bonus.ts BONUS.week)
       250 * (select count(distinct x.month) from rounds x where x.player_id in (select id from seats) and x.card and x.month >= '2026-11-08')::int as weeks
   )
-  select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'drive', b.drive, 'shots', b.shots,
+  select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'drive', b.drive, 'acepot', b.acepot, 'shots', b.shots,
     'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks,
-    'total', b.rounds + b.streaks + b.ctp + b.drive + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies + b.weeks) from b
+    'total', b.rounds + b.streaks + b.ctp + b.drive + b.acepot + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies + b.weeks) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 
@@ -3421,20 +3434,32 @@ end $$;
 grant execute on function bil_start(uuid, int) to anon;
 grant execute on function bil_finish(uuid, bigint, boolean) to anon;
 
--- The Ace Pot (from Nov 17, src/acepot.ts): one par 3 a day, the same for every club. $50 a swing, three swings a day a
--- person. Every miss goes in the pot; a hole-in-one takes the lot, and the pot starts again at $1,000. One pot across
--- every club. Each swing is a casino row, settled as it's made: payout 0 on a miss, the whole pot on an ace (state says
--- which, and how near). The phone reports the shot, as with Mo's other games; the server keeps swings 5 seconds apart
--- and three a day. Same daily limit as Mo's tables.
+-- The Ace Pot (from Nov 17, src/acepot.ts): one par 3 a day, the same for every club, three swings a day a person.
+-- The club puts up the pot, not the players (Nov 17, Robbie): it starts at $1,000 and the club adds $50 for every
+-- miss; a hole-in-one takes the lot (paid as a club bonus, so it counts in career earnings and the bank) and the pot
+-- starts again. One pot across every club. The phone reports the shot; the server keeps swings 5 seconds apart and
+-- three a day. (For its first hour each swing was a $50 bet in casino; those rows stay, refunded.)
 alter table casino drop constraint if exists casino_game_check;
 alter table casino add constraint casino_game_check check (game in ('blackjack', 'popashot', 'billiards', 'acepot', 'book'));
 
--- what the pot holds now: $1,000, and every miss since the last ace
+create table if not exists ace_swings (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade, -- the person's home seat
+  day date not null,
+  holed boolean not null default false,
+  ft numeric(7, 1),
+  pot int not null, -- what the pot held when they swung
+  payout int not null default 0, -- the pot, on an ace
+  created_at timestamptz not null default now()
+);
+alter table ace_swings enable row level security;
+create index if not exists ace_swings_day on ace_swings (day);
+
+-- what the pot holds now: $1,000, and the club's $50 for every miss since the last ace
 create or replace function ace_pot() returns int
 language sql stable security definer set search_path = public, extensions as $$
-  select 1000 + coalesce((select sum(stake) from casino
-    where game = 'acepot' and state->>'outcome' = 'miss'
-      and created_at > coalesce((select max(created_at) from casino where game = 'acepot' and state->>'outcome' = 'ace'), '-infinity'::timestamptz)), 0)::int
+  select 1000 + 50 * (select count(*) from ace_swings
+    where not holed and created_at > coalesce((select max(created_at) from ace_swings where holed), '-infinity'::timestamptz))::int
 $$;
 
 create or replace function ace_state(p_token uuid) returns json
@@ -3446,21 +3471,17 @@ begin
       select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.id as home_id
       from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
     ), swings as (
-      select pe.k, pe.h, pe.name, pe.home_id, c.* from casino c join players p on p.id = c.player_id
+      select pe.k, pe.h, pe.name, pe.home_id, a.* from ace_swings a join players p on p.id = a.player_id
       join people pe on pe.k = lower(p.name) and pe.h = p.pin_hash
-      where c.game = 'acepot'
     ), today as (
-      select distinct on (k, h) k, h, name, home_id, state->>'outcome' = 'ace' as holed, (state->>'ft')::numeric as ft
-      from swings where (created_at at time zone 'America/New_York')::date = game_today()
-      order by k, h, (state->>'outcome' = 'ace') desc, (state->>'ft')::numeric asc nulls last
+      select distinct on (k, h) k, h, name, home_id, holed, ft
+      from swings where day = game_today() order by k, h, holed desc, ft asc nulls last
     )
     select json_build_object(
       'pot', ace_pot(),
-      'swingsToday', (select count(*) from casino where game = 'acepot' and player_id in (select person_seats(me))
-        and (created_at at time zone 'America/New_York')::date = game_today()),
+      'swingsToday', (select count(*) from ace_swings where day = game_today() and player_id in (select person_seats(me))),
       'bank', person_bank(me),
-      'lastAce', (select json_build_object('name', name, 'pot', payout, 'at', created_at) from swings
-        where state->>'outcome' = 'ace' order by created_at desc limit 1),
+      'lastAce', (select json_build_object('name', name, 'pot', payout, 'at', created_at) from swings where holed order by created_at desc limit 1),
       'today', coalesce((select json_agg(json_build_object('playerId', home_id, 'name', name, 'ft', ft, 'holed', holed,
           'mine', k = lower(me.name) and h = me.pin_hash) order by holed desc, ft asc nulls last) from today), '[]')
     )
@@ -3469,23 +3490,20 @@ end $$;
 
 create or replace function ace_swing(p_token uuid, p_day date, p_holed boolean, p_ft numeric) returns json
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := home_of(player_for(p_token)); pot int; pay int; n int; last timestamptz;
+declare me players := home_of(player_for(p_token)); pot int; n int; last timestamptz;
 begin
   perform bar_gate(me, 'acepot');
   if p_day <> game_today() then raise exception 'That''s not today''s hole.'; end if;
   -- one pot for everyone: settle one swing at a time
   perform pg_advisory_xact_lock(hashtext('acepot'));
-  select count(*), max(created_at) into n, last from casino where game = 'acepot' and player_id in (select person_seats(me))
-    and (created_at at time zone 'America/New_York')::date = game_today();
+  select count(*), max(created_at) into n, last from ace_swings where day = game_today() and player_id in (select person_seats(me));
   if n >= 3 then raise exception 'That''s your three swings today. The pot''s here tomorrow.'; end if;
   if last is not null and now() - last < interval '5 seconds' then raise exception 'Easy. One swing at a time.'; end if;
-  perform casino_check(me, 50);
   pot := ace_pot();
-  pay := case when p_holed then pot else 0 end;
-  insert into casino (player_id, game, stake, payout, settled_at, state)
-    values (me.id, 'acepot', 50, pay, now(), jsonb_build_object('outcome', case when p_holed then 'ace' else 'miss' end,
-      'ft', case when p_holed then 0 when p_ft is null then null else round(least(greatest(p_ft, 0), 9999), 1) end, 'pot', pot));
-  return json_build_object('holed', p_holed, 'payout', pay, 'pot', ace_pot(), 'swingsToday', n + 1, 'bank', person_bank(me));
+  insert into ace_swings (player_id, day, holed, ft, pot, payout)
+    values (me.id, game_today(), p_holed, case when p_holed then 0 when p_ft is null then null else round(least(greatest(p_ft, 0), 9999), 1) end,
+      pot, case when p_holed then pot else 0 end);
+  return json_build_object('holed', p_holed, 'payout', case when p_holed then pot else 0 end, 'pot', ace_pot(), 'swingsToday', n + 1, 'bank', person_bank(me));
 end $$;
 
 revoke all on function ace_pot() from public, anon, authenticated;

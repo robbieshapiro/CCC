@@ -1,7 +1,7 @@
-// The Nineteenth Hole on home (Nov 17): one swipeable row between the Play card and the Open, so the bar's games are
-// seen by everyone who comes in. Each card leads with its live number: the Ace Pot's pot, today's Closest to the Pin
-// and long drive leaders, Mo's Book favourite, the Midway's leader. A game the Committee has closed drops out for members.
-// And once today's cards are in, the Play card's button points here (barCta).
+// The Nineteenth Hole on home (Nov 17): every bar game between the Play card and the Open, two to a row, so they're seen
+// by everyone who comes in. Today's contests first (each leads with its live number: today's Closest to the Pin and
+// long drive leaders, the Ace Pot, the Midway's leader), then Mo's tables (your money). A game the Committee has
+// closed drops out for members. And once today's cards are in, the Play card's button points here (barCta).
 import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
@@ -12,21 +12,31 @@ import { money } from '../purse';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 
-// the free contests first, then Mo's tables (your own money), each wearing its tag
-const CARDS: [game: string, href: string, icon: string, name: string, wait: string, tag: string][] = [
-  ['daily', '#/daily', '🎯', 'Closest to the Pin', `1st pays $${DAILY_PRIZES[0]} today`, 'Free'],
-  ['drive', '#/bar/drive', '🚀', 'Long drive', `1st pays $${DAILY_PRIZES[0]} today`, 'Free'],
-  ['midway', '#/bar/midway', '🎡', 'The Midway', 'Three carnival holes', 'Free'],
-  ['acepot', '#/bar/ace', '💰', 'The Ace Pot', '$50 a swing', '$50 a swing'],
-  ['book', '#/bar/book', '📒', "Mo's Book", 'Bet on the Open', '$10 to $500'],
+// two groups, as at the bar: today's contests (the club puts up the prizes), then Mo's tables (your money, tagged with
+// the stake). Every game shows: two to a row on a phone, nothing to scroll sideways.
+type Card = [game: string, href: string, icon: string, name: string, wait: string];
+const CONTESTS: Card[] = [
+  ['daily', '#/daily', '🎯', 'Closest to the Pin', `1st pays $${DAILY_PRIZES[0]} today`],
+  ['drive', '#/bar/drive', '🚀', 'Long drive', `1st pays $${DAILY_PRIZES[0]} today`],
+  ['acepot', '#/bar/ace', '💰', 'The Ace Pot', 'An ace takes the pot'],
+  ['midway', '#/bar/midway', '🎡', 'The Midway', 'Three carnival holes'],
 ];
+const TABLES: Card[] = [
+  ['book', '#/bar/book', '📒', "Mo's Book", 'Bet on the Open'],
+  ['blackjack', '#/bar/blackjack', '🃏', 'Blackjack', 'Against Mo'],
+  ['popashot', '#/bar/popashot', '🏀', 'Pop-a-Shot', "Beat Mo's score"],
+  ['billiards', '#/bar/billiards', '🎱', '8-Ball', 'A game against Mo'],
+];
+const card = ([game, href, icon, name, wait]: Card, stake = '') =>
+  `<a class="bs-card${stake ? ' stake' : ''}" href="${href}" data-bs="${game}"><i>${icon}</i><small>${esc(name)}</small><b data-bs-big>${esc(wait)}</b><span data-bs-sub>${esc(stake)}</span></a>`;
 
 export function barStrip() {
   return `<section class="bar-strip" aria-label="The Nineteenth Hole">
     <div class="bs-head"><h2>The Nineteenth Hole</h2><a href="#/bar">The bar ›</a></div>
-    <div class="bs-row">${CARDS.map(
-      ([game, href, icon, name, wait, tag]) => `<a class="bs-card${tag === 'Free' ? '' : ' stake'}" href="${href}" data-bs="${game}"><em class="bs-tag">${esc(tag)}</em><i>${icon}</i><small>${esc(name)}</small><b data-bs-big>${esc(wait)}</b><span data-bs-sub></span></a>`,
-    ).join('')}</div>
+    <p class="bs-group">Today's contests</p>
+    <div class="bs-row">${CONTESTS.map((c) => card(c)).join('')}</div>
+    <p class="bs-group" data-bs-tables>Mo's tables <small>your club money</small></p>
+    <div class="bs-row" data-bs-tables>${TABLES.map((c) => card(c, '$10 to $500')).join('')}</div>
   </section>`;
 }
 
@@ -41,6 +51,8 @@ export async function bindBarStrip(snap: Snapshot) {
   const s = requireSession();
   void api.barGames(s).then(({ settings, committee }) => {
     document.querySelectorAll<HTMLElement>('[data-bs]').forEach((el) => (el.hidden = settings[el.dataset.bs!] === false && !committee));
+    const open = TABLES.some(([g]) => settings[g] !== false || committee);
+    document.querySelectorAll<HTMLElement>('[data-bs-tables]').forEach((el) => (el.hidden = !open));
   });
   void api
     .aceState(s)
@@ -68,8 +80,8 @@ export async function bindBarStrip(snap: Snapshot) {
     .then((b) => {
       const fav = b.field[0];
       const open = b.bets.filter((x) => x.payout === null).length;
-      if (!b.open) fill('book', 'Closed till Sunday', open ? `${open} ${open === 1 ? 'bet' : 'bets'} open` : '');
-      else if (fav) fill('book', `${fav.name} ${fav.odds.toFixed(1)}x`, open ? `${open} ${open === 1 ? 'bet' : 'bets'} open` : 'Favourite to win');
+      if (!b.open) fill('book', 'Closed till Sunday', open ? `${open} ${open === 1 ? 'bet' : 'bets'} open` : '$10 to $500');
+      else if (fav) fill('book', `${fav.name} ${fav.odds.toFixed(1)}x`, open ? `${open} ${open === 1 ? 'bet' : 'bets'} open` : 'Favourite · $10 to $500');
     })
     .catch(() => {});
   void api

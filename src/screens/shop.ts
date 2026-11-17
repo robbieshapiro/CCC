@@ -74,7 +74,7 @@ export function shopPane(snap: Snapshot) {
         <p><b>The weekly purse:</b> at least ${money(OPEN_FLOOR)} a week, and ${money(OPEN_PER_PLAYER)} a player once more than ${OPEN_FLOOR / OPEN_PER_PLAYER} play. The top 10 on the Open split it like a tour event. And ${money(BONUS.week)} to everyone who plays a card that week, wherever they finish.</p>
         <p><b>Every day you play your card:</b> ${money(BONUS.round)}, plus ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle, ${money(BONUS.albatross)} an albatross and ${money(BONUS.ace)} a hole in one. ${money(BONUS.streak3)} for three days running at the club, ${money(BONUS.streak7)} for every full week.</p>
         <p><b>The moments:</b> hole a putt from ${LONG_PUTT_FT} ft for ${money(BONUS.longPutt)}, from ${MONSTER_PUTT_FT} ft for ${money(BONUS.monsterPutt)}. Chip in from off the green for ${money(BONUS.chipin)}. Find a hole's secret route for the first time for ${money(BONUS.secret)}.</p>
-        <p><b>Around the club:</b> Closest to the Pin and the long drive each pay the day's top three ${DAILY_PRIZES.map(money).join(', ')}. ${money(BONUS.designPlay)} each time another member finishes a hole you designed on the Members' Course (once each a week, up to ${money(BONUS.designWeek)} a week).</p>
+        <p><b>Around the club:</b> Closest to the Pin and the long drive each pay the day's top three ${DAILY_PRIZES.map(money).join(', ')}. Make an ace at the Ace Pot and the whole pot is yours. ${money(BONUS.designPlay)} each time another member finishes a hole you designed on the Members' Course (once each a week, up to ${money(BONUS.designWeek)} a week).</p>
         <p class="muted">Only your daily card counts; practice is free and earns nothing. Spending never touches your career earnings. The Club Legend rack also needs a weekly title.</p>
       </details>
     </div>`;
@@ -118,6 +118,7 @@ function earnedFrom(me: Player) {
       ['Streaks', b?.streaks ?? 0],
       ['Closest to the Pin', b?.ctp ?? 0],
       ['Long drive', b?.drive ?? 0],
+      ['Ace Pot', b?.acepot ?? 0],
       ['Birdies and better', b?.shots ?? 0],
       ['Long putts', b?.putts ?? 0],
       ['Chip-ins', b?.chipins ?? 0],

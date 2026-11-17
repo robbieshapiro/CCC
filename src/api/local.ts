@@ -16,7 +16,7 @@ import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
 import { CURSES_A_WEEK, LOCKER_MAX, powerOf } from '../powerups';
 import type { Tweaks } from '../golf3d/tweaks';
-import { ACE_SEED, ACE_STAKE, ACE_SWINGS } from '../acepot';
+import { ACE_ADD, ACE_SEED, ACE_SWINGS } from '../acepot';
 import { BACK_ODDS, backLine, daysLeft, priceField } from '../book';
 import { MAX_OVER_PAR, type CourseRequest, type AgentNote, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type Snapshot, type TrendDay } from './types';
 
@@ -26,7 +26,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book'; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
+type Db = { aceSwings?: { playerId: string; day: string; holed: boolean; ft: number | null; pot: number; payout: number; at: string }[]; schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book'; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -285,6 +285,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         days: [...(db.days ?? []).filter((d) => ids.has(d.playerId)).map((d) => d.day), ...roundDays, ...(db.practice ?? []).filter((x) => ids.has(x.playerId)).map((x) => todayInGameTz(new Date(x.startedAt)))],
         ctpPay: ctpPlaces(db).filter((w) => w.key === `${p.name.toLowerCase()}|${p.pin}`).reduce((a, w) => a + dailyPrize(w.day, w.place), 0),
         drivePay: drivePlaces(db).filter((w) => w.key === `${p.name.toLowerCase()}|${p.pin}`).reduce((a, w) => a + dailyPrize(w.day, w.place), 0),
+        acePay: (db.aceSwings ?? []).filter((x) => ids.has(x.playerId)).reduce((a, x) => a + x.payout, 0),
         // birdies and better pay on the day's first finished round only
         holes: rs.filter((r, i) => !rs.slice(0, i).some((x) => todayInGameTz(new Date(x.createdAt)) === todayInGameTz(new Date(r.createdAt)))).flatMap((r) => {
           const pars = courseById(r.course)?.holes.map((h) => h.par);
@@ -1263,26 +1264,26 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return this.bookState(session);
   },
 
-  // the Ace Pot, as ace_state and ace_swing do it
+  // the Ace Pot, as ace_state and ace_swing do it (the club puts up the pot)
   async aceState(session) {
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
-    const swings = (db.casino ?? []).filter((x) => x.game === 'acepot' && x.ace);
-    const today = swings.filter((x) => todayInGameTz(new Date(x.at)) === todayInGameTz());
+    const swings = db.aceSwings ?? [];
+    const today = swings.filter((x) => x.day === todayInGameTz());
     const best = new Map<string, { playerId: string; name: string; ft: number | null; holed: boolean; mine: boolean }>();
     for (const x of today) {
       const p = db.players.find((y) => y.id === x.playerId);
       if (!p) continue;
       const b = best.get(p.id);
-      const better = !b || (x.ace!.holed && !b.holed) || (!b.holed && x.ace!.ft !== null && (b.ft === null || x.ace!.ft < b.ft));
-      if (better) best.set(p.id, { playerId: p.id, name: p.name, ft: x.ace!.ft, holed: x.ace!.holed, mine: p.id === me.id });
+      const better = !b || (x.holed && !b.holed) || (!b.holed && x.ft !== null && (b.ft === null || x.ft < b.ft));
+      if (better) best.set(p.id, { playerId: p.id, name: p.name, ft: x.ft, holed: x.holed, mine: p.id === me.id });
     }
-    const last = [...swings].reverse().find((x) => x.ace!.holed);
+    const last = [...swings].reverse().find((x) => x.holed);
     return {
       pot: acePotLocal(db),
       swingsToday: today.filter((x) => x.playerId === me.id).length,
       bank: await localBank(session),
-      lastAce: last ? { name: db.players.find((y) => y.id === last.playerId)?.name ?? '?', pot: last.payout ?? 0, at: last.at } : null,
+      lastAce: last ? { name: db.players.find((y) => y.id === last.playerId)?.name ?? '?', pot: last.payout, at: last.at } : null,
       today: [...best.values()].sort((a, b) => Number(b.holed) - Number(a.holed) || (a.ft ?? 1e9) - (b.ft ?? 1e9)),
     };
   },
@@ -1292,17 +1293,14 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     if (day !== todayInGameTz()) throw new Error("That's not today's hole.");
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
-    const mine = (db.casino ?? []).filter((x) => x.game === 'acepot' && x.playerId === me.id && todayInGameTz(new Date(x.at)) === todayInGameTz());
+    const mine = (db.aceSwings ?? []).filter((x) => x.playerId === me.id && x.day === day);
     if (mine.length >= ACE_SWINGS) throw new Error("That's your three swings today. The pot's here tomorrow.");
     if (mine.length && Date.now() - Date.parse(mine[mine.length - 1].at) < 5000) throw new Error('Easy. One swing at a time.');
-    await casinoCheckLocal(session, ACE_STAKE);
-    const fresh = load();
-    const list = (fresh.casino ??= []);
-    const pot = acePotLocal(fresh);
+    const pot = acePotLocal(db);
     const payout = r.holed ? pot : 0;
-    list.push({ id: list.length + 1, playerId: me.id, stake: ACE_STAKE, payout, at: new Date().toISOString(), p: [], d: [], deck: [], doubled: false, outcome: null, game: 'acepot', ace: { holed: r.holed, ft: r.holed ? 0 : r.ft === null ? null : Math.round(r.ft * 10) / 10, pot } });
-    save(fresh);
-    return { holed: r.holed, payout, pot: acePotLocal(fresh), swingsToday: mine.length + 1, bank: await localBank(session) };
+    (db.aceSwings ??= []).push({ playerId: me.id, day, holed: r.holed, ft: r.holed ? 0 : r.ft === null ? null : Math.round(r.ft * 10) / 10, pot, payout, at: new Date().toISOString() });
+    save(db);
+    return { holed: r.holed, payout, pot: acePotLocal(db), swingsToday: mine.length + 1, bank: await localBank(session) };
   },
 
   // Pop-a-Shot, as pas_start and pas_finish do it
@@ -1989,11 +1987,11 @@ function bookSettleLocal(db: Db) {
     }
   }
 }
-// the Ace Pot: $1,000 and every miss since the last ace, as ace_pot does
+// the Ace Pot: $1,000, and the club's $50 for every miss since the last ace, as ace_pot does
 function acePotLocal(db: Db) {
-  const swings = (db.casino ?? []).filter((x) => x.game === 'acepot' && x.ace);
-  const lastAce = swings.map((x) => x.ace!.holed).lastIndexOf(true);
-  return ACE_SEED + swings.slice(lastAce + 1).reduce((a, x) => a + x.stake, 0);
+  const swings = db.aceSwings ?? [];
+  const lastAce = swings.map((x) => x.holed).lastIndexOf(true);
+  return ACE_SEED + swings.slice(lastAce + 1).length * ACE_ADD;
 }
 async function gateLocal(session: { token: string }, game: string) {
   const g = await localApi.barGames(session as Parameters<typeof localApi.barGames>[0]);

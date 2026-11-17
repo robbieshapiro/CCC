@@ -17,7 +17,7 @@ const GAMES: [string, string, string][] = [
   ['drive', '🚀', 'Long drive'],
   ['members', '🏗️', "Members' Course"],
 ];
-const CASINO = new Set(['blackjack', 'popashot', 'billiards', 'acepot', 'book']);
+const CASINO = new Set(['blackjack', 'popashot', 'billiards', 'book']);
 
 export function barSection() {
   return `<section class="adm-card" id="adm-bar"><h2>The bar</h2><p class="muted">Switch a game off and members don't see it at the bar (Mo's tables also turn them away from a saved link). You can still play it, to try it.</p><div id="adm-bar-body"><p class="muted">Loading…</p></div></section>`;

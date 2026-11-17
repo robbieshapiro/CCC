@@ -29,7 +29,7 @@ import { range, TARGETS } from '../golf3d/practice/range';
 import { shortgame, STATIONS } from '../golf3d/practice/shortgame';
 import { scoreClass } from './home';
 import { DAILY_TRIES, dailyShot } from '../daily';
-import { ACE_SEED, ACE_STAKE, ACE_SWINGS, aceShot } from '../acepot';
+import { ACE_ADD, ACE_SEED, ACE_SWINGS, aceShot } from '../acepot';
 import { HANK } from '../staff';
 import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
@@ -674,7 +674,7 @@ export async function dailyRound(snap: Snapshot) {
 }
 
 // The Ace Pot (src/acepot.ts): today's par 3, $50 a swing, three a day. Each swing is settled as it lands; an ace takes
-// the pot. After the last swing (or if the bank or Mo says no), how it went.
+// the pot (the club puts the money up). After the last swing, how it went.
 export async function aceRound(snap: Snapshot) {
   closeRound();
   const day = snap.today;
@@ -685,7 +685,6 @@ export async function aceRound(snap: Snapshot) {
   };
   if (!state) return back();
   if (state.swingsToday >= ACE_SWINGS) return void aceSummary(state.swingsToday, back);
-  if (state.bank < ACE_STAKE) return void tell('Not enough in the bank', `<p>A swing at the Ace Pot is ${money(ACE_STAKE)}. Win some on the Open first.</p>`).then(back);
   const me = snap.players.find((p) => p.id === snap.me)!;
   const shot = aceShot(day);
   let swings = state.swingsToday;
@@ -706,7 +705,7 @@ export async function aceRound(snap: Snapshot) {
     title: `The Ace Pot · ${money(pot)}`,
     stations: [{ name: shot.label, at: shot.from }],
     wind: shot.wind,
-    eyebrow: `${money(ACE_STAKE)} a swing · ace takes the pot`,
+    eyebrow: `Three swings · an ace takes the pot`,
     tag: () => `Swing ${swings + 1} of ${ACE_SWINGS}`,
     onResult: (r) => {
       swings++;
@@ -714,10 +713,10 @@ export async function aceRound(snap: Snapshot) {
         .aceSwing(requireSession(), day, { holed: r.holed, ft: r.lost ? null : r.ft })
         .then((res) => {
           pot = res.pot;
-          if (res.holed) void tell('Ace! The pot is yours', `<p>${money(res.payout)} in the bank. The pot starts again at ${money(res.pot)}.</p>`);
+          if (res.holed) void tell('Ace! The pot is yours', `<p>${money(res.payout)} to your club bonus. The pot starts again at ${money(res.pot)}.</p>`);
         })
         .catch((e) => {
-          void tell("That swing didn't count", `<p>${esc((e as Error).message)}</p><p>No money changed hands.</p>`).then(back);
+          void tell("That swing didn't count", `<p>${esc((e as Error).message)}</p>`).then(back);
         });
       if (swings < ACE_SWINGS) return true;
       window.setTimeout(() => void aceSummary(swings, back), 1900);
@@ -738,7 +737,7 @@ async function aceSummary(swings: number, back: () => void) {
         <p class="eyebrow">The Ace Pot</p>
         <h2>${money(s?.pot ?? ACE_SEED)} in the pot</h2>
         <p>${swings >= ACE_SWINGS ? "That's your three swings today. Back tomorrow." : ''}${mine ? ` Your nearest: <b>${mine.holed ? 'in the hole' : mine.ft === null ? 'no ball' : `${mine.ft} ft`}</b>.` : ''}</p>
-        <p class="fine">A new hole tomorrow. The pot carries over until someone aces it.</p>
+        <p class="fine">A new hole tomorrow. The club adds ${money(ACE_ADD)} for every miss, and the pot carries over until someone aces it.</p>
         ${s?.lastAce ? `<p class="fine">Last ace: ${esc(s.lastAce.name)}, for ${money(s.lastAce.pot)}.</p>` : '<p class="fine">Nobody has aced it yet.</p>'}
         ${s?.today.length ? `<h3>Closest today</h3><ol class="daily-board">${s.today
           .slice(0, 10)
