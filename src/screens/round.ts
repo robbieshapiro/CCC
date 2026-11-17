@@ -13,7 +13,8 @@ import { inPoly, isWater, surfaceAt } from '../golf3d/terrain';
 import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus, shotName } from '../bonus';
 import type { CardToday, RoundShot, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
-import { conditionsFor } from '../golf3d/conditions';
+import { conditionsFor, WIND_PER_MPH } from '../golf3d/conditions';
+import { SCALE } from '../golf3d/clubs';
 import { shoutSheet } from './shoutouts';
 import { store } from '../storage';
 import { payTrophies } from './trophyroom';
@@ -656,7 +657,15 @@ export async function dailyRound(snap: Snapshot) {
   }
   game.leaveText = 'Leave';
   game.howTo = 'daily';
+  // today's closest, as a gold ring round the pin (a holed shot has nothing to circle)
+  const cup = shot.hole.cup;
+  const ring = (name: string, ft: number | null) => (ft ? { kind: 'ring' as const, center: cup, r: ft / SCALE, label: name, sub: `${ft} ft today` } : null);
+  const top = state.board[0];
+  let bestFt = top && !top.holed ? top.ft : null;
+  const g = game;
   game.practiceArea(shot.hole, {
+    mark: top && !top.holed ? ring(top.mine ? 'You' : top.name, top.ft) : null,
+    ticker: (_from, at) => `${Math.round(Math.hypot(at.x - cup.x, at.y - cup.y) * SCALE)} ft`,
     title: `Closest to the Pin #${shot.number}`,
     stations: [{ name: shot.label, at: shot.from }],
     wind: shot.wind,
@@ -665,6 +674,12 @@ export async function dailyRound(snap: Snapshot) {
     onResult: (r) => {
       const t = { try: done.length + 1, ...r };
       done.push(t);
+      // a new closest of the day moves the ring (holed: the ring goes, nothing beats it)
+      if (r.holed) g.setMark(null);
+      else if (r.ft !== null && (bestFt === null || r.ft < bestFt) && !(top?.holed)) {
+        bestFt = r.ft;
+        g.setMark(ring('You', r.ft));
+      }
       void api.submitDaily(requireSession(), day, t).catch(() => {});
       if (done.length < DAILY_TRIES) return true;
       window.setTimeout(() => void dailySummary(day, back), 1900);
@@ -894,23 +909,45 @@ export function barRound(snap: Snapshot, kind: BarGame) {
       if (game === g) window.setTimeout(() => void barSummary(kind, score, again, back, fun), 600);
     })();
   } else {
-    // off the tee of the week's longest hole, in today's wind: the first swing as you are, the last two with a fireball
-    // (the overswing is live: only a perfect strike with the wind behind carries 375)
+    // off the tee of the week's longest hole, the wind always at your back (today's strength, at least 8 mph): the first
+    // swing as you are, the last two with a fireball (the overswing is live: only a perfect strike carries 375). The
+    // yards count up as it flies and rolls, and today's longest is a line of tape across the fairway.
     const hole = driveHole(courseFor(snap.month));
     let best: number | null = null;
     let n = 0;
+    const day = conditionsFor(hole, todayInGameTz());
+    const mph = Math.max(8, day.mph);
+    const behind = { pin: day.pin, mph, toward: hole.aim, accel: { x: Math.sin(hole.aim) * mph * WIND_PER_MPH, y: Math.cos(hole.aim) * mph * WIND_PER_MPH } };
+    let lead: { name: string; yards: number } | null = null;
+    const tape = (name: string, yards: number, you = false) =>
+      g.setMark({ kind: 'arc', center: hole.tee, aim: hole.aim, r: (yards * 3) / SCALE, label: you ? 'You' : name, sub: `${yards} yd today` });
+    void api
+      .barBoard(requireSession(), 'drive')
+      .then((b) => {
+        const top = b.board[0];
+        if (!top || game !== g) return;
+        lead = { name: top.name, yards: Math.round(top.score) };
+        tape(top.mine ? 'You' : top.name, lead.yards, top.mine);
+      })
+      .catch(() => {});
     g.starter = `${hole.name}, ${me.name}. Three swings. Reginald's pouring the fireballs for the last two.`;
     g.pour(null);
     g.practiceArea(hole, {
       title: 'Long drive',
       eyebrow: `The Nineteenth Hole · ${hole.name}`,
-      wind: conditionsFor(hole, todayInGameTz()),
+      wind: behind,
       stations: [{ name: `${DRIVES} swings, longest in play`, at: hole.tee }],
+      ticker: (from, at) => `${driveYards(from, at)} yd`,
       tag: () => `Swing ${n + 1} of ${DRIVES}${n >= DRIVES - 2 ? ' · Fireball' : ''}`,
       report: (r) => (r.lost ? 'Out of play' : `${driveYards(r.from, r.end)} yd`),
       onResult: (r) => {
         n++;
         if (!r.lost) best = Math.max(best ?? 0, driveYards(r.from, r.end));
+        // a new longest of the day moves the tape
+        if (best !== null && (!lead || best > lead.yards)) {
+          lead = { name: 'You', yards: best };
+          tape('You', best, true);
+        }
         // the last two swings come with a fireball
         g.pour(n >= DRIVES - 2 && n < DRIVES ? 'fireball' : null);
         if (n < DRIVES) return true;

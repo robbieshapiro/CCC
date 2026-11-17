@@ -40,7 +40,15 @@ export type Drill = {
   // bar games: move on to the next spot after each shot, and say how it went in your own words
   advance?: boolean;
   report?: (r: { holed: boolean; lost: boolean; from: V2; end: V2 }) => string;
+  // a live read while the ball moves (the long drive's yards from the tee, Closest to the Pin's feet to the pin)
+  ticker?: (from: V2, at: V2) => string;
+  // the day's best, marked on the ground (see Mark)
+  mark?: Mark | null;
 };
+// The day's best on the ground: a band of tape across the fairway at the longest drive's distance from the tee (an arc,
+// r from center, either side of aim), or a gold ring round the pin at the closest shot's distance (it circles the flag,
+// never covers it). The tag says whose it is.
+export type Mark = { kind: 'arc' | 'ring'; center: V2; r: number; aim?: number; label: string; sub: string };
 // One counted stroke: the club, the power and the swing's error off the meter, where it was hit from and where it came to
 // rest (hole feet, rounded), the lie it was hit from, and whether it cost a penalty (x) or went in (i)
 export type ShotLog = { c: ClubId; p: number; e: number; f: [number, number]; t: [number, number]; l: string; x: 0 | 1; i: 0 | 1 };
@@ -409,6 +417,59 @@ export class Course3D {
     void this.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
   }
 
+  // ---------- the day's best, marked on the ground (Mark) ----------
+  private markObjs: THREE.Object3D[] = [];
+  setMark(m: Mark | null) {
+    for (const o of this.markObjs) {
+      o.parent?.remove(o);
+      o.traverse((x) => {
+        const mesh = x as THREE.Mesh;
+        mesh.geometry?.dispose();
+        const mat = mesh.material as THREE.Material | undefined;
+        mat?.dispose();
+      });
+    }
+    this.markObjs = [];
+    if (this.drill) this.drill.mark = m;
+    if (!m || !this.world || m.r <= 0) return;
+    const ring = m.kind === 'ring';
+    const steps = ring ? 64 : 48;
+    const span = ring ? Math.PI * 2 : 0.5; // the tape runs about 14 degrees either side of the line
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const a = ring ? (i / steps) * span : (m.aim ?? 0) - span / 2 + (i / steps) * span;
+      const x = m.center.x + Math.sin(a) * m.r;
+      const y = m.center.y + Math.cos(a) * m.r;
+      pts.push(w3(x, y, heightAt(this.hole, x, y) + 0.12));
+    }
+    const tube = new THREE.Mesh(
+      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, ring), steps * 2, ring ? 0.12 : 1, 6, ring),
+      new THREE.MeshBasicMaterial({ color: ring ? 0xffd23f : 0xffffff, fog: false }),
+    );
+    tube.renderOrder = 2;
+    // the tape's posts, so it reads from the tee 300 yards back
+    if (!ring)
+      for (const a of [(m.aim ?? 0) - span / 2, (m.aim ?? 0) + span / 2]) {
+        const x = m.center.x + Math.sin(a) * m.r;
+        const y = m.center.y + Math.cos(a) * m.r;
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 9, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
+        post.position.copy(w3(x, y, heightAt(this.hole, x, y) + 4.5));
+        this.world.root.add(post);
+        this.markObjs.push(post);
+      }
+    // the tag: over the middle of the tape; for the ring, off to the side of the pin as you look at it (well clear of
+    // the flagstick), low to the ground
+    const from = this.drill?.stations[this.drill.at]?.at ?? this.hole.tee;
+    const a = ring ? Math.atan2(from.x - m.center.x, from.y - m.center.y) + Math.PI / 2 : (m.aim ?? 0);
+    const off = ring ? m.r + 9 : m.r;
+    const tx = m.center.x + Math.sin(a) * off;
+    const ty = m.center.y + Math.cos(a) * off;
+    const tag = nameTag(m.label, m.sub);
+    tag.position.copy(w3(tx, ty, heightAt(this.hole, tx, ty) + (ring ? 0.6 : 6)));
+    this.world.root.add(tube, tag);
+    this.markObjs.push(tube, tag);
+  }
+
   // ---------- the Committee's preview controls (src/screens/previewControls.ts) ----------
   // wind and pin to play the next hole started with (null: the day's own)
   lab: { wind?: { mph: number; toward: number } | null; pin?: number | null } = {};
@@ -503,6 +564,8 @@ export class Course3D {
     this.number = number;
     this.world = buildWorld(hole, number);
     this.scene.add(this.world.root);
+    this.markObjs = [];
+    if (this.drill?.mark) this.setMark(this.drill.mark);
     // the flag streams the way the wind blows
     const pin = this.world.root.getObjectByName('pin');
     if (pin && this.wind.mph) pin.rotation.y = Math.PI / 2 - this.wind.toward;
@@ -850,6 +913,7 @@ export class Course3D {
         <p data-swing-tip></p>
       </div>
       <div class="g3-callout" data-callout></div>
+      <div class="g3-ticker" data-ticker hidden></div>
       <div class="g3-intro" data-intro aria-live="polite"></div>
       <div class="g3-hint" data-hint></div>
       <div class="g3-read" data-read hidden></div>
@@ -1700,6 +1764,13 @@ export class Course3D {
     const z = a.z + (b.z - a.z) * k;
     const prev = this.ball.position.clone();
     this.ball.position.copy(w3(x, y, z + BALL_R));
+    if (s.practice && this.drill?.ticker) {
+      const tk = this.overlay.querySelector('[data-ticker]') as HTMLElement | null;
+      if (tk) {
+        tk.hidden = false;
+        tk.textContent = this.drill.ticker(s.from, { x, y });
+      }
+    }
     this.ballSink = 0;
     const mv = this.ball.position.clone().sub(prev);
     mv.y = 0;
@@ -1723,6 +1794,8 @@ export class Course3D {
   private endShot() {
     const s = this.shot!;
     this.shot = null;
+    const tk = this.overlay.querySelector('[data-ticker]') as HTMLElement | null;
+    if (tk) tk.hidden = true;
     const r = s.r;
     if (s.practice) {
       // tell them how it went, then put the ball back on the tee
