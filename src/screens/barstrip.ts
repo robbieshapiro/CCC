@@ -5,7 +5,8 @@
 import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
-import { ACE_SWINGS } from '../acepot';
+import { ACE_SEED, ACE_SWINGS } from '../acepot';
+import { todayInGameTz } from '../day';
 import { scoreLabel } from '../bar';
 import { resultLabel } from '../daily';
 import { money } from '../purse';
@@ -28,6 +29,7 @@ const card = ([game, href, icon, name, wait]: Card, stake = '') =>
 export function barStrip() {
   return `<section class="bar-strip" aria-label="The Nineteenth Hole">
     <div class="bs-head"><h2>The Nineteenth Hole</h2><a href="#/bar">The bar ›</a></div>
+    <a class="bs-news" href="#/bar/ace" data-bs-news hidden></a>
     <p class="bs-group">Today's contests</p>
     ${card(ACE, 'ace')}
     <div class="bs-row">${CONTESTS.map((c) => card(c)).join('')}</div>
@@ -50,6 +52,14 @@ export async function bindBarStrip(snap: Snapshot) {
     .aceState(s)
     .then((a) => {
       const left = ACE_SWINGS - a.swingsToday;
+      // an ace today: the news across the top for the rest of the day
+      const news = document.querySelector<HTMLAnchorElement>('[data-bs-news]');
+      if (news && a.lastAce && todayInGameTz(new Date(a.lastAce.at)) === snap.today) {
+        const me = snap.players.find((p) => p.id === snap.me);
+        const you = me && me.name.toLowerCase() === a.lastAce.name.toLowerCase();
+        news.innerHTML = `<i>🏆</i><div><b>${you ? 'You' : esc(a.lastAce.name)} aced the Ace Pot today</b><span>${money(a.lastAce.pot)} ${you ? 'is yours' : 'won'} · the pot started again at ${money(ACE_SEED)}</span></div>`;
+        news.hidden = false;
+      }
       fill('acepot', `${money(a.pot)} pot`, `Carries over · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left` : 'back tomorrow'}`);
     })
     .catch(() => {});

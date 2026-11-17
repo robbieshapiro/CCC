@@ -47,6 +47,7 @@ import { barSummary } from './bar';
 import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
 import { canShare, dailySummary, share } from './daily';
+import { aceWin } from './acewin';
 import { cardStatus, elsewhereLine } from './cardnote';
 import { earned, plaques } from '../trophies';
 
@@ -727,17 +728,23 @@ export async function aceRound(snap: Snapshot) {
     tag: () => `Swing ${swings + 1} of ${ACE_SWINGS}`,
     onResult: (r) => {
       swings++;
+      // an ace: the whole screen goes to it straight away, with the pot as it stood; the server's figure follows
+      const win = r.holed ? aceWin(pot, shot.hole.name) : null;
       api
         .aceSwing(requireSession(), day, { holed: r.holed, ft: r.lost ? null : r.ft })
         .then((res) => {
           pot = res.pot;
-          if (res.holed) void tell('Ace! The pot is yours', `<p>${money(res.payout)} to your club bonus. The pot starts again at ${money(res.pot)}.</p>`);
+          if (res.holed) {
+            win?.setPot(res.payout);
+            void refresh().catch(() => {});
+          }
         })
         .catch((e) => {
           void tell("That swing didn't count", `<p>${esc((e as Error).message)}</p>`).then(back);
         });
       if (swings < ACE_SWINGS) return true;
-      window.setTimeout(() => void aceSummary(swings, back), 1900);
+      // after the last swing, the summary (once they've taken in an ace)
+      void (win ? win.closed : Promise.resolve()).then(() => window.setTimeout(() => void aceSummary(swings, back), win ? 300 : 1900));
       return false;
     },
   });

@@ -3,6 +3,7 @@
 // on anyone out on the course, new events sliding in lit up, times that count up ("4m ago"), and a feed that drifts
 // slowly down on its own (flick it back to the top and a moment later it drifts down again). Every name opens that
 // member's card. Everything else sits under "Numbers".
+import { money } from '../purse';
 import { api } from '../api';
 import type { AdminToday, AdminTodayEvent, AdminTodayPerson } from '../api/types';
 import { GAME_TZ } from '../day';
@@ -125,6 +126,7 @@ function line(e: AdminTodayEvent) {
   if (e.kind === 'daily') return e.ft === 0 ? 'holed the Daily Shot!' : `took the Daily Shot${e.ft !== null ? `, best ${e.ft} ft` : ''}${e.n && e.n > 1 ? ` (${e.n} tries)` : ''}`;
   if (e.kind === 'playoff') return `played the playoff in ${e.total ?? '?'}${e.ft !== null ? `, ${e.ft} ft from the pin` : ''}`;
   if (e.kind === 'join') return e.what === 'guest' ? `joined ${esc(e.club)} as a guest` : 'joined the club';
+  if (e.kind === 'ace') return `<b>aced the Ace Pot for ${money(e.total ?? 0)}!</b>`;
   if (e.kind === 'midway') {
     // status:kind:target, from the Midway's power-ups
     const [status, kind, who] = (e.what ?? '').split(':');
@@ -136,7 +138,7 @@ function line(e: AdminTodayEvent) {
   }
   return `sent feedback: “${esc(e.what ?? '')}”`;
 }
-const ICON: Record<AdminTodayEvent['kind'], string> = { round: '✅', start: '⛳', practice: '🎯', daily: '📍', playoff: '🏆', join: '👋', feedback: '✉️', classic: '🏛️', midway: '🎡' };
+const ICON: Record<AdminTodayEvent['kind'], string> = { round: '✅', start: '⛳', practice: '🎯', daily: '📍', playoff: '🏆', join: '👋', feedback: '✉️', classic: '🏛️', midway: '🎡', ace: '🏆' };
 
 function draw() {
   const top = document.getElementById('adm-today');
