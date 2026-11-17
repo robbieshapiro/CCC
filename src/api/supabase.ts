@@ -176,6 +176,8 @@ export const supabaseApi: Api = {
   },
   bilStart: (s, stake) => rpc('bil_start', { p_token: s.token, p_stake: stake }),
   bilFinish: (s, id, won) => rpc('bil_finish', { p_token: s.token, p_id: id, p_won: won }),
+  bookState: (s) => rpc('book_state', { p_token: s.token }),
+  bookBet: (s, kind, pick, stake) => rpc('book_bet', { p_token: s.token, p_kind: kind, p_pick: pick, p_stake: stake }),
   aceState: (s) => rpc('ace_state', { p_token: s.token }),
   aceSwing: (s, day, r) => rpc('ace_swing', { p_token: s.token, p_day: day, p_holed: r.holed, p_ft: r.ft }),
   pasStart: (s, stake) => rpc('pas_start', { p_token: s.token, p_stake: stake }),

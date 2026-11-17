@@ -334,6 +334,9 @@ export interface Api {
   bjDeal(session: Session, stake: number): Promise<import('../blackjack').BjView>;
   bjAct(session: Session, id: number, action: 'hit' | 'stand' | 'double'): Promise<import('../blackjack').BjView>;
   // Pop-a-Shot against Mo (pas_start, pas_finish)
+  // Mo's Book (src/book.ts): the field and its prices, your line, your bets (settling any on closed weeks); a bet
+  bookState(session: Session): Promise<import('../book').BookState>;
+  bookBet(session: Session, kind: 'winner' | 'back', pick: string | null, stake: number): Promise<import('../book').BookState>;
   // the Ace Pot (src/acepot.ts): the pot, your swings today, the last ace, and today's closest; a swing, settled at once
   aceState(session: Session): Promise<import('../acepot').AceState>;
   aceSwing(session: Session, day: string, r: { holed: boolean; ft: number | null }): Promise<import('../acepot').AceSwing>;

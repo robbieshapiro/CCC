@@ -80,6 +80,7 @@ export function barPane(snap: Snapshot) {
       <div class="bar-games">
         <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
         <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · make an ace, take the pot</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
+        <a class="bar-game cards" href="#/bar/book" data-game="book"><i>📒</i><div><b>Mo's Book</b><span>Bet on who wins the Open, or back yourself · prices move as cards come in</span></div><p data-mine="book">Mo's taking bets</p></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game cards" href="#/bar/blackjack" data-game="blackjack"><i>🃏</i><div><b>Blackjack</b><span>Against Mo, for club money · $10 to $500 a hand</span></div><p data-mine="blackjack">Pull up a stool</p></a>
         <a class="bar-game cards" href="#/bar/popashot" data-game="popashot"><i>🏀</i><div><b>Pop-a-Shot</b><span>Thirty seconds at the hoop · beat Mo's score for club money</span></div><p data-mine="popashot">Mo's waiting</p></a>
@@ -148,6 +149,15 @@ export async function fillBar(snap: Snapshot) {
     const best = bestTry(daily.mine);
     put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ playerId: r.playerId, name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
   }
+  // Mo's Book: the favourite's price and your open bets
+  void api
+    .bookState(s)
+    .then((b) => {
+      const fav = b.field[0];
+      const open = b.bets.filter((x) => x.payout === null).length;
+      put('book', `${b.open ? (fav ? `Favourite: ${fav.name} at ${fav.odds.toFixed(1)}x` : "Mo's taking bets") : 'Closed till Sunday'}${open ? ` · ${open} ${open === 1 ? 'bet' : 'bets'} open` : ''}`, '');
+    })
+    .catch(() => {});
   if (ace) {
     const left = ACE_SWINGS - ace.swingsToday;
     put(

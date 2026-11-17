@@ -3377,7 +3377,7 @@ grant execute on function bil_finish(uuid, bigint, boolean) to anon;
 -- which, and how near). The phone reports the shot, as with Mo's other games; the server keeps swings 5 seconds apart
 -- and three a day. Same daily limit as Mo's tables.
 alter table casino drop constraint if exists casino_game_check;
-alter table casino add constraint casino_game_check check (game in ('blackjack', 'popashot', 'billiards', 'acepot'));
+alter table casino add constraint casino_game_check check (game in ('blackjack', 'popashot', 'billiards', 'acepot', 'book'));
 
 -- what the pot holds now: $1,000, and every miss since the last ace
 create or replace function ace_pot() returns int
@@ -3442,6 +3442,136 @@ revoke all on function ace_pot() from public, anon, authenticated;
 grant execute on function ace_state(uuid) to anon;
 grant execute on function ace_swing(uuid, date, boolean, numeric) to anon;
 
+-- Mo's Book (from Nov 17, src/book.ts): bets on the week's Open, for club money. Who wins (anyone who's played the
+-- Open in the last three weeks, priced from this week's best card or recent form, Mo keeping 12%; the price is locked
+-- when you bet; closed on the Saturday) and Back yourself (beat your own line for 1.9x; before your first card of the
+-- week, once a week; no card all week and the stake comes back). Each bet is a casino row (game 'book'), open until
+-- the week closes; book_settle pays them from open_payouts (a tie for first splits the winnings). $10 to $500 a bet,
+-- the same daily limit as Mo's tables. (The casino game check, with book in it, is up with the Ace Pot.)
+
+-- the field and its prices, this week. posted: best card to par this week; prior: the last three weeks' best per
+-- hole, times this week's holes; left: days left to play, today included (7 on the Sunday, 1 on the Saturday)
+create or replace function book_field()
+returns table (home_id uuid, name text, posted numeric, prior numeric, odds numeric)
+language sql stable security definer set search_path = public, extensions as $$
+  with people as (
+    select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.id as home_id
+    from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+  ), wk as (select game_month() as m, greatest(1, 7 - (game_today() - game_month()::date))::numeric as left_days),
+  r as (
+    select pe.home_id, pe.name, rd.month, (rd.total - rd.par)::numeric as tp, coalesce(array_length(rd.holes, 1), 0) as holes, rd.created_at
+    from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h join rounds rd on rd.player_id = p.id
+    where rd.month >= open_purse_from() and length(rd.month) = 10 and rd.month::date >= (select m from wk)::date - 21
+      and rd.month <= (select m from wk)
+  ), best as (
+    select distinct on (home_id, month) home_id, name, month, tp, holes from r order by home_id, month, tp, created_at
+  ), now_holes as (
+    select coalesce((select mode() within group (order by holes) from best where month = (select m from wk) and holes > 0), 6) as n
+  ), f as (
+    select home_id, min(name) as name,
+      min(tp) filter (where month = (select m from wk)) as posted,
+      avg(tp / nullif(holes, 0)) filter (where month < (select m from wk)) * (select n from now_holes) as prior
+    from best group by home_id
+  ), g as (
+    select f.*, case when posted is not null then posted - 0.25 * (select left_days from wk) else coalesce(prior, 2) + 0.5 end as rating from f
+  ), w as (
+    select g.*, exp(-(rating - min(rating) over ()) / (1 + 0.35 * (select left_days from wk))) as wgt from g
+  )
+  select home_id, name, posted, round(prior, 2), least(40, greatest(1.2, round(0.88 / (wgt / sum(wgt) over ()), 1))) from w
+$$;
+revoke all on function book_field() from public, anon, authenticated;
+
+-- pay every bet on a week that's closed
+create or replace function book_settle() returns void
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if not exists (select 1 from casino where game = 'book' and payout is null and state->>'week' < game_month()) then return; end if;
+  with o as (select * from open_payouts()),
+  firsts as (select month, count(*) as n from o where place = 1 group by month),
+  due as (
+    select c.id, c.stake, c.state, c.player_id from casino c
+    where c.game = 'book' and c.payout is null and c.state->>'week' < game_month() for update
+  ), pay as (
+    select d.id,
+      case when d.state->>'kind' = 'winner' then
+        case when exists (select 1 from o where o.month = d.state->>'week' and o.player_id = (d.state->>'pick')::uuid and o.place = 1)
+          then floor(d.stake * (d.state->>'odds')::numeric / (select n from firsts where firsts.month = d.state->>'week'))::int else 0 end
+      else (
+        select case when b.tp is null then d.stake when b.tp < (d.state->>'line')::numeric then floor(d.stake * 1.9)::int else 0 end
+        from (select min(rd.total - rd.par) as tp from rounds rd join players me on me.id = d.player_id
+          where rd.month = d.state->>'week' and rd.player_id in (select person_seats(me))) b)
+      end as payout
+    from due d
+  )
+  update casino c set payout = pay.payout, settled_at = now() from pay where c.id = pay.id;
+end $$;
+revoke all on function book_settle() from public, anon, authenticated;
+
+create or replace function book_state(p_token uuid) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); my_home uuid; pr numeric; posted boolean; backed boolean;
+begin
+  perform book_settle();
+  select pe.id into my_home from players pe where lower(pe.name) = lower(me.name) and pe.pin_hash = me.pin_hash
+    order by pe.host_only, pe.created_at limit 1;
+  select f.prior into pr from book_field() f where f.home_id = my_home;
+  posted := exists (select 1 from rounds rd where rd.month = game_month() and rd.player_id in (select person_seats(me)));
+  backed := exists (select 1 from casino c where c.game = 'book' and c.player_id in (select person_seats(me))
+    and c.state->>'week' = game_month() and c.state->>'kind' = 'back');
+  return json_build_object(
+    'week', game_month(),
+    'open', game_today() - game_month()::date < 6,
+    'field', coalesce((select json_agg(json_build_object('playerId', f.home_id, 'name', f.name, 'posted', f.posted, 'odds', f.odds,
+      'mine', f.home_id = my_home) order by f.odds, f.name) from book_field() f), '[]'),
+    'back', json_build_object(
+      'line', case when pr is null then null else floor(pr) + 0.5 end,
+      'can', pr is not null and not posted and not backed and game_today() - game_month()::date < 6,
+      'why', case when backed then 'You''re backed this week.' when posted then 'Mo only takes it before your first card of the week.'
+        when pr is null then 'Mo needs a week of your cards first.' when game_today() - game_month()::date >= 6 then 'The book''s closed till Sunday.' else null end),
+    'bets', coalesce((select json_agg(json_build_object('id', c.id, 'kind', c.state->>'kind', 'week', c.state->>'week',
+      'pick', c.state->>'pickName', 'line', (c.state->>'line')::numeric, 'odds', (c.state->>'odds')::numeric, 'stake', c.stake,
+      'payout', c.payout, 'at', c.created_at) order by c.created_at desc)
+      from casino c where c.game = 'book' and c.player_id in (select person_seats(me)) and c.state->>'week' >= to_char(game_month()::date - 21, 'YYYY-MM-DD')), '[]'),
+    'bank', person_bank(me)
+  );
+end $$;
+
+create or replace function book_bet(p_token uuid, p_kind text, p_pick uuid, p_stake int) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); f record; pr numeric; my_home uuid;
+begin
+  perform bar_gate(me, 'book');
+  if p_stake not between 10 and 500 then raise exception 'Bets are $10 to $500.'; end if;
+  if game_today() - game_month()::date >= 6 then raise exception 'The book''s closed till Sunday.'; end if;
+  perform casino_check(me, p_stake);
+  if p_kind = 'winner' then
+    select * into f from book_field() b where b.home_id = p_pick;
+    if not found then raise exception 'Mo''s not taking bets on them this week.'; end if;
+    insert into casino (player_id, game, stake, state) values (me.id, 'book', p_stake,
+      jsonb_build_object('kind', 'winner', 'week', game_month(), 'pick', f.home_id, 'pickName', f.name, 'odds', f.odds));
+  elsif p_kind = 'back' then
+    select pe.id into my_home from players pe where lower(pe.name) = lower(me.name) and pe.pin_hash = me.pin_hash
+      order by pe.host_only, pe.created_at limit 1;
+    select b.prior into pr from book_field() b where b.home_id = my_home;
+    if pr is null then raise exception 'Mo needs a week of your cards first.'; end if;
+    if exists (select 1 from rounds rd where rd.month = game_month() and rd.player_id in (select person_seats(me))) then
+      raise exception 'Mo only takes it before your first card of the week.';
+    end if;
+    if exists (select 1 from casino c where c.game = 'book' and c.player_id in (select person_seats(me))
+        and c.state->>'week' = game_month() and c.state->>'kind' = 'back') then
+      raise exception 'You''re backed this week.';
+    end if;
+    insert into casino (player_id, game, stake, state) values (me.id, 'book', p_stake,
+      jsonb_build_object('kind', 'back', 'week', game_month(), 'line', floor(pr) + 0.5, 'odds', 1.9));
+  else
+    raise exception 'No such bet.';
+  end if;
+  return book_state(p_token);
+end $$;
+
+grant execute on function book_state(uuid) to anon;
+grant execute on function book_bet(uuid, text, uuid, int) to anon;
+
 -- The Committee Room's Bar tab: every game's switch, and the last 7 days at Mo's tables (bets, players, staked, and
 -- what the house is up or down)
 create or replace function admin_bar(p_token uuid) returns json
@@ -3463,7 +3593,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
 begin
   if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
-  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members', 'acepot') then raise exception 'No such game.'; end if;
+  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members', 'acepot', 'book') then raise exception 'No such game.'; end if;
   insert into bar_settings (game, open, updated_at) values (p_game, p_open, now())
   on conflict (game) do update set open = excluded.open, updated_at = now();
 end $$;
