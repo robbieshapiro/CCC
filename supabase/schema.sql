@@ -1996,9 +1996,9 @@ begin
   if p_game not in ('minigolf', 'drive', 'members', 'midway', 'targets') then raise exception 'No such game.'; end if;
   -- the Target Range (Nov 17, src/targets.ts) can be closed from the Committee Room
   if p_game = 'targets' then perform bar_gate(me, 'targets'); end if;
-  -- a long drive is 0 to 450 yd; the Target Range 0 to 810 points (TARGET_MAX); mini golf, the Members' Course and
+  -- a long drive is 0 to 450 yd; the Target Range 0 to 1,080 points (TARGET_MAX); mini golf, the Members' Course and
   -- the Midway are minus the strokes
-  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'targets' and p_score not between 0 and 810) or (p_game = 'minigolf' and p_score not between -60 and -6)
+  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'targets' and p_score not between 0 and 1080) or (p_game = 'minigolf' and p_score not between -60 and -6)
     or (p_game = 'members' and p_score not between -90 and -1) or (p_game = 'midway' and p_score not between -40 and -3) then
     raise exception 'That score doesn''t look right.';
   end if;

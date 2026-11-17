@@ -1,9 +1,12 @@
-// The Target Range (Nov 17): a daily game at the bar. Ten balls from a bay at six targets, 60 to 240 yd, each with
-// three rings. Where the ball stops scores: the inner ring the most, and the far targets more than the near ones.
-// Land in a ring on the next ball too and it scores double, then triple from the third in a row; a miss resets that.
-// So a sure wedge can be worth more than a long miss. One counted game a day; the day's top three are paid
-// (DAILY_PRIZES). submit_bar in supabase/schema.sql checks the score is possible (0 to TARGET_MAX).
+// The Target Range (Nov 17): a daily game at the bar. Ten balls from a bay at six targets, 50 to 210 yd, and the back
+// net at 235 yd. Each target is a net in three rings: a ball that lands in a ring on the fly is caught there and scores
+// it (the bullseye most, the far targets more than the near ones). One that lands short and rolls in only reaches the
+// outer ring. The back net pays only through its centre window, on the fly, for a drive.
+// Score again on the next ball and it doubles, then triples from the third in a row; a miss resets that. One counted
+// game a day; the day's top three are paid (DAILY_PRIZES). submit_bar in supabase/schema.sql checks the score is
+// possible (0 to TARGET_MAX).
 import { SCALE } from './golf3d/clubs';
+import type { Frame, Result } from './golf3d/physics';
 import type { V2 } from './golf3d/types';
 
 export const TARGET_BALLS = 10;
@@ -14,19 +17,23 @@ export const RING_YD = [4, 9, 15];
 export const RINGS = RING_YD.map(yd);
 export type Target = { yards: number; at: V2; points: [number, number, number]; color: number };
 export const TARGETS: Target[] = [
-  { yards: 60, at: { x: -30, y: yd(60) }, points: [10, 5, 2], color: 0xe94b3c },
-  { yards: 90, at: { x: 34, y: yd(90) }, points: [14, 7, 3], color: 0xf39c12 },
-  { yards: 125, at: { x: -38, y: yd(125) }, points: [18, 9, 4], color: 0xf1c40f },
-  { yards: 160, at: { x: 30, y: yd(160) }, points: [22, 11, 4], color: 0x2ecc71 },
-  { yards: 200, at: { x: -20, y: yd(200) }, points: [26, 13, 5], color: 0x3498db },
-  { yards: 240, at: { x: 24, y: yd(240) }, points: [30, 15, 6], color: 0x9b59b6 },
+  { yards: 50, at: { x: -30, y: yd(50) }, points: [10, 5, 2], color: 0xe94b3c },
+  { yards: 80, at: { x: 34, y: yd(80) }, points: [13, 6, 3], color: 0xf39c12 },
+  { yards: 115, at: { x: -38, y: yd(115) }, points: [16, 8, 3], color: 0xf1c40f },
+  { yards: 150, at: { x: 30, y: yd(150) }, points: [20, 10, 4], color: 0x2ecc71 },
+  { yards: 180, at: { x: -24, y: yd(180) }, points: [24, 12, 5], color: 0x3498db },
+  { yards: 210, at: { x: 26, y: yd(210) }, points: [28, 14, 6], color: 0x9b59b6 },
 ];
+// The back net, across the end of the range: only a drive through the window in its middle, on the fly, scores.
+// x0/x1: the net's ends; top: its height above the ground; win: the window's half-width and height (hole units).
+export const NET = { yards: 235, y: yd(235), x: 0, x0: -120, x1: 120, top: 40, half: yd(7), h: yd(9), points: 40, color: 0xffd23f };
 // a streak: the second ball in a row in a ring doubles, the third and on triple
 export const streakMult = (run: number) => Math.min(3, Math.max(1, run));
-// the most a game can score: 30, then 60, then 90 for each ball after
-export const TARGET_MAX = TARGETS[TARGETS.length - 1].points[0] * (1 + 2 + 3 * (TARGET_BALLS - 2));
+// the most a game can score: the window every time, 40, then 80, then 120 for each ball after
+export const TARGET_MAX = NET.points * (1 + 2 + 3 * (TARGET_BALLS - 2));
 
-// which target and ring a ball that stopped here is in (ring 0 is the inner), or null for none
+export type Hit = { target: number; ring: number; points: number; rolled?: boolean };
+// which target and ring this spot is in (ring 0 is the inner), or null for none
 export function ringAt(end: V2): { target: number; ring: number; points: number } | null {
   for (let i = 0; i < TARGETS.length; i++) {
     const t = TARGETS[i];
@@ -36,18 +43,52 @@ export function ringAt(end: V2): { target: number; ring: number; points: number 
   }
   return null;
 }
+const inOuter = (p: V2) => TARGETS.findIndex((t) => Math.hypot(p.x - t.at.x, p.y - t.at.y) <= RINGS[2]);
 
-// a whole game: each ball's points after the streak, and the total
-export function scoreGame(ends: (V2 | null)[]) {
-  let run = 0;
-  let total = 0;
-  const balls = ends.map((e) => {
-    const hit = e ? ringAt(e) : null;
-    run = hit ? run + 1 : 0;
-    const mult = hit ? streakMult(run) : 1;
-    const pts = hit ? hit.points * mult : 0;
-    total += pts;
-    return { hit, mult, pts };
-  });
-  return { balls, total };
+// The nets catch the ball: the shot as flown, cut off where a net takes it, and what it scored (hit null: nothing).
+//   on the fly into the back net: it drops at the net (the window scores, the rest of the net doesn't);
+//   on the fly into a ring: it stops where it landed and scores that ring;
+//   landed short and rolling: the first target it rolls into takes it, in the outer ring;
+//   rolling into the back net: it stops there, nothing.
+export function netShot(r: Result, ground: (x: number, y: number) => number): { r: Result; hit: Hit | null; net: 'window' | 'net' | null } {
+  if (r.penalty || r.frames.length < 2) return { r, hit: null, net: null };
+  const land = r.sounds.find((s) => s.s === 'land' || s.s === 'sand' || s.s === 'splash')?.t ?? Infinity;
+  const cut = (frames: Frame[]): Result => {
+    const t = frames[frames.length - 1].t;
+    const end = frames[frames.length - 1];
+    return { ...r, frames, end: { x: end.x, y: end.y }, sounds: r.sounds.filter((s) => s.t <= t), duration: t, holed: false, zones: [] };
+  };
+  for (let i = 1; i < r.frames.length; i++) {
+    const a = r.frames[i - 1];
+    const f = r.frames[i];
+    // the back net
+    if (a.y < NET.y && f.y >= NET.y) {
+      const k = (NET.y - a.y) / (f.y - a.y || 1);
+      const x = a.x + (f.x - a.x) * k;
+      const z = a.z + (f.z - a.z) * k;
+      const t = a.t + (f.t - a.t) * k;
+      const up = z - ground(x, NET.y);
+      if (x >= NET.x0 && x <= NET.x1 && up <= NET.top) {
+        // it hits the net and drops to its foot
+        const y = NET.y - 0.6;
+        const g = ground(x, y);
+        const drop: Frame[] = [];
+        for (let j = 1; j <= 8; j++) drop.push({ x, y, z: g + (z - g) * (1 - j / 8) ** 2, t: t + 0.06 * j });
+        const flying = f.t <= land;
+        const window = flying && Math.abs(x - NET.x) <= NET.half && up <= NET.h;
+        return { r: cut([...r.frames.slice(0, i), { x, y, z, t }, ...drop]), hit: window ? { target: -1, ring: 0, points: NET.points } : null, net: window ? 'window' : 'net' };
+      }
+    }
+    // landed: in a ring, the net takes it there
+    if (a.t < land && f.t >= land) {
+      const hit = ringAt(f);
+      if (hit) return { r: cut(r.frames.slice(0, i + 1)), hit, net: null };
+    }
+    // rolling: into a target's outer edge
+    if (f.t > land) {
+      const k = inOuter(f);
+      if (k >= 0) return { r: cut(r.frames.slice(0, i + 1)), hit: { target: k, ring: 2, points: TARGETS[k].points[2], rolled: true }, net: null };
+    }
+  }
+  return { r, hit: null, net: null };
 }
