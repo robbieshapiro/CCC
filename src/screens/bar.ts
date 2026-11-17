@@ -80,7 +80,7 @@ export function barPane(snap: Snapshot) {
       <h2 class="bar-wall">On the wall</h2>
       <div class="bar-games">
         <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · top 3 paid ${prizesLine()} today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
-        <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · make an ace, take the pot</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
+        <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · ace it and the pot is yours. It carries over until someone does</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
         <a class="bar-game cards" href="#/bar/book" data-game="book"><i>📒</i><div><b>Mo's Book</b><span>Bet on who wins the Open, or back yourself · prices move as cards come in</span></div><p data-mine="book">Mo's taking bets</p></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game cards" href="#/bar/blackjack" data-game="blackjack"><i>🃏</i><div><b>Blackjack</b><span>Against Mo, for club money · $10 to $500 a hand</span></div><p data-mine="blackjack">Pull up a stool</p></a>

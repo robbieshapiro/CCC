@@ -24,7 +24,7 @@ export function playTiles(snap: Snapshot) {
       <h2 class="pm-head">More to play</h2>
       <div class="pm-grid">
         ${dailyCard()}
-        <a class="tile pm-tile" href="#/bar/ace" data-game="acepot"><i>💰</i><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · 3 a day</span><em data-lead="acepot"></em></a>
+        <a class="tile pm-tile" href="#/bar/ace" data-game="acepot"><i>💰</i><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · carries over till someone aces it</span><em data-lead="acepot"></em></a>
         <a class="tile pm-tile" href="#/bar/drive"><i>🚀</i><b>Long drive</b><span>3 swings off ${esc(tee.name)} · pays ${prizesLine()} today</span><em data-lead="drive"></em></a>
         <a class="tile pm-tile" href="#/bar/members"><i>🏗️</i><b>Members' Course</b><span>Holes the members built</span><em data-lead="members"></em></a>
         <a class="tile pm-tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
