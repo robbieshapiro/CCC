@@ -2020,7 +2020,10 @@ begin
     ), best as (
       select lower(p.name) as k, p.pin_hash as h, max(b.score) as score, min(b.created_at) as first_at
       from bar_scores b join players p on p.id = b.player_id
-      where b.game = p_game and b.week = wk group by lower(p.name), p.pin_hash
+      where b.game = p_game and b.week = wk
+        -- the long drive is a daily contest (Nov 17): only today's swings count
+        and (p_game <> 'drive' or (b.created_at at time zone 'America/New_York')::date = game_today())
+      group by lower(p.name), p.pin_hash
     )
     select json_build_object(
       'week', wk,

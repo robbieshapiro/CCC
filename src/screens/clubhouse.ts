@@ -150,7 +150,7 @@ function how(snap: Snapshot) {
     ['🏆', `Win the ${per}`, `Lowest round in your club when the ${per} closes goes on the plaque. Midnight ET, ${per === 'week' ? 'Saturday night' : 'last day'}.`],
     ['🌍', 'The Open', 'Every club on one board. Same round, bigger field.'],
     ['🎯', 'Closest to the Pin', 'One shot, three tries, new every day.'],
-    ['🍺', 'The bar', "The long drive and the Members' Course. New boards every Monday."],
+    ['🍺', 'The bar', "A new long drive board every day, and the Members' Course every Monday."],
     ['🏌️', 'Practice', `The range, the short game, and next ${per}’s course before it opens.`],
     ['🥤', 'The cart', 'Each drink from the cart does one thing for the rest of the hole, at a cost.'],
   ];

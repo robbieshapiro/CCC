@@ -1726,7 +1726,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const week = weekOf(todayInGameTz());
     const key = (p: DbPlayer) => `${p.name.toLowerCase()}|${p.pin}`;
     const best = new Map<string, { playerId: string; name: string; score: number }>();
-    for (const r of (db.bar ?? []).filter((x) => x.game === game && x.week === week)) {
+    for (const r of (db.bar ?? []).filter((x) => x.game === game && x.week === week && (game !== 'drive' || (!!x.at && todayInGameTz(new Date(x.at)) === todayInGameTz())))) {
       const p = db.players.find((x) => x.id === r.playerId);
       if (!p) continue;
       const b = best.get(key(p));

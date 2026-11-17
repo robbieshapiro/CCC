@@ -61,7 +61,10 @@ export async function bindDaily(day: string, crown?: DailyCrown | null) {
   el.hidden = false;
   // yesterday's winner, across every club
   const king = crown ? `<span class="tile-crown">🎯 ${esc(crown.name)} · ${esc(resultLabel({ ft: crown.ft, holed: crown.holed, lost: false }))} yesterday</span>` : '';
-  el.innerHTML = `<i>🎯</i><b>Closest to the Pin</b><span>${esc(status)}</span>${king}${state.streak ? `<em class="tile-badge">🔥 ${state.streak}</em>` : ''}`;
+  // today's leader, across every club, as the long drive tile shows its own
+  const top = state.board[0];
+  const lead = `<em class="pm-lead">${top ? `Leader: ${esc(top.name)}, ${esc(top.holed ? 'holed it' : resultLabel({ ft: top.ft, holed: false, lost: top.ft === null }))}${top.mine ? ' (you)' : ''}` : 'Nobody yet today'}</em>`;
+  el.innerHTML = `<i>🎯</i><b>Closest to the Pin</b><span>${esc(status)}</span>${lead}${king}${state.streak ? `<em class="tile-badge">🔥 ${state.streak}</em>` : ''}`;
 }
 
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;

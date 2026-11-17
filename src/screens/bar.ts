@@ -1,5 +1,5 @@
-// The Nineteenth Hole: Mo's bar, and the games on the wall behind it. Closest to the Pin (daily), mini golf and
-// the long drive (weekly). Each card: what it is in a line, where you stand, the top three, and Play.
+// The Nineteenth Hole: Mo's bar, and the games on the wall behind it. Closest to the Pin and the long drive (daily),
+// the Members' Course (weekly). Each card: what it is in a line, where you stand, the top three, and Play.
 // It's the first tab of the Clubhouse.
 import { api } from '../api';
 import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
@@ -81,7 +81,7 @@ export function barPane(snap: Snapshot) {
         <a class="bar-game cards" href="#/bar/blackjack" data-game="blackjack"><i>🃏</i><div><b>Blackjack</b><span>Against Mo, for club money · $10 to $500 a hand</span></div><p data-mine="blackjack">Pull up a stool</p></a>
         <a class="bar-game cards" href="#/bar/popashot" data-game="popashot"><i>🏀</i><div><b>Pop-a-Shot</b><span>Thirty seconds at the hoop · beat Mo's score for club money</span></div><p data-mine="popashot">Mo's waiting</p></a>
         <a class="bar-game cards" href="#/bar/billiards" data-game="billiards"><i>🎱</i><div><b>8-Ball</b><span>A full game against Mo · stripes or solids, for club money</span></div><p data-mine="billiards">Table's free</p></a>
-        <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
+        <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs · today</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game members" href="#/bar/members" data-game="members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
       <h2 class="bar-wall">Through the back</h2>
@@ -147,7 +147,7 @@ export async function fillBar(snap: Snapshot) {
   for (const [game, b] of [['drive', drive], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
     const today = game === 'midway' ? (b.playedToday ? " · today's round is in" : ' · today’s round is waiting') + (waiting ? ` · ${waiting === 1 ? 'a curse is' : `${waiting} curses are`} waiting for you` : '') : '';
-    put(game, (b.mine === null ? 'Not played this week' : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
+    put(game, (b.mine === null ? (game === 'drive' ? 'Not played today' : 'Not played this week') : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
   }
 }
 
@@ -160,10 +160,10 @@ export async function barSummary(game: BarGame, score: number | null, again: () 
   sheet.innerHTML = `
     <div class="notes-card">
       <div class="notes-body">
-        <p class="eyebrow">${gameName(game)} · ${fun ? 'for fun' : 'this week'}</p>
+        <p class="eyebrow">${gameName(game)} · ${fun ? 'for fun' : game === 'drive' ? 'today' : 'this week'}</p>
         <h2>${score === null ? 'No score' : esc(scoreLabel(game, score))}</h2>
         ${game === 'midway' ? `<p class="fine">${fun ? "Just for fun: today's round is already in. Back tomorrow for another that counts." : 'That was today’s round. Any more today are for fun.'}</p>` : ''}
-        ${b && b.mine !== null ? `<p>Your best this week: <b>${esc(scoreLabel(game, b.mine))}</b></p>` : ''}
+        ${b && b.mine !== null ? `<p>Your best ${game === 'drive' ? 'today' : 'this week'}: <b>${esc(scoreLabel(game, b.mine))}</b></p>` : ''}
         ${b ? `<ol class="daily-board">${b.board
           .slice(0, 10)
           .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span><b>${esc(r.name)}</b><small></small><em>${esc(scoreLabel(game, r.score))}</em></li>`)
