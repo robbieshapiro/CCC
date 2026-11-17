@@ -700,6 +700,24 @@ begin
   update players set avatar = p_avatar where id in (select person_seats(me));
 end $$;
 
+-- The daily streak (Nov 17, src/streak.ts): days in a row a person got a card in, across their clubs. Alive while the
+-- last card day is today or yesterday. today: whether today's is in.
+create or replace function person_streak(p players) returns json
+language sql stable security definer set search_path = public, extensions as $$
+  with d as (
+    select distinct (r.created_at at time zone 'America/New_York')::date as day
+    from rounds r where r.player_id in (select person_seats(p)) and r.card
+  ), g as (
+    select day, day - (row_number() over (order by day))::int as grp from d
+  ), runs as (
+    select max(day) as last, count(*)::int as n from g group by grp
+  )
+  select json_build_object(
+    'days', coalesce((select n from runs where last >= game_today() - 1 order by last desc limit 1), 0),
+    'today', exists (select 1 from d where day = game_today()))
+$$;
+revoke all on function person_streak(players) from public, anon, authenticated;
+
 create or replace function get_snapshot(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); m text := game_month();
@@ -727,6 +745,7 @@ begin
         'owned', (select coalesce(json_agg(distinct item), '[]') from purchases where player_id in (select person_seats(pl))),
         -- the side money (club bonuses): counts toward career earnings and rank, not the board's purse column
         'bonus', person_bonus(pl),
+        'streak', person_streak(pl),
         -- playing here from another club: on the board and in for the title, but paid at home
         'away', (home_of(pl)).group_id <> pl.group_id,
         -- runs the clubs: shown as the Committee, never as a guest (display only; away still decides the purse)
@@ -924,7 +943,9 @@ begin
         'mine', lower(me.name) = b.k and me.pin_hash = b.h,
         'localId', (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = b.k and p2.pin_hash = b.h),
         'avatar', b.avatar, 'holes', b.holes, 'total', b.total, 'par', b.par,
-        'rounds', c.n, 'last', c.last, 'createdAt', b.created_at
+        'rounds', c.n, 'last', c.last, 'createdAt', b.created_at,
+        -- days in a row with a card in (person_streak, Nov 17)
+        'streak', (select person_streak(pp) from players pp where pp.id = b.home_id)
       ) order by b.total - b.par, b.created_at)
     from best b join counts c using (home_id) join groups g on g.id = b.home_group
   ), '[]');
