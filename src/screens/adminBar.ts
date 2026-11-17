@@ -12,7 +12,7 @@ const GAMES: [string, string, string][] = [
   ['book', '📒', "Mo's Book"],
   ['midway', '🎡', 'The Midway'],
   ['drive', '🚀', 'Long drive'],
-  ['targets', '⭕', 'The Target Range'],
+  ['targets', '🏹', 'The Target Range'],
   ['members', '🏗️', "Members' Course"],
 ];
 const CASINO = new Set(['book', 'uth']);

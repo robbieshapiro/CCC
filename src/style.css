@@ -2248,7 +2248,14 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 /* the live read while the ball moves (Nov 17): the long drive's yards, Closest to the Pin's feet */
 .g3-ticker { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); padding: 6px 16px; border-radius: 999px; background: rgba(10, 24, 18, 0.72); color: #fff; font: 800 30px var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; pointer-events: none; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
 .g3-ticker[hidden] { display: none; }
-.bs-row > .bs-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+/* the Ace Pot across the top of the strip (Nov 17): gold, the pot big, a slow shine */
+.bs-card.ace { grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; column-gap: 12px; align-items: center; padding: 12px 14px; overflow: hidden; background: linear-gradient(135deg, #f7d774 0%, #e0a92e 45%, #b8791a 100%); border: 1px solid #ffe7a3; box-shadow: 0 8px 22px -10px rgba(184, 121, 26, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.5); color: #3a2405; }
+.bs-card.ace i { grid-row: 1 / 4; font-size: 34px; }
+.bs-card.ace small { color: #5a3a08; }
+.bs-card.ace b { font-size: 24px; color: #2a1802; }
+.bs-card.ace span { color: #4a2f06; font-weight: 600; }
+.bs-card.ace::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%); transform: translateX(-100%); animation: bs-shine 4s ease-in-out infinite; pointer-events: none; }
+@keyframes bs-shine { 0%, 60% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
 /* the Target Range (Nov 17): the scoreboard, and the points pop when a ball scores */
 .tr-hud { position: absolute; z-index: 6; left: 10px; top: calc(env(safe-area-inset-top, 0px) + 122px); display: flex; gap: 6px; pointer-events: none; }
