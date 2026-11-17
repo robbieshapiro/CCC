@@ -3371,6 +3371,77 @@ end $$;
 grant execute on function bil_start(uuid, int) to anon;
 grant execute on function bil_finish(uuid, bigint, boolean) to anon;
 
+-- The Ace Pot (from Nov 17, src/acepot.ts): one par 3 a day, the same for every club. $50 a swing, three swings a day a
+-- person. Every miss goes in the pot; a hole-in-one takes the lot, and the pot starts again at $1,000. One pot across
+-- every club. Each swing is a casino row, settled as it's made: payout 0 on a miss, the whole pot on an ace (state says
+-- which, and how near). The phone reports the shot, as with Mo's other games; the server keeps swings 5 seconds apart
+-- and three a day. Same daily limit as Mo's tables.
+alter table casino drop constraint if exists casino_game_check;
+alter table casino add constraint casino_game_check check (game in ('blackjack', 'popashot', 'billiards', 'acepot'));
+
+-- what the pot holds now: $1,000, and every miss since the last ace
+create or replace function ace_pot() returns int
+language sql stable security definer set search_path = public, extensions as $$
+  select 1000 + coalesce((select sum(stake) from casino
+    where game = 'acepot' and state->>'outcome' = 'miss'
+      and created_at > coalesce((select max(created_at) from casino where game = 'acepot' and state->>'outcome' = 'ace'), '-infinity'::timestamptz)), 0)::int
+$$;
+
+create or replace function ace_state(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token));
+begin
+  return (
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.id as home_id
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+    ), swings as (
+      select pe.k, pe.h, pe.name, pe.home_id, c.* from casino c join players p on p.id = c.player_id
+      join people pe on pe.k = lower(p.name) and pe.h = p.pin_hash
+      where c.game = 'acepot'
+    ), today as (
+      select distinct on (k, h) k, h, name, home_id, state->>'outcome' = 'ace' as holed, (state->>'ft')::numeric as ft
+      from swings where (created_at at time zone 'America/New_York')::date = game_today()
+      order by k, h, (state->>'outcome' = 'ace') desc, (state->>'ft')::numeric asc nulls last
+    )
+    select json_build_object(
+      'pot', ace_pot(),
+      'swingsToday', (select count(*) from casino where game = 'acepot' and player_id in (select person_seats(me))
+        and (created_at at time zone 'America/New_York')::date = game_today()),
+      'bank', person_bank(me),
+      'lastAce', (select json_build_object('name', name, 'pot', payout, 'at', created_at) from swings
+        where state->>'outcome' = 'ace' order by created_at desc limit 1),
+      'today', coalesce((select json_agg(json_build_object('playerId', home_id, 'name', name, 'ft', ft, 'holed', holed,
+          'mine', k = lower(me.name) and h = me.pin_hash) order by holed desc, ft asc nulls last) from today), '[]')
+    )
+  );
+end $$;
+
+create or replace function ace_swing(p_token uuid, p_day date, p_holed boolean, p_ft numeric) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); pot int; pay int; n int; last timestamptz;
+begin
+  perform bar_gate(me, 'acepot');
+  if p_day <> game_today() then raise exception 'That''s not today''s hole.'; end if;
+  -- one pot for everyone: settle one swing at a time
+  perform pg_advisory_xact_lock(hashtext('acepot'));
+  select count(*), max(created_at) into n, last from casino where game = 'acepot' and player_id in (select person_seats(me))
+    and (created_at at time zone 'America/New_York')::date = game_today();
+  if n >= 3 then raise exception 'That''s your three swings today. The pot''s here tomorrow.'; end if;
+  if last is not null and now() - last < interval '5 seconds' then raise exception 'Easy. One swing at a time.'; end if;
+  perform casino_check(me, 50);
+  pot := ace_pot();
+  pay := case when p_holed then pot else 0 end;
+  insert into casino (player_id, game, stake, payout, settled_at, state)
+    values (me.id, 'acepot', 50, pay, now(), jsonb_build_object('outcome', case when p_holed then 'ace' else 'miss' end,
+      'ft', case when p_holed then 0 when p_ft is null then null else round(least(greatest(p_ft, 0), 9999), 1) end, 'pot', pot));
+  return json_build_object('holed', p_holed, 'payout', pay, 'pot', ace_pot(), 'swingsToday', n + 1, 'bank', person_bank(me));
+end $$;
+
+revoke all on function ace_pot() from public, anon, authenticated;
+grant execute on function ace_state(uuid) to anon;
+grant execute on function ace_swing(uuid, date, boolean, numeric) to anon;
+
 -- The Committee Room's Bar tab: every game's switch, and the last 7 days at Mo's tables (bets, players, staked, and
 -- what the house is up or down)
 create or replace function admin_bar(p_token uuid) returns json
@@ -3392,7 +3463,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
 begin
   if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
-  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members') then raise exception 'No such game.'; end if;
+  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members', 'acepot') then raise exception 'No such game.'; end if;
   insert into bar_settings (game, open, updated_at) values (p_game, p_open, now())
   on conflict (game) do update set open = excluded.open, updated_at = now();
 end $$;

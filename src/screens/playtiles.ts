@@ -1,9 +1,11 @@
-// Home, under the Open: everything else you can play, as big tiles. The day's Closest to the Pin, the day's long drive
+// Home, under the Open: everything else you can play, as big tiles. The day's Closest to the Pin, the Ace Pot, the day's long drive
 // and the Members' Course (each with its leader), the practice facility, and the classic courses of weeks gone by, each
 // with its course record and the champions of its week.
 import { api } from '../api';
 import type { CourseRecord, Snapshot } from '../api/types';
 import { scoreLabel } from '../bar';
+import { ACE_STAKE, aceShot } from '../acepot';
+import { money } from '../purse';
 import { classics, courseFor, type Course } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
@@ -21,6 +23,7 @@ export function playTiles(snap: Snapshot) {
       <h2 class="pm-head">More to play</h2>
       <div class="pm-grid">
         ${dailyCard()}
+        <a class="tile pm-tile" href="#/bar/ace" data-game="acepot"><i>💰</i><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · 3 a day</span><em data-lead="acepot"></em></a>
         <a class="tile pm-tile" href="#/bar/drive"><i>🚀</i><b>Long drive</b><span>3 swings off ${esc(tee.name)} · the last 2 with a fireball</span><em data-lead="drive"></em></a>
         <a class="tile pm-tile" href="#/bar/members"><i>🏗️</i><b>Members' Course</b><span>Holes the members built</span><em data-lead="members"></em></a>
         <a class="tile pm-tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
@@ -55,6 +58,18 @@ export async function bindPlayTiles(snap: Snapshot) {
         el.textContent = top ? `Leader: ${top.name}, ${scoreLabel(game, top.score)}${b.mine !== null && !top.mine ? ` · you ${scoreLabel(game, b.mine)}` : ''}` : game === 'drive' ? 'Nobody yet today' : 'Nobody yet this week';
       })
       .catch(() => {});
+  void api
+    .aceState(s)
+    .then((a) => {
+      const el = document.querySelector<HTMLElement>('[data-lead="acepot"]');
+      if (el) el.textContent = `Pot: ${money(a.pot)}${a.lastAce ? ` · last ace ${a.lastAce.name}` : ''}`;
+    })
+    .catch(() => {});
+  // a closed game's tile goes for members, as at the bar
+  void api.barGames(s).then(({ settings, committee }) => {
+    const ace = document.querySelector<HTMLElement>('.pm-tile[data-game="acepot"]');
+    if (ace) ace.hidden = settings.acepot === false && !committee;
+  });
   void lead('drive');
   void lead('members');
   if (!classics(snap.month).length) return;
