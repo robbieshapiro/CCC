@@ -90,7 +90,6 @@ export function barPane(snap: Snapshot) {
       <p class="bar-wall-sub">Your club money on the line. At most $2,000 down a day.</p>
       <div class="bar-games">
         <a class="bar-game stake" href="#/bar/book" data-game="book"><i>📒</i><div><b>Mo's Book <em class="bar-stake">$10 to $500</em></b><span>Bet on who wins the Open, or back yourself · prices move as cards come in</span></div><p data-mine="book">Mo's taking bets</p></a>
-        <a class="bar-game stake" href="#/bar/poker" data-game="uth"><i>🂡</i><div><b>Ultimate Texas Hold'em <em class="bar-stake">$10 to $100 Ante</em></b><span>You against Mo · bet 4x before the flop, 2x on it, 1x on the river · a royal pays 500 to 1</span></div><p data-mine="uth">Pull up a seat</p></a>
       </div>
       <h2 class="bar-wall">Through the back</h2>
       <div class="bar-doors">

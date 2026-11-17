@@ -23,7 +23,6 @@ const CONTESTS: Card[] = [
 ];
 const TABLES: Card[] = [
   ['book', '#/bar/book', '📒', "Mo's Book", 'Bet on the Open'],
-  ['uth', '#/bar/poker', '🂡', "Ultimate Hold'em", 'You against Mo'],
 ];
 const card = ([game, href, icon, name, wait]: Card, stake = '') =>
   `<a class="bs-card${stake ? ' stake' : ''}" href="${href}" data-bs="${game}"><i>${icon}</i><small>${esc(name)}</small><b data-bs-big>${esc(wait)}</b><span data-bs-sub>${esc(stake)}</span></a>`;

@@ -14,7 +14,6 @@ import { leaveShop } from './screens/shop';
 import { aceRound, barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { playoff } from './screens/playoff';
 import { book } from './screens/book';
-import { uth } from './screens/uth';
 import { clubhouse, isAboutPart, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
@@ -84,11 +83,10 @@ async function router() {
     if (page === 'round') return arg === 'practice' ? round(s, { course: courseFor(s.month), practice: true }) : round(s);
     if (page === 'daily') return dailyRound(s);
     if (page === 'playoff') return playoff(s);
-    // blackjack, Pop-a-Shot and 8-ball are off for now (Nov 17): their screens stay in src/screens, unrouted, and an old
-    // link lands on the bar
+    // blackjack, Pop-a-Shot, 8-ball and Ultimate Texas Hold'em are off for now (Nov 17): their screens stay in
+    // src/screens, unrouted, and an old link lands on the bar
     if (page === 'bar' && arg === 'ace') return aceRound(s);
     if (page === 'bar' && arg === 'book') return book(s);
-    if (page === 'bar' && arg === 'poker') return uth(s);
     if (page === 'bar') return arg === 'drive' || arg === 'members' || arg === 'midway' ? barRound(s, arg) : clubhouse(s, 'bar');
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     // the old Clubs tab became the Season
