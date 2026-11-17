@@ -1,3 +1,4 @@
+import { DAILY_PRIZES } from '../bonus';
 // The Nineteenth Hole on home (Nov 17): one swipeable row between the Play card and the Open, so the bar's games are
 // seen by everyone who comes in. Each card leads with its live number: the Ace Pot's pot, today's Closest to the Pin
 // and long drive leaders, Mo's Book favourite, the Midway's leader. A game the Committee has closed drops out for members.
@@ -13,8 +14,8 @@ import { esc } from '../ui';
 
 const CARDS: [game: string, href: string, icon: string, name: string, wait: string][] = [
   ['acepot', '#/bar/ace', '💰', 'The Ace Pot', '$50 a swing'],
-  ['daily', '#/daily', '🎯', 'Closest to the Pin', 'Three tries today'],
-  ['drive', '#/bar/drive', '🚀', 'Long drive', 'Today’s board'],
+  ['daily', '#/daily', '🎯', 'Closest to the Pin', `1st pays $${DAILY_PRIZES[0]} today`],
+  ['drive', '#/bar/drive', '🚀', 'Long drive', `1st pays $${DAILY_PRIZES[0]} today`],
   ['book', '#/bar/book', '📒', "Mo's Book", 'Bet on the Open'],
   ['midway', '#/bar/midway', '🎡', 'The Midway', 'Three carnival holes'],
 ];
@@ -51,14 +52,14 @@ export async function bindBarStrip(snap: Snapshot) {
     .dailyState(s, snap.today)
     .then((d) => {
       const top = d.board[0];
-      if (top) fill('daily', `${top.name} · ${top.holed ? 'holed it' : resultLabel({ ft: top.ft, holed: false, lost: top.ft === null })}`, top.mine ? "You're leading" : `${d.players} in today`);
+      if (top) fill('daily', `${top.name} · ${top.holed ? 'holed it' : resultLabel({ ft: top.ft, holed: false, lost: top.ft === null })}`, `${top.mine ? "You're leading" : `${d.players} in`} · 1st pays $${DAILY_PRIZES[0]}`);
     })
     .catch(() => {});
   void api
     .barBoard(s, 'drive')
     .then((b) => {
       const top = b.board[0];
-      if (top) fill('drive', `${top.name} · ${scoreLabel('drive', top.score)}`, top.mine ? "You're leading" : b.mine !== null ? `You: ${scoreLabel('drive', b.mine)}` : 'Beat it');
+      if (top) fill('drive', `${top.name} · ${scoreLabel('drive', top.score)}`, `${top.mine ? "You're leading" : b.mine !== null ? `You: ${scoreLabel('drive', b.mine)}` : 'Beat it'} · 1st pays $${DAILY_PRIZES[0]}`);
     })
     .catch(() => {});
   void api

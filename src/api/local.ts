@@ -3,7 +3,7 @@ import { seasonPoints } from '../season';
 import { STOCK_BUDDIES } from '../buddies';
 import { CARDS_A_DAY, cardsOn, GAME_TZ, openPurseOn, periodOf, todayInGameTz } from '../day';
 import { courseById, courseFor } from '../golf3d/courses';
-import { BONUS, bonusOf, puttBonus, RAISE_FROM, SECRET_FEATS } from '../bonus';
+import { BONUS, bonusOf, dailyPrize, PRIZES_FROM, puttBonus, RAISE_FROM, SECRET_FEATS } from '../bonus';
 import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
@@ -145,7 +145,8 @@ function paidIn(db: Db, groupId: string, month: string): Payout[] {
 }
 
 // every past day's Closest to the Pin winner, as a person ('name|pin'): holed first, holed sooner, then nearest
-function ctpWinners(db: Db): string[] {
+// the day's places at Closest to the Pin, as ctp_places does (closed days only): holed sooner first, then nearest
+function ctpPlaces(db: Db): { day: string; key: string; place: number }[] {
   const today = todayInGameTz();
   const days = new Map<string, Map<string, { holed: number; ft: number }>>();
   for (const s of db.daily ?? []) {
@@ -157,10 +158,29 @@ function ctpWinners(db: Db): string[] {
     day.set(k, { holed: s.t.holed ? Math.min(x.holed, s.t.try) : x.holed, ft: !s.t.holed && !s.t.lost && s.t.ft !== null ? Math.min(x.ft, s.t.ft) : x.ft });
     days.set(s.day, day);
   }
-  return [...days.values()].flatMap((day) => {
-    const top = [...day].filter(([, x]) => x.holed < Infinity || x.ft < Infinity).sort((a, b) => a[1].holed - b[1].holed || a[1].ft - b[1].ft)[0];
-    return top ? [top[0]] : [];
-  });
+  return [...days].flatMap(([d, day]) =>
+    [...day]
+      .filter(([, x]) => x.holed < Infinity || x.ft < Infinity)
+      .sort((a, b) => a[1].holed - b[1].holed || a[1].ft - b[1].ft)
+      .slice(0, 3)
+      .map(([key], i) => ({ day: d, key, place: i + 1 })),
+  );
+}
+// and the long drive's, as drive_places does: the day's longest ball per person, from Nov 17
+function drivePlaces(db: Db): { day: string; key: string; place: number }[] {
+  const today = todayInGameTz();
+  const days = new Map<string, Map<string, number>>();
+  for (const b of db.bar ?? []) {
+    if (b.game !== 'drive' || !b.at) continue;
+    const d = todayInGameTz(new Date(b.at));
+    const p = db.players.find((x) => x.id === b.playerId);
+    if (!p || d >= today || d < PRIZES_FROM) continue;
+    const k = `${p.name.toLowerCase()}|${p.pin}`;
+    const day = days.get(d) ?? new Map<string, number>();
+    day.set(k, Math.max(day.get(k) ?? 0, b.score));
+    days.set(d, day);
+  }
+  return [...days].flatMap(([d, day]) => [...day].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([key], i) => ({ day: d, key, place: i + 1 })));
 }
 
 function playerByToken(db: Db, token: string): DbPlayer {
@@ -263,7 +283,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       const bonus = bonusOf({
         roundDays,
         days: [...(db.days ?? []).filter((d) => ids.has(d.playerId)).map((d) => d.day), ...roundDays, ...(db.practice ?? []).filter((x) => ids.has(x.playerId)).map((x) => todayInGameTz(new Date(x.startedAt)))],
-        ctpWins: ctpWinners(db).filter((w) => w === `${p.name.toLowerCase()}|${p.pin}`).length,
+        ctpPay: ctpPlaces(db).filter((w) => w.key === `${p.name.toLowerCase()}|${p.pin}`).reduce((a, w) => a + dailyPrize(w.day, w.place), 0),
+        drivePay: drivePlaces(db).filter((w) => w.key === `${p.name.toLowerCase()}|${p.pin}`).reduce((a, w) => a + dailyPrize(w.day, w.place), 0),
         // birdies and better pay on the day's first finished round only
         holes: rs.filter((r, i) => !rs.slice(0, i).some((x) => todayInGameTz(new Date(x.createdAt)) === todayInGameTz(new Date(r.createdAt)))).flatMap((r) => {
           const pars = courseById(r.course)?.holes.map((h) => h.par);
@@ -1375,7 +1396,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       pinseeker: (db.daily ?? []).filter((d) => ids.has(d.playerId) && (d.t.holed || (d.t.ft !== null && d.t.ft <= 3))).length,
       longdrive: Math.max(0, ...(db.bar ?? []).filter((b) => ids.has(b.playerId) && b.game === 'drive').map((b) => b.score)),
       streak: 0,
-      ctpwins: ctpWinners(db).filter((w) => w === `${home.name.toLowerCase()}|${home.pin}`).length,
+      ctpwins: ctpPlaces(db).filter((w) => w.place === 1 && w.key === `${home.name.toLowerCase()}|${home.pin}`).length,
       designplayers: 0,
       titles: card?.titles ?? 0,
       openwins: card?.weeks.filter((w) => w.banked && w.place === 1 && w.week >= '2026-11-08').length ?? 0,

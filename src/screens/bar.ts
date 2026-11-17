@@ -5,6 +5,7 @@ import { api } from '../api';
 import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
 import { ACE_STAKE, ACE_SWINGS, aceShot, type AceState } from '../acepot';
 import { money } from '../purse';
+import { prizesLine } from '../bonus';
 import { gameName, scoreLabel, type BarGame } from '../bar';
 import { isHole } from '../designer/desk';
 import { bestTry, dailyShot, resultLabel } from '../daily';
@@ -78,14 +79,14 @@ export function barPane(snap: Snapshot) {
       </section>
       <h2 class="bar-wall">On the wall</h2>
       <div class="bar-games">
-        <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
+        <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · top 3 paid ${prizesLine()} today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
         <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · make an ace, take the pot</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
         <a class="bar-game cards" href="#/bar/book" data-game="book"><i>📒</i><div><b>Mo's Book</b><span>Bet on who wins the Open, or back yourself · prices move as cards come in</span></div><p data-mine="book">Mo's taking bets</p></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game cards" href="#/bar/blackjack" data-game="blackjack"><i>🃏</i><div><b>Blackjack</b><span>Against Mo, for club money · $10 to $500 a hand</span></div><p data-mine="blackjack">Pull up a stool</p></a>
         <a class="bar-game cards" href="#/bar/popashot" data-game="popashot"><i>🏀</i><div><b>Pop-a-Shot</b><span>Thirty seconds at the hoop · beat Mo's score for club money</span></div><p data-mine="popashot">Mo's waiting</p></a>
         <a class="bar-game cards" href="#/bar/billiards" data-game="billiards"><i>🎱</i><div><b>8-Ball</b><span>A full game against Mo · stripes or solids, for club money</span></div><p data-mine="billiards">Table's free</p></a>
-        <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs · today</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
+        <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs · top 3 paid ${prizesLine()} today</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game members" href="#/bar/members" data-game="members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
       <h2 class="bar-wall">Through the back</h2>
@@ -186,6 +187,7 @@ export async function barSummary(game: BarGame, score: number | null, again: () 
         <p class="eyebrow">${gameName(game)} · ${fun ? 'for fun' : game === 'drive' ? 'today' : 'this week'}</p>
         <h2>${score === null ? 'No score' : esc(scoreLabel(game, score))}</h2>
         ${game === 'midway' ? `<p class="fine">${fun ? "Just for fun: today's round is already in. Back tomorrow for another that counts." : 'That was today’s round. Any more today are for fun.'}</p>` : ''}
+        ${game === 'drive' ? `<p class="fine">Today's top three are paid ${prizesLine()} at midnight.</p>` : ''}
         ${b && b.mine !== null ? `<p>Your best ${game === 'drive' ? 'today' : 'this week'}: <b>${esc(scoreLabel(game, b.mine))}</b></p>` : ''}
         ${b ? `<ol class="daily-board">${b.board
           .slice(0, 10)
