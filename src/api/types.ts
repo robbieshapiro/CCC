@@ -334,6 +334,10 @@ export interface Api {
   bjDeal(session: Session, stake: number): Promise<import('../blackjack').BjView>;
   bjAct(session: Session, id: number, action: 'hit' | 'stand' | 'double'): Promise<import('../blackjack').BjView>;
   // Pop-a-Shot against Mo (pas_start, pas_finish)
+  // Ultimate Texas Hold'em against Mo (src/uth.ts): your hand in progress, a new hand, and your move
+  uthState(session: Session): Promise<import('../uth').UthState>;
+  uthDeal(session: Session, ante: number, trips: number): Promise<import('../uth').UthView>;
+  uthAct(session: Session, id: number, action: import('../uth').UthAction): Promise<import('../uth').UthView>;
   // Mo's Book (src/book.ts): the field and its prices, your line, your bets (settling any on closed weeks); a bet
   bookState(session: Session): Promise<import('../book').BookState>;
   bookBet(session: Session, kind: 'winner' | 'back', pick: string | null, stake: number): Promise<import('../book').BookState>;

@@ -3440,7 +3440,7 @@ grant execute on function bil_finish(uuid, bigint, boolean) to anon;
 -- starts again. One pot across every club. The phone reports the shot; the server keeps swings 5 seconds apart and
 -- three a day. (For its first hour each swing was a $50 bet in casino; those rows stay, refunded.)
 alter table casino drop constraint if exists casino_game_check;
-alter table casino add constraint casino_game_check check (game in ('blackjack', 'popashot', 'billiards', 'acepot', 'book'));
+alter table casino add constraint casino_game_check check (game in ('blackjack', 'popashot', 'billiards', 'acepot', 'book', 'uth'));
 
 create table if not exists ace_swings (
   id bigserial primary key,
@@ -3640,6 +3640,194 @@ end $$;
 grant execute on function book_state(uuid) to anon;
 grant execute on function book_bet(uuid, text, uuid, int) to anon;
 
+-- Ultimate Texas Hold'em against Mo (from Nov 17, src/uth.ts has the rules in full and local mode's copy). Ante and an
+-- equal Blind, an optional Trips; two cards each, five to the board; Play 4x or 3x before the flop, 2x on the flop, 1x
+-- or fold on the river; Mo qualifies with a pair. Blind pays on a straight or better (500, 50, 10, 3, 3:2, 1 to 1),
+-- Trips on three of a kind or better whatever Mo has (50, 40, 30, 9, 7, 4, 3 to 1). Dealt on the server: each hand is a
+-- casino row (game 'uth'), its nine cards in state, shown to the phone only as the hand reaches them. stake is
+-- everything put up so far; payout what came back, once settled. Same daily limit as Mo's tables.
+
+-- the top card of the best straight in a 13-bit rank mask (2 = bit 0 ... ace = bit 12; the wheel's top is the five), or -1
+create or replace function poker_straight(m int) returns int
+language plpgsql immutable as $$
+declare top int;
+begin
+  for top in reverse 12..4 loop
+    if (m >> (top - 4)) & 31 = 31 then return top; end if;
+  end loop;
+  if m & 4111 = 4111 then return 3; end if; -- A-2-3-4-5 (bits 12, 0, 1, 2, 3)
+  return -1;
+end $$;
+
+-- a category and up to five kickers as one comparable number
+create or replace function poker_val(cat int, k int[]) returns bigint
+language sql immutable as $$
+  select cat::bigint * 371293 + coalesce(k[1], 0) * 28561 + coalesce(k[2], 0) * 2197 + coalesce(k[3], 0) * 169 + coalesce(k[4], 0) * 13 + coalesce(k[5], 0)
+$$;
+
+-- the best five of 5 to 7 cards (0 to 51, as blackjack numbers them), higher wins. pokerRank in src/uth.ts does the same.
+create or replace function poker_rank(p_cards int[]) returns bigint
+language plpgsql immutable as $$
+declare
+  cnt int[] := array_fill(0, array[13]);
+  sm int[] := array[0, 0, 0, 0]; sn int[] := array[0, 0, 0, 0];
+  rm int := 0; c int; r int; s int; fs int := -1; t int;
+  q int := -1; t1 int := -1; t2 int := -1; p1 int := -1; p2 int := -1; k int[] := '{}';
+begin
+  foreach c in array p_cards loop
+    r := (c % 13 + 12) % 13; s := (c / 13) % 4;
+    cnt[r + 1] := cnt[r + 1] + 1; sm[s + 1] := sm[s + 1] | (1 << r); sn[s + 1] := sn[s + 1] + 1; rm := rm | (1 << r);
+  end loop;
+  for s in 0..3 loop if sn[s + 1] >= 5 then fs := s; end if; end loop;
+  if fs >= 0 then
+    t := poker_straight(sm[fs + 1]);
+    if t >= 0 then return poker_val(8, array[t]); end if;
+  end if;
+  for r in reverse 12..0 loop
+    if cnt[r + 1] = 4 then if q < 0 then q := r; end if;
+    elsif cnt[r + 1] = 3 then if t1 < 0 then t1 := r; elsif t2 < 0 then t2 := r; end if;
+    elsif cnt[r + 1] = 2 then if p1 < 0 then p1 := r; elsif p2 < 0 then p2 := r; end if;
+    end if;
+  end loop;
+  if q >= 0 then
+    for r in reverse 12..0 loop if cnt[r + 1] > 0 and r <> q then return poker_val(7, array[q, r]); end if; end loop;
+  end if;
+  if t1 >= 0 and (t2 >= 0 or p1 >= 0) then return poker_val(6, array[t1, greatest(t2, p1)]); end if;
+  if fs >= 0 then
+    for r in reverse 12..0 loop
+      if sm[fs + 1] & (1 << r) <> 0 and coalesce(array_length(k, 1), 0) < 5 then k := k || r; end if;
+    end loop;
+    return poker_val(5, k);
+  end if;
+  t := poker_straight(rm);
+  if t >= 0 then return poker_val(4, array[t]); end if;
+  if t1 >= 0 then
+    k := array[t1];
+    for r in reverse 12..0 loop if cnt[r + 1] > 0 and r <> t1 and array_length(k, 1) < 3 then k := k || r; end if; end loop;
+    return poker_val(3, k);
+  end if;
+  if p2 >= 0 then
+    for r in reverse 12..0 loop if cnt[r + 1] > 0 and r <> p1 and r <> p2 then return poker_val(2, array[p1, p2, r]); end if; end loop;
+  end if;
+  if p1 >= 0 then
+    k := array[p1];
+    for r in reverse 12..0 loop if cnt[r + 1] > 0 and r <> p1 and array_length(k, 1) < 4 then k := k || r; end if; end loop;
+    return poker_val(1, k);
+  end if;
+  for r in reverse 12..0 loop if cnt[r + 1] > 0 and coalesce(array_length(k, 1), 0) < 5 then k := k || r; end if; end loop;
+  return poker_val(0, k);
+end $$;
+
+-- 0 high card ... 8 straight flush, 9 a royal (a straight flush to the ace)
+create or replace function poker_cat(v bigint) returns int
+language sql immutable as $$
+  select case when v / 371293 = 8 and (v / 28561) % 13 = 12 then 9 else (v / 371293)::int end
+$$;
+
+
+-- a hand as the phone may see it: your cards, the board as far as it's dealt, Mo's only once it's over
+create or replace function uth_view(h casino, me players) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare cards int[]; stage text := h.state->>'stage'; shown int;
+begin
+  select array_agg(x::int order by o) into cards from jsonb_array_elements_text(h.state->'cards') with ordinality a(x, o);
+  shown := case stage when 'pre' then 0 when 'flop' then 3 else 5 end;
+  return json_build_object('id', h.id, 'stage', stage, 'ante', (h.state->>'ante')::int, 'trips', (h.state->>'trips')::int,
+    'play', (h.state->>'play')::int, 'player', to_json(cards[1:2]),
+    'dealer', case when stage = 'done' then to_json(cards[3:4]) else '[]'::json end,
+    'board', case when shown = 0 then '[]'::json else to_json(cards[5:4 + shown]) end,
+    'result', h.state->'result', 'bank', person_bank(me), 'lostToday', casino_lost_today(me));
+end $$;
+
+-- settle a hand: what comes back on each bet, by the rule card
+create or replace function uth_settle(p_id bigint, p_folded boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare h casino; cards int[]; pv bigint; dv bigint; pc int; q boolean; ante int; trips int; play int;
+  b_ante int; b_blind int; b_play int; b_trips int; outcome text;
+  names text[] := array['High card', 'Pair', 'Two pair', 'Three of a kind', 'Straight', 'Flush', 'Full house', 'Four of a kind', 'Straight flush', 'Royal flush'];
+begin
+  select * into h from casino where id = p_id;
+  select array_agg(x::int order by o) into cards from jsonb_array_elements_text(h.state->'cards') with ordinality a(x, o);
+  ante := (h.state->>'ante')::int; trips := (h.state->>'trips')::int; play := (h.state->>'play')::int;
+  pv := poker_rank(cards[1:2] || cards[5:9]); dv := poker_rank(cards[3:4] || cards[5:9]);
+  pc := poker_cat(pv); q := poker_cat(dv) >= 1;
+  b_trips := case when trips > 0 and pc >= 3 then trips + floor(trips * (array[3, 4, 7, 9, 30, 40, 50])[pc - 2])::int else 0 end;
+  if p_folded then outcome := 'fold'; b_ante := 0; b_blind := 0; b_play := 0;
+  elsif pv > dv then
+    outcome := 'win'; b_ante := case when q then ante * 2 else ante end; b_play := play * 2;
+    b_blind := ante + case when pc >= 4 then floor(ante * (array[1, 1.5, 3, 10, 50, 500])[pc - 3])::int else 0 end;
+  elsif pv < dv then outcome := 'lose'; b_ante := case when q then 0 else ante end; b_blind := 0; b_play := 0;
+  else outcome := 'tie'; b_ante := ante; b_blind := ante; b_play := play;
+  end if;
+  update casino set payout = b_ante + b_blind + b_play + b_trips, settled_at = now(),
+    state = state || jsonb_build_object('stage', 'done', 'result', jsonb_build_object('outcome', outcome, 'qualified', q,
+      'you', names[pc + 1], 'mo', names[poker_cat(dv) + 1],
+      'back', jsonb_build_object('ante', b_ante, 'blind', b_blind, 'play', b_play, 'trips', b_trips),
+      'payout', b_ante + b_blind + b_play + b_trips))
+  where id = p_id;
+end $$;
+
+-- your hand in progress, if any, and your bank
+create or replace function uth_state(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); h casino;
+begin
+  select * into h from casino where game = 'uth' and payout is null and player_id in (select person_seats(me)) order by id desc limit 1;
+  return json_build_object('hand', case when h.id is null then null else uth_view(h, me) end, 'bank', person_bank(me), 'lostToday', casino_lost_today(me));
+end $$;
+
+-- a new hand: Ante (and the equal Blind), and Trips if you like. Nine cards from a fresh shuffle.
+create or replace function uth_deal(p_token uuid, p_ante int, p_trips int) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); h casino; cards int[];
+begin
+  perform bar_gate(me, 'uth');
+  if p_ante not in (10, 25, 50, 100) then raise exception 'The Ante is $10, $25, $50 or $100.'; end if;
+  if coalesce(p_trips, 0) not in (0, 10, 25, 50) then raise exception 'Trips is $10, $25 or $50, or none.'; end if;
+  if exists (select 1 from casino where game = 'uth' and payout is null and player_id in (select person_seats(me))) then
+    raise exception 'Finish the hand in front of you first.';
+  end if;
+  perform casino_check(me, 2 * p_ante + coalesce(p_trips, 0));
+  select array_agg(x order by random()) into cards from generate_series(0, 51) x;
+  insert into casino (player_id, game, stake, state) values (me.id, 'uth', 2 * p_ante + coalesce(p_trips, 0),
+    jsonb_build_object('cards', to_jsonb(cards[1:9]), 'ante', p_ante, 'trips', coalesce(p_trips, 0), 'play', 0, 'stage', 'pre'))
+  returning * into h;
+  return uth_view(h, me);
+end $$;
+
+-- your move: play4, play3 (before the flop), check, play2 (the flop), play1 or fold (the river)
+create or replace function uth_act(p_token uuid, p_id bigint, p_action text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); h casino; stage text; mult int; ante int;
+begin
+  select * into h from casino where id = p_id and game = 'uth' and player_id in (select person_seats(me)) for update;
+  if not found then raise exception 'No such hand.'; end if;
+  if h.payout is not null then raise exception 'That hand is over.'; end if;
+  stage := h.state->>'stage'; ante := (h.state->>'ante')::int;
+  mult := case
+    when stage = 'pre' and p_action = 'play4' then 4 when stage = 'pre' and p_action = 'play3' then 3
+    when stage = 'flop' and p_action = 'play2' then 2 when stage = 'river' and p_action = 'play1' then 1 else 0 end;
+  if mult > 0 then
+    perform casino_check(me, mult * ante);
+    update casino set stake = stake + mult * ante, state = state || jsonb_build_object('play', mult * ante) where id = h.id;
+    perform uth_settle(h.id, false);
+  elsif p_action = 'check' and stage in ('pre', 'flop') then
+    update casino set state = state || jsonb_build_object('stage', case stage when 'pre' then 'flop' else 'river' end) where id = h.id;
+  elsif p_action = 'fold' and stage = 'river' then
+    perform uth_settle(h.id, true);
+  else
+    raise exception 'You can''t do that now.';
+  end if;
+  select * into h from casino where id = p_id;
+  return uth_view(h, me);
+end $$;
+
+revoke all on function uth_view(casino, players) from public, anon, authenticated;
+revoke all on function uth_settle(bigint, boolean) from public, anon, authenticated;
+grant execute on function uth_state(uuid) to anon;
+grant execute on function uth_deal(uuid, int, int) to anon;
+grant execute on function uth_act(uuid, bigint, text) to anon;
+
 -- The Committee Room's Bar tab: every game's switch, and the last 7 days at Mo's tables (bets, players, staked, and
 -- what the house is up or down)
 create or replace function admin_bar(p_token uuid) returns json
@@ -3661,7 +3849,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
 begin
   if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
-  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members', 'acepot', 'book') then raise exception 'No such game.'; end if;
+  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members', 'acepot', 'book', 'uth') then raise exception 'No such game.'; end if;
   insert into bar_settings (game, open, updated_at) values (p_game, p_open, now())
   on conflict (game) do update set open = excluded.open, updated_at = now();
 end $$;

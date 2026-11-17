@@ -2214,3 +2214,33 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 .bs-card { position: relative; }
 .bs-card.stake { border-color: #c9a24a; background: linear-gradient(160deg, #3a2410, #5a3a12); }
 .bs-card.stake button.pm-tile { font: inherit; text-align: left; cursor: pointer; }
+
+/* Ultimate Texas Hold'em at Mo's table (Nov 17): the board, the bet spots, the Ante and Trips pickers, the pay table */
+.bj-chip.c50 { background: #b8572a; }
+.uth-board { display: flex; justify-content: center; gap: 4px; min-height: 84px; }
+.uth-board .bj-card { margin-left: 0; }
+.uth-slot { width: 58px; height: 82px; border-radius: 7px; border: 2px dashed rgba(246, 213, 138, 0.35); }
+.uth-spots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.uth-spot { display: grid; justify-items: center; gap: 1px; padding: 6px 2px; border-radius: 10px; border: 1px solid rgba(246, 213, 138, 0.5); color: #f6e6c4; }
+.uth-spot small { font: 800 10px var(--font); letter-spacing: 0.08em; text-transform: uppercase; color: #f6d58a; }
+.uth-spot b { font: 800 14px var(--font); }
+.uth-spot em { font-style: normal; font-size: 12px; font-weight: 800; }
+.uth-spot.empty { opacity: 0.45; }
+.uth-spot.won { border-color: #7ad48f; } .uth-spot.won em { color: #9ff0b0; }
+.uth-spot.lost { border-color: #e2776a; } .uth-spot.lost em { color: #ffb3a8; }
+.uth-spot.push em { color: #f6e6c4; }
+.uth-note { margin: 0; text-align: center; font-size: 13px; color: #f6d58a; min-height: 1em; }
+.uth-pick { display: grid; gap: 10px; }
+.uth-pick small { font-weight: 800; color: #f6d58a; font-size: 12px; letter-spacing: 0.04em; }
+.uth-pick small em { font-style: normal; font-weight: 600; color: #d9c49a; }
+.uth-pick.locked { opacity: 0.45; pointer-events: none; }
+.uth-trips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.uth-trips button { font: 800 13px var(--font); padding: 8px 12px; border-radius: 999px; border: 1px solid #c9a24a; background: transparent; color: #f6e6c4; cursor: pointer; }
+.uth-trips button.on { background: #c9a24a; color: #2a1810; }
+.uth-how { color: #f6e6c4; font-size: 14px; }
+.uth-how summary { cursor: pointer; font-weight: 800; color: #f6d58a; }
+.uth-how p { margin: 8px 0; line-height: 1.45; }
+.uth-pays { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0; }
+.uth-pays th, .uth-pays td { padding: 5px 6px; border-bottom: 1px solid rgba(246, 213, 138, 0.2); text-align: left; }
+.uth-pays th { color: #f6d58a; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+@media (max-width: 380px) { .uth-board .bj-card, .uth-slot { width: 50px; height: 72px; } }
