@@ -1182,6 +1182,8 @@ export class Course3D {
   private calloutTimer = 0;
 
   // a drink handed over with no cart (the long drive's fireballs): good for the next swing; null clears it
+  // the clubhouse's drink names whatever the course (the long drive pours a Fireball every week, not the course's own)
+  houseMenu = false;
   pour(kind: Drink | null) {
     this.drink = kind ? { kind, shots: 1 } : null;
     this.showDrink();
@@ -1191,7 +1193,7 @@ export class Course3D {
     const el = this.overlay.querySelector('[data-drink]') as HTMLElement | null;
     if (!el) return;
     el.hidden = !this.drink || (this.drink.kind === 'water' && drinksOn(this.hole?.id ?? '').water.wind === 1);
-    if (this.drink) el.innerHTML = `<b>${pour(this.drink.kind, this.hole).name}</b><span>${this.drink.shots >= HOLE_LONG ? 'this hole' : `${this.drink.shots} ${this.drink.shots === 1 ? 'swing' : 'swings'} left`}</span>`;
+    if (this.drink) el.innerHTML = `<b>${pour(this.drink.kind, this.hole, this.houseMenu).name}</b><span>${this.drink.shots >= HOLE_LONG ? 'this hole' : `${this.drink.shots} ${this.drink.shots === 1 ? 'swing' : 'swings'} left`}</span>`;
   }
 
   // ---------- the beverage cart ----------
@@ -1581,7 +1583,7 @@ export class Course3D {
     m.classList.toggle('fireball', kind === 'fireball');
     const tag = this.overlay.querySelector('[data-swing-tag]') as HTMLElement;
     tag.hidden = !drink || (kind === 'water' && drink.wind === 1);
-    if (drink && kind) tag.textContent = `${pour(kind, this.hole).name} · ${drink.job.split(':')[0]}${drink.boost > 1 ? ' · swing into the fire' : ''}`;
+    if (drink && kind) tag.textContent = `${pour(kind, this.hole, this.houseMenu).name} · ${drink.job.split(':')[0]}${drink.boost > 1 ? ' · swing into the fire' : ''}`;
     // righties have the meter on the left, out of the way of the golfer; lefties on the right
     m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
     this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.meterAt(this.power)));
