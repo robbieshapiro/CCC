@@ -2188,3 +2188,17 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 .book-bets em.lost { color: #b3261e; }
 .book-bets em.open { color: var(--muted); }
 #book-body { display: grid; gap: 12px; }
+
+/* The Nineteenth Hole on home (Nov 17): one swipeable row of the bar's games, each with its live number */
+.bar-strip { display: grid; gap: 8px; margin: 14px 0; }
+.bs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.bs-head h2 { margin: 0; font: 700 20px var(--serif); color: var(--green); }
+.bs-head a { color: var(--green); font-weight: 700; font-size: 14px; text-decoration: none; }
+.bs-row { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 6px; margin: 0 -2px; scrollbar-width: none; }
+.bs-row::-webkit-scrollbar { display: none; }
+.bs-card { flex: 0 0 min(46%, 190px); scroll-snap-align: start; display: grid; gap: 2px; align-content: start; padding: 12px; border-radius: 12px; background: linear-gradient(160deg, #2b1a10, #4a2d1a); border: 1px solid #6b4a2a; color: #f6e6c4; text-decoration: none; box-shadow: 0 6px 16px -10px rgba(0, 0, 0, 0.6); }
+.bs-card i { font-style: normal; font-size: 24px; }
+.bs-card small { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #d9b36a; }
+.bs-card b { font: 700 17px var(--serif); color: #fff; line-height: 1.2; overflow-wrap: anywhere; }
+.bs-card span { font-size: 12px; color: #e6d2a8; }
+.bs-card[hidden] { display: none; }
