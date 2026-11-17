@@ -244,7 +244,7 @@ Last updated Nov 17, 2026 (the Target Range's nets: land in a ring on the fly, r
 
 ## Setup status
 
-- [ ] #327: apply `pr_327_target_nets` after merge (submit_bar: the Target Range's top score 1,080).
+- [x] #327: applied `pr_327_target_nets` on Nov 17; submit_bar takes the Target Range up to 1,080.
 - [x] #324: applied `pr_324_target_range` on Nov 17; the game check takes targets, submit_bar checks 0 to 810 and one a day, person_bonus has a targets line for everyone.
 - [x] #305: applied `pr_305_agent_notes` on Nov 16 (evening ET); `agent_notes_list` answers for the app, `agent_note` is closed to it. The three agents' prompts updated in place (the old activity check deleted, the Greenkeeper switched on).
 - [x] Done Nov 16 (checked: all three have Supabase, push notifications off). Robbie, once, in claude.ai > Routines: on **CCC Greenkeeper** attach the CCC repo and the Supabase connector; on **CCC Architect** attach the Supabase connector; on all three (Architect, Greenkeeper, Steward) turn push notifications off. Until then the Architect still builds and merges courses but can't leave its note, and the Greenkeeper does nothing.
