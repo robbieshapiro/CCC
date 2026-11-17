@@ -226,7 +226,7 @@ Last updated Nov 17, 2026 (the club on autopilot: agents ship their own work and
 ## Setup status
 
 - [x] #305: applied `pr_305_agent_notes` on Nov 16 (evening ET); `agent_notes_list` answers for the app, `agent_note` is closed to it. The three agents' prompts updated in place (the old activity check deleted, the Greenkeeper switched on).
-- [ ] Robbie, once, in claude.ai > Routines (about 2 minutes; Claude can't attach connectors or change notifications from a session): on **CCC Greenkeeper** attach the CCC repo and the Supabase connector; on **CCC Architect** attach the Supabase connector; on all three (Architect, Greenkeeper, Steward) turn push notifications off. Until then the Architect still builds and merges courses but can't leave its note, and the Greenkeeper does nothing.
+- [x] Done Nov 16 (checked: all three have Supabase, push notifications off). Robbie, once, in claude.ai > Routines: on **CCC Greenkeeper** attach the CCC repo and the Supabase connector; on **CCC Architect** attach the Supabase connector; on all three (Architect, Greenkeeper, Steward) turn push notifications off. Until then the Architect still builds and merges courses but can't leave its note, and the Greenkeeper does nothing.
 - [x] #301: Robbie pasted the SQL on Nov 15; one start_round (with p_pars) remains, submit_round and course_field have the checks, course_pars has windycity's six holes.
 - [x] #296: applied `pr_296_three_cards` on Nov 14; `cards_a_day()` returns 3.
 - [x] #294: applied `pr_294_bigger_pot` on Nov 14 at about 9:30 pm ET; `open_per_player` 1000 and `open_purse_floor` 25000 answer, and members' bonuses show `weeks: 250` for the week of Nov 8 (banks up $250).
