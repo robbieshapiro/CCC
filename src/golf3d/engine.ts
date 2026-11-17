@@ -46,6 +46,10 @@ export type Drill = {
   mark?: Mark | null;
   // the Target Range: rings drawn round each target (radii, inner first), in the target's colour
   rings?: { center: V2; r: number[]; color: number }[];
+  // and its back net: a wall of netting across the range at y, with a gold window in the middle (half-width, height)
+  net?: { y: number; x0: number; x1: number; top: number; x: number; half: number; h: number; label: string };
+  // the nets catch the ball: the shot as simulated, cut off where a net takes it (src/targets.ts netShot)
+  catch?: (r: Result) => Result;
 };
 // The day's best on the ground: a band of tape across the fairway at the longest drive's distance from the tee (an arc,
 // r from center, either side of aim), or a gold ring round the pin at the closest shot's distance (it circles the flag,
@@ -438,6 +442,44 @@ export class Course3D {
     // the inner ring bold, the middle white, the outer the target's colour again
     t.r.forEach((r, i) => this.world!.root.add(this.ringLine(t.center, r, i === 1 ? 0xffffff : t.color, i === 0 ? 0.55 : 0.32)));
   }
+  private drawNet(n: NonNullable<Drill['net']>) {
+    if (!this.world) return;
+    const g = heightAt(this.hole, n.x, n.y);
+    const w = n.x1 - n.x0;
+    // the netting: dark and see-through, with the window cut out of it (left, right and above the window)
+    const mat = new THREE.MeshBasicMaterial({ color: 0x14201a, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false });
+    const panel = (x0: number, x1: number, z0: number, z1: number) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), mat);
+      m.position.copy(w3((x0 + x1) / 2, n.y, g + (z0 + z1) / 2));
+      this.world!.root.add(m);
+    };
+    panel(n.x0, n.x - n.half, 0, n.top);
+    panel(n.x + n.half, n.x1, 0, n.top);
+    panel(n.x - n.half, n.x + n.half, n.h, n.top);
+    // posts at the ends and every 40 or so
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.6 });
+    const posts = Math.max(2, Math.round(w / 40) + 1);
+    for (let i = 0; i < posts; i++) {
+      const x = n.x0 + (w * i) / (posts - 1);
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, n.top + 2, 8), postMat);
+      p.position.copy(w3(x, n.y, heightAt(this.hole, x, n.y) + (n.top + 2) / 2));
+      this.world.root.add(p);
+    }
+    // the window: a glowing gold frame with a faint fill, and its name over it
+    const corners = [
+      [n.x - n.half, 0],
+      [n.x - n.half, n.h],
+      [n.x + n.half, n.h],
+      [n.x + n.half, 0],
+    ].map(([x, z]) => w3(x, n.y - 0.3, g + z));
+    const frame = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(corners, false, 'catmullrom', 0), 48, 0.6, 6, false), new THREE.MeshBasicMaterial({ color: 0xffd23f, fog: false }));
+    const fill = new THREE.Mesh(new THREE.PlaneGeometry(n.half * 2, n.h), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, fog: false }));
+    fill.position.copy(w3(n.x, n.y - 0.2, g + n.h / 2));
+    const [label, sub] = n.label.split('|');
+    const tag = nameTag(label, sub ?? '');
+    tag.position.copy(w3(n.x, n.y, g + n.h + 5));
+    this.world.root.add(frame, fill, tag);
+  }
   private bursts: { o: THREE.Mesh; t0: number; r: number }[] = [];
   // a ball scored: a flat ring of light swells out from the ring it landed in and fades, twice
   burst(center: V2, r: number, color: number) {
@@ -619,6 +661,7 @@ export class Course3D {
     this.markObjs = [];
     if (this.drill?.mark) this.setMark(this.drill.mark);
     for (const t of this.drill?.rings ?? []) this.drawRings(t);
+    if (this.drill?.net) this.drawNet(this.drill.net);
     // the flag streams the way the wind blows
     const pin = this.world.root.getObjectByName('pin');
     if (pin && this.wind.mph) pin.rotation.y = Math.PI / 2 - this.wind.toward;
@@ -1185,7 +1228,7 @@ export class Course3D {
       ace: ['The Ace Pot', 'Three swings a day at a new hole every day. The club adds $50 to the pot for every miss, and it carries over until someone makes an ace and takes the lot.'],
       minigolf: ['Hollow Hills Mini Golf', 'Six holes. Fewest strokes wins the week.'],
       drive: ['Long drive', 'Three swings with the wind at your back, the last two with a Fireball. The longest ball in play wins the day.'],
-      targets: ['The Target Range', 'Ten balls at six targets. Stop one in a ring to score: the bullseye and the far targets pay most. Score on the next ball too and it doubles, then triples. A miss ends the streak, so the safe target can be the smart one.'],
+      targets: ['The Target Range', 'Ten balls at six netted targets. Land one in a ring on the fly to score it: the bullseye and the far targets pay most. Roll in and you only get the outer ring. A drive through the back net\'s window pays most of all. Score on the next ball too and it doubles, then triples; a miss ends the streak.'],
     }[this.howTo];
     const card = document.createElement('div');
     card.className = 'g3-howto';
@@ -1710,7 +1753,8 @@ export class Course3D {
     const fx = full ? this.fx() : null;
     if (!fx?.clean) error += lieScatter(this.hole, this.pos, club, Math.random());
     const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind && fx && fx.wind !== 1 ? { x: this.wind.accel.x * fx.wind, y: this.wind.accel.y * fx.wind } : this.wind?.accel, cleanLie: !!fx?.clean };
-    const r = simulate(this.hole, this.pos, shot);
+    let r = simulate(this.hole, this.pos, shot);
+    if (this.drill?.catch) r = this.drill.catch(r);
     if (!this.practice && !this.drill)
       this.onShotLog?.({ c: club, p: Math.round(power * 100) / 100, e: Math.round(swingError * 100) / 100, f: [Math.round(this.pos.x), Math.round(this.pos.y)], t: [Math.round(r.end.x), Math.round(r.end.y)], l: surfaceAt(this.hole, this.pos), x: r.penalty ? 1 : 0, i: r.holed ? 1 : 0 });
     // every shot starts from a stock strike

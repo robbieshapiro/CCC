@@ -1,7 +1,8 @@
-// The Target Range (src/targets.ts): a wide floodlit field from a stone bay, with six targets out at 60 to 240 yd.
-// Each target is a shallow green dish (a ball that lands in it tends to gather), and the rings are drawn round it by
-// the engine (Drill.rings). The same field every day, so the boards compare.
-import { TARGETS } from '../../targets';
+// The Target Range (src/targets.ts): a wide field from a stone bay, with six targets out at 50 to 210 yd and the
+// back net at 235. Each target is a shallow green dish with its rings drawn round it, and the back net is drawn
+// across the end, by the engine (Drill.rings, Drill.net); the nets catch the ball (netShot). The wind is never more
+// than 9 mph. The same field every day, so the boards compare.
+import { NET, TARGETS } from '../../targets';
 import { band, blob, rect } from '../terrain';
 import type { Hole, Post } from '../types';
 
@@ -16,6 +17,7 @@ export const targetRange: Hole = {
   id: 'targets',
   name: 'The Target Range',
   par: 0,
+  windCap: 9,
   theme: 'volcanic',
   tour: true,
   flag: String(far.yards),
@@ -52,7 +54,7 @@ export const targetRange: Hole = {
   secret: { name: '', zone: '', hint: '' },
   flyover: [
     { x: 0, y: -20 },
-    { x: 0, y: far.at.y },
+    { x: 0, y: NET.y },
   ],
   // a flag in each target but the farthest (the hole's own pin is there)
   decor: [{ kind: 'bench', x: -22, y: -12, rot: 0 }, ...TARGETS.slice(0, -1).map((t) => ({ kind: 'target', x: t.at.x, y: t.at.y, label: String(t.yards) }))],

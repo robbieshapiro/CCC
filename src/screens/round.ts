@@ -34,7 +34,8 @@ import { ACE_ADD, ACE_SEED, ACE_SWINGS, aceShot } from '../acepot';
 import { HANK } from '../staff';
 import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
-import { RINGS, ringAt, streakMult, TARGET_BALLS, TARGETS as RANGE_TARGETS } from '../targets';
+import { NET, netShot, RINGS, streakMult, TARGET_BALLS, TARGETS as RANGE_TARGETS, type Hit } from '../targets';
+import { heightAt } from '../golf3d/terrain';
 import { targetRange } from '../golf3d/practice/targets';
 import { HOLLOW_HILLS } from '../golf3d/minigolf';
 import { MIDWAY } from '../golf3d/midway';
@@ -854,6 +855,10 @@ export async function targetRound(snap: Snapshot) {
   g.leaveText = 'Leave';
   g.howTo = 'targets';
   const hole = targetRange;
+  // what the nets made of the last ball (netShot), and whether it rolled in rather than landing in the ring
+  let last: Hit | null = null;
+  let lastNet: 'window' | 'net' | null = null;
+  const rolled = (h: Hit) => !!h.rolled;
   let n = 0;
   let run = 0;
   let total = 0;
@@ -870,7 +875,7 @@ export async function targetRound(snap: Snapshot) {
     const p = document.createElement('div');
     p.className = `tr-pop r${ring}`;
     p.style.setProperty('--c', `#${color.toString(16).padStart(6, '0')}`);
-    p.innerHTML = `<b>+${pts}</b>${mult > 1 ? `<span>×${mult} streak</span>` : ''}<small>${['Bullseye', 'Middle ring', 'Outer ring'][ring]}</small>`;
+    p.innerHTML = `<b>+${pts}</b>${mult > 1 ? `<span>×${mult} streak</span>` : ''}<small>${ring < 0 ? 'The window' : ['Bullseye', 'Middle ring', 'Outer ring'][ring]}</small>`;
     el.appendChild(p);
     window.setTimeout(() => p.remove(), 1900);
   };
@@ -881,23 +886,38 @@ export async function targetRound(snap: Snapshot) {
     wind: conditionsFor(hole, todayInGameTz()),
     stations: [{ name: `${TARGET_BALLS} balls from the bay`, at: hole.tee }],
     rings: RANGE_TARGETS.map((t) => ({ center: t.at, r: RINGS, color: t.color })),
+    net: { ...NET, label: `Window · ${NET.points}|${NET.yards} yd` },
+    // the nets catch it: what this ball scored is settled as it's simulated
+    catch: (r) => {
+      const c = netShot(r, (x, y) => heightAt(hole, x, y));
+      last = c.hit;
+      lastNet = c.net;
+      return c.r;
+    },
     ticker: (from, at) => `${driveYards(from, at)} yd`,
     tag: () => `Ball ${n + 1} of ${TARGET_BALLS}`,
     report: (r) => {
-      const hit = r.lost ? null : ringAt(r.end);
-      return hit ? `${RANGE_TARGETS[hit.target].yards} yd target · ${['bullseye', 'middle ring', 'outer ring'][hit.ring]}` : r.lost ? 'Out of play' : `${driveYards(r.from, r.end)} yd · no ring`;
+      const hit = r.lost ? null : last;
+      if (hit && hit.target < 0) return 'Through the window!';
+      if (lastNet === 'net') return 'Back net · missed the window';
+      return hit ? `${RANGE_TARGETS[hit.target].yards} yd target · ${hit.ring === 2 && rolled(hit) ? 'rolled into the outer ring' : ['bullseye', 'middle ring', 'outer ring'][hit.ring]}` : r.lost ? 'Out of play' : `${driveYards(r.from, r.end)} yd · no ring`;
     },
     onResult: (r) => {
       n++;
-      const hit = r.lost ? null : ringAt(r.end);
+      const hit = r.lost ? null : last;
       if (hit) {
         run++;
         const mult = streakMult(run);
         const pts = hit.points * mult;
         total += pts;
-        const t = RANGE_TARGETS[hit.target];
-        g.burst(t.at, RINGS[hit.ring], t.color);
-        pop(pts, mult, hit.ring, t.color);
+        if (hit.target < 0) {
+          g.burst({ x: NET.x, y: NET.y - 1 }, NET.half * 1.6, NET.color);
+          pop(pts, mult, -1, NET.color);
+        } else {
+          const t = RANGE_TARGETS[hit.target];
+          g.burst(t.at, RINGS[hit.ring], t.color);
+          pop(pts, mult, hit.ring, t.color);
+        }
         sfx(hit.ring === 0 || mult > 1 ? 'cheer' : 'clap');
       } else {
         if (run >= 2) sfx('ooh');
