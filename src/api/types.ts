@@ -290,8 +290,8 @@ export interface Api {
   dailyState(session: Session, day: string): Promise<DailyState>;
   submitDaily(session: Session, day: string, t: DailyTry): Promise<void>;
   dailyAdmin(session: Session): Promise<DailyDay[]>;
-  submitBar(session: Session, game: 'minigolf' | 'drive' | 'members' | 'midway', score: number): Promise<void>;
-  barBoard(session: Session, game: 'minigolf' | 'drive' | 'members' | 'midway'): Promise<BarBoard>; // the last 7 days across the admin's clubs
+  submitBar(session: Session, game: import('../bar').BarGame, score: number): Promise<void>;
+  barBoard(session: Session, game: import('../bar').BarGame): Promise<BarBoard>; // the last 7 days across the admin's clubs
   openBoard(session: Session): Promise<OpenRow[]>;
   clubList(session: Session): Promise<ClubRow[]>;
   chronicles(session: Session): Promise<Chronicle[]>;

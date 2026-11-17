@@ -2248,3 +2248,27 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 /* the live read while the ball moves (Nov 17): the long drive's yards, Closest to the Pin's feet */
 .g3-ticker { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); padding: 6px 16px; border-radius: 999px; background: rgba(10, 24, 18, 0.72); color: #fff; font: 800 30px var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; pointer-events: none; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
 .g3-ticker[hidden] { display: none; }
+.bs-row > .bs-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* the Target Range (Nov 17): the scoreboard, and the points pop when a ball scores */
+.tr-hud { position: absolute; z-index: 6; left: 10px; top: calc(env(safe-area-inset-top, 0px) + 122px); display: flex; gap: 6px; pointer-events: none; }
+.tr-hud > div { display: grid; justify-items: center; min-width: 54px; padding: 5px 9px; border-radius: 12px; background: rgba(10, 24, 18, 0.78); color: #fff; border: 1px solid rgba(255, 255, 255, 0.14); }
+.tr-hud small { font: 800 9px var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: #cfe3d6; }
+.tr-hud b { font: 800 22px var(--font); font-variant-numeric: tabular-nums; line-height: 1.05; }
+.tr-hud b i { font-style: normal; font-size: 13px; opacity: 0.6; }
+.tr-hud .hot { background: linear-gradient(160deg, #ff7a18, #d6249f); border-color: #ffb36b; animation: tr-hot 1s ease-in-out infinite alternate; }
+.tr-hud .hot small { color: #fff3e0; }
+@keyframes tr-hot { from { transform: scale(1); } to { transform: scale(1.07); } }
+.tr-pop { position: absolute; z-index: 7; left: 50%; top: 34%; display: grid; justify-items: center; gap: 2px; pointer-events: none; transform: translate(-50%, 0); animation: tr-pop 1.9s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards; }
+.tr-pop b { font: 900 64px var(--font); color: #fff; line-height: 1; -webkit-text-stroke: 2px var(--c); text-shadow: 0 0 24px var(--c), 0 4px 0 rgba(0, 0, 0, 0.35); }
+.tr-pop.r0 b { font-size: 84px; }
+.tr-pop span { padding: 3px 12px; border-radius: 999px; background: linear-gradient(90deg, #ff7a18, #d6249f); color: #fff; font: 800 16px var(--font); letter-spacing: 0.06em; text-transform: uppercase; animation: tr-shake 0.5s ease-in-out 0.25s 2; }
+.tr-pop small { font: 800 12px var(--font); letter-spacing: 0.16em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
+@keyframes tr-pop {
+  0% { opacity: 0; transform: translate(-50%, 30px) scale(0.3); }
+  18% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
+  30% { transform: translate(-50%, 0) scale(1); }
+  75% { opacity: 1; transform: translate(-50%, -20px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60px) scale(0.9); }
+}
+@keyframes tr-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }

@@ -20,7 +20,7 @@ export const BONUS = {
   designPlay: 100, // another member finishes your Members' Course hole (once each a week)
   designWeek: 500, // the most your holes can earn you in a week
 };
-// Closest to the Pin and the long drive, from Nov 17: the day's top three across every club, paid at midnight ET.
+// Closest to the Pin and the long drive, from Nov 17 (and the Target Range): the day's top three across every club, paid at midnight ET.
 // Before that Closest to the Pin paid its winner BONUS.ctp and the long drive nothing (not paid back).
 export const DAILY_PRIZES = [300, 150, 75];
 export const PRIZES_FROM = '2026-11-17';
@@ -31,7 +31,7 @@ export const MONSTER_PUTT_FT = 60;
 // every hole's secret route, by its zone (secret_feats in supabase/schema.sql)
 export const SECRET_FEATS = ['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch', 'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk', 'breakwater', 'plaza', 'lowerwacker', 'gangway', 'boardwalk', 'rooftop'];
 
-export type Bonus = { rounds: number; streaks: number; ctp: number; drive?: number; acepot?: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; grants?: number; trophies?: number; weeks?: number; total: number };
+export type Bonus = { rounds: number; streaks: number; ctp: number; drive?: number; targets?: number; acepot?: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; grants?: number; trophies?: number; weeks?: number; total: number };
 
 // before Nov 10 2026 great holes paid the old rates (person_bonus in supabase/schema.sql)
 export const RAISE_FROM = '2026-11-10';
@@ -62,14 +62,15 @@ export function streakBonus(days: string[]) {
   return total;
 }
 
-export function bonusOf(o: { roundDays: string[]; days: string[]; ctpPay: number; drivePay?: number; acePay?: number; holes: [number, number, boolean?][]; putts?: number; chipins?: number; secrets?: number; designs?: number; cardWeeks?: string[] }): Bonus {
+export function bonusOf(o: { roundDays: string[]; days: string[]; ctpPay: number; drivePay?: number; targetsPay?: number; acePay?: number; holes: [number, number, boolean?][]; putts?: number; chipins?: number; secrets?: number; designs?: number; cardWeeks?: string[] }): Bonus {
   const rounds = new Set(o.roundDays).size * BONUS.round;
   const streaks = streakBonus(o.days);
   const ctp = o.ctpPay;
   const drive = o.drivePay ?? 0;
+  const targets = o.targetsPay ?? 0;
   const acepot = o.acePay ?? 0;
   const shots = o.holes.reduce((a, [s, p, old]) => a + (old ? oldShotBonus(s, p) : shotBonus(s, p)), 0);
   const extra = { putts: o.putts ?? 0, chipins: o.chipins ?? 0, secrets: o.secrets ?? 0, designs: o.designs ?? 0 };
   const weeks = new Set((o.cardWeeks ?? []).filter((w) => w >= '2026-11-08')).size * BONUS.week;
-  return { rounds, streaks, ctp, drive, acepot, shots, ...extra, weeks, total: rounds + streaks + ctp + drive + acepot + shots + extra.putts + extra.chipins + extra.secrets + extra.designs + weeks };
+  return { rounds, streaks, ctp, drive, targets, acepot, shots, ...extra, weeks, total: rounds + streaks + ctp + drive + targets + acepot + shots + extra.putts + extra.chipins + extra.secrets + extra.designs + weeks };
 }
