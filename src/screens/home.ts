@@ -8,6 +8,7 @@ import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodNam
 import { bindOpen } from './open';
 import { bindLive, liveCards, liveNow } from './live';
 import { bindPlayTiles, playTiles } from './playtiles';
+import { barStrip, bindBarCta, bindBarStrip } from './barstrip';
 import { openName } from '../season';
 import { openFeedback } from './feedback';
 import { bindDaily } from './daily';
@@ -172,6 +173,7 @@ export function home(snap: Snapshot) {
       </section>
       ${liveNow()}
       ${liveCards()}
+      ${barStrip()}
       <section class="board${look(course)}">
         ${countdown(snap.month, course, purse.field, openMoney)}
         <div class="board-head"><h2>${leaf(course)}${openPurseOn(snap.month) ? esc(openName(course.name, snap.month)) : 'The Open'}</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
@@ -206,6 +208,8 @@ export function home(snap: Snapshot) {
   freezeBoard();
   void bindLive(snap, course);
   void bindPlayTiles(snap);
+  void bindBarStrip(snap);
+  bindBarCta();
   // where you stand in the season, on the link under the Open
   if (openPurseOn(snap.month))
     void api.seasonStandings(requireSession()).then((s) => {
@@ -245,6 +249,7 @@ export function home(snap: Snapshot) {
       if (tile && (state !== 'fresh' || t?.n)) {
         tile.innerHTML = cardTile(state, course, t, CARD_LINKS);
         bindCardNote(tile, CARD_LINKS, navigate);
+        bindBarCta();
       }
     });
   void bindNotices();

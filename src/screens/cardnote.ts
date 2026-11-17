@@ -46,7 +46,8 @@ export function cardTile(state: TileState, course: Course, t: CardToday | null, 
       <p class="fine card-line">${e.line}${t.done ? '' : ` <a href="${links.practice}">Practise here</a>`}</p>`;
   }
   if (state === 'in')
-    return `<a class="btn big" href="${links.practice}">Practice round</a><p class="fine card-line">All of today's cards are in. Your best one counts${bestSoFar(t)}. New ones at midnight.</p>`;
+    // the day's golf is done: the button heads to the bar (bindBarCta in barstrip.ts names the Ace Pot when it can)
+    return `<a class="btn big" href="#/bar" data-bar-cta>Head to the bar ›</a><p class="fine card-line">All of today's cards are in. Your best one counts${bestSoFar(t)}. New cards at midnight. <a href="${links.practice}">Practice round</a></p>`;
   if (state === 'going' && t)
     return `<div class="card-going"><p class="eyebrow">Card ${nth(t)} of ${t.of ?? CARDS_A_DAY} · in progress</p><b>${esc(cardStatus(course, t.scores, t.shots))}</b></div>
       <a class="btn big" href="${links.play}">Continue card ${nth(t)}</a>
