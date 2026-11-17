@@ -11,6 +11,7 @@ import { earned, payOf, plaques } from '../trophies';
 import { moTarget, pasPay, PAS_MAX } from '../popashot';
 import { BJ_MAX, BJ_MIN, bjSettle, bjValue, DAILY_LOSS, type BjOutcome, type BjView } from '../blackjack';
 import { DAILY_BOARD, weekOf } from '../bar';
+import { cardStreak } from '../streak';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
@@ -336,6 +337,8 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           ...money(p),
           away: homeOf(db, p).groupId !== p.groupId,
           committee: seatsOf(p).some((x) => x.admin),
+          // days in a row with a card in, across their clubs (person_streak)
+          streak: cardStreak(db.rounds.filter((r) => seatsOf(p).some((x) => x.id === r.playerId)).map((r) => todayInGameTz(new Date(r.createdAt))), today),
         })),
       rounds: mine.filter((r) => r.month === month).map(strip),
       champions,
@@ -790,6 +793,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       rows.push({
         playerId: home.id, name: home.name, club: club(home.groupId), mine: k === key(me), localId: ps.find((p) => p.groupId === me.groupId)?.id ?? null,
         avatar: home.avatar, holes: best.holes, total: best.total, par: best.par, rounds: rounds.length, last: rounds.map((r) => r.createdAt).sort().pop()!, createdAt: best.createdAt,
+        streak: cardStreak(db.rounds.filter((r) => ps.some((p) => p.id === r.playerId)).map((r) => todayInGameTz(new Date(r.createdAt))), todayInGameTz()),
       });
     }
     return rows.sort((a, b) => a.total - a.par - (b.total - b.par) || a.createdAt.localeCompare(b.createdAt));
