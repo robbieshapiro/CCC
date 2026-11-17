@@ -1,30 +1,35 @@
-// An ace at the Ace Pot (Nov 17): the whole screen goes to it. "ACE!", the pot counting up to what you won, confetti,
-// the crowd, and a way to tell your friends. Resolves when they tap on, so the round waits for it.
+// The big moments (Nov 17): the whole screen goes to it. A huge gold word, the money counting up, confetti, the crowd,
+// and a way to tell your friends. Resolves when they tap on, so the round waits for it.
+//   aceWin: a hole in one at the Ace Pot, for the pot.
+//   bigMoment: anything else that big (a hole in one or an albatross on a card).
 import { sfx } from '../fx/sound';
 import { money } from '../purse';
 import { canShare, share } from './daily';
 
-export function aceWin(pot: number, hole: string): { closed: Promise<void>; setPot: (n: number) => void } {
-  let target = pot;
+export type Moment = { eyebrow: string; title: string; sub: string; amount: number; fine: string; brag: (amount: number) => string };
+
+export function bigMoment(m: Moment): { closed: Promise<void>; setAmount: (n: number) => void } {
+  let target = m.amount;
   let shown = 0;
   const el = document.createElement('div');
   el.className = 'ace-win';
   el.innerHTML = `
     <canvas class="ace-confetti"></canvas>
-    <div class="ace-card" role="dialog" aria-label="Ace">
-      <p class="ace-eyebrow">The Ace Pot · ${hole}</p>
-      <h1 class="ace-big">ACE!</h1>
-      <p class="ace-sub">The pot is yours</p>
-      <p class="ace-money" data-money>$0</p>
-      <p class="ace-fine">Added to your club bonus. The whole club will hear about this one.</p>
+    <div class="ace-card" role="dialog" aria-label="${m.title}">
+      <p class="ace-eyebrow">${m.eyebrow}</p>
+      <h1 class="ace-big${m.title.length > 6 ? ' long' : ''}">${m.title}</h1>
+      <p class="ace-sub">${m.sub}</p>
+      <p class="ace-money" data-money${target ? '' : ' hidden'}>$0</p>
+      <p class="ace-fine">${m.fine}</p>
       <div class="ace-acts"><button class="btn gold big" data-share>${canShare() ? 'Tell your friends' : 'Copy the brag'}</button><button class="btn ghost" data-on>Keep going</button></div>
     </div>`;
   document.body.appendChild(el);
   sfx('cheer');
   window.setTimeout(() => sfx('clap'), 500);
   window.setTimeout(() => sfx('cheer'), 1400);
+  navigator.vibrate?.([40, 60, 40, 60, 120]);
 
-  // the money counts up, easing in to the pot
+  // the money counts up, easing in
   const out = el.querySelector<HTMLElement>('[data-money]')!;
   const t0 = performance.now();
   const count = () => {
@@ -79,18 +84,29 @@ export function aceWin(pot: number, hole: string): { closed: Promise<void>; setP
 
   let done: () => void = () => {};
   const closed = new Promise<void>((res) => (done = res));
-  // the server's word on what was won (it can differ from what the screen thought the pot was)
-  const setPot = (n: number) => {
+  // the server's word on what was won (it can differ from what the screen thought)
+  const setAmount = (n: number) => {
     target = n;
     if (out.classList.contains('done')) out.textContent = money(n);
   };
-  el.querySelector<HTMLButtonElement>('[data-share]')!.onclick = (e) =>
-    void share(`I just made a hole in one at the Claude Country Club and took the Ace Pot: ${money(target)} ⛳\n${location.origin}`, e.currentTarget as HTMLButtonElement);
+  el.querySelector<HTMLButtonElement>('[data-share]')!.onclick = (e) => void share(m.brag(target), e.currentTarget as HTMLButtonElement);
   el.querySelector<HTMLButtonElement>('[data-on]')!.onclick = () => {
     el.classList.add('out');
     window.setTimeout(() => el.remove(), 300);
     done();
   };
   window.addEventListener('hashchange', () => (el.remove(), done()), { once: true });
-  return { closed, setPot };
+  return { closed, setAmount };
+}
+
+export function aceWin(pot: number, hole: string): { closed: Promise<void>; setPot: (n: number) => void } {
+  const m = bigMoment({
+    eyebrow: `The Ace Pot · ${hole}`,
+    title: 'ACE!',
+    sub: 'The pot is yours',
+    amount: pot,
+    fine: 'Added to your club bonus. The whole club will hear about this one.',
+    brag: (n) => `I just made a hole in one at the Claude Country Club and took the Ace Pot: ${money(n)} ⛳\n${location.origin}`,
+  });
+  return { closed: m.closed, setPot: m.setAmount };
 }

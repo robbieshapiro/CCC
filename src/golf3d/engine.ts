@@ -1988,8 +1988,11 @@ export class Course3D {
     return !w ? 'Out of bounds' : w.look === 'lava' ? 'Into the lava' : w.look === 'sea' ? 'In the sea' : 'In the drink';
   }
 
+  // the moment a hole is done, before the reaction and the pause (round.ts pops a birdie or better here)
+  onHoleDone?: (strokes: number, par: number) => void;
   private finish(feats: string[], delay = 0) {
     this.mode = 'done';
+    this.onHoleDone?.(this.strokes, this.hole.par);
     const name = scoreName(this.strokes, this.hole.par);
     // the reaction to the score; a hole in one is shown again first, in slow motion from down by the cup
     const kind = reactionFor(this.strokes, this.hole.par);
