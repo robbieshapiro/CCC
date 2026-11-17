@@ -2354,6 +2354,8 @@ on conflict (course) do update set pars = excluded.pars;
 -- step with src/golf3d/courses.ts whenever a course's holes change (the check in check-holes compares them).
 insert into course_pars (course, pars) values ('windycity', '{4,3,4,4,4,5}')
 on conflict (course) do update set pars = excluded.pars;
+insert into course_pars (course, pars) values ('atlanticlinks', '{4,3,4,3,4,5}')
+on conflict (course) do update set pars = excluded.pars;
 
 -- every past day's Closest to the Pin winner across all clubs, as a person (lower name, PIN hash), ranked as
 -- daily_crown ranks a day: holed first, holed sooner, then nearest, then the next-best try, then the earlier player

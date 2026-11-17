@@ -1,4 +1,4 @@
-// The Atlantic Links: what its three holes share. Firm, running fairways, wiry fescue rough that grabs a landing ball
+// The Atlantic Links: what its holes share. Firm, running fairways, wiry fescue rough that grabs a landing ball
 // and takes a little off the next swing, and small deep pots of heavy sand.
 import type { Hole, Post } from '../../types';
 import { bunker } from '../woods';
