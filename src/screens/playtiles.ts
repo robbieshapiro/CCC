@@ -1,33 +1,27 @@
-import { prizesLine } from '../bonus';
-// Home, under the Open: everything else you can play, as big tiles. The day's Closest to the Pin, the Ace Pot, the day's long drive
-// and the Members' Course (each with its leader), the practice facility, and the classic courses of weeks gone by, each
-// with its course record and the champions of its week.
+// Home, under the Open: Around the club. Practise the course, the range, design a hole, the Members' Course (with its
+// leader), a course idea for Reginald; then the classic courses of weeks gone by, each with its course record and the
+// champions of its week. The bar's games are in the Nineteenth Hole row above the Open (barstrip.ts).
 import { api } from '../api';
 import type { CourseRecord, Snapshot } from '../api/types';
 import { scoreLabel } from '../bar';
-import { ACE_STAKE, aceShot } from '../acepot';
-import { money } from '../purse';
 import { classics, courseFor, type Course } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc } from '../ui';
-import { dailyCard } from './daily';
-import { driveHole } from './round';
 
 const ICON: Record<string, string> = { volcanic: '🌋', coastal: '🌊', autumn: '🍁' };
 
 export function playTiles(snap: Snapshot) {
   const course = courseFor(snap.month);
-  const tee = driveHole(course);
   const old = classics(snap.month);
-  return `<section class="play-more" aria-label="More to play">
-      <h2 class="pm-head">More to play</h2>
+  return `<section class="play-more" aria-label="Around the club">
+      <h2 class="pm-head">Around the club</h2>
       <div class="pm-grid">
-        ${dailyCard()}
-        <a class="tile pm-tile" href="#/bar/ace" data-game="acepot"><i>💰</i><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · carries over till someone aces it</span><em data-lead="acepot"></em></a>
-        <a class="tile pm-tile" href="#/bar/drive"><i>🚀</i><b>Long drive</b><span>3 swings off ${esc(tee.name)} · pays ${prizesLine()} today</span><em data-lead="drive"></em></a>
+        <a class="tile pm-tile" href="#/round/practice"><i>⛳</i><b>Practise the course</b><span>${esc(course.name.replace(/ Course$/, ""))} in today's wind and pins. Nothing counts</span></a>
+        <a class="tile pm-tile" href="#/facility"><i>🏌️</i><b>The range</b><span>Range and short game</span></a>
+        <a class="tile pm-tile" href="#/design"><i>✏️</i><b>Design a hole</b><span>Describe it. The architect builds it, you play it</span></a>
         <a class="tile pm-tile" href="#/bar/members"><i>🏗️</i><b>Members' Course</b><span>Holes the members built</span><em data-lead="members"></em></a>
-        <a class="tile pm-tile" href="#/facility"><i>🏌️</i><b>Practice</b><span>Range and short game</span></a>
+        <button class="tile pm-tile" data-course-idea><i>💡</i><b>A course idea</b><span>Send Reginald a place you'd like to play</span></button>
       </div>
       ${
         old.length
@@ -49,29 +43,16 @@ const classicTile = (c: Course) => `<a class="pm-classic ${esc(c.holes[0]?.theme
 
 export async function bindPlayTiles(snap: Snapshot) {
   const s = requireSession();
-  const lead = (game: 'drive' | 'members') =>
+  const lead = (game: 'members') =>
     api
       .barBoard(s, game)
       .then((b) => {
         const el = document.querySelector<HTMLElement>(`[data-lead="${game}"]`);
         if (!el) return;
         const top = b.board[0];
-        el.textContent = top ? `Leader: ${top.name}, ${scoreLabel(game, top.score)}${b.mine !== null && !top.mine ? ` · you ${scoreLabel(game, b.mine)}` : ''}` : game === 'drive' ? 'Nobody yet today' : 'Nobody yet this week';
+        el.textContent = top ? `Leader: ${top.name}, ${scoreLabel(game, top.score)}${b.mine !== null && !top.mine ? ` · you ${scoreLabel(game, b.mine)}` : ''}` : 'Nobody yet this week';
       })
       .catch(() => {});
-  void api
-    .aceState(s)
-    .then((a) => {
-      const el = document.querySelector<HTMLElement>('[data-lead="acepot"]');
-      if (el) el.textContent = `Pot: ${money(a.pot)}${a.lastAce ? ` · last ace ${a.lastAce.name}` : ''}`;
-    })
-    .catch(() => {});
-  // a closed game's tile goes for members, as at the bar
-  void api.barGames(s).then(({ settings, committee }) => {
-    const ace = document.querySelector<HTMLElement>('.pm-tile[data-game="acepot"]');
-    if (ace) ace.hidden = settings.acepot === false && !committee;
-  });
-  void lead('drive');
   void lead('members');
   if (!classics(snap.month).length) return;
   const records = await api.courseRecords(s).catch(() => null as CourseRecord[] | null);

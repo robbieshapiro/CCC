@@ -1,6 +1,6 @@
-import { prizesLine } from '../bonus';
 // The Daily Shot on the home page and after your last try: today's shot, your tries, your streak, the board across
 // every club, and a result to share.
+import { prizesLine } from '../bonus';
 import { api } from '../api';
 import type { DailyCrown, DailyState, DailyTry } from '../api/types';
 import { bestTry, DAILY_TRIES, dailyShot, resultLabel, tryMark } from '../daily';

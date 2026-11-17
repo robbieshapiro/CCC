@@ -11,7 +11,6 @@ import { bindPlayTiles, playTiles } from './playtiles';
 import { barStrip, bindBarCta, bindBarStrip } from './barstrip';
 import { openName } from '../season';
 import { openFeedback } from './feedback';
-import { bindDaily } from './daily';
 import { bindCardNote, cardTile, tileState } from './cardnote';
 import { bindNotices, noticesStrip } from './notices';
 import { bindShoutouts, shoutStrip } from './shoutouts';
@@ -195,7 +194,6 @@ export function home(snap: Snapshot) {
       ${nominateTile()}
       ${previewBand(snap.month)}
       ${playTiles(snap)}
-      <p class="course-idea">Want to feature next week's course? <button class="link" data-course-idea>Submit an idea</button> to Reginald for review.</p>
       ${honoursPane(snap)}
       <section class="plaque">
         <h2>Past Champions</h2>
@@ -254,7 +252,6 @@ export function home(snap: Snapshot) {
     });
   void bindNotices();
   void bindShoutouts();
-  void bindDaily(snap.today, snap.crown);
   void bindHonours(snap);
   void bindPlayoff();
   void bindNominateTile();

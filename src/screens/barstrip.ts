@@ -1,8 +1,8 @@
-import { DAILY_PRIZES } from '../bonus';
 // The Nineteenth Hole on home (Nov 17): one swipeable row between the Play card and the Open, so the bar's games are
 // seen by everyone who comes in. Each card leads with its live number: the Ace Pot's pot, today's Closest to the Pin
 // and long drive leaders, Mo's Book favourite, the Midway's leader. A game the Committee has closed drops out for members.
 // And once today's cards are in, the Play card's button points here (barCta).
+import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { ACE_SWINGS } from '../acepot';
@@ -12,19 +12,20 @@ import { money } from '../purse';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 
-const CARDS: [game: string, href: string, icon: string, name: string, wait: string][] = [
-  ['acepot', '#/bar/ace', '💰', 'The Ace Pot', '$50 a swing'],
-  ['daily', '#/daily', '🎯', 'Closest to the Pin', `1st pays $${DAILY_PRIZES[0]} today`],
-  ['drive', '#/bar/drive', '🚀', 'Long drive', `1st pays $${DAILY_PRIZES[0]} today`],
-  ['book', '#/bar/book', '📒', "Mo's Book", 'Bet on the Open'],
-  ['midway', '#/bar/midway', '🎡', 'The Midway', 'Three carnival holes'],
+// the free contests first, then Mo's tables (your own money), each wearing its tag
+const CARDS: [game: string, href: string, icon: string, name: string, wait: string, tag: string][] = [
+  ['daily', '#/daily', '🎯', 'Closest to the Pin', `1st pays $${DAILY_PRIZES[0]} today`, 'Free'],
+  ['drive', '#/bar/drive', '🚀', 'Long drive', `1st pays $${DAILY_PRIZES[0]} today`, 'Free'],
+  ['midway', '#/bar/midway', '🎡', 'The Midway', 'Three carnival holes', 'Free'],
+  ['acepot', '#/bar/ace', '💰', 'The Ace Pot', '$50 a swing', '$50 a swing'],
+  ['book', '#/bar/book', '📒', "Mo's Book", 'Bet on the Open', '$10 to $500'],
 ];
 
 export function barStrip() {
   return `<section class="bar-strip" aria-label="The Nineteenth Hole">
     <div class="bs-head"><h2>The Nineteenth Hole</h2><a href="#/bar">The bar ›</a></div>
     <div class="bs-row">${CARDS.map(
-      ([game, href, icon, name, wait]) => `<a class="bs-card" href="${href}" data-bs="${game}"><i>${icon}</i><small>${esc(name)}</small><b data-bs-big>${esc(wait)}</b><span data-bs-sub></span></a>`,
+      ([game, href, icon, name, wait, tag]) => `<a class="bs-card${tag === 'Free' ? '' : ' stake'}" href="${href}" data-bs="${game}"><em class="bs-tag">${esc(tag)}</em><i>${icon}</i><small>${esc(name)}</small><b data-bs-big>${esc(wait)}</b><span data-bs-sub></span></a>`,
     ).join('')}</div>
   </section>`;
 }
