@@ -1,13 +1,13 @@
-// The Committee Room's home: the game maker's desk. Jarvis's briefing first (worked out from the numbers, no AI),
-// then this week's course with how it's really playing and what to tweak, then every course week by week: the
-// coming weeks, the weeks gone by, and the bench (courses on no week). Each tile opens the course: review it, play
-// it, test it, and put it on a week.
+// The Committee Room's Metrics, Agents and Courses tabs. Metrics: the headline strip and players per day (the rest
+// is in adminKpis.ts). Agents: each agent's latest note, anything that needs you first, older ones folded. Courses:
+// every week's tile (this week, the weeks ahead, the weeks gone by, the bench), and each course's page: put it on a
+// week, play it, how it plays, ask the Architect, and the hand dials, folded.
 import { api } from '../api';
 import type { AdminKpis, AgentNote, CoursePlanner, CourseRequest, HoleReport, Snapshot } from '../api/types';
 import { planCanvas } from '../designer/plan';
 import { applyTweak, FAIRWAY_STEPS, hasTweak, TEE_MAX, teeAt, teeOk, WIND_STEPS, type Tweak } from '../golf3d/tweaks';
 import { tell } from '../dialog';
-import { isWeek, nextStart, periodName, todayInGameTz } from '../day';
+import { nextStart, periodName } from '../day';
 import { asBuilt, courseById, courseFor, labHoles, nextCourse, scheduleOf, tourCourses, tweaksOf, type Course } from '../golf3d/courses';
 import { hasNight } from '../golf3d/kits';
 import { ratingOf } from '../golf3d/ratings';
@@ -50,18 +50,13 @@ let data: Data = { kpis: null, report: [], planner: { approved: {}, results: {} 
 let snap0: Snapshot | null = null;
 let view: string | null = null; // a course id when one is open
 
-// Overview: the briefing, what's waiting, then the Pulse (one strip of headline numbers, every club side by side, one
-// chart). who: who's in and the feed (adminToday.ts); more: the rest of the numbers (adminKpis.ts), folded.
-export const overviewSections = (who = '', more = '') => `<div id="jv-top"></div>
-  <div id="adm-needs" class="adm-needs" hidden></div>
-  <section class="jv-pulse" id="jv-pulse">
-    <h2 class="jv-h">The pulse <small>every club</small></h2>
+// Metrics: the headline numbers, every club together, and players a day
+export const metricsSections = () => `<section class="jv-pulse" id="jv-pulse">
     <div id="jv-pulse-top"></div>
-    <div id="adm-pulse-clubs"></div>
     <div class="adm-card adm-charts" id="jv-pulse-chart" hidden></div>
-  </section>
-  ${who}
-  ${more}`;
+  </section>`;
+// Agents: each agent's latest note
+export const agentsSections = () => `<div id="jv-agents"><p class="muted">Loading…</p></div>`;
 // Courses: every week's tile, and a course's own page
 export const coursesSections = () => `<div id="jv-home"><p class="muted">Loading…</p></div>`;
 
@@ -92,40 +87,51 @@ function draw() {
   const el = document.getElementById('jv-home');
   if (!el || !snap0) return;
   const c = view ? courseById(view) : null;
-  const top = document.getElementById('jv-top');
-  if (top) top.innerHTML = agentsBox() + brief(snap0);
+  const agents = document.getElementById('jv-agents');
+  if (agents) agents.innerHTML = agentsBox();
   pulse();
   el.innerHTML = c ? detail(snap0, c) : home(snap0);
   bind(el, snap0);
   courseNeeds(snap0);
 }
 
-// From the agents (Nov 17): what the Architect, the Greenkeeper and the Steward did, newest first; anything that needs
-// Robbie on top, in red. A course's preview link plays it here; anything else (a PR) opens in a new tab.
+// From the agents: the Architect, the Greenkeeper and the Steward, one card each with its latest note, the ones that
+// need Robbie first (in red). Everything older is folded under Earlier. A course's preview link plays it here; anything
+// else (a PR) opens in a new tab.
 const AGENT_ICON: Record<string, string> = { Architect: '🏗️', Greenkeeper: '🌱', Steward: '🎩' };
+const AGENTS = ['Architect', 'Greenkeeper', 'Steward'];
 function agentsBox() {
-  const all = data.notes ?? [];
-  if (!all.length) return '';
-  const notes = [...all.filter((n) => n.needsYou), ...all.filter((n) => !n.needsYou).slice(0, 4)];
-  const when = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+  const all = [...(data.notes ?? [])].sort((a, b) => b.at.localeCompare(a.at));
+  const latest = new Map<string, AgentNote>();
+  for (const n of all) if (!latest.has(n.agent)) latest.set(n.agent, n);
+  const names = [...new Set([...AGENTS, ...latest.keys()])];
+  const cards = names.map((a) => ({ a, n: latest.get(a) })).sort((x, y) => Number(!!y.n?.needsYou) - Number(!!x.n?.needsYou));
+  setNeeds('agents', cards.filter((c) => c.n?.needsYou).length);
+  const when = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
   const go = (n: AgentNote) => {
     if (!n.link) return '';
     const preview = n.link.match(/^#\/preview\/([a-z0-9-]+)$/);
     const label = preview ? `▶ Play ${esc(courseById(preview[1])?.name ?? 'it')}` : 'Open';
     return n.link.startsWith('#/') ? `<a class="btn small" href="${esc(n.link)}">${label}</a>` : `<a class="btn ghost small" href="${esc(n.link)}" target="_blank" rel="noopener">See what changed</a>`;
   };
-  return `<section class="jv-agents">
-    <h2 class="jv-h">From the agents</h2>
-    ${notes
-      .map(
-        (n) => `<article class="jv-agent${n.needsYou ? ' needs' : ''}">
-          <p class="jv-agent-who">${AGENT_ICON[n.agent] ?? '🤖'} <b>${esc(n.agent)}</b><small>${when(n.at)}</small>${n.needsYou ? '<em>Needs you</em>' : ''}</p>
+  const card = (a: string, n?: AgentNote) =>
+    n
+      ? `<article class="jv-agent${n.needsYou ? ' needs' : ''}">
+          <p class="jv-agent-who">${AGENT_ICON[a] ?? '🤖'} <b>${esc(a)}</b><small>${when(n.at)}</small>${n.needsYou ? '<em>Needs you</em>' : ''}</p>
           <p class="jv-agent-title">${esc(n.title)}</p>
           ${n.body ? `<p class="jv-agent-body">${esc(n.body)}</p>` : ''}
           ${go(n)}
-        </article>`,
-      )
-      .join('')}
+        </article>`
+      : `<article class="jv-agent quiet"><p class="jv-agent-who">${AGENT_ICON[a] ?? '🤖'} <b>${esc(a)}</b><small>no note yet</small></p></article>`;
+  const older = all.filter((n) => latest.get(n.agent) !== n).slice(0, 20);
+  return `<section class="jv-agents">
+    ${cards.map((c) => card(c.a, c.n)).join('')}
+    ${
+      older.length
+        ? `<details class="adm-more jv-earlier"><summary>Earlier <small>${older.length} older ${older.length === 1 ? 'note' : 'notes'}</small></summary>
+        <ul class="adm-list">${older.map((n) => `<li><div>${AGENT_ICON[n.agent] ?? '🤖'} <b>${esc(n.agent)}</b> <small>${when(n.at)}</small><p>${esc(n.title)}</p></div></li>`).join('')}</ul></details>`
+        : ''
+    }
   </section>`;
 }
 
@@ -136,7 +142,7 @@ function courseNeeds(snap: Snapshot) {
   let w = snap.month;
   for (let i = 0; i < AHEAD; i++) ahead.push((w = nextStart(w)));
   setNeeds('nopick', !scheduleOf()[nw] && courseFor(nw).id === courseFor(snap.month).id ? 1 : 0);
-  setNeeds('unplaced', tourCourses().filter((c) => c.draft && !c.id.startsWith('room-') && !ahead.some((x) => courseFor(x).id === c.id)).length);
+  setNeeds('unplaced', tourCourses().filter((c) => c.draft && !ahead.some((x) => courseFor(x).id === c.id)).length);
 }
 
 // the headline numbers, every club together: today against the same day last week, this week, who came back
@@ -159,70 +165,10 @@ function pulse() {
   </div>`;
 }
 
-// ---- Jarvis: what matters now, in a line or two each ----
-
-type Note = { hole: number; text: string; level: 'hard' | 'easy' | 'note' };
-
-// what to tweak on this week's course, from members' real scores and shots (a few rounds before it says anything)
-function notesFor(c: Course): Note[] {
-  const out: Note[] = [];
-  for (const h of data.kpis?.holes ?? []) {
-    const hole = c.holes[h.hole - 1];
-    if (!hole || h.n < 3) continue;
-    const r = data.report.find((x) => x.hole === h.hole);
-    const name = `${h.hole}. ${hole.name}`;
-    if (h.avg >= 1) out.push({ hole: h.hole, level: 'hard', text: `${name} plays ${toParLabel(Math.round(h.avg * 10) / 10)} a round. Ease it: move the tee up or widen where the drive lands.` });
-    else if (h.avg <= -0.6) out.push({ hole: h.hole, level: 'easy', text: `${name} plays ${toParLabel(Math.round(h.avg * 10) / 10)}. Too kind: push the tee back or tuck the pin.` });
-    if (r && r.rounds >= 3 && r.threePutts >= 0.3) out.push({ hole: h.hole, level: 'note', text: `${name}: ${Math.round(r.threePutts * 100)}% three-putt. Soften the green's slope.` });
-    if (r && r.rounds >= 3 && r.penalties >= 0.35) out.push({ hole: h.hole, level: 'note', text: `${name}: ${r.penalties.toFixed(1)} penalties a hole. Give the hazard more room.` });
-  }
-  return out;
-}
-
-function briefing(snap: Snapshot): string[] {
-  const now = courseFor(snap.month);
-  const rows = board(snap);
-  const played = rows.filter((r) => r.best);
-  const lines: string[] = [];
-  if (isWeek(snap.month)) {
-    const day = Math.min(7, Math.max(1, Math.round((Date.parse(`${todayInGameTz()}T12:00:00Z`) - Date.parse(`${snap.month}T12:00:00Z`)) / 86400000) + 1));
-    lines.push(`Day ${day} of 7 on <b>${esc(short(now))}</b>.`);
-  } else lines.push(`<b>${esc(short(now))}</b> is on.`);
-  if (played.length) {
-    const top = played.filter((r) => r.rank === 1);
-    const who = top.map((r) => snap.players.find((p) => p.id === r.playerId)?.name ?? '?');
-    lines.push(`${esc(who.join(' and '))} ${top.length > 1 ? 'lead' : 'leads'} at ${toParLabel(top[0].toPar)}.`);
-  }
-  const notes = notesFor(now);
-  if (notes.length) lines.push(`${notes.length === 1 ? 'One thing' : `${notes.length} things`} to look at on this course. ${esc(notes[0].text)}`);
-  const nw = nextStart(snap.month);
-  const next = courseFor(nw);
-  if (scheduleOf()[nw]) lines.push(`Next week: <b>${esc(short(next))}</b>, picked.${next.draft ? ' Still a draft: play it before Sunday.' : ''}`);
-  else if (next.id === now.id) lines.push(`Nothing picked for next week, so ${esc(short(now))} carries on.`);
-  else lines.push(`Next week: <b>${esc(short(next))}</b>, from the calendar.`);
-  return lines;
-}
-
-function greeting() {
-  const h = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()));
-  return h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening';
-}
-
-// ---- the home: briefing, this week, every week ----
-
-function brief(snap: Snapshot): string {
-  const me = snap.players.find((p) => p.id === snap.me)?.name ?? '';
-  return `<section class="jv-brief">
-      <p class="jv-hi">${greeting()}${me ? `, ${esc(me)}` : ''}.</p>
-      ${briefing(snap)
-        .map((l) => `<p>${l}</p>`)
-        .join('')}
-    </section>`;
-}
+// ---- the home: this week, every week ----
 
 function home(snap: Snapshot): string {
   const now = courseFor(snap.month);
-  const notes = notesFor(now);
   const ahead: string[] = [];
   let w = snap.month;
   for (let i = 0; i < AHEAD; i++) ahead.push((w = nextStart(w)));
@@ -242,19 +188,16 @@ function home(snap: Snapshot): string {
         <div><b>${played.length}<small>/${rows.length}</small></b><span>cards in</span></div>
         <div><b>${played.length ? toParLabel(played[0].toPar) : '–'}</b><span>leading</span></div>
         <div><b>${data.kpis?.rounds ?? '–'}</b><span>rounds</span></div>
-        <div><b>${notes.length}</b><span>to look at</span></div>
       </div>
       <span class="jv-open">Open ›</span>
     </button>
-    ${notes.length ? `<ul class="jv-notes">${notes.slice(0, 3).map((n) => `<li class="${n.level}">${esc(n.text)}</li>`).join('')}</ul>` : ''}
 
     <h2 class="jv-h" id="jv-coming">Coming up</h2>
     <div class="jv-weeks">${ahead.map((x) => weekTile(x)).join('')}</div>
 
     ${back.length ? `<h2 class="jv-h">Weeks gone by</h2><div class="jv-weeks past">${back.map((x) => weekTile(x, true)).join('')}</div>` : ''}
 
-    ${bench.length ? `<h2 class="jv-h" id="jv-benchh">The bench <small>on no week</small></h2><div class="jv-bench">${bench.map(benchTile).join('')}</div>` : ''}
-    <p class="jv-foot"><a href="#/room">🛰️ Build a course from scratch in the Design Room</a></p>`;
+    ${bench.length ? `<h2 class="jv-h" id="jv-benchh">The bench <small>on no week</small></h2><div class="jv-bench">${bench.map(benchTile).join('')}</div>` : ''}`;
 }
 
 function weekTile(w: string, past = false): string {
@@ -285,7 +228,7 @@ function benchTile(c: Course): string {
   return `<button class="jv-tile small" data-open="${c.id}" style="${style(c)}">
     <span class="jv-emoji" aria-hidden="true">${artOf(c).emoji}</span>
     <b>${esc(short(c).replace(/^Lab · /, ''))}</b>
-    <em>${c.lab ? 'Hole Lab' : c.id.startsWith('room-') ? 'Design Room' : c.draft ? 'Draft' : 'Played before'} · par ${c.par}</em>
+    <em>${c.lab ? 'Hole Lab' : c.draft ? 'Draft' : 'Played before'} · par ${c.par}</em>
     ${Object.keys(tweaksOf()[c.id] ?? {}).length ? '<span class="jv-chips"><i>🎛️ Tweaked</i></span>' : ''}
   </button>`;
 }
@@ -298,7 +241,6 @@ function detail(snap: Snapshot, c: Course): string {
   const isNext = c.id === nextCourse(snap.month)?.id;
   const r = ratingOf(c);
   const res = data.planner.results[c.id];
-  const notes = isNow ? notesFor(c) : [];
   const ahead: string[] = [];
   let w = snap.month;
   for (let i = 0; i < AHEAD; i++) ahead.push((w = nextStart(w)));
@@ -317,25 +259,11 @@ function detail(snap: Snapshot, c: Course): string {
       <em>${c.holes.length} holes · par ${c.par} · ${yards(c).toLocaleString('en-US')} yd${c.draft ? ` · ${data.planner.approved[c.id] ? 'approved draft' : 'draft'}` : ''}</em>
     </section>
 
-    <section class="jv-sec">
-      <h3>Play and test</h3>
-      <div class="jv-acts">
-        <a class="btn" href="#/preview/${c.id}">▶ Play it, with the controls</a>
-        ${isNext ? '<a class="btn ghost" href="#/rehearse">Rehearse Sunday\'s card</a>' : ''}
-        ${c.id.startsWith('room-') ? `<a class="btn ghost" href="#/room/${c.id.slice(5)}">🛰️ Open on the holo-table</a>` : ''}
-      </div>
-      ${hasNight(c.holes[0]) ? `<div class="adm-chips" role="group" aria-label="Time of day"><small>Time</small><button data-night="day">☀️ Day</button><button data-night="night">🌙 Night</button><button data-night="">By the clock</button></div>` : ''}
-      <p class="fine">In play, Controls sets the time of day, the wind and the pin, pours any drink, puts a shot back and drops the ball anywhere. Nothing is posted or paid.</p>
-    </section>
-
-    ${c.lab ? '' : `<section class="jv-sec" id="jv-tweak"></section>`}
-    ${c.lab ? '' : askSection(c)}
-
     ${
       c.lab
         ? ''
         : `<section class="jv-sec">
-      <h3>Plan</h3>
+      <h3>Schedule</h3>
       <p>${mine.length ? `Picked for ${mine.map(weekLabel).join(', ')}.` : isNow ? 'This week. Pick it again for a coming week to keep it on.' : 'Not picked for a coming week.'}</p>
       <div class="jv-plan">
         <select id="jv-week" aria-label="Week">${ahead
@@ -349,6 +277,16 @@ function detail(snap: Snapshot, c: Course): string {
     }
 
     <section class="jv-sec">
+      <h3>Play and test</h3>
+      <div class="jv-acts">
+        <a class="btn" href="#/preview/${c.id}">▶ Play it, with the controls</a>
+        ${isNext ? '<a class="btn ghost" href="#/rehearse">Rehearse Sunday\'s card</a>' : ''}
+      </div>
+      ${hasNight(c.holes[0]) ? `<div class="adm-chips" role="group" aria-label="Time of day"><small>Time</small><button data-night="day">☀️ Day</button><button data-night="night">🌙 Night</button><button data-night="">By the clock</button></div>` : ''}
+      <p class="fine">In play, Controls sets the time of day, the wind and the pin, pours any drink, puts a shot back and drops the ball anywhere. Nothing is posted or paid.</p>
+    </section>
+
+    <section class="jv-sec">
       <h3>How it plays</h3>
       <dl class="jv-stats">
         <div><dt>CCC Rating</dt><dd>${r ? r.rating.toFixed(1) : '–'}</dd></div>
@@ -357,7 +295,6 @@ function detail(snap: Snapshot, c: Course): string {
         <div><dt>Best</dt><dd>${res ? toParLabel(res.best) : '–'}</dd></div>
       </dl>
       <p class="fine">${res ? `${res.rounds} rounds from ${res.members} ${res.members === 1 ? 'member' : 'members'}${res.bestBy ? `, best by ${esc(res.bestBy)}` : ''}.` : 'No member rounds yet.'}${r ? ` The robot rated it ${esc(new Date(`${r.at}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }))}${r.hardest ? `; hardest for it: ${esc(r.hardest)}` : ''}.` : ''}</p>
-      ${notes.length ? `<ul class="jv-notes">${notes.map((n) => `<li class="${n.level}">${esc(n.text)}</li>`).join('')}</ul>` : ''}
       <table class="jv-holes">
         <thead><tr><th>Hole</th><th class="num">Par</th><th class="num">Yd</th>${isNow ? '<th class="num">Avg</th><th class="num">3-putt</th><th class="num">Pen</th>' : ''}</tr></thead>
         <tbody>${c.holes
@@ -373,7 +310,10 @@ function detail(snap: Snapshot, c: Course): string {
           })
           .join('')}</tbody>
       </table>
-    </section>`;
+    </section>
+
+    ${c.lab ? '' : askSection(c)}
+    ${c.lab ? '' : `<details class="jv-sec jv-dials"><summary>Hand dials <small>tee, fairway, pins, wind. The Greenkeeper tunes these each week</small></summary><div id="jv-tweak"></div></details>`}`;
 }
 
 function bind(el: HTMLElement, snap: Snapshot) {
@@ -448,7 +388,7 @@ function drawTweak(c: Course) {
   const isNow = snap0 && courseFor(snap0.month).id === c.id;
   const chip = <T,>(attr: string, v: T, label: string, cur: T) => `<button data-${attr}="${String(v)}" class="${cur === v ? 'on' : ''}">${label}</button>`;
   el.innerHTML = `
-    <h3>Tweak <small>live for everyone once saved</small></h3>
+    <p class="fine">One hole at a time. Live for everyone once saved.</p>
     <div class="jv-hole-tabs">${c.holes.map((_, i) => `<button data-twhole="${i}" class="${i === tw.hole ? 'on' : ''}">${i + 1}${hasTweak(tweaksOf()[c.id]?.[String(i + 1)]) ? '<i></i>' : ''}</button>`).join('')}</div>
     <div class="jv-tweak">
       <div class="jv-tw-plan" id="jv-tw-plan"></div>

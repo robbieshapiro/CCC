@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, RoomCourse, CourseRequest, AgentNote } from './types';
+import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, CourseRequest, AgentNote } from './types';
 import type { Tweaks } from '../golf3d/tweaks';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
@@ -149,9 +149,6 @@ export const supabaseApi: Api = {
   agentNotes: (s) => rpc<AgentNote[]>('agent_notes_list', { p_token: s.token }).catch(() => [] as AgentNote[]),
   addCourseRequest: (s, course, hole, body) => rpc<number>('course_request_add', { p_token: s.token, p_course: course, p_hole: hole, p_body: body }),
   courseRequestDone: (s, id, done) => rpc<void>('course_request_done', { p_token: s.token, p_id: id, p_done: done }),
-  roomCourses: (s) => rpc<RoomCourse[]>('room_courses_list', { p_token: s.token }),
-  roomSave: (s, c) => rpc<number>('room_save', { p_token: s.token, p_id: c.id, p_name: c.name, p_tagline: c.tagline, p_holes: c.holes, p_draft: c.draft }),
-  roomDelete: (s, id) => rpc<void>('room_delete', { p_token: s.token, p_id: id }),
   courseSchedule: (s) => rpc<Record<string, string>>('course_schedule', { p_token: s.token }),
   setCourseSchedule: (s, period, course) => rpc<void>('set_course_schedule', { p_token: s.token, p_period: period, p_course: course }),
   periodHonors: (s, period) => rpc<Honors>('period_honors', { p_token: s.token, p_period: period }),
