@@ -3,7 +3,7 @@
 // coming weeks, the weeks gone by, and the bench (courses on no week). Each tile opens the course: review it, play
 // it, test it, and put it on a week.
 import { api } from '../api';
-import type { AdminKpis, CoursePlanner, CourseRequest, HoleReport, Snapshot } from '../api/types';
+import type { AdminKpis, AgentNote, CoursePlanner, CourseRequest, HoleReport, Snapshot } from '../api/types';
 import { planCanvas } from '../designer/plan';
 import { applyTweak, FAIRWAY_STEPS, hasTweak, TEE_MAX, teeAt, teeOk, WIND_STEPS, type Tweak } from '../golf3d/tweaks';
 import { tell } from '../dialog';
@@ -45,8 +45,8 @@ const style = (c: Course) => {
   return `--from:${a.from};--to:${a.to};--ink:${a.ink}`;
 };
 
-type Data = { kpis: AdminKpis | null; report: HoleReport[]; planner: CoursePlanner; requests: CourseRequest[] };
-let data: Data = { kpis: null, report: [], planner: { approved: {}, results: {} }, requests: [] };
+type Data = { kpis: AdminKpis | null; report: HoleReport[]; planner: CoursePlanner; requests: CourseRequest[]; notes: AgentNote[] };
+let data: Data = { kpis: null, report: [], planner: { approved: {}, results: {} }, requests: [], notes: [] };
 let snap0: Snapshot | null = null;
 let view: string | null = null; // a course id when one is open
 
@@ -70,13 +70,14 @@ export async function loadHome(snap: Snapshot, course?: string) {
   view = course ?? null;
   draw();
   const s = requireSession();
-  const [kpis, report, planner, requests] = await Promise.all([
+  const [kpis, report, planner, requests, notes] = await Promise.all([
     api.adminKpis(s).catch(() => null),
     api.adminHoles(s).catch(() => [] as HoleReport[]),
     api.coursePlanner(s).catch(() => ({ approved: {}, results: {} })),
     api.courseRequests(s).catch(() => [] as CourseRequest[]),
+    api.agentNotes(s).catch(() => [] as AgentNote[]),
   ]);
-  data = { kpis, report, planner, requests };
+  data = { kpis, report, planner, requests, notes };
   draw();
 }
 
@@ -92,11 +93,40 @@ function draw() {
   if (!el || !snap0) return;
   const c = view ? courseById(view) : null;
   const top = document.getElementById('jv-top');
-  if (top) top.innerHTML = brief(snap0);
+  if (top) top.innerHTML = agentsBox() + brief(snap0);
   pulse();
   el.innerHTML = c ? detail(snap0, c) : home(snap0);
   bind(el, snap0);
   courseNeeds(snap0);
+}
+
+// From the agents (Nov 17): what the Architect, the Greenkeeper and the Steward did, newest first; anything that needs
+// Robbie on top, in red. A course's preview link plays it here; anything else (a PR) opens in a new tab.
+const AGENT_ICON: Record<string, string> = { Architect: '🏗️', Greenkeeper: '🌱', Steward: '🎩' };
+function agentsBox() {
+  const all = data.notes ?? [];
+  if (!all.length) return '';
+  const notes = [...all.filter((n) => n.needsYou), ...all.filter((n) => !n.needsYou).slice(0, 4)];
+  const when = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+  const go = (n: AgentNote) => {
+    if (!n.link) return '';
+    const preview = n.link.match(/^#\/preview\/([a-z0-9-]+)$/);
+    const label = preview ? `▶ Play ${esc(courseById(preview[1])?.name ?? 'it')}` : 'Open';
+    return n.link.startsWith('#/') ? `<a class="btn small" href="${esc(n.link)}">${label}</a>` : `<a class="btn ghost small" href="${esc(n.link)}" target="_blank" rel="noopener">See what changed</a>`;
+  };
+  return `<section class="jv-agents">
+    <h2 class="jv-h">From the agents</h2>
+    ${notes
+      .map(
+        (n) => `<article class="jv-agent${n.needsYou ? ' needs' : ''}">
+          <p class="jv-agent-who">${AGENT_ICON[n.agent] ?? '🤖'} <b>${esc(n.agent)}</b><small>${when(n.at)}</small>${n.needsYou ? '<em>Needs you</em>' : ''}</p>
+          <p class="jv-agent-title">${esc(n.title)}</p>
+          ${n.body ? `<p class="jv-agent-body">${esc(n.body)}</p>` : ''}
+          ${go(n)}
+        </article>`,
+      )
+      .join('')}
+  </section>`;
 }
 
 // what's waiting on the course side: next week with nothing picked (it would carry on), and new courses on no week

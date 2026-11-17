@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, RoomCourse, CourseRequest } from './types';
+import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, RoomCourse, CourseRequest, AgentNote } from './types';
 import type { Tweaks } from '../golf3d/tweaks';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
@@ -146,6 +146,7 @@ export const supabaseApi: Api = {
   courseTweaks: (s) => rpc<Tweaks>('course_tweaks_list', { p_token: s.token }),
   setCourseTweak: (s, course, hole, tweak) => rpc<void>('set_course_tweak', { p_token: s.token, p_course: course, p_hole: hole, p_tweak: tweak ?? {} }),
   courseRequests: (s) => rpc<CourseRequest[]>('course_requests_list', { p_token: s.token }),
+  agentNotes: (s) => rpc<AgentNote[]>('agent_notes_list', { p_token: s.token }).catch(() => [] as AgentNote[]),
   addCourseRequest: (s, course, hole, body) => rpc<number>('course_request_add', { p_token: s.token, p_course: course, p_hole: hole, p_body: body }),
   courseRequestDone: (s, id, done) => rpc<void>('course_request_done', { p_token: s.token, p_id: id, p_done: done }),
   roomCourses: (s) => rpc<RoomCourse[]>('room_courses_list', { p_token: s.token }),

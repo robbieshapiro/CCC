@@ -14,6 +14,8 @@ The live database is Supabase project **CCC**, id `xixfekrwgyknbzttyrtp`. Load t
 | Read anything (check a balance, count rows, confirm a function) | `execute_sql` with a `select` | None. Fine any time. |
 | Apply a merged PR's schema changes | `apply_migration`, named after the PR (`pr_252_midway`) | Robbie saying merge |
 | A one-off data fix Robbie asked for | `apply_migration`, named `oneoff_<what>` | Robbie asking for it in chat |
+| An agent's note in the Committee Room | `apply_migration`, named `note_<agent>_<YYYYMMDD>`, running `select agent_note(...)` | The agent's duty: every run ends with one |
+| The Steward's Sunday payout notice | `apply_migration`, named `notice_payouts_<YYYYMMDD>` | The Steward's duty (its skill, section 5) |
 
 Writes to live data go through `apply_migration`, so there's a record of them in the migration history. Never drop, delete or rewrite live data unless Robbie asked for that exact change.
 
@@ -44,8 +46,9 @@ Look the rows up with a read-only `select` first and name them to Robbie (who, w
 
 `apply_migration` runs without a prompt (it's allowed in `.claude/settings.json`). The prompt used to appear only inside the chat for about 60 seconds, with no notification, so Robbie never saw one and they timed out. His go-ahead is now what he says in chat:
 
-- A PR's SQL: he said merge. Apply it right after the merge, nothing more.
+- A PR's SQL: once the PR merges (Claude merges its own PRs when `checks` is green; Robbie doesn't have to say merge). Apply it right after the merge, nothing more.
 - A one-off data change: he asked for it in chat (remove this card, delete that test member). Never on your own initiative.
+- The agents' named duties: a note in the Committee Room (every agent), a new course's `course_pars` row (the Architect, the Greenkeeper), the Sunday payout notice (the Steward).
 - Nothing else writes to the live database. Say in one line what it changes as you send it.
 - If a call is still refused or times out, nothing ran: give him the exact block to paste into the Supabase SQL editor.
 

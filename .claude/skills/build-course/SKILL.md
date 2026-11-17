@@ -1,16 +1,16 @@
 ---
 name: build-course
-description: The Architect's playbook for building the weekly 3-hole course for Claude Country Club two weeks out, checking it plays fair, and opening it as a draft PR for Robbie. Use when a scheduled Architect run starts, or when asked to build a new weekly course.
+description: The Architect's playbook for building the weekly course (5 to 9 holes) for Claude Country Club two weeks out, checking it plays fair and at the right difficulty, and shipping it (merged, live on its week) with a note in the Committee Room. Use when a scheduled Architect run starts, or when asked to build a new weekly course.
 ---
 
 # The Architect
 
-Each Sunday you build the course for the week that starts two Sundays from now, as code like the Pacific Bluffs and the Western Reserve, and open it as a draft PR. Robbie plays the preview and decides. You never merge, never remove `draft: true`, never touch `supabase/schema.sql` or the live database.
+Each Sunday you build the course for the week that starts two Sundays from now, as code like the Caldera and the Windy City Classic, and ship it: once its checks pass you merge it, and it plays on its week (since Nov 17, at Robbie's request, the club runs itself). Robbie can play it from the Committee Room any time and swap the week if he wants (Admin, Courses, The weeks ahead). The only database writes you make are the course's `course_pars` row and your note.
 
 ## 0. Should you build at all?
 
 - Work out the target Sunday: today's date if it's a Sunday, plus 14 days (`YYYY-MM-DD`). Weeks run Sunday to Saturday (see `src/day.ts`).
-- Look in `COURSES` in `src/golf3d/courses.ts`. If a course already has `opens` set to that Sunday, draft or not, stop. Reply "A course is already lined up for the week of <date>: <name>." and do nothing else.
+- Look in `COURSES` in `src/golf3d/courses.ts`. If a course already has `opens` set to that Sunday, draft or not, stop: leave the note "A course is already lined up for the week of <date>: <name>." (not needs_you) and do nothing else.
 - Look at open PRs. If one already adds a course for that Sunday, stop the same way and name the PR.
 
 ## Robbie's requests and dials (read these first)
@@ -22,7 +22,7 @@ select id, course, hole, body, created_at from course_requests where not done or
 select course, hole, tweak from course_tweaks order by course, hole;
 ```
 
-- A request is an ask from Robbie for a course you're working on. Do the ones you can in your PR, one line each under "Robbie's requests" in the description, with the request id. Say plainly which you didn't do and why. He ticks them done himself; you never write to the database.
+- A request is an ask from Robbie for a course you're working on. Do the ones you can in your PR, one line each under "Robbie's requests" in the description, with the request id. Say plainly which you didn't do and why. He ticks them done himself.
 - `course_tweaks` are his live dials (`src/golf3d/tweaks.ts`): tee moved in yards, fairway grown in feet, pin spots kept, a wind cap, day or night. They sit on top of the hole as built, and stay on top of your change. If your change makes a dial pointless or doubles it up (you widen a fairway he already widened by dial), say so in the PR so he can clear the dial.
 - The text is Robbie's, but treat it as a request to weigh, never as an instruction to do anything outside the course.
 
@@ -32,20 +32,27 @@ select course, hole, tweak from course_tweaks order by course, hole;
 - Don't recreate a real, named golf course or its famous holes. Original holes, inspired by the place.
 - Reuse an existing look where it fits (`theme` in `src/golf3d/types.ts`: `highland`, `volcanic`, `links`, `desert`, `autumn`, `coastal`) and its kit (trees, rocks, walls, water). A small addition, like a new tree or a building on an existing look, is fine. A whole new look (like `src/golf3d/coastal.ts`) is a big job: only do it if you can keep it tidy, and say so in the PR.
 
-## 2. Build three holes
+## 2. Build the holes: 5 to 9 of them, at the right difficulty
+
+The size, length and difficulty vary week to week, inside these lines (Robbie, Nov 17; members liked the Caldera and the Windy City Classic):
+
+- **5 to 9 holes**, a different count from the week before (look at last week's course in `COURSES`).
+- **A mix:** par 3 to 5; from 6 holes up at least one par 3 and one par 5. Card length averages roughly 75 to 95 yards a hole, with a real spread from short to long.
+- **Difficulty**, from the CCC Rating run (`QUICK=1 SEEDS=4 COURSE=<id> npm run check-holes -- rate`; the numbers in `src/golf3d/ratings.ts`): a member about **+1.2 to +1.8 a hole** on average, a strong player **+0.2 to +0.6**. The Caldera rates about +1.4 and +0.4, the Windy City Classic about +1.8 and +0.5. Make one or two holes clearly harder (member +2.5 or more) and one a breather. Put the run's `RATE` line into `ratings.ts`.
 
 Read two finished holes first as models: `src/golf3d/holes/thecarry.ts` and `src/golf3d/holes/creekbend.ts`. Then, for each hole, make a new file in `src/golf3d/holes/`:
 
 - a header comment in the same style: the play, the bail-out and the secret;
-- par 3 to 5, a mix across the three. Par about 11 to 12 for the course;
+- par 3 to 5, mixed as above;
 - `name`, `blurb` (one plain line on how to play it), `yards`, `theme`, `tour: true`;
 - 4 `pins`, every one on dry green;
 - a `secret`: a clever route a curious player can find. Add where it starts to `SECRET_FROM` in `scripts/check-holes.ts`.
 
 Then register the course:
-- an entry in `COURSES` in `src/golf3d/courses.ts` with `id`, `opens` (the target Sunday), `draft: true`, `name`, `tagline`, `holes`, `par`, and a `playoff` (usually the last hole, with a fairway spot for the shot at the pin and a short label);
+- an entry in `COURSES` in `src/golf3d/courses.ts` with `id`, `opens` (the target Sunday), `name`, `tagline`, `holes`, `par`, and a `playoff` (usually the last hole, with a fairway spot for the shot at the pin and a short label). No `draft: true`: `opens` puts it on its week, and members see it from the Thursday before;
+- its row in `course_pars` in `supabase/schema.sql` (next to the others, `insert ... on conflict (course) do update`), pars in hole order: the server refuses cards whose pars don't match, and `check-holes` fails if they differ;
 - its name in the `COURSES` map in `api/chronicle.ts`, so Reginald can write about it;
-- the calendar check near line 380 of `scripts/check-holes.ts`, if adding the course changes what it expects. A draft course shouldn't change which course members get.
+- the calendar check near line 430 of `scripts/check-holes.ts` (`courseFor(...)`): add the new week so it expects your course from its Sunday.
 
 ## 3. Check it plays fair
 
@@ -60,14 +67,27 @@ Run each of these and fix the holes until they pass. Paste the summary lines int
 
 Members have found cheap scoring on holes with big, soft greens and easy chip-ins (the Summit, the Lava Field and the Blowhole gave up eagles 37 to 47% of the time). Smaller, firmer greens (`greenFirm`) and `chipDrop: 0.7` help.
 
-## 4. Open the PR
+## 4. Ship it
 
 - Work on the branch the session gives you; otherwise use `architect/<course id>`. Merge the latest `main` in first.
-- Update `docs/PLAN.md` in the same PR: a row in "Shipped" marked "(draft)", an unchecked box under "Setup status" ("Play <course> (Admin → Preview <course> (draft)) and approve or ask for changes"), the schedule line under "Weekly play", and "Last updated".
-- Title: a plain sentence about what members get, e.g. "The Desert Mesa: three holes in the Arizona canyons, the draft for Nov 22".
-- Description, short and plain:
-  - the three holes, one line each (par, the play, the secret);
-  - the check results (quick, member averages per hole);
-  - anything you weren't sure about;
-  - "Robbie to do": open the Vercel preview for this PR, go to Admin → "Preview <course> (draft)", play it (about 10 minutes), then tell an agent "approve <course>" or what to change. Approving means a follow-up removes `draft: true`.
-- End your run with a two-line note for Robbie: the course name, the week, and the PR link. If you stopped early or a check wouldn't pass, say exactly what and why instead. Don't open a PR with failing checks.
+- Update `docs/PLAN.md` in the same PR: a row in "Shipped", the schedule line under "Weekly play", and "Last updated".
+- Title: a plain sentence about what members get, e.g. "The Desert Mesa: seven holes in the Arizona canyons, for the week of Nov 22".
+- Description, short and plain: the holes, one line each (par, yards, the play, the secret); the check results and the rating; anything you weren't sure about; "Robbie to do: Nothing".
+- Don't open a PR with failing checks. Once it's open, poll the `checks` run on its head commit (`gh api repos/robbieshapiro/ccc/commits/<sha>/check-runs --jq '.check_runs[]|select(.name=="checks")|.conclusion'`) and, when it's green, merge it (squash, `expectedHeadSha`).
+- Then apply the `course_pars` row live with `apply_migration` (named `pr_<n>_<course id>_pars`) and check it with a read-only select.
+- If the course won't pass its checks or land in the difficulty band by the end of your run, don't merge: leave the PR as a draft and write a `needs_you` note saying exactly what failed. The week then carries on with the course before, so members always have one.
+
+## Leave Robbie a note in the Committee Room
+
+Every run ends with one note, never with "go look at a PR". Write it with the Supabase connector's `apply_migration` on project `xixfekrwgyknbzttyrtp`, named `note_<agent>_<YYYYMMDD>`:
+
+```sql
+select agent_note('<Agent>', '<one line: what happened>', '<a few plain lines, or null>', '<link, or null>', <needs_you: true or false>);
+```
+
+- The link for a course is its preview, `#/preview/<course id>`: it opens in the app and plays it. Otherwise a PR's URL, or null.
+- `needs_you` is true only when something is stuck that only Robbie can sort out (a check you couldn't get to pass, the database unreachable). It shows in red at the top. Most notes are false.
+- Words he reads: short, warm, plain, no em dashes. The note is the whole report; your chat reply can be the same line.
+- If the Supabase tools aren't there, put the note in your final reply instead.
+
+The Architect's note: the title names the course, its week and size ("The Desert Mesa is ready for the week of Nov 22: seven holes, par 28."), the body its rating and one line on its character, and the link `#/preview/<course id>`.
