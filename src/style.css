@@ -2339,3 +2339,11 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 .bar-room .bar-game[data-game='acepot'] .bar-top li { border-top-color: rgba(42, 24, 2, 0.2); }
 .bar-room .bar-game[data-game='acepot'] .bar-top li.me b { color: #7a3a00; }
 .bar-room .bar-game.closed[data-game] { opacity: 0.7; border-style: dashed; }
+
+/* the moments on a card (Nov 17, src/screens/moments.ts): the Target Range's pop, with the word big and the money under */
+.tr-pop.moment { top: 46%; }
+.tr-pop.moment b { font-size: 50px; white-space: nowrap; letter-spacing: 0.01em; }
+.tr-pop.moment.eagle b { font-size: 60px; }
+.tr-pop.moment span { background: var(--c); color: #fff; font-size: 20px; padding: 4px 14px; animation: none; box-shadow: 0 4px 16px -4px var(--c); }
+.tr-pop.moment.eagle span { color: #2a1802; }
+.ace-big.long { font-size: 56px; line-height: 1.05; }

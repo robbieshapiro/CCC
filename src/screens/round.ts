@@ -47,7 +47,8 @@ import { barSummary } from './bar';
 import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
 import { canShare, dailySummary, share } from './daily';
-import { aceWin } from './acewin';
+import { aceWin, bigMoment } from './acewin';
+import { scorePop } from './moments';
 import { cardStatus, elsewhereLine } from './cardnote';
 import { earned, plaques } from '../trophies';
 
@@ -301,8 +302,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       holeShots.set(holeAt, (holeShots.get(holeAt) ?? 0) + 1);
       if (pops && s.i) {
         const ft = Math.round(Math.hypot(s.t[0] - s.f[0], s.t[1] - s.f[1]));
-        if (s.c === 'putter' && puttBonus(ft)) coinPop(el, puttBonus(ft), ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', unpaid || `${ft} ft`);
-        else if (s.c !== 'putter' && s.l !== 'green' && !first) coinPop(el, BONUS.chipin, 'Chip-in', unpaid || 'from off the green');
+        if (s.c === 'putter' && puttBonus(ft)) scorePop(el, 'putt', ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', puttBonus(ft), unpaid || `${ft} ft`);
+        else if (s.c !== 'putter' && s.l !== 'green' && !first) scorePop(el, 'putt', 'Chip-in', BONUS.chipin, unpaid || 'from off the green');
       }
       // the first time a swing past 100% goes badly wrong, say what the red zone is (once a device)
       if (s.p >= 1.05 && Math.abs(s.e) >= 0.5 && s.c !== 'putter' && !store.get('ccc-overswing-tip')) {
@@ -353,6 +354,15 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
       jump?.(holeAt);
     });
   } else releaseNight(); // a member's round follows the clock
+  // a birdie or an eagle pops the moment it drops (an eagle in gold, with a burst at the cup); an albatross or a hole in
+  // one waits for the engine's own replay and then gets the whole screen (below)
+  game.onHoleDone = (strokes, par) => {
+    const h = course.holes[holeAt];
+    const sb = pops && !opts.practice && h ? shotBonus(strokes, par) : 0;
+    if (!sb || strokes === 1 || par - strokes >= 3 || !game) return;
+    if (par - strokes >= 2) game.burst(h.cup, 5, 0xf2b705);
+    scorePop(el, par - strokes >= 2 ? 'eagle' : 'birdie', shotName(strokes, par), sb, unpaid || h.name);
+  };
   for (let i = scores.length; i < course.holes.length; ) {
     const h = course.holes[i];
     holeAt = i;
@@ -371,7 +381,22 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     spots[i] = r.spot;
     // a birdie or better on a card pays (the card is the day's first round): the coins come as it drops
     const sb = pops && !opts.practice ? shotBonus(r.strokes, h.par) : 0;
-    if (sb) coinPop(el, sb, shotName(r.strokes, h.par), unpaid || h.name);
+    if (sb) {
+      // a birdie pops; an eagle pops in gold with a burst at the cup; an albatross or a hole in one gets the whole screen
+      const under = h.par - r.strokes;
+      if (r.strokes === 1 || under >= 3) {
+        await bigMoment({
+          eyebrow: `${h.name} · Par ${h.par}`,
+          title: r.strokes === 1 ? 'HOLE IN ONE!' : 'ALBATROSS!',
+          sub: r.strokes === 1 ? 'In with one swing' : `${r.strokes} on a par ${h.par}`,
+          amount: sb,
+          fine: unpaid ? `A ${unpaid}.` : 'Added to your club bonus.',
+          brag: () => `${r.strokes === 1 ? 'Hole in one' : 'Albatross'} on ${h.name} at the Claude Country Club ⛳\n${location.origin}`,
+        }).closed;
+        if (quit || !game) return;
+      }
+      // (a birdie or an eagle popped as the ball dropped: onHoleDone, above)
+    }
     // a hole's secret, found for the first time on a card
     if (pops && h.secret && r.feats.includes(h.secret.zone) && (rehearsal || (SECRET_FEATS.includes(h.secret.zone) && !foundBefore.has(h.secret.zone)))) {
       foundBefore.add(h.secret.zone);
