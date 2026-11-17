@@ -2279,15 +2279,15 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
   100% { opacity: 0; transform: translate(-50%, -60px) scale(0.9); }
 }
 @keyframes tr-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
-
-/* the four contests under the Ace Pot (Nov 17): light cards, each game in its own colour (the all-brown tiles were
-   heavy going), so the gold Ace Pot above still stands out */
-.bs-row .bs-card { --c: #2f6b4f; background: #fff; border: 1px solid #e6dfd0; border-top: 4px solid var(--c); color: #2a2a26; box-shadow: 0 4px 14px -10px rgba(40, 30, 10, 0.45); }
-.bs-row .bs-card[data-bs='daily'] { --c: #d9473a; }
-.bs-row .bs-card[data-bs='drive'] { --c: #2f6fd6; }
-.bs-row .bs-card[data-bs='targets'] { --c: #8a4fd6; }
-.bs-row .bs-card[data-bs='midway'] { --c: #149c8c; }
-.bs-row .bs-card i { display: grid; place-items: center; width: 32px; height: 32px; margin-bottom: 4px; border-radius: 10px; background: color-mix(in srgb, var(--c) 14%, #fff); font-size: 18px; }
-.bs-row .bs-card small { color: var(--c); }
-.bs-row .bs-card b { color: #1d1d1a; }
-.bs-row .bs-card span { color: #6b665c; }
+/* the four contests under the Ace Pot (Nov 17): each game its own rich colour, made the same way as the gold Ace Pot
+   (a diagonal gradient, a light edge on top, a soft glow under), so the five read as one set. The all-brown tiles were
+   heavy going, and plain white ones too flat next to the gold. */
+.bs-row .bs-card { --a: #3f8a64; --b: #1f5a3e; --e: #8fd3ad; background: linear-gradient(135deg, var(--a) 0%, var(--b) 100%); border: 1px solid var(--e); color: #fff; box-shadow: 0 8px 20px -12px var(--b), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.bs-row .bs-card[data-bs='daily'] { --a: #ec6a4f; --b: #b8322a; --e: #ffb3a1; }
+.bs-row .bs-card[data-bs='drive'] { --a: #4f8ff0; --b: #1f4fae; --e: #a9c9ff; }
+.bs-row .bs-card[data-bs='targets'] { --a: #a874f0; --b: #5b2fae; --e: #d4b8ff; }
+.bs-row .bs-card[data-bs='midway'] { --a: #2fbfa8; --b: #13756a; --e: #9fe8dc; }
+.bs-row .bs-card i { display: grid; place-items: center; width: 32px; height: 32px; margin-bottom: 4px; border-radius: 10px; background: rgba(255, 255, 255, 0.2); font-size: 18px; }
+.bs-row .bs-card small { color: rgba(255, 255, 255, 0.85); }
+.bs-row .bs-card b { color: #fff; }
+.bs-row .bs-card span { color: rgba(255, 255, 255, 0.82); }
