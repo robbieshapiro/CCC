@@ -26,123 +26,122 @@ export const PACIFIC = '#1d6b86';
 export const PACIFIC_BED = new THREE.Color('#2f7f88');
 
 const CYPRESS_DARK = '#2c4a2b';
-const CYPRESS_LIGHT = '#3b5d36';
+const CYPRESS_LIGHT = '#3d6237';
+const CYPRESS_BARK = new THREE.MeshStandardMaterial({ color: '#5a4636', roughness: 0.95 });
+const CYPRESS_FOLIAGE = new THREE.MeshStandardMaterial({ color: CYPRESS_DARK, roughness: 0.95, flatShading: true });
+const CYPRESS_TOPS = new THREE.MeshStandardMaterial({ color: CYPRESS_LIGHT, roughness: 0.95, flatShading: true });
 
-// A Monterey cypress: a short, twisted trunk leaning away from the sea, splitting into limbs that carry flat,
-// wind-pruned pads of foliage, the whole crown swept to one side.
-export function montereyCypress(scale = 1, seed = 0) {
+// Two trees, built the same way: a trunk of tapered pieces joined with knuckles (so the bends don't show seams) and
+// foliage of closed, flattened clumps, merged into three meshes (bark, shade, sunlit tops) so a hillside stays cheap.
+const UP = new THREE.Vector3(0, 1, 0);
+type Parts = { bark: THREE.BufferGeometry[]; shade: THREE.BufferGeometry[]; lit: THREE.BufferGeometry[] };
+const limbTo = (parts: Parts, a: THREE.Vector3, b: THREE.Vector3, r0: number, r1: number) => {
+  const d = b.clone().sub(a);
+  const g = new THREE.CylinderGeometry(r1, r0, d.length(), 6);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize()));
+  g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  parts.bark.push(g);
+  // a knuckle at the joint, so a bend reads as one trunk
+  parts.bark.push(new THREE.SphereGeometry(r1 * 1.05, 6, 4).translate(b.x, b.y, b.z));
+};
+// a clump of foliage: an irregular, flattened ball, darker underneath and lit on top
+const clump = (parts: Parts, at: THREE.Vector3, w: number, h: number, rng: { next(): number }) => {
+  const g = new THREE.IcosahedronGeometry(1, 1);
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const k = 0.82 + rng.next() * 0.36;
+    pos.setXYZ(i, pos.getX(i) * w * k, pos.getY(i) * h * k, pos.getZ(i) * w * (0.85 + rng.next() * 0.3));
+  }
+  g.computeVertexNormals();
+  parts.shade.push(g.clone().translate(at.x, at.y, at.z));
+  // the sunlit top: a smaller cap a little higher
+  parts.lit.push(g.scale(0.78, 0.7, 0.78).translate(at.x + w * 0.08, at.y + h * 0.42, at.z));
+};
+const assemble = (parts: Parts, bark: THREE.Material, shade: THREE.Material, lit: THREE.Material) => {
   const g = new THREE.Group();
+  for (const [list, m] of [[parts.bark, bark], [parts.shade, shade], [parts.lit, lit]] as const) {
+    const geo = mergeGeometries(list.map((p) => (p.index ? p.toNonIndexed() : p)), false);
+    list.forEach((p) => p.dispose());
+    const out = new THREE.Mesh(geo, m);
+    out.castShadow = true;
+    out.receiveShadow = true;
+    g.add(out);
+  }
+  return g;
+};
+
+// A Monterey cypress: a stout trunk leaning away from the sea, splitting into a few big limbs, and over them a wide,
+// flat-topped crown in layered shelves, swept downwind (+x) by the wind off the Pacific.
+export function montereyCypress(scale = 1, seed = 0) {
   const rng = makeRng(`cypress:${seed}`);
-  const bark = mat('#5a4636');
-  const lean = 0.25 + rng.next() * 0.25;
-  // the trunk: three segments, each leaning a little more
-  let at = new THREE.Vector3(0, 0, 0);
-  let tilt = 0;
+  const parts: Parts = { bark: [], shade: [], lit: [] };
+  const lean = 0.2 + rng.next() * 0.25;
+  let at = new THREE.Vector3();
+  let r = 0.95;
   for (let i = 0; i < 3; i++) {
-    const len = (3.2 - i * 0.6) * scale;
-    tilt += lean * (0.6 + i * 0.3);
-    const seg = mesh(new THREE.CylinderGeometry((0.55 - i * 0.12) * scale, (0.75 - i * 0.12) * scale, len, 7), bark);
-    const dir = new THREE.Vector3(Math.sin(tilt), Math.cos(tilt), 0);
-    seg.position.copy(at.clone().add(dir.clone().multiplyScalar(len / 2)));
-    seg.rotation.z = -tilt;
-    g.add(seg);
-    at = at.clone().add(dir.multiplyScalar(len));
+    const tilt = lean * (0.7 + i * 0.5);
+    const next = at.clone().add(new THREE.Vector3(Math.sin(tilt), Math.cos(tilt), (rng.next() - 0.5) * 0.3).multiplyScalar(2.6 - i * 0.4));
+    limbTo(parts, at, next, r, r * 0.82);
+    at = next;
+    r *= 0.82;
   }
-  // limbs out from the top of the trunk, each ending in a flat pad
-  const pads = 5 + Math.floor(rng.next() * 3);
-  for (let i = 0; i < pads; i++) {
-    const a = (i / pads) * Math.PI * 2 + rng.next() * 0.6;
-    // the crown spreads mostly downwind (+x), flat and wide
-    const reach = (2.5 + rng.next() * 4) * scale;
-    const end = new THREE.Vector3(at.x + Math.cos(a) * reach * 0.7 + reach * 0.5, at.y + (rng.next() * 2.5 - 0.5) * scale, at.z + Math.sin(a) * reach);
-    const limb = end.clone().sub(at);
-    const l = mesh(new THREE.CylinderGeometry(0.16 * scale, 0.26 * scale, limb.length(), 5), bark);
-    l.position.copy(at.clone().add(limb.clone().multiplyScalar(0.5)));
-    l.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), limb.clone().normalize());
-    g.add(l);
-    const r = (2.4 + rng.next() * 1.6) * scale;
-    const pad = mesh(new THREE.SphereGeometry(r, 10, 6), mat(i % 2 ? CYPRESS_DARK : CYPRESS_LIGHT, { rough: 0.95 }));
-    pad.scale.set(1.35, 0.42, 1.1);
-    pad.position.copy(end).add(new THREE.Vector3(0, 0.6 * scale, 0));
-    g.add(pad);
+  // big limbs out to the shelves of the crown
+  const limbs = 4 + Math.floor(rng.next() * 3);
+  for (let i = 0; i < limbs; i++) {
+    const a = (i / limbs) * Math.PI * 2 + rng.next() * 0.7;
+    const reach = 3 + rng.next() * 4 + Math.max(0, Math.cos(a)) * 3;
+    const end = at.clone().add(new THREE.Vector3(Math.cos(a) * reach + 1.5, 0.6 + rng.next() * 2.2, Math.sin(a) * reach * 0.8));
+    limbTo(parts, at, end, r * 0.6, r * 0.28);
+    clump(parts, end.clone().add(new THREE.Vector3(0, 0.5, 0)), 3 + rng.next() * 1.5, 1.1 + rng.next() * 0.4, rng);
   }
-  // one broad cap over the top
-  const cap = mesh(new THREE.SphereGeometry(4.2 * scale, 12, 7), mat(CYPRESS_DARK, { rough: 0.95 }));
-  cap.scale.set(1.6, 0.38, 1.25);
-  cap.position.set(at.x + 2 * scale, at.y + 1.6 * scale, at.z);
-  g.add(cap);
+  // the flat top of the crown, and a lower shelf on the downwind side
+  clump(parts, at.clone().add(new THREE.Vector3(2.2, 2.4, 0)), 6.2, 1.5, rng);
+  clump(parts, at.clone().add(new THREE.Vector3(5, 0.6, (rng.next() - 0.5) * 3)), 4, 1.2, rng);
+  const g = assemble(parts, CYPRESS_BARK, CYPRESS_FOLIAGE, CYPRESS_TOPS);
+  g.scale.setScalar(scale);
   g.rotation.y = rng.next() * 0.6 - 0.3;
   return g;
 }
 
-// A Torrey pine: the rare pine of the San Diego bluffs. A thick, twisting trunk that splits low into a few long limbs
-// reaching out sideways, bent by the sea wind, each ending in bottlebrush clusters of long blue-green needles. The
-// whole tree is two merged meshes (bark and needles), so a hillside of them stays cheap to draw.
+// A Torrey pine: the rare pine of the San Diego bluffs. A thick, twisting trunk that splits into a few long, crooked
+// limbs reaching out sideways, each ending in a dense, rounded tuft of long grey-green needles: an open, irregular
+// crown you can see the sky through, never a cone.
 const PINE_BARK = new THREE.MeshStandardMaterial({ color: '#6b5444', roughness: 0.95 });
-const PINE_NEEDLES = new THREE.MeshStandardMaterial({ color: '#3d5a3c', roughness: 0.9, flatShading: true });
-const PINE_TIPS = new THREE.MeshStandardMaterial({ color: '#58764d', roughness: 0.9, flatShading: true });
+const PINE_NEEDLES = new THREE.MeshStandardMaterial({ color: '#3f5b3e', roughness: 0.9, flatShading: true });
+const PINE_TIPS = new THREE.MeshStandardMaterial({ color: '#61805a', roughness: 0.9, flatShading: true });
 export function torreyPine(scale = 1, seed = 0) {
   const rng = makeRng(`torrey:${seed}`);
-  const bark: THREE.BufferGeometry[] = [];
-  const needles: THREE.BufferGeometry[] = [];
-  const tips: THREE.BufferGeometry[] = [];
-  const up = new THREE.Vector3(0, 1, 0);
-  // a tapered piece of branch from a to b
-  const limb = (a: THREE.Vector3, b: THREE.Vector3, r0: number, r1: number) => {
-    const d = b.clone().sub(a);
-    const g = new THREE.CylinderGeometry(r1, r0, d.length(), 5, 1, true);
-    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.clone().normalize()));
-    g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
-    bark.push(g);
-  };
-  // a bottlebrush of needles at the end of a limb, pointing up and out
-  const tuft = (at: THREE.Vector3, dir: THREE.Vector3, size: number) => {
-    for (let k = 0; k < 3; k++) {
-      const g = new THREE.ConeGeometry(size * (0.9 - k * 0.15), size * 2.4, 5, 1, true);
-      const aim = dir.clone().add(new THREE.Vector3((rng.next() - 0.5) * 0.9, 0.9 + rng.next() * 0.5, (rng.next() - 0.5) * 0.9)).normalize();
-      g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, aim));
-      g.translate(at.x + (rng.next() - 0.5) * size, at.y + k * size * 0.4, at.z + (rng.next() - 0.5) * size);
-      (k === 2 ? tips : needles).push(g);
-    }
-  };
+  const parts: Parts = { bark: [], shade: [], lit: [] };
   // the trunk: three bends, leaning with the wind
-  const lean = new THREE.Vector3(0.35 + rng.next() * 0.3, 1, (rng.next() - 0.5) * 0.4);
+  const lean = new THREE.Vector3(0.3 + rng.next() * 0.3, 1, (rng.next() - 0.5) * 0.4);
   let at = new THREE.Vector3();
-  let r = 1.1;
+  let r = 1;
+  const tall = 0.8 + rng.next() * 0.5;
   for (let i = 0; i < 3; i++) {
-    const step = new THREE.Vector3(lean.x * (0.3 + rng.next() * 0.6) * (i % 2 ? -0.6 : 1), 1, lean.z + (rng.next() - 0.5) * 0.5).normalize().multiplyScalar(3.4 + rng.next() * 1.4);
+    const step = new THREE.Vector3(lean.x * (0.3 + rng.next() * 0.5) * (i % 2 ? -0.5 : 1), 1, lean.z + (rng.next() - 0.5) * 0.4)
+      .normalize()
+      .multiplyScalar((3 + rng.next() * 1.2) * tall);
     const next = at.clone().add(step);
-    limb(at, next, r, r * 0.8);
+    limbTo(parts, at, next, r, r * 0.8);
     at = next;
     r *= 0.8;
   }
-  // the crown: four to six long limbs reaching out and up, each forking once
-  const n = 4 + Math.floor(rng.next() * 3);
+  // the crown: three to five crooked limbs, each with a tuft at its end and one partway along
+  const n = 3 + Math.floor(rng.next() * 3);
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + rng.next() * 0.8;
-    // downwind limbs reach further
-    const reach = 5 + rng.next() * 5 + Math.max(0, Math.cos(a)) * 4;
-    const out = new THREE.Vector3(Math.cos(a), 0.35 + rng.next() * 0.55, Math.sin(a)).normalize();
-    const mid = at.clone().add(out.clone().multiplyScalar(reach * 0.6));
-    limb(at, mid, r * 0.75, r * 0.45);
-    for (const side of [-1, 1]) {
-      const fork = out.clone().applyAxisAngle(up, side * (0.35 + rng.next() * 0.3)).add(new THREE.Vector3(0, 0.35, 0)).normalize();
-      const end = mid.clone().add(fork.multiplyScalar(reach * (0.4 + rng.next() * 0.3)));
-      limb(mid, end, r * 0.42, r * 0.2);
-      tuft(end, fork, 1.6 + rng.next() * 0.8);
-    }
-    tuft(mid.clone().add(new THREE.Vector3(0, 0.6, 0)), out, 1.3);
+    const a = (i / n) * Math.PI * 2 + rng.next() * 0.9;
+    const reach = 4 + rng.next() * 4 + Math.max(0, Math.cos(a)) * 3;
+    const out = new THREE.Vector3(Math.cos(a), 0.45 + rng.next() * 0.5, Math.sin(a)).normalize();
+    const mid = at.clone().add(out.clone().multiplyScalar(reach * 0.55)).add(new THREE.Vector3(0, -0.4, 0));
+    const end = mid.clone().add(out.clone().applyAxisAngle(UP, (rng.next() - 0.5) * 0.8).add(new THREE.Vector3(0, 0.5, 0)).normalize().multiplyScalar(reach * 0.5));
+    limbTo(parts, at, mid, r * 0.7, r * 0.45);
+    limbTo(parts, mid, end, r * 0.45, r * 0.22);
+    clump(parts, end.clone().add(new THREE.Vector3(0, 0.8, 0)), 2.2 + rng.next() * 0.9, 1.4 + rng.next() * 0.4, rng);
+    if (rng.next() < 0.6) clump(parts, mid.clone().add(new THREE.Vector3(0, 0.9, 0)), 1.5 + rng.next() * 0.6, 1 + rng.next() * 0.3, rng);
   }
-  const g = new THREE.Group();
-  const merged = (parts: THREE.BufferGeometry[], m: THREE.Material) => {
-    const geo = mergeGeometries(parts.map((p) => p.toNonIndexed()), false);
-    parts.forEach((p) => p.dispose());
-    const out = new THREE.Mesh(geo, m);
-    out.castShadow = true;
-    out.receiveShadow = true;
-    return out;
-  };
-  g.add(merged(bark, PINE_BARK), merged(needles, PINE_NEEDLES), merged(tips, PINE_TIPS));
+  // a tuft over the top of the trunk
+  clump(parts, at.clone().add(new THREE.Vector3(0, 1.4, 0)), 2.6, 1.6, rng);
+  const g = assemble(parts, PINE_BARK, PINE_NEEDLES, PINE_TIPS);
   g.scale.setScalar(scale);
   g.rotation.y = rng.next() * Math.PI * 2;
   return g;
@@ -219,6 +218,83 @@ function icePlant(scale = 1, seed = 0) {
     bloom.setMatrixAt(i, m);
   }
   g.add(bloom);
+  return g;
+}
+
+
+// California poppies: a drift of orange cups on grey-green leaves, the state flower on the cliff tops
+function poppies(scale = 1, seed = 0) {
+  const g = new THREE.Group();
+  const rng = makeRng(`poppy:${seed}`);
+  const leaves = new THREE.Mesh(new THREE.CircleGeometry(5 * scale, 16), new THREE.MeshStandardMaterial({ color: '#7f9a62', roughness: 0.9 }));
+  leaves.rotation.x = -Math.PI / 2;
+  leaves.position.y = 0.1;
+  leaves.receiveShadow = true;
+  g.add(leaves);
+  const n = Math.round(60 * scale * scale);
+  const bloom = new THREE.InstancedMesh(new THREE.ConeGeometry(0.3, 0.35, 6, 1, true).rotateX(Math.PI), new THREE.MeshStandardMaterial({ color: '#f28a1c', roughness: 0.55, side: THREE.DoubleSide }), n);
+  const m = new THREE.Matrix4();
+  for (let i = 0; i < n; i++) {
+    const a = rng.next() * Math.PI * 2;
+    const r = Math.sqrt(rng.next()) * 4.8 * scale;
+    m.makeTranslation(Math.cos(a) * r, 0.45 + rng.next() * 0.3, Math.sin(a) * r);
+    bloom.setMatrixAt(i, m);
+  }
+  g.add(bloom);
+  return g;
+}
+
+// A concrete arch bridge carrying the coast road over a canyon, as on Highway 1 down the Big Sur coast. Along +x.
+// size: [span, deck height above the decor's ground, deck width]. Scenery: a ball flies under it.
+function archBridge(size: [number, number, number] = [120, 40, 8]) {
+  const [span, high, wide] = size;
+  const g = new THREE.Group();
+  const concrete = mat('#d8d2c4', { rough: 0.8 });
+  // the deck and its rails
+  g.add(mesh(new THREE.BoxGeometry(span, 1.6, wide), concrete).translateY(high));
+  for (const z of [-wide / 2, wide / 2]) g.add(mesh(new THREE.BoxGeometry(span, 1.2, 0.4), concrete).translateY(high + 1.4).translateZ(z));
+  // the arch: a curve of short blocks, and the spandrel columns up to the deck
+  const n = 18;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const x = (t - 0.5) * span * 0.8;
+    const y = Math.sin(t * Math.PI) * high * 0.82;
+    const b = mesh(new THREE.BoxGeometry((span * 0.8) / n + 1, 2.4, wide * 0.8), concrete);
+    b.position.set(x, y, 0);
+    // along the curve: its slope there
+    b.rotation.z = Math.atan2(high * 0.82 * Math.PI * Math.cos(t * Math.PI), span * 0.8);
+    g.add(b);
+    if (i % 2 === 0 && i > 0 && i < n) g.add(mesh(new THREE.BoxGeometry(1.2, high - y, wide * 0.7), concrete).translateX(x).translateY((high + y) / 2));
+  }
+  // the piers at each end, down to the canyon sides
+  for (const x of [-span * 0.42, span * 0.42]) g.add(mesh(new THREE.BoxGeometry(4, high, wide * 0.9), concrete).translateX(x).translateY(high / 2));
+  // one vintage roadster stopped on the bridge for the view, in Pacific blue
+  const car = new THREE.Group();
+  car.add(mesh(new THREE.BoxGeometry(5, 1.2, 2.2), mat('#2f6f9a', { rough: 0.4 })).translateY(0.9));
+  car.add(mesh(new THREE.BoxGeometry(2.4, 0.9, 2), mat('#e9e4d8', { rough: 0.4 })).translateY(1.9).translateX(-0.4));
+  car.position.set(span * 0.2, high + 0.8, -wide / 4);
+  g.add(car);
+  return g;
+}
+
+// The starter's hut: a little Craftsman bungalow in brown shingle, white trim and a low gabled roof with a deep porch
+function craftsman() {
+  const g = new THREE.Group();
+  const shingle = mat('#7a5a3e', { rough: 0.9 });
+  const trim = mat('#efe9dc', { rough: 0.6 });
+  g.add(mesh(new THREE.BoxGeometry(14, 0.8, 12), mat('#a89a86')).translateY(0.4));
+  g.add(mesh(new THREE.BoxGeometry(12, 6, 8), shingle).translateY(3.8).translateZ(-1.5));
+  // the porch posts, tapered as Craftsman columns are
+  for (const x of [-5.4, -1.8, 1.8, 5.4]) g.add(mesh(new THREE.CylinderGeometry(0.35, 0.55, 5.4, 6), trim).translateX(x).translateY(3.5).translateZ(4.4));
+  // the roof: two low slopes with wide eaves
+  for (const s of [-1, 1]) {
+    const r = mesh(new THREE.BoxGeometry(15.5, 0.5, 8.4), mat('#5b4a3c', { rough: 0.85 }));
+    r.position.set(0, 8.1, s * 3.6 - 0.3);
+    r.rotation.x = s * 0.32;
+    g.add(r);
+  }
+  // windows, glowing a little in the low sun
+  for (const x of [-3.5, 3.5]) g.add(mesh(new THREE.BoxGeometry(2.4, 1.8, 0.2), mat('#f6d39a', { emissive: '#6b4a1a' })).translateX(x).translateY(4.2).translateZ(2.6));
   return g;
 }
 
@@ -323,6 +399,9 @@ function seaLions(anim: ((clock: number, dt: number) => void)[], seed = 0) {
 export function coastalDecor(d: Decor, anim: ((clock: number, dt: number) => void)[]): THREE.Object3D | null {
   if (d.kind === 'lighthouse') return lighthouse(anim);
   if (d.kind === 'iceplant') return icePlant(d.scale ?? 1, Math.round(d.x * 5 + d.y));
+  if (d.kind === 'poppies') return poppies(d.scale ?? 1, Math.round(d.x * 5 + d.y));
+  if (d.kind === 'bridge') return archBridge(d.size);
+  if (d.kind === 'craftsman') return craftsman();
   if (d.kind === 'sealions') return seaLions(anim, Math.round(d.x + d.y));
   return null;
 }
@@ -521,6 +600,26 @@ export function coastalFrame(h: Hole, root: THREE.Group, anim: ((clock: number, 
       ring.scale.setScalar(1 + k * 0.35);
       (ring.material as THREE.MeshBasicMaterial).opacity = 0.2 + k * 0.45;
     });
+  }
+  // kelp beds just off the rocks: dark olive mats of fronds floating on the swell, the sea otters' forest
+  const kelpMat = new THREE.MeshStandardMaterial({ color: '#5a5a26', roughness: 0.9, transparent: true, opacity: 0.85, depthWrite: false });
+  for (let i = 0, tries = 0; i < 7 && tries < 120; tries++) {
+    const along = y0 + (y1 - y0) * rng.next();
+    const out = (seaSide > 0 ? x1 : x0) + seaSide * (30 + rng.next() * 160);
+    if (apronHeight(h, level, out, along) > level - 2) continue;
+    i++;
+    const bed = new THREE.Group();
+    for (let k = 0; k < 9; k++) {
+      const f = new THREE.Mesh(new THREE.CircleGeometry(4 + rng.next() * 7, 7).rotateX(-Math.PI / 2), kelpMat);
+      f.scale.set(1, 1, 0.35 + rng.next() * 0.4);
+      f.rotation.y = rng.next() * Math.PI;
+      f.position.set((rng.next() - 0.5) * 40, 0, (rng.next() - 0.5) * 40);
+      bed.add(f);
+    }
+    bed.position.set(out, level + 0.15, -along);
+    root.add(bed);
+    const phase = rng.next() * 6;
+    anim.push((clock) => (bed.position.y = level + 0.15 + Math.sin(clock * 0.7 + phase) * 0.25));
   }
   // a couple of sails out on the water, drifting
   for (let i = 0; i < 3; i++) {

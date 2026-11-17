@@ -204,6 +204,12 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   sealion: { from: { x: -34, y: 348 }, clubs: ['putter'], angles: [-6, 6] },
   thecarry: { from: { x: 0, y: 0 }, clubs: ['iron', 'wedge'], angles: [-12, 0] },
   lighthouse: { from: { x: 96, y: 632 }, clubs: ['putter'], angles: [-14, -4] },
+  // off the bank behind the green, down the old road past the bridge, a drive down the launch, onto the beach
+  poppies: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-8, 4] },
+  highwayone: { from: { x: -52, y: 476 }, clubs: ['putter'], angles: [20, 50] },
+  // the launch is a drive: it leaves a short iron, not a putt
+  gliderport: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [0, 8], near: 240 },
+  kelpcove: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-6, 2], near: 170 },
   // the Western Reserve: off the bank behind the green, round the ridge, the kick off the left bank
   creekbend: { from: { x: -30, y: 440 }, clubs: ['wedge', 'iron'], angles: [-36, -12] },
   maplelake: { from: { x: 0, y: -88 }, clubs: ['wood', 'driver'], angles: [-14, 0] },

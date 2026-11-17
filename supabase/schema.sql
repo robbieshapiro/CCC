@@ -2348,7 +2348,7 @@ delete from shop_items where id in ('sequin', 'stud', 'blackdiamond') and id not
 -- each hole's par on the courses played before rounds kept their own (and the ones since, as a fallback)
 create table if not exists course_pars (course text primary key, pars int[] not null);
 alter table course_pars enable row level security;
-insert into course_pars (course, pars) values ('highlands', '{5,3,4}'), ('caldera', '{4,5,5,3,4,4}'), ('pacificbluffs', '{4,5,3}')
+insert into course_pars (course, pars) values ('highlands', '{5,3,4}'), ('caldera', '{4,5,5,3,4,4}'), ('pacificbluffs', '{4,3,4,4,5,4,3}')
 on conflict (course) do update set pars = excluded.pars;
 -- each live course's holes as they are now: submit_round refuses a card played on an older version (Nov 15). Keep it in
 -- step with src/golf3d/courses.ts whenever a course's holes change (the check in check-holes compares them).

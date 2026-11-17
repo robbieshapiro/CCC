@@ -5,6 +5,7 @@
 // The secret: the old cliff walk runs round the rim of the cove to the green. Roll one round it.
 import { band, blob, rect } from '../terrain';
 import type { Hole, Post, V2 } from '../types';
+import { grove } from './pacific/common';
 
 const GREEN = { x: 46, y: 440, rx: 17, ry: 14 };
 // the cliff walk: round the rim of the cove, falling gently to the front of the green
@@ -26,8 +27,10 @@ const BARRANCA: V2[] = [
 
 const cypress: Post[] = [
   // Torrey pines hard up against the left of the fairway, and a second row behind
-  ...[70, 130, 190, 250, 300].map((y, i) => ({ x: -42 - (i % 2) * 6, y, r: 2.4, h: 22, look: 'torrey' as const })),
-  ...[40, 120, 200, 280, 380].map((y, i) => ({ x: -100 - (i % 2) * 18, y, r: 2.4, h: 22, look: 'torrey' as const })),
+  ...grove(-48, 100, 3, 9, 'sl-a', 'torrey'),
+  ...grove(-50, 250, 3, 10, 'sl-b', 'torrey'),
+  ...grove(-112, 120, 6, 26, 'sl-c'),
+  ...grove(-118, 330, 6, 28, 'sl-d'),
   // a pair of tall fan palms behind the tee: this is Southern California
   { x: -30, y: -32, r: 1, h: 30, look: 'palm' },
   { x: 34, y: -36, r: 1, h: 30, look: 'palm' },
