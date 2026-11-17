@@ -2316,3 +2316,26 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 .bs-news i { font-style: normal; font-size: 26px; animation: ace-throb 1.2s ease-in-out infinite alternate; }
 .bs-news b { display: block; font: 700 16px var(--serif); color: #ffd23f; }
 .bs-news span { font-size: 13px; color: #e6efe9; }
+
+/* the bar's game cards in the home strip's colours (Nov 17): each game its own gradient, the Ace Pot gold, so the bar
+   and home read as one club. Mo's Book stays a dark amber (your money), the Members' Course a club green. */
+.bar-room .bar-game[data-game] { --a: #3f8a64; --b: #1f5a3e; --e: #8fd3ad; background: linear-gradient(135deg, var(--a) 0%, var(--b) 100%); border: 1px solid var(--e); border-radius: 14px; color: #fff; box-shadow: 0 10px 22px -14px var(--b), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.bar-room .bar-game[data-game='daily'] { --a: #ec6a4f; --b: #b8322a; --e: #ffb3a1; }
+.bar-room .bar-game[data-game='drive'] { --a: #4f8ff0; --b: #1f4fae; --e: #a9c9ff; }
+.bar-room .bar-game[data-game='targets'] { --a: #a874f0; --b: #5b2fae; --e: #d4b8ff; }
+.bar-room .bar-game[data-game='midway'] { --a: #2fbfa8; --b: #13756a; --e: #9fe8dc; }
+.bar-room .bar-game[data-game='book'] { --a: #8a5a1c; --b: #4a2c0c; --e: #e0b25a; }
+.bar-room .bar-game[data-game='acepot'] { --a: #f7d774; --b: #b8791a; --e: #ffe7a3; color: #2a1802; }
+.bar-room .bar-game[data-game] > i { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); font-size: 22px; }
+.bar-room .bar-game[data-game] b { color: #fff; }
+.bar-room .bar-game[data-game] span, .bar-room .bar-game[data-game] .bar-empty { color: rgba(255, 255, 255, 0.85); }
+.bar-room .bar-game[data-game] > p { color: #fff6d8; }
+.bar-room .bar-game[data-game] .bar-top li { border-top-color: rgba(255, 255, 255, 0.25); }
+.bar-room .bar-game[data-game] .bar-top li b, .bar-room .bar-game[data-game] .bar-top a, .bar-room .bar-game[data-game] .bar-top em { color: #fff; }
+.bar-room .bar-game[data-game] .bar-top li.me b, .bar-room .bar-game[data-game] .bar-top li.me a { color: #fff3b0; }
+/* the gold one reads in dark ink */
+.bar-room .bar-game[data-game='acepot'] b, .bar-room .bar-game[data-game='acepot'] .bar-top li b, .bar-room .bar-game[data-game='acepot'] .bar-top a, .bar-room .bar-game[data-game='acepot'] .bar-top em { color: #2a1802; }
+.bar-room .bar-game[data-game='acepot'] span, .bar-room .bar-game[data-game='acepot'] .bar-empty, .bar-room .bar-game[data-game='acepot'] > p { color: #4a2f06; }
+.bar-room .bar-game[data-game='acepot'] .bar-top li { border-top-color: rgba(42, 24, 2, 0.2); }
+.bar-room .bar-game[data-game='acepot'] .bar-top li.me b { color: #7a3a00; }
+.bar-room .bar-game.closed[data-game] { opacity: 0.7; border-style: dashed; }
