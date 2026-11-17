@@ -1,14 +1,13 @@
-// The Committee Room, for one person running the club. Four tabs, each thing in one place:
-//   Overview (#/admin): Jarvis's briefing, what's waiting on you, the Pulse (headline numbers, every club side by
-//     side, players per day), who's in today, one feed (today, live, or the last 7 days, by club), post a notice,
-//     and the rest of the numbers folded away.
+// The Committee Room, a control centre for one person running the club. Always on top: what's waiting on you, who's in
+// today and the live feed (adminToday.ts). Then five tabs, each thing in one place:
+//   Metrics (#/admin): the headline strip, players per day, week over week, Weekly Players since launch.
+//   Agents (#/admin/agents): the Architect, the Greenkeeper and the Steward, each one's latest note (adminHome.ts).
 //   Courses (#/admin/courses, #/admin/course/<id>): every week's tile and each course's page (adminHome.ts).
-//   Members: what members have sent (feedback, friends put up, their holes), the members, invites, and the tools
-//     to bring someone in.
-//   Bar: the games' switches and takings.
+//   Members: feedback, friends put up, members' holes, the members table, invitations out.
+//   Tools: post a notice, text the group, bring someone in, the bar's switches.
 // Every member name opens their card.
 import { api, getSession, listSessions } from '../api';
-import type { AdminOverview, AdminWindow, DailyDay, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
+import type { AdminOverview, AdminWindow, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
 import { courseById } from '../golf3d/courses';
 import { toParLabel } from '../standings';
@@ -21,9 +20,9 @@ import { esc, golferHref, header, navigate, render } from '../ui';
 import { ago } from './activity';
 import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
-import { chartSections, kpiSections, loadKpis } from './adminKpis';
+import { chartSections, loadKpis } from './adminKpis';
 import { ask, copyBox, tell } from '../dialog';
-import { coursesSections, loadHome, overviewSections, showCourse } from './adminHome';
+import { agentsSections, coursesSections, loadHome, metricsSections, showCourse } from './adminHome';
 import { applyFeedFilter, loadToday, todaySections } from './adminToday';
 import { loadNominations, nominationsSection } from './nominate';
 import { bindNudge, nudgeSection } from './adminNudge';
@@ -48,7 +47,8 @@ const COLUMNS: { key: SortKey; label: string; num?: boolean; all?: boolean }[] =
 ];
 
 export function admin(snap: Snapshot, arg?: string, extra?: string) {
-  const tab: Tab = arg === 'members' || arg === 'bar' ? arg : arg === 'courses' || arg === 'course' ? 'courses' : 'overview';
+  // the old Bar tab is under Tools now
+  const tab: Tab = arg === 'agents' || arg === 'members' || arg === 'tools' ? arg : arg === 'bar' ? 'tools' : arg === 'courses' || arg === 'course' ? 'courses' : 'metrics';
   const course = arg === 'course' && extra ? extra : undefined;
   // moving about inside the Committee Room keeps the page (and its numbers): only the view changes
   const shell = document.getElementById('adm-shell');
@@ -60,28 +60,21 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
   render(`
     ${header(snap.groupName, 'admin')}
     <main class="admin-page" id="adm-shell" data-group="${esc(requireSession().groupId)}">
+      <div id="adm-needs" class="adm-needs" hidden></div>
+      ${todaySections()}
       <nav class="adm-tabs" id="adm-tabs" role="tablist">${TABS.map((t) => `<button role="tab" data-tab="${t.id}">${t.label}</button>`).join('')}</nav>
-      <div class="adm-pane" data-pane="overview">
-        ${overviewSections(
-          todaySections(),
-          `<section class="adm-card adm-do">
-            <div class="adm-actions"><button class="btn ghost" data-tool="notice">📣 Post a notice to members</button></div>
-            <div class="adm-tool" data-panel="notice" hidden>${noticeTool()}</div>
-          </section>
-          <details class="adm-more">
-            <summary>More numbers <small>purse, Pro Shop, AI calls, week over week</small></summary>
-            ${kpiSections()}
-            ${chartSections()}
-            <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
-            <section class="adm-card" id="adm-daily-bars" hidden></section>
-          </details>`,
-        )}
+      <div class="adm-pane" data-pane="metrics">
+        ${metricsSections()}
+        ${chartSections()}
+        <section class="adm-card adm-trend" id="adm-trend"><p class="muted">Loading…</p></section>
+      </div>
+      <div class="adm-pane" data-pane="agents" hidden>
+        ${agentsSections()}
       </div>
       <div class="adm-pane" data-pane="courses" hidden>
         ${coursesSections()}
       </div>
       <div class="adm-pane" data-pane="members" hidden>
-        ${nudgeSection(snap)}
         <section class="adm-card" id="adm-feedback-card" hidden>
           <h2>Feedback</h2>
           <div id="adm-todo"></div>
@@ -89,6 +82,13 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
         ${nominationsSection()}
         <section class="adm-card" id="adm-holes" hidden></section>
         <div id="adm-members-slot"></div>
+      </div>
+      <div class="adm-pane" data-pane="tools" hidden>
+        <section class="adm-card adm-do">
+          <h2>Post a notice</h2>
+          ${noticeTool()}
+        </section>
+        ${nudgeSection(snap)}
         <section class="adm-card adm-do">
           <h2>Bring someone in</h2>
           <div class="adm-actions">
@@ -99,8 +99,6 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
           <div class="adm-tool" data-panel="invite" hidden>${inviteTool()}</div>
           <div class="adm-tool" data-panel="club" hidden>${clubMaker(true)}</div>
         </section>
-      </div>
-      <div class="adm-pane" data-pane="bar" hidden>
         ${barSection()}
       </div>
       <div id="adm-body" hidden></div>
@@ -297,14 +295,12 @@ function bindSend(root: HTMLElement) {
 
 let state: {
   data: AdminOverview | null;
-  daily: DailyDay[] | null;
   sort: SortKey;
   ever: Map<string, { rounds: number; best: number | null }>;
   desc: boolean;
   club: string;
 } = {
   data: null,
-  daily: null,
   sort: 'lastSeen',
   ever: new Map(),
   desc: true,
@@ -368,16 +364,14 @@ async function load() {
   const body = document.getElementById('adm-body');
   if (!body) return;
   body.classList.add('loading');
-  const [data, daily, ever] = await Promise.all([
+  const [data, ever] = await Promise.all([
     api.adminOverview(requireSession(), WINDOW).catch(() => null),
-    api.dailyAdmin(requireSession()).catch(() => null),
     // all time, for the table's All time columns
     api.adminOverview(requireSession(), 'all').catch(() => null),
   ]);
   state.ever = new Map((ever?.members ?? []).map((m) => [m.id ?? m.name, { rounds: m.rounds, best: m.best }]));
   // friends members have put up: waiting on you, and the ones who joined lately
   void loadNominations({ many: (data?.clubs.length ?? 0) > 1, who: nameLink, count: (n) => setNeeds('nominations', n) });
-  state.daily = daily;
   if (!document.getElementById('adm-body')) return; // left the page
   body.classList.remove('loading');
   if (!data) {
@@ -392,7 +386,6 @@ function draw() {
   const body = document.getElementById('adm-body');
   const d = state.data;
   if (!body || !d) return;
-  const guests = d.clubs.reduce((a, c) => a + (c.guests ?? 0), 0);
   const many = d.clubs.length > 1;
   const todo = document.getElementById('adm-todo');
   const todoCard = document.getElementById('adm-feedback-card');
@@ -433,24 +426,6 @@ function draw() {
   const hist = document.getElementById('adm-history');
   if (hist) hist.innerHTML = feed(d, many);
   applyFeedFilter();
-  // the Pulse on the Courses home: every club side by side over the last 7 days, and the total
-  const pulse = document.getElementById('adm-pulse-clubs');
-  if (pulse) {
-    const tot = (k: 'members' | 'active' | 'newMembers' | 'rounds' | 'practice' | 'guests') => d.clubs.reduce((a, c) => a + (c[k] ?? 0), 0);
-    const pctOf = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : '–');
-    pulse.innerHTML = `<div class="table-wrap"><table class="practice-table adm-clubs"><thead><tr><th>Club <small>last 7 days</small></th><th class="num">Members</th>${guests ? '<th class="num">Guests</th>' : ''}<th class="num">Active</th><th class="num">New</th><th class="num">Rounds</th><th class="num">Per active</th><th class="num">Practice</th></tr></thead><tbody>${d.clubs
-      .map((c) => `<tr><td>${esc(c.name)}</td><td class="num">${c.members}</td>${guests ? `<td class="num">${c.guests ?? 0}</td>` : ''}<td class="num">${c.active} <small>${pctOf(c.active, c.members)}</small></td><td class="num">${c.newMembers}</td><td class="num">${c.rounds}</td><td class="num">${c.active ? Math.round((c.rounds / c.active) * 10) / 10 : '–'}</td><td class="num">${c.practice}</td></tr>`)
-      .join('')}${
-      many
-        ? `<tr class="adm-total"><td><b>Every club</b></td><td class="num"><b>${tot('members')}</b></td>${guests ? `<td class="num">${tot('guests')}</td>` : ''}<td class="num"><b>${tot('active')}</b> <small>${pctOf(tot('active'), tot('members'))}</small></td><td class="num">${tot('newMembers')}</td><td class="num"><b>${tot('rounds')}</b></td><td class="num">${tot('active') ? Math.round((tot('rounds') / tot('active')) * 10) / 10 : '–'}</td><td class="num">${tot('practice')}</td></tr>`
-        : ''
-    }</tbody></table></div>`;
-  }
-  const bars = document.getElementById('adm-daily-bars');
-  if (bars) {
-    bars.innerHTML = dailyBars(state.daily);
-    bars.hidden = !state.daily;
-  }
   body.querySelectorAll<HTMLButtonElement>('[data-club]').forEach((b) => (b.onclick = () => ((state.club = b.dataset.club!), draw())));
   body.querySelectorAll<HTMLElement>('[data-sort]').forEach(
     (th) =>
@@ -484,13 +459,14 @@ function draw() {
   drawNeeds();
 }
 
-// ---------- the layout: tabs, with Overview (what needs you, then the numbers) first ----------
+// ---------- the layout: what needs you and today on top, then the tabs ----------
 
 const TABS = [
-  { id: 'overview', label: 'Overview' },
+  { id: 'metrics', label: 'Metrics' },
+  { id: 'agents', label: 'Agents' },
   { id: 'courses', label: 'Courses' },
   { id: 'members', label: 'Members' },
-  { id: 'bar', label: 'Bar' },
+  { id: 'tools', label: 'Tools' },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
 function showTab(t: Tab, scrollTo?: string) {
@@ -501,7 +477,7 @@ function showTab(t: Tab, scrollTo?: string) {
 
 // each tab has its own address, so the phone's Back button walks back through them
 const tabHash = (t: Tab, scrollTo?: string) => {
-  if (t === 'overview') navigate('#/admin');
+  if (t === 'metrics') navigate('#/admin');
   else navigate(`#/admin/${t}`);
   if (scrollTo) setTimeout(() => document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
 };
@@ -521,17 +497,25 @@ function arrange(body: HTMLElement) {
   }
 }
 
-// "Waiting on you": only what's really yours to do. Feedback nobody has answered, next week with no course picked,
-// and a new course that isn't on a week yet. Each a tap to where it's dealt with.
-const needs = { feedback: 0, nominations: 0, holes: 0, invites: 0, unplayed: 0, nopick: 0, unplaced: 0 };
+// "Waiting on you": only what's really yours to do. An agent that's stuck, feedback nobody has answered, friends put
+// up, members' holes to judge, next week with no course picked, and a new course that isn't on a week yet. Each a tap
+// to where it's dealt with. The Agents and Members tabs carry a count too.
+const needs = { agents: 0, feedback: 0, nominations: 0, holes: 0, invites: 0, unplayed: 0, nopick: 0, unplaced: 0 };
 export const setNeeds = (k: keyof typeof needs, n: number) => ((needs[k] = n), drawNeeds());
 function drawNeeds() {
-  const tab = document.querySelector<HTMLButtonElement>('#adm-tabs [data-tab="members"]');
-  if (tab) tab.innerHTML = `Members${needs.feedback ? ` <span class="adm-badge">${needs.feedback}</span>` : ''}`;
+  const badge = (t: Tab, label: string, n: number) => {
+    const b = document.querySelector<HTMLButtonElement>(`#adm-tabs [data-tab="${t}"]`);
+    if (b) b.innerHTML = `${label}${n ? ` <span class="adm-badge">${n}</span>` : ''}`;
+  };
+  badge('agents', 'Agents', needs.agents);
+  badge('members', 'Members', needs.feedback + needs.nominations + needs.holes);
   const home = document.getElementById('adm-needs');
   if (!home) return;
   const items: [number, string, () => void][] = [
+    [needs.agents, needs.agents === 1 ? 'agent needs you' : 'agents need you', () => tabHash('agents')],
     [needs.feedback, needs.feedback === 1 ? 'piece of feedback to answer' : 'pieces of feedback to answer', () => tabHash('members', 'adm-feedback-card')],
+    [needs.nominations, needs.nominations === 1 ? 'friend put up for membership' : 'friends put up for membership', () => tabHash('members', 'adm-nominations')],
+    [needs.holes, needs.holes === 1 ? "member's hole to judge" : "members' holes to judge", () => tabHash('members', 'adm-holes')],
     [needs.nopick, 'Next week has no course picked', () => tabHash('courses', 'jv-coming')],
     [needs.unplaced, needs.unplaced === 1 ? 'new course not on a week' : 'new courses not on a week', () => tabHash('courses', 'jv-benchh')],
   ];
@@ -622,15 +606,4 @@ function feed(d: AdminOverview, many: boolean) {
     })
     .join('');
   return `<div class="adm-feed-box"><ul class="adm-feed">${rows}</ul></div>`;
-}
-
-// Daily Shot players a day for the last week, oldest on the left
-function dailyBars(days: DailyDay[] | null) {
-  if (!days) return '';
-  const top = Math.max(1, ...days.map((d) => d.players));
-  const day = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'narrow', timeZone: 'UTC' });
-  return `<h3 class="adm-sub">Closest to the Pin · players a day</h3><div class="adm-bars">${[...days]
-    .reverse()
-    .map((d) => `<div title="${d.day}: ${d.players} players, ${d.tries} tries"><b style="height:${Math.round((d.players / top) * 100)}%"></b><span>${d.players}</span><small>${day(d.day)}</small></div>`)
-    .join('')}</div>`;
 }

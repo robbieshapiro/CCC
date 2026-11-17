@@ -14,7 +14,6 @@ import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
 import { leaveShop } from './screens/shop';
-import { closeRoom, designRoom } from './screens/designRoom';
 import { barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { playoff } from './screens/playoff';
 import { clubhouse, isAboutPart, isClubhouseTab } from './screens/clubhouse';
@@ -47,7 +46,6 @@ let routing = false; // the router draws the page itself; the refresh hook mustn
 
 async function router() {
   closeRound();
-  closeRoom();
   leaveCard();
   leaveShop();
   leaveGolfer();
@@ -91,8 +89,6 @@ async function router() {
     if (page === 'bar' && arg === 'popashot') return popashot(s);
     if (page === 'bar' && arg === 'billiards') return billiards(s);
     if (page === 'bar') return arg === 'drive' || arg === 'members' || arg === 'midway' ? barRound(s, arg) : clubhouse(s, 'bar');
-    // the Design Room: the Committee's holo-table for building courses
-    if (page === 'room') return designRoom(s, arg);
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     // the old Clubs tab became the Season
     if (page === 'clubhouse') return isAboutPart(arg) ? clubhouse(s, 'about', arg) : clubhouse(s, arg === 'clubs' ? 'season' : isClubhouseTab(arg) ? arg : 'members', extra);

@@ -12,7 +12,7 @@ Build passing isn't the same as working. Look at the change in a browser before 
 1. Start the dev server, once, in the background: `nohup npx vite --port 5179 --strictPort > /tmp/vite.log 2>&1 &`. Check that it's up with `curl -s -o /dev/null -w '%{http_code}' localhost:5179`.
 2. Run `node .claude/skills/browser-check/check.cjs <out-dir> '<route>' '<options json>'`. Its header lists the options. Some examples:
    - Home on a phone: `node .claude/skills/browser-check/check.cjs $OUT '#/'`
-   - The Committee room's Course tab: `... '#/admin' '{"eval":"document.querySelector(\"[data-tab=course]\").click()"}'`
+   - The Committee Room's Courses tab: `... '#/admin/courses'` (the others: `#/admin` Metrics, `#/admin/agents`, `#/admin/members`, `#/admin/tools`)
    - Hole 5 of a course, in landscape: `... '#/preview/westernreserve' '{"w":844,"h":390,"hole":5,"skip":true,"noCart":true}'`
    - A member's card played through: `... '#/rehearse' '{"finish":5,"eval":"document.querySelector(\".summary .fine\")?.textContent"}'`
 3. Read the PNG, and say what you saw. For a person to see it, take it at `"dpr":2` and send it.

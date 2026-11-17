@@ -201,10 +201,8 @@ export type Chronicle = { week: string; body: { headline: string; dek: string; i
 export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 // a member's golf hole from the Design Desk (spec: src/designer/hole.ts HoleSpec)
 export type Design = { id: number; prompt: string; spec: import('../designer/hole').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string };
-// a course from the Design Room (room_courses): holes in the Design Desk's format, saved in the club
 // a change too big for a dial, asked of the Architect (course_requests)
 export type CourseRequest = { id: number; course: string; hole: number | null; body: string; done: boolean; createdAt: string };
-export type RoomCourse = { id: number; name: string; tagline: string; holes: import('../designer/hole').HoleSpec[]; draft: boolean; updatedAt: string };
 export type MembersHole = { id: number; spec: import('../designer/hole').HoleSpec; par: number; by: string };
 // One counted stroke of a round (h: the hole's index); see ShotLog in golf3d/engine.ts
 export type RoundShot = { h: number; c: string; p: number; e: number; f: [number, number]; t: [number, number]; l: string; x: 0 | 1; i: 0 | 1 };
@@ -311,8 +309,6 @@ export interface Api {
   // the course planner (course_planner, set_course_approved): members' real results by course, and approved drafts
   coursePlanner(session: Session): Promise<CoursePlanner>;
   setCourseApproved(session: Session, course: string, approved: boolean): Promise<void>;
-  // the Design Room: every room course (any member, so a scheduled one loads for everyone); saving and deleting are the Committee's
-  roomCourses(session: Session): Promise<RoomCourse[]>;
   // the Committee's dials on courses' holes (course_tweaks): anyone reads them, the Committee sets them
   courseTweaks(session: Session): Promise<import('../golf3d/tweaks').Tweaks>;
   setCourseTweak(session: Session, course: string, hole: number, tweak: import('../golf3d/tweaks').Tweak | null): Promise<void>;
@@ -322,8 +318,6 @@ export interface Api {
   agentNotes(session: Session): Promise<AgentNote[]>;
   addCourseRequest(session: Session, course: string, hole: number | null, body: string): Promise<number>;
   courseRequestDone(session: Session, id: number, done: boolean): Promise<void>;
-  roomSave(session: Session, c: { id: number | null; name: string; tagline: string; holes: import('../designer/hole').HoleSpec[]; draft: boolean }): Promise<number>;
-  roomDelete(session: Session, id: number): Promise<void>;
   periodHonors(session: Session, period: string): Promise<Honors>;
   adminTrend(session: Session): Promise<TrendDay[]>;
   adminToday(session: Session): Promise<AdminToday>;

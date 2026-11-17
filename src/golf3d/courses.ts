@@ -172,15 +172,6 @@ export const setSchedule = (s: Record<string, string> | null | undefined) => {
 };
 export const scheduleOf = () => schedule;
 
-// The Design Room's courses (room_courses, src/designer/room.ts): built in the app, loaded from the club at refresh
-let ROOM: Course[] = [];
-export const setRoomCourses = (cs: Course[]) => {
-  // the same courses as before: keep the built list, so a course stays the same object between refreshes
-  if (cs.length === ROOM.length && cs.every((c, i) => c === ROOM[i])) return;
-  ROOM = cs;
-  live = null;
-};
-
 // The Committee's dials on the holes (course_tweaks, src/golf3d/tweaks.ts), applied to every course as it's handed out
 let tweaks: Tweaks = {};
 export const setTweaks = (t: Tweaks | null | undefined) => {
@@ -197,9 +188,9 @@ const tweakCourse = (c: Course): Course => {
   return { ...c, holes, ...(c.playoff && at >= 0 ? { playoff: { ...c.playoff, hole: holes[at] } } : {}) };
 };
 let live: Course[] | null = null;
-const all = () => (live ??= [...COURSES, ...ROOM].map(tweakCourse));
+const all = () => (live ??= COURSES.map(tweakCourse));
 // a course as built, without the dials (the Committee Room shows both)
-export const asBuilt = (id: string) => COURSES.find((c) => c.id === id) ?? ROOM.find((c) => c.id === id);
+export const asBuilt = (id: string) => COURSES.find((c) => c.id === id);
 
 const playable = () => all().filter((c) => !c.lab);
 // the calendar alone: the latest course (not a draft) to open by this period
