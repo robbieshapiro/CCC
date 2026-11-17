@@ -10,6 +10,7 @@ import { alpine } from './looks/alpine';
 import { linksland } from './looks/linksland';
 import { chicago, chicagoNight } from './looks/chicago';
 import { carnival } from './looks/carnival';
+import { arena } from './looks/arena';
 
 export type Anim = ((clock: number, dt: number) => void)[];
 export type Kit = {
@@ -32,7 +33,7 @@ export type Kit = {
 };
 
 // a look with a night version ('<theme>@night') shows it from 5pm to 7am on the player's own clock (see engine.ts)
-export const KITS: Record<string, Kit> = { florida, city, canyon, alpine, linksland, chicago, 'chicago@night': chicagoNight, carnival };
+export const KITS: Record<string, Kit> = { florida, city, canyon, alpine, linksland, chicago, 'chicago@night': chicagoNight, carnival, arena };
 // (the Committee's preview can hold it at day or night: forceNight(true | false), or null to follow the clock again)
 let forcedNight: boolean | null = null;
 export const forceNight = (v: boolean | null) => (forcedNight = v);

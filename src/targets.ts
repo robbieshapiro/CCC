@@ -58,6 +58,21 @@ export function netShot(r: Result, ground: (x: number, y: number) => number): { 
     const end = frames[frames.length - 1];
     return { ...r, frames, end: { x: end.x, y: end.y }, sounds: r.sounds.filter((s) => s.t <= t), duration: t, holed: false, zones: [] };
   };
+  // caught by a target's net: from where it went in, it runs down the funnel to the middle and drops out of sight
+  const funnel = (frames: Frame[], k: number): Frame[] => {
+    const at = frames[frames.length - 1];
+    const c = TARGETS[k].at;
+    const out: Frame[] = [];
+    const n = 12;
+    for (let j = 1; j <= n; j++) {
+      const s = j / n;
+      const e = s * s * (3 - 2 * s);
+      const x = at.x + (c.x - at.x) * e;
+      const y = at.y + (c.y - at.y) * e;
+      out.push({ x, y, z: ground(x, y) - 1.6 * s * s, t: at.t + 0.07 * j });
+    }
+    return [...frames, ...out];
+  };
   for (let i = 1; i < r.frames.length; i++) {
     const a = r.frames[i - 1];
     const f = r.frames[i];
@@ -82,12 +97,12 @@ export function netShot(r: Result, ground: (x: number, y: number) => number): { 
     // landed: in a ring, the net takes it there
     if (a.t < land && f.t >= land) {
       const hit = ringAt(f);
-      if (hit) return { r: cut(r.frames.slice(0, i + 1)), hit, net: null };
+      if (hit) return { r: cut(funnel(r.frames.slice(0, i + 1), hit.target)), hit, net: null };
     }
     // rolling: into a target's outer edge
     if (f.t > land) {
       const k = inOuter(f);
-      if (k >= 0) return { r: cut(r.frames.slice(0, i + 1)), hit: { target: k, ring: 2, points: TARGETS[k].points[2], rolled: true }, net: null };
+      if (k >= 0) return { r: cut(funnel(r.frames.slice(0, i + 1), k)), hit: { target: k, ring: 2, points: TARGETS[k].points[2], rolled: true }, net: null };
     }
   }
   return { r, hit: null, net: null };
