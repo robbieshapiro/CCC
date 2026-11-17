@@ -35,12 +35,16 @@ export const RATINGS: Record<string, Rated> = {
     ],
   },
   pacificbluffs: {
-    at: "2026-11-12",
-    seeds: 4,
+    at: "2026-11-17",
+    seeds: 12,
     holes: [
-      { id: "sealion", member: 0.8, strong: 1.8 },
-      { id: "lighthouse", member: 1.5, strong: 0.8 },
-      { id: "thecarry", member: 1.3, strong: 1 },
+      { id: "sealion", member: 1.2, strong: 0.9 },
+      { id: "poppies", member: 0.7, strong: 0.5 },
+      { id: "highwayone", member: 0.5, strong: 0.8 },
+      { id: "gliderport", member: 2, strong: 0.8 },
+      { id: "lighthouse", member: 1.7, strong: 0.7 },
+      { id: "kelpcove", member: 1.2, strong: 0.7 },
+      { id: "thecarry", member: 0.8, strong: 0.6 },
     ],
   },
   westernreserve: {

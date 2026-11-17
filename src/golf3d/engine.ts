@@ -119,7 +119,7 @@ const LOOKS: Record<Look, { sky: string; ground: string; hemi: number; sunColor:
   tempest: { sky: '#9298a4', ground: '#4a3a30', hemi: 1.2, sunColor: '#d3d8e2', sun: 1.2, fog: '#757a85', near: 240, far: 1000, env: 0.65 },
   storm: { sky: '#b4bcc2', ground: '#5a5236', hemi: 1.15, sunColor: '#d9dde0', sun: 1.1, fog: '#a9b0b3', near: 160, far: 820, env: 0.6 },
   // the California coast at golden hour: warm low light, a soft sea haze, and you can see a long way out
-  coastal: { sky: '#d9eaf4', ground: '#7a7444', hemi: 1.4, sunColor: '#ffd6a0', sun: 3.0, fog: '#f3e2c8', near: 650, far: 2100, env: 1.15 },
+  coastal: { sky: '#e3e6e6', ground: '#7a7444', hemi: 1.35, sunColor: '#ffc88a', sun: 3.2, fog: '#f6dcb8', near: 650, far: 2100, env: 1.15 },
   // the look kits bring their own (src/golf3d/kits.ts)
   ...Object.fromEntries(Object.entries(KITS).map(([k, kit]) => [k, kit.light])),
 };
@@ -596,7 +596,7 @@ export class Course3D {
     low.position.set(-1000, 420, 1100);
     // the coast: deep Pacific blue overhead going to peach at the horizon, and a big warm sun low over the water
     // with a glow round it
-    const coastal = this.skyMesh(1, ['#2c6aa8', '#94c3e0', '#f9d6a4']);
+    const coastal = this.skyMesh(1, ['#3474ac', '#a6cbe0', '#ffcc8e']);
     const evening = new THREE.Group();
     evening.add(new THREE.Mesh(new THREE.SphereGeometry(50, 20, 12), new THREE.MeshBasicMaterial({ color: '#fff0c8', fog: false })));
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('#ffd08a'), transparent: true, opacity: 0.85, fog: false, depthWrite: false }));

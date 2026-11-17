@@ -19,6 +19,10 @@ import { thegorge } from './holes/thegorge';
 import { theledges } from './holes/theledges';
 import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
+import { poppies } from './holes/pacific/poppies';
+import { highwayone } from './holes/pacific/highwayone';
+import { gliderport } from './holes/pacific/gliderport';
+import { kelpcove } from './holes/pacific/kelpcove';
 import { sheepwalk } from './holes/atlantic/sheepwalk';
 import { punchbowl } from './holes/atlantic/punchbowl';
 import { cliffroad } from './holes/atlantic/cliffroad';
@@ -82,14 +86,20 @@ const COURSES: Course[] = [
   },
   {
     id: 'pacificbluffs',
-    // the California coast at golden hour, now the week of Nov 15 (the Western Reserve took Nov 8). A draft until
-    // Robbie has played it: then drop `draft` and it opens on the Sunday below.
-    opens: '2026-11-15',
-    draft: true,
+    // the California coast at golden hour. Robbie's pick for the week of Nov 22; grown from three holes to seven on
+    // Nov 17, to the Architect's brief, and released
+    opens: '2026-11-22',
+    whatsNew: [
+      'Seven holes on the California cliffs, at golden hour.',
+      'The Pacific runs down one side of nearly every hole. Wet is a penalty.',
+      'Canyons cross and line the fairways. A ball in one is hard work.',
+      'The Glider Port is the hard one. A bogey there is no disgrace.',
+      'Every hole has a secret.',
+    ],
     name: 'The Pacific Bluffs',
-    tagline: 'Three holes on the California cliffs. Cypress, surf and a lighthouse.',
-    holes: [sealion, lighthouse, thecarry],
-    par: par([sealion, lighthouse, thecarry]),
+    tagline: 'Seven holes on the California cliffs. Torrey pines, poppies, the coast road, a glider port, a kelp cove and a lighthouse.',
+    holes: [sealion, poppies, highwayone, gliderport, lighthouse, kelpcove, thecarry],
+    par: par([sealion, poppies, highwayone, gliderport, lighthouse, kelpcove, thecarry]),
     playoff: { hole: thecarry, from: { x: -80, y: 120 }, label: 'Off the cliff top' },
   },
   {

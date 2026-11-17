@@ -1,4 +1,4 @@
-// Hole 3, The Carry (par 3, about 185 ft, 135 yd as shown): the finisher, and all carry, from one cliff top to
+// Hole 7, The Carry (par 3, about 185 ft, 135 yd as shown): the finisher, and all carry, from one cliff top to
 // another over a cove where the surf comes in.
 // The play: a high iron to the headland green. Short is the sea; long is the rocks.
 // The bail-out: the cliff top swings round the left of the cove, for a chip on.

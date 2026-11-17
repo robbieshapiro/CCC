@@ -1,10 +1,11 @@
-// Hole 2, The Lighthouse (par 5, about 800 ft, 585 yd as shown): the long way out along the cliffs, the sea on the
+// Hole 5, The Lighthouse (par 5, about 800 ft, 585 yd as shown): the long way out along the cliffs, the sea on the
 // left, to a green on the point under the lighthouse.
 // The play: a drive up the right, a wood past the cove, then a wedge in.
 // The gamble: carry the cove with the second and you're a wedge from the green. Short of it is the sandbar, or the sea.
 // The secret: the keeper's road comes down off the rise behind the cove, straight at the green. Roll one down it.
 import { band, blob, circle, rect } from '../terrain';
 import { extend } from './extend';
+import { grove } from './pacific/common';
 import type { Hole, Post, V2 } from '../types';
 
 const GREEN = { x: 20, y: 676, rx: 16, ry: 13 };
@@ -28,12 +29,14 @@ const BARRANCA: V2[] = [
 
 const cypress: Post[] = [
   // Torrey pines framing the drive: a line down the right of the fairway, two out on the cliff edge on the left
-  ...[150, 200, 250, 300].map((y, i) => ({ x: 70 + (i % 2) * 6, y, r: 2.4, h: 22, look: 'torrey' as const })),
+  ...grove(76, 180, 3, 10, 'lh-a', 'torrey'),
+  ...grove(78, 280, 3, 12, 'lh-b', 'torrey'),
   { x: 4, y: 170, r: 2.4, h: 20, look: 'torrey' },
   { x: 8, y: 262, r: 2.4, h: 20, look: 'torrey' },
   // down the right, along the road
-  ...[60, 150, 240, 330, 420].map((y, i) => ({ x: 176 + (i % 2) * 14, y, r: 2.2, h: 20, look: 'torrey' as const })),
-  ...[560, 640, 710].map((y, i) => ({ x: 130 + (i % 2) * 12, y, r: 2.2, h: 20, look: 'monterey' as const })),
+  ...grove(184, 110, 5, 20, 'lh-c'),
+  ...grove(186, 360, 6, 24, 'lh-d'),
+  ...grove(138, 640, 5, 20, 'lh-e', 'monterey'),
   // the lone one out on the corner of the cove
   { x: 6, y: 300, r: 2.4, h: 22, look: 'monterey' },
 ];
