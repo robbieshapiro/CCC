@@ -738,6 +738,7 @@ async function aceSummary(swings: number, back: () => void) {
         <p class="eyebrow">The Ace Pot</p>
         <h2>${money(s?.pot ?? ACE_SEED)} in the pot</h2>
         <p>${swings >= ACE_SWINGS ? "That's your three swings today. Back tomorrow." : ''}${mine ? ` Your nearest: <b>${mine.holed ? 'in the hole' : mine.ft === null ? 'no ball' : `${mine.ft} ft`}</b>.` : ''}</p>
+        <p class="fine">A new hole tomorrow. The pot carries over until someone aces it.</p>
         ${s?.lastAce ? `<p class="fine">Last ace: ${esc(s.lastAce.name)}, for ${money(s.lastAce.pot)}.</p>` : '<p class="fine">Nobody has aced it yet.</p>'}
         ${s?.today.length ? `<h3>Closest today</h3><ol class="daily-board">${s.today
           .slice(0, 10)

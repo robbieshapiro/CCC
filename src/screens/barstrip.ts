@@ -45,7 +45,7 @@ export async function bindBarStrip(snap: Snapshot) {
     .aceState(s)
     .then((a) => {
       const left = ACE_SWINGS - a.swingsToday;
-      fill('acepot', `${money(a.pot)} pot`, left ? `${left} ${left === 1 ? 'swing' : 'swings'} left today` : 'Back tomorrow');
+      fill('acepot', `${money(a.pot)} pot`, `Carries over · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left` : 'back tomorrow'}`);
     })
     .catch(() => {});
   void api

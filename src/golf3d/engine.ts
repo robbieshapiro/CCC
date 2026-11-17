@@ -1065,7 +1065,7 @@ export class Course3D {
       round: ['How to play', 'Fewest shots wins.'],
       practice: ['Practice', "Nothing counts. Hit as many as you like."],
       daily: ['Closest to the Pin', 'One shot, three tries. Closest wins.'],
-      ace: ['The Ace Pot', '$50 a swing, three a day. Make an ace and the whole pot is yours.'],
+      ace: ['The Ace Pot', '$50 a swing, three a day. A new hole every day, and every miss goes in the pot. It carries over until someone makes an ace and takes the lot.'],
       minigolf: ['Hollow Hills Mini Golf', 'Six holes. Fewest strokes wins the week.'],
     }[this.howTo];
     const card = document.createElement('div');
