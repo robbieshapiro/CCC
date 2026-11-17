@@ -10,7 +10,7 @@ import { store } from '../storage';
 import { earned, payOf, plaques } from '../trophies';
 import { moTarget, pasPay, PAS_MAX } from '../popashot';
 import { BJ_MAX, BJ_MIN, bjSettle, bjValue, DAILY_LOSS, type BjOutcome, type BjView } from '../blackjack';
-import { weekOf } from '../bar';
+import { DAILY_BOARD, weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById } from '../shop';
 import { SAMPLES } from '../designer/samples';
@@ -18,6 +18,7 @@ import { CURSES_A_WEEK, LOCKER_MAX, powerOf } from '../powerups';
 import type { Tweaks } from '../golf3d/tweaks';
 import { ACE_ADD, ACE_SEED, ACE_SWINGS } from '../acepot';
 import { BACK_ODDS, backLine, daysLeft, priceField } from '../book';
+import { TARGET_MAX } from '../targets';
 import { UTH_ANTES, UTH_TRIPS, uthSettle, type UthStage, type UthView } from '../uth';
 import { MAX_OVER_PAR, type CourseRequest, type AgentNote, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type Snapshot, type TrendDay } from './types';
 
@@ -167,12 +168,13 @@ function ctpPlaces(db: Db): { day: string; key: string; place: number }[] {
       .map(([key], i) => ({ day: d, key, place: i + 1 })),
   );
 }
-// and the long drive's, as drive_places does: the day's longest ball per person, from Nov 17
-function drivePlaces(db: Db): { day: string; key: string; place: number }[] {
+// and the long drive's, as drive_places does: the day's longest ball per person, from Nov 17 (the Target Range's the
+// same way: the day's best game, from Nov 18)
+function drivePlaces(db: Db, game: 'drive' | 'targets' = 'drive'): { day: string; key: string; place: number }[] {
   const today = todayInGameTz();
   const days = new Map<string, Map<string, number>>();
   for (const b of db.bar ?? []) {
-    if (b.game !== 'drive' || !b.at) continue;
+    if (b.game !== game || !b.at) continue;
     const d = todayInGameTz(new Date(b.at));
     const p = db.players.find((x) => x.id === b.playerId);
     if (!p || d >= today || d < PRIZES_FROM) continue;
@@ -286,6 +288,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
         days: [...(db.days ?? []).filter((d) => ids.has(d.playerId)).map((d) => d.day), ...roundDays, ...(db.practice ?? []).filter((x) => ids.has(x.playerId)).map((x) => todayInGameTz(new Date(x.startedAt)))],
         ctpPay: ctpPlaces(db).filter((w) => w.key === `${p.name.toLowerCase()}|${p.pin}`).reduce((a, w) => a + dailyPrize(w.day, w.place), 0),
         drivePay: drivePlaces(db).filter((w) => w.key === `${p.name.toLowerCase()}|${p.pin}`).reduce((a, w) => a + dailyPrize(w.day, w.place), 0),
+        targetsPay: drivePlaces(db, 'targets').filter((w) => w.key === `${p.name.toLowerCase()}|${p.pin}`).reduce((a, w) => a + dailyPrize(w.day, w.place), 0),
         acePay: (db.aceSwings ?? []).filter((x) => ids.has(x.playerId)).reduce((a, x) => a + x.payout, 0),
         // birdies and better pay on the day's first finished round only
         holes: rs.filter((r, i) => !rs.slice(0, i).some((x) => todayInGameTz(new Date(x.createdAt)) === todayInGameTz(new Date(r.createdAt)))).flatMap((r) => {
@@ -1894,8 +1897,9 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token)); // play counts at home
     const today = todayInGameTz();
-    if (game === 'midway' && (db.bar ?? []).some((x) => x.game === 'midway' && x.playerId === me.id && x.at && todayInGameTz(new Date(x.at)) === today))
-      throw new Error('Your Midway round for today is in. Back tomorrow.');
+    if (game === 'targets' && (score < 0 || score > TARGET_MAX)) throw new Error('That score doesn’t look right.');
+    if ((game === 'midway' || game === 'targets') && (db.bar ?? []).some((x) => x.game === game && x.playerId === me.id && x.at && todayInGameTz(new Date(x.at)) === today))
+      throw new Error(game === 'midway' ? 'Your Midway round for today is in. Back tomorrow.' : 'Your Target Range game for today is in. Back tomorrow.');
     (db.bar ??= []).push({ playerId: me.id, game, week: weekOf(today), score, at: new Date().toISOString() });
     save(db);
   },
@@ -1906,7 +1910,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const week = weekOf(todayInGameTz());
     const key = (p: DbPlayer) => `${p.name.toLowerCase()}|${p.pin}`;
     const best = new Map<string, { playerId: string; name: string; score: number }>();
-    for (const r of (db.bar ?? []).filter((x) => x.game === game && x.week === week && (game !== 'drive' || (!!x.at && todayInGameTz(new Date(x.at)) === todayInGameTz())))) {
+    for (const r of (db.bar ?? []).filter((x) => x.game === game && x.week === week && (!DAILY_BOARD.includes(game) || (!!x.at && todayInGameTz(new Date(x.at)) === todayInGameTz())))) {
       const p = db.players.find((x) => x.id === r.playerId);
       if (!p) continue;
       const b = best.get(key(p));

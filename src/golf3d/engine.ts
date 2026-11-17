@@ -44,6 +44,8 @@ export type Drill = {
   ticker?: (from: V2, at: V2) => string;
   // the day's best, marked on the ground (see Mark)
   mark?: Mark | null;
+  // the Target Range: rings drawn round each target (radii, inner first), in the target's colour
+  rings?: { center: V2; r: number[]; color: number }[];
 };
 // The day's best on the ground: a band of tape across the fairway at the longest drive's distance from the tee (an arc,
 // r from center, either side of aim), or a gold ring round the pin at the closest shot's distance (it circles the flag,
@@ -303,7 +305,7 @@ export class Course3D {
   // practice of any kind: the Leave button says so and doesn't ask
   leaveText = '';
   // which how-to card this game shows (first time, then on the ? button)
-  howTo: 'round' | 'practice' | 'daily' | 'ace' | 'minigolf' = 'round';
+  howTo: 'round' | 'practice' | 'daily' | 'ace' | 'minigolf' | 'drive' | 'targets' = 'round';
   // Hank the Starter's word on the first tee of a round
   starter = '';
   // told after every swing, for the practice log
@@ -415,6 +417,56 @@ export class Course3D {
   practiceArea(hole: Hole, drill: Omit<Drill, 'at'>) {
     this.drill = { ...drill, at: 0 };
     void this.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
+  }
+
+  // ---------- the Target Range's rings, and the burst when a ball scores in one ----------
+  private ringLine(center: V2, r: number, color: number, width: number) {
+    const steps = 72;
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * Math.PI * 2;
+      const x = center.x + Math.sin(a) * r;
+      const y = center.y + Math.cos(a) * r;
+      pts.push(w3(x, y, heightAt(this.hole, x, y) + 0.1));
+    }
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), steps * 2, width, 6, true), new THREE.MeshBasicMaterial({ color, fog: false }));
+    tube.renderOrder = 2;
+    return tube;
+  }
+  private drawRings(t: { center: V2; r: number[]; color: number }) {
+    if (!this.world) return;
+    // the inner ring bold, the middle white, the outer the target's colour again
+    t.r.forEach((r, i) => this.world!.root.add(this.ringLine(t.center, r, i === 1 ? 0xffffff : t.color, i === 0 ? 0.55 : 0.32)));
+  }
+  private bursts: { o: THREE.Mesh; t0: number; r: number }[] = [];
+  // a ball scored: a flat ring of light swells out from the ring it landed in and fades, twice
+  burst(center: V2, r: number, color: number) {
+    if (!this.world) return;
+    const z = heightAt(this.hole, center.x, center.y) + 0.3;
+    for (let k = 0; k < 2; k++) {
+      const o = new THREE.Mesh(new THREE.RingGeometry(0.82, 1, 64), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, fog: false, depthWrite: false }));
+      o.rotation.x = -Math.PI / 2;
+      o.position.copy(w3(center.x, center.y, z));
+      o.renderOrder = 3;
+      this.world.root.add(o);
+      this.bursts.push({ o, t0: performance.now() + k * 260, r });
+    }
+  }
+  private stepBursts(now: number) {
+    this.bursts = this.bursts.filter((b) => {
+      const k = (now - b.t0) / 900;
+      if (k < 0) return true;
+      if (k >= 1) {
+        b.o.parent?.remove(b.o);
+        b.o.geometry.dispose();
+        (b.o.material as THREE.Material).dispose();
+        return false;
+      }
+      const s = b.r * (0.6 + 1.4 * k);
+      b.o.scale.set(s, s, s);
+      (b.o.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - k);
+      return true;
+    });
   }
 
   // ---------- the day's best, marked on the ground (Mark) ----------
@@ -566,6 +618,7 @@ export class Course3D {
     this.scene.add(this.world.root);
     this.markObjs = [];
     if (this.drill?.mark) this.setMark(this.drill.mark);
+    for (const t of this.drill?.rings ?? []) this.drawRings(t);
     // the flag streams the way the wind blows
     const pin = this.world.root.getObjectByName('pin');
     if (pin && this.wind.mph) pin.rotation.y = Math.PI / 2 - this.wind.toward;
@@ -1131,6 +1184,8 @@ export class Course3D {
       daily: ['Closest to the Pin', 'One shot, three tries. Closest wins.'],
       ace: ['The Ace Pot', 'Three swings a day at a new hole every day. The club adds $50 to the pot for every miss, and it carries over until someone makes an ace and takes the lot.'],
       minigolf: ['Hollow Hills Mini Golf', 'Six holes. Fewest strokes wins the week.'],
+      drive: ['Long drive', 'Three swings with the wind at your back, the last two with a Fireball. The longest ball in play wins the day.'],
+      targets: ['The Target Range', 'Ten balls at six targets. Stop one in a ring to score: the bullseye and the far targets pay most. Score on the next ball too and it doubles, then triples. A miss ends the streak, so the safe target can be the smart one.'],
     }[this.howTo];
     const card = document.createElement('div');
     card.className = 'g3-howto';
@@ -2478,6 +2533,7 @@ export class Course3D {
     }
     this.clock += dt;
     this.world?.update(this.clock, dt);
+    this.stepBursts(now);
     if (this.replay) this.stepReplay(dt);
     this.cart?.update(dt);
 

@@ -3,13 +3,17 @@
 //   Mini golf: the six holes of Hollow Hills, putter only. Fewest strokes wins.
 //   Long drive: three swings off the tee of the week's longest hole, in the day's wind, the last two with a fireball.
 //   Longest ball that stays in play. A daily board (Nov 17): only today's swings count.
+//   The Target Range: ten balls at six ringed targets, streaks multiply (src/targets.ts). One counted game a day, a
+//   daily board.
 //   The Midway (Eli's game): three carnival holes, one counting round a day, fewest strokes. Any more are for fun.
 import { SCALE } from './golf3d/clubs';
 import { HOLLOW_HILLS_PAR } from './golf3d/minigolf';
 import { MIDWAY_PAR } from './golf3d/midway';
 import type { V2 } from './golf3d/types';
 
-export type BarGame = 'minigolf' | 'drive' | 'members' | 'midway';
+export type BarGame = 'minigolf' | 'drive' | 'members' | 'midway' | 'targets';
+// the daily boards (only today's scores count); the rest run Monday to Sunday
+export const DAILY_BOARD: BarGame[] = ['drive', 'targets'];
 export const DRIVES = 3;
 
 // Monday of this week, Eastern, as YYYY-MM-DD
@@ -34,5 +38,5 @@ const midwayLabel = (score: number) => {
   return `${-score} (${d === 0 ? 'E' : d > 0 ? `+${d}` : `−${-d}`})`;
 };
 export const scoreLabel = (game: BarGame, score: number) =>
-  game === 'drive' ? `${Math.round(score)} yd` : game === 'members' ? `${-score} strokes` : game === 'midway' ? midwayLabel(score) : minigolfLabel(score);
-export const gameName = (game: BarGame) => (game === 'drive' ? 'Long drive' : game === 'members' ? "Members' Course" : game === 'midway' ? 'The Midway' : 'Hollow Hills Mini Golf');
+  game === 'drive' ? `${Math.round(score)} yd` : game === 'targets' ? `${Math.round(score)} pts` : game === 'members' ? `${-score} strokes` : game === 'midway' ? midwayLabel(score) : minigolfLabel(score);
+export const gameName = (game: BarGame) => (game === 'drive' ? 'Long drive' : game === 'targets' ? 'The Target Range' : game === 'members' ? "Members' Course" : game === 'midway' ? 'The Midway' : 'Hollow Hills Mini Golf');

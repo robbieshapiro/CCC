@@ -6,7 +6,7 @@ import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
 import { ACE_ADD, ACE_SWINGS, aceShot, type AceState } from '../acepot';
 import { money } from '../purse';
 import { prizesLine } from '../bonus';
-import { gameName, scoreLabel, type BarGame } from '../bar';
+import { DAILY_BOARD, gameName, scoreLabel, type BarGame } from '../bar';
 import { isHole } from '../designer/desk';
 import { bestTry, dailyShot, resultLabel } from '../daily';
 import { MO, staffFace } from '../staff';
@@ -78,10 +78,11 @@ export function barPane(snap: Snapshot) {
         <div class="bar-counter" aria-hidden="true"></div>
       </section>
       <h2 class="bar-wall">Today's contests</h2>
-      <p class="bar-wall-sub">The club puts up the prizes. Closest to the Pin and the long drive pay the day's top three; an ace takes the pot.</p>
+      <p class="bar-wall-sub">The club puts up the prizes. Closest to the Pin, the long drive and the Target Range pay the day's top three; an ace takes the pot.</p>
       <div class="bar-games">
         <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · top 3 paid ${prizesLine()} today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
         <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 Fireballs · top 3 paid ${prizesLine()} today</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
+        <a class="bar-game" href="#/bar/targets" data-game="targets"><i>⭕</i><div><b>The Target Range</b><span>10 balls at six ringed targets · land in a row and the streak multiplies · one game counts a day · top 3 paid ${prizesLine()} today</span></div><p data-mine="targets"></p><div data-board="targets"></div></a>
         <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>Three swings a day at ${esc(aceShot(snap.today).label)} · the club adds ${money(ACE_ADD)} for every miss, and it carries over until someone aces it</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game members" href="#/bar/members" data-game="members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
@@ -104,13 +105,14 @@ export async function fillBar(snap: Snapshot) {
   const prize = document.querySelector<HTMLButtonElement>('[data-prize]');
   if (prize) prize.onclick = () => void openPrizeCounter();
   // (Hollow Hills mini golf is closed for now: its course and code stay, ready to come back)
-  const [daily, drive, members, course, midway, ace] = await Promise.all([
+  const [daily, drive, members, course, midway, ace, targets] = await Promise.all([
     api.dailyState(s, snap.today).catch(() => null as DailyState | null),
     api.barBoard(s, 'drive').catch(() => null as BarBoard | null),
     api.barBoard(s, 'members').catch(() => null as BarBoard | null),
     api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => [] as MembersHole[]),
     api.barBoard(s, 'midway').catch(() => null as BarBoard | null),
     api.aceState(s).catch(() => null as AceState | null),
+    api.barBoard(s, 'targets').catch(() => null as BarBoard | null),
   ]);
   // curses waiting for your next Midway round: the count, not who or what
   const waiting = (await api.powerupState(s).catch(() => null))?.waiting ?? 0;
@@ -170,10 +172,10 @@ export async function fillBar(snap: Snapshot) {
         (ace.lastAce ? `<p class="bar-empty">Last ace: ${esc(ace.lastAce.name)}, for ${money(ace.lastAce.pot)}</p>` : ''),
     );
   }
-  for (const [game, b] of [['drive', drive], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {
+  for (const [game, b] of [['drive', drive], ['targets', targets], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
-    const today = game === 'midway' ? (b.playedToday ? " · today's round is in" : ' · today’s round is waiting') + (waiting ? ` · ${waiting === 1 ? 'a curse is' : `${waiting} curses are`} waiting for you` : '') : '';
-    put(game, (b.mine === null ? (game === 'drive' ? 'Not played today' : 'Not played this week') : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
+    const today = game === 'targets' ? (b.playedToday ? " · today's game is in" : '') : game === 'midway' ? (b.playedToday ? " · today's round is in" : ' · today’s round is waiting') + (waiting ? ` · ${waiting === 1 ? 'a curse is' : `${waiting} curses are`} waiting for you` : '') : '';
+    put(game, (b.mine === null ? (DAILY_BOARD.includes(game) ? 'Not played today' : 'Not played this week') : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
   }
 }
 
@@ -186,17 +188,18 @@ export async function barSummary(game: BarGame, score: number | null, again: () 
   sheet.innerHTML = `
     <div class="notes-card">
       <div class="notes-body">
-        <p class="eyebrow">${gameName(game)} · ${fun ? 'for fun' : game === 'drive' ? 'today' : 'this week'}</p>
+        <p class="eyebrow">${gameName(game)} · ${fun ? 'for fun' : DAILY_BOARD.includes(game) ? 'today' : 'this week'}</p>
         <h2>${score === null ? 'No score' : esc(scoreLabel(game, score))}</h2>
         ${game === 'midway' ? `<p class="fine">${fun ? "Just for fun: today's round is already in. Back tomorrow for another that counts." : 'That was today’s round. Any more today are for fun.'}</p>` : ''}
-        ${game === 'drive' ? `<p class="fine">Today's top three are paid ${prizesLine()} at midnight.</p>` : ''}
-        ${b && b.mine !== null ? `<p>Your best ${game === 'drive' ? 'today' : 'this week'}: <b>${esc(scoreLabel(game, b.mine))}</b></p>` : ''}
+        ${game === 'targets' ? `<p class="fine">${fun ? "Just for fun: today's game is already in. Back tomorrow for another that counts." : 'That was today’s game. Any more today are for fun.'}</p>` : ''}
+        ${DAILY_BOARD.includes(game) ? `<p class="fine">Today's top three are paid ${prizesLine()} at midnight.</p>` : ''}
+        ${b && b.mine !== null ? `<p>Your best ${DAILY_BOARD.includes(game) ? 'today' : 'this week'}: <b>${esc(scoreLabel(game, b.mine))}</b></p>` : ''}
         ${b ? `<ol class="daily-board">${b.board
           .slice(0, 10)
           .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span><b>${esc(r.name)}</b><small></small><em>${esc(scoreLabel(game, r.score))}</em></li>`)
           .join('')}</ol>` : ''}
       </div>
-      <div class="notes-foot daily-foot"><button class="btn" data-again>${game === 'midway' ? 'Again, for fun' : 'Play again'}</button><button class="btn ghost" data-back>Back to the bar</button></div>
+      <div class="notes-foot daily-foot"><button class="btn" data-again>${game === 'midway' || game === 'targets' ? 'Again, for fun' : 'Play again'}</button><button class="btn ghost" data-back>Back to the bar</button></div>
     </div>`;
   document.body.appendChild(sheet);
   sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = () => {

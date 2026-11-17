@@ -1987,15 +1987,18 @@ alter table bar_scores enable row level security;
 create index if not exists bar_scores_week on bar_scores (game, week);
 -- the games on the wall (the Midway joined on Nov 10)
 alter table bar_scores drop constraint if exists bar_scores_game_check;
-alter table bar_scores add constraint bar_scores_game_check check (game in ('putting', 'drive', 'minigolf', 'members', 'midway'));
+alter table bar_scores add constraint bar_scores_game_check check (game in ('putting', 'drive', 'minigolf', 'members', 'midway', 'targets'));
 
 create or replace function submit_bar(p_token uuid, p_game text, p_score numeric) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token));
 begin
-  if p_game not in ('minigolf', 'drive', 'members', 'midway') then raise exception 'No such game.'; end if;
-  -- a long drive is 0 to 450 yd; mini golf, the Members' Course and the Midway are minus the strokes
-  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'minigolf' and p_score not between -60 and -6)
+  if p_game not in ('minigolf', 'drive', 'members', 'midway', 'targets') then raise exception 'No such game.'; end if;
+  -- the Target Range (Nov 17, src/targets.ts) can be closed from the Committee Room
+  if p_game = 'targets' then perform bar_gate(me, 'targets'); end if;
+  -- a long drive is 0 to 450 yd; the Target Range 0 to 810 points (TARGET_MAX); mini golf, the Members' Course and
+  -- the Midway are minus the strokes
+  if (p_game = 'drive' and p_score not between 0 and 450) or (p_game = 'targets' and p_score not between 0 and 810) or (p_game = 'minigolf' and p_score not between -60 and -6)
     or (p_game = 'members' and p_score not between -90 and -1) or (p_game = 'midway' and p_score not between -40 and -3) then
     raise exception 'That score doesn''t look right.';
   end if;
@@ -2004,6 +2007,12 @@ begin
       where b.game = 'midway' and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash
         and (b.created_at at time zone 'America/New_York')::date = game_today()) then
     raise exception 'Your Midway round for today is in. Back tomorrow.';
+  end if;
+  -- the Target Range: one counting game a day too
+  if p_game = 'targets' and exists (select 1 from bar_scores b join players p on p.id = b.player_id
+      where b.game = 'targets' and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash
+        and (b.created_at at time zone 'America/New_York')::date = game_today()) then
+    raise exception 'Your Target Range game for today is in. Back tomorrow.';
   end if;
   insert into bar_scores (player_id, game, week, score)
     values (me.id, p_game, date_trunc('week', now() at time zone 'America/New_York')::date, p_score);
@@ -2021,8 +2030,8 @@ begin
       select lower(p.name) as k, p.pin_hash as h, max(b.score) as score, min(b.created_at) as first_at
       from bar_scores b join players p on p.id = b.player_id
       where b.game = p_game and b.week = wk
-        -- the long drive is a daily contest (Nov 17): only today's swings count
-        and (p_game <> 'drive' or (b.created_at at time zone 'America/New_York')::date = game_today())
+        -- the long drive and the Target Range are daily contests (Nov 17): only today's count
+        and (p_game not in ('drive', 'targets') or (b.created_at at time zone 'America/New_York')::date = game_today())
       group by lower(p.name), p.pin_hash
     )
     select json_build_object(
@@ -2428,6 +2437,23 @@ language sql stable security definer set search_path = public, extensions as $$
 $$;
 revoke all on function drive_places() from public, anon, authenticated;
 
+-- and the Target Range's (from Nov 17): the day's best game per person, the earlier one first on a tie
+create or replace function targets_places() returns table (day date, k text, h text, place int)
+language sql stable security definer set search_path = public, extensions as $$
+  with best as (
+    select (b.created_at at time zone 'America/New_York')::date as day, lower(p.name) as k, p.pin_hash as h,
+      max(b.score) as score, min(b.created_at) as first_at
+    from bar_scores b join players p on p.id = b.player_id
+    where b.game = 'targets' and (b.created_at at time zone 'America/New_York')::date < game_today()
+      and (b.created_at at time zone 'America/New_York')::date >= date '2026-11-17'
+    group by 1, 2, 3
+  ), ranked as (
+    select day, k, h, row_number() over (partition by day order by score desc, first_at)::int as place from best
+  )
+  select * from ranked where place <= 3
+$$;
+revoke all on function targets_places() from public, anon, authenticated;
+
 -- what a person has earned on the side, across their clubs: $50 a day they finish a round, $100 on the third day running
 -- at the club and $250 every seventh, $150 a Closest to the Pin win, and $25 a birdie, $100 an eagle, $500 an ace on
 -- the day's first finished round (so replaying a short course isn't a money farm). From the shots on their cards: $75 a
@@ -2503,6 +2529,7 @@ language sql stable security definer set search_path = public, extensions as $$
       -- Closest to the Pin and the long drive: the day's top three (daily_prize)
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from ctp_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from drive_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as drive,
+      (select coalesce(sum(daily_prize(w.day, w.place)), 0) from targets_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as targets,
       -- the Ace Pot, when you ace it (the club puts up the pot)
       (select coalesce(sum(a.payout), 0) from ace_swings a where a.player_id in (select id from seats))::int as acepot,
       -- birdie $100, eagle $500, albatross $1,000, ace $2,500 (src/bonus.ts) for holes from Nov 10 2026; before that the
@@ -2520,9 +2547,9 @@ language sql stable security definer set search_path = public, extensions as $$
       -- $250 for every week (from Nov 8) with a counted card, whoever you are on the board (src/bonus.ts BONUS.week)
       250 * (select count(distinct x.month) from rounds x where x.player_id in (select id from seats) and x.card and x.month >= '2026-11-08')::int as weeks
   )
-  select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'drive', b.drive, 'acepot', b.acepot, 'shots', b.shots,
+  select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'drive', b.drive, 'targets', b.targets, 'acepot', b.acepot, 'shots', b.shots,
     'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks,
-    'total', b.rounds + b.streaks + b.ctp + b.drive + b.acepot + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies + b.weeks) from b
+    'total', b.rounds + b.streaks + b.ctp + b.drive + b.targets + b.acepot + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies + b.weeks) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 
@@ -3849,7 +3876,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
 begin
   if not is_committee(me) then raise exception 'Only the committee can do that.'; end if;
-  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members', 'acepot', 'book', 'uth') then raise exception 'No such game.'; end if;
+  if p_game not in ('daily', 'midway', 'blackjack', 'popashot', 'billiards', 'drive', 'members', 'acepot', 'book', 'uth', 'targets') then raise exception 'No such game.'; end if;
   insert into bar_settings (game, open, updated_at) values (p_game, p_open, now())
   on conflict (game) do update set open = excluded.open, updated_at = now();
 end $$;

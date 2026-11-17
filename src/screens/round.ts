@@ -34,6 +34,8 @@ import { ACE_ADD, ACE_SEED, ACE_SWINGS, aceShot } from '../acepot';
 import { HANK } from '../staff';
 import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
+import { RINGS, ringAt, streakMult, TARGET_BALLS, TARGETS as RANGE_TARGETS } from '../targets';
+import { targetRange } from '../golf3d/practice/targets';
 import { HOLLOW_HILLS } from '../golf3d/minigolf';
 import { MIDWAY } from '../golf3d/midway';
 import { landCurses, pickPower } from './prizecounter';
@@ -826,6 +828,91 @@ export function testHole(snap: Snapshot, hole: Hole, back: () => void) {
   void go();
 }
 
+// The Target Range (src/targets.ts): ten balls at six ringed targets. Each ball scores where it stops, with the streak
+// on top; a scoring ball sets off a burst of light round its ring and a points pop. The day's first game counts (it's
+// sent when the tenth ball stops); any more that day are for fun.
+export async function targetRound(snap: Snapshot) {
+  closeRound();
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const back = () => {
+    closeRound();
+    navigate('#/bar');
+  };
+  const fun = !!(await api.barBoard(requireSession(), 'targets').catch(() => null))?.playedToday;
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  let g: Course3D;
+  try {
+    g = new Course3D(el, me.avatar, back);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/bar">Back to the bar</a></main>`);
+    return;
+  }
+  game = g;
+  g.leaveText = 'Leave';
+  g.howTo = 'targets';
+  const hole = targetRange;
+  let n = 0;
+  let run = 0;
+  let total = 0;
+  // the scoreboard, top left under the title: points, balls left, and the streak when there is one
+  const hud = document.createElement('div');
+  hud.className = 'tr-hud';
+  el.appendChild(hud);
+  const drawHud = () => {
+    const next = streakMult(run + 1);
+    hud.innerHTML = `<div><small>Points</small><b>${total}</b></div><div><small>Ball</small><b>${Math.min(n + 1, TARGET_BALLS)}<i>/${TARGET_BALLS}</i></b></div>${run ? `<div class="hot"><small>Streak ${run}</small><b>×${next}</b></div>` : ''}`;
+  };
+  drawHud();
+  const pop = (pts: number, mult: number, ring: number, color: number) => {
+    const p = document.createElement('div');
+    p.className = `tr-pop r${ring}`;
+    p.style.setProperty('--c', `#${color.toString(16).padStart(6, '0')}`);
+    p.innerHTML = `<b>+${pts}</b>${mult > 1 ? `<span>×${mult} streak</span>` : ''}<small>${['Bullseye', 'Middle ring', 'Outer ring'][ring]}</small>`;
+    el.appendChild(p);
+    window.setTimeout(() => p.remove(), 1900);
+  };
+  g.starter = fun ? `Today's game is in, ${me.name}. These ten are for fun.` : `Ten balls, ${me.name}. Stop it in a ring to score, and keep the streak going.`;
+  g.practiceArea(hole, {
+    title: 'The Target Range',
+    eyebrow: fun ? 'The Nineteenth Hole · for fun' : 'The Nineteenth Hole · today counts',
+    wind: conditionsFor(hole, todayInGameTz()),
+    stations: [{ name: `${TARGET_BALLS} balls from the bay`, at: hole.tee }],
+    rings: RANGE_TARGETS.map((t) => ({ center: t.at, r: RINGS, color: t.color })),
+    ticker: (from, at) => `${driveYards(from, at)} yd`,
+    tag: () => `Ball ${n + 1} of ${TARGET_BALLS}`,
+    report: (r) => {
+      const hit = r.lost ? null : ringAt(r.end);
+      return hit ? `${RANGE_TARGETS[hit.target].yards} yd target · ${['bullseye', 'middle ring', 'outer ring'][hit.ring]}` : r.lost ? 'Out of play' : `${driveYards(r.from, r.end)} yd · no ring`;
+    },
+    onResult: (r) => {
+      n++;
+      const hit = r.lost ? null : ringAt(r.end);
+      if (hit) {
+        run++;
+        const mult = streakMult(run);
+        const pts = hit.points * mult;
+        total += pts;
+        const t = RANGE_TARGETS[hit.target];
+        g.burst(t.at, RINGS[hit.ring], t.color);
+        pop(pts, mult, hit.ring, t.color);
+        sfx(hit.ring === 0 || mult > 1 ? 'cheer' : 'clap');
+      } else {
+        if (run >= 2) sfx('ooh');
+        run = 0;
+      }
+      drawHud();
+      if (n < TARGET_BALLS) return true;
+      const done = () => window.setTimeout(() => void barSummary('targets', total, () => void targetRound(snap), back, fun), 1600);
+      if (fun) done();
+      else void api.submitBar(requireSession(), 'targets', total).catch(() => {}).finally(done);
+      return false;
+    },
+  });
+}
+
 // The week's long drive tee: the longest hole on the week's course (The Gorge on the Western Reserve)
 export const driveHole = (course: Course) => [...course.holes].sort((a, b) => Math.hypot(b.cup.x - b.tee.x, b.cup.y - b.tee.y) - Math.hypot(a.cup.x - a.tee.x, a.cup.y - a.tee.y))[0];
 
@@ -931,6 +1018,7 @@ export function barRound(snap: Snapshot, kind: BarGame) {
       })
       .catch(() => {});
     g.starter = `${hole.name}, ${me.name}. Three swings. Reginald's pouring the fireballs for the last two.`;
+    g.howTo = 'drive';
     g.houseMenu = true;
     g.pour(null);
     g.practiceArea(hole, {
