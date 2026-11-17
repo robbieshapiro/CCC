@@ -10,7 +10,6 @@ const GAMES: [string, string, string][] = [
   ['daily', '🎯', 'Closest to the Pin'],
   ['acepot', '💰', 'The Ace Pot'],
   ['book', '📒', "Mo's Book"],
-  ['uth', '🂡', "Ultimate Texas Hold'em"],
   ['midway', '🎡', 'The Midway'],
   ['drive', '🚀', 'Long drive'],
   ['members', '🏗️', "Members' Course"],
