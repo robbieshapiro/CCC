@@ -1507,6 +1507,10 @@ begin
           pu.status || ':' || pu.kind || ':' || coalesce((select x.name from players x where x.id = pu.target_id), ''), null, null, null, null
         from powerups pu join mem m on m.id = pu.owner_id
         where pu.target_id is not null and pu.status <> 'stolen' and coalesce(pu.used_at, pu.created_at) >= t0
+      union all
+      -- an ace at the Ace Pot (total: what it won)
+      select m.who, m.name, m.club, a.created_at, 'ace', null, a.payout, null, null, null
+        from ace_swings a join mem m on m.id = a.player_id where a.holed and a.created_at >= t0
     ),
     -- who's in: anyone with an event today, or who opened the club today
     ins as (

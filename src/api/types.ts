@@ -188,7 +188,7 @@ export type AdminOverview = {
 // The Daily Shot: one shot a day for everyone, three tries, best counts (see daily.ts)
 // The Committee Room's Today (admin_today): everyone in today, each person once, and today's feed
 export type AdminTodayPerson = { cards?: number; id?: string; name: string; club: string; last: string | null; card: 'in' | 'going' | null; toPar: number | null; total: number | null; hole: number | null; practice: number; daily: boolean; dailyFt: number | null };
-export type AdminTodayEvent = { id?: string; at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback' | 'classic' | 'midway'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
+export type AdminTodayEvent = { id?: string; at: string; kind: 'round' | 'start' | 'practice' | 'daily' | 'playoff' | 'join' | 'feedback' | 'classic' | 'midway' | 'ace'; name: string; club: string; what: string | null; total: number | null; par: number | null; n: number | null; ft: number | null };
 export type AdminToday = { today: string; in: number; cardsIn: number; onCourse: number; people: AdminTodayPerson[]; feed: AdminTodayEvent[] };
 export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: boolean };
 export type DailyRow = { playerId?: string; name: string; club: string; ft: number | null; holed: boolean; holedTry?: number | null; tries: number; mine: boolean };

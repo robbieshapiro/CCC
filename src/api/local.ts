@@ -1606,6 +1606,10 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       const p = who(f.playerId);
       if (p && isToday(f.createdAt)) feed.push({ id: p.id, at: f.createdAt, kind: 'classic', name: p.name, club: club(p.groupId), what: f.course, total: f.total, par: f.par, n: null, ft: null });
     }
+    for (const a of db.aceSwings ?? []) {
+      const p = who(a.playerId);
+      if (p && a.holed && isToday(a.at)) feed.push({ id: p.id, at: a.at, kind: 'ace', name: p.name, club: club(p.groupId), what: null, total: a.payout, par: null, n: null, ft: null });
+    }
     for (const p of mem) if (isToday(p.joined)) feed.push({ id: p.id, at: p.joined, kind: 'join', name: p.name, club: club(p.groupId), what: null, total: null, par: null, n: null, ft: null });
     feed.sort((a, b) => b.at.localeCompare(a.at));
     const cards = (db.cards ?? []).filter((c) => c.day === today);
