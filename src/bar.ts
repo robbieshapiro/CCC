@@ -2,7 +2,7 @@
 // score of the week counts, play as often as you like:
 //   Mini golf: the six holes of Hollow Hills, putter only. Fewest strokes wins.
 //   Long drive: three swings off the tee of the week's longest hole, in the day's wind, the last two with a fireball.
-//   Longest ball that stays in play.
+//   Longest ball that stays in play. A daily board (Nov 17): only today's swings count.
 //   The Midway (Eli's game): three carnival holes, one counting round a day, fewest strokes. Any more are for fun.
 import { SCALE } from './golf3d/clubs';
 import { HOLLOW_HILLS_PAR } from './golf3d/minigolf';

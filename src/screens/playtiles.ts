@@ -1,4 +1,4 @@
-// Home, under the Open: everything else you can play, as big tiles. The day's Closest to the Pin, the week's long drive
+// Home, under the Open: everything else you can play, as big tiles. The day's Closest to the Pin, the day's long drive
 // and the Members' Course (each with its leader), the practice facility, and the classic courses of weeks gone by, each
 // with its course record and the champions of its week.
 import { api } from '../api';
@@ -52,7 +52,7 @@ export async function bindPlayTiles(snap: Snapshot) {
         const el = document.querySelector<HTMLElement>(`[data-lead="${game}"]`);
         if (!el) return;
         const top = b.board[0];
-        el.textContent = top ? `Leader: ${top.name}, ${scoreLabel(game, top.score)}${b.mine !== null && !top.mine ? ` · you ${scoreLabel(game, b.mine)}` : ''}` : 'Nobody yet this week';
+        el.textContent = top ? `Leader: ${top.name}, ${scoreLabel(game, top.score)}${b.mine !== null && !top.mine ? ` · you ${scoreLabel(game, b.mine)}` : ''}` : game === 'drive' ? 'Nobody yet today' : 'Nobody yet this week';
       })
       .catch(() => {});
   void lead('drive');
