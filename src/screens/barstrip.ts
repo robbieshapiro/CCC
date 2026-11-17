@@ -12,23 +12,24 @@ import { money } from '../purse';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 
-// today's contests, as at the bar (the club puts up the prizes). Every game shows: two to a row on a phone (an odd one
-// out spans the row), nothing to scroll sideways.
+// today's contests, as at the bar (the club puts up the prizes): the Ace Pot first, a gold bar across the top, then the
+// other four two to a row on a phone, nothing to scroll sideways.
 type Card = [game: string, href: string, icon: string, name: string, wait: string];
 const CONTESTS: Card[] = [
   ['daily', '#/daily', '🎯', 'Closest to the Pin', `1st pays $${DAILY_PRIZES[0]} today`],
   ['drive', '#/bar/drive', '🚀', 'Long drive', `1st pays $${DAILY_PRIZES[0]} today`],
-  ['targets', '#/bar/targets', '⭕', 'Target Range', `1st pays $${DAILY_PRIZES[0]} today`],
-  ['acepot', '#/bar/ace', '💰', 'The Ace Pot', 'An ace takes the pot'],
+  ['targets', '#/bar/targets', '🏹', 'Target Range', `1st pays $${DAILY_PRIZES[0]} today`],
   ['midway', '#/bar/midway', '🎡', 'The Midway', 'Three carnival holes'],
 ];
+const ACE: Card = ['acepot', '#/bar/ace', '💰', 'The Ace Pot', 'An ace takes the pot'];
 const card = ([game, href, icon, name, wait]: Card, stake = '') =>
-  `<a class="bs-card${stake ? ' stake' : ''}" href="${href}" data-bs="${game}"><i>${icon}</i><small>${esc(name)}</small><b data-bs-big>${esc(wait)}</b><span data-bs-sub>${esc(stake)}</span></a>`;
+  `<a class="bs-card${stake ? ` ${stake}` : ''}" href="${href}" data-bs="${game}"><i>${icon}</i><small>${esc(name)}</small><b data-bs-big>${esc(wait)}</b><span data-bs-sub>${esc(stake)}</span></a>`;
 
 export function barStrip() {
   return `<section class="bar-strip" aria-label="The Nineteenth Hole">
     <div class="bs-head"><h2>The Nineteenth Hole</h2><a href="#/bar">The bar ›</a></div>
     <p class="bs-group">Today's contests</p>
+    ${card(ACE, 'ace')}
     <div class="bs-row">${CONTESTS.map((c) => card(c)).join('')}</div>
   </section>`;
 }
