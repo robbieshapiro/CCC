@@ -74,8 +74,9 @@ const menuOf = (h: Hole | null | undefined): Menu => {
   return MENUS[t] ?? (h && HIGHLANDS.has(h.id) ? MENUS.highlands : CLUBHOUSE);
 };
 
-// a drink as this hole's course pours it: its name, what it does, and its colour on the tray
-export function pour(kind: Drink, h: Hole | null | undefined) {
-  const p = menuOf(h)[kind];
+// a drink as this hole's course pours it: its name, what it does, and its colour on the tray. house: the clubhouse's
+// own names whatever the course (the long drive: a Fireball every week, Nov 17)
+export function pour(kind: Drink, h: Hole | null | undefined, house = false) {
+  const p = (house ? CLUBHOUSE : menuOf(h))[kind];
   return { name: p.name, colour: p.colour, blurb: p.note ? `${p.note} · ${drinksOn(h?.id ?? '')[kind].blurb}` : drinksOn(h?.id ?? '')[kind].blurb };
 }

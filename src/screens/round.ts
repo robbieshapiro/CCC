@@ -931,6 +931,7 @@ export function barRound(snap: Snapshot, kind: BarGame) {
       })
       .catch(() => {});
     g.starter = `${hole.name}, ${me.name}. Three swings. Reginald's pouring the fireballs for the last two.`;
+    g.houseMenu = true;
     g.pour(null);
     g.practiceArea(hole, {
       title: 'Long drive',
