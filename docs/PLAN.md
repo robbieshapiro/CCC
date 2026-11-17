@@ -248,7 +248,7 @@ Last updated Nov 17, 2026 (an ace at the Ace Pot gets the whole screen, and the 
 
 ## Setup status
 
-- [ ] #331: apply `pr_331_ace_feed` after merge (admin_today lists aces).
+- [x] #331: applied `pr_331_ace_feed` on Nov 17; admin_today lists aces.
 - [x] #327: applied `pr_327_target_nets` on Nov 17; submit_bar takes the Target Range up to 1,080.
 - [x] #324: applied `pr_324_target_range` on Nov 17; the game check takes targets, submit_bar checks 0 to 810 and one a day, person_bonus has a targets line for everyone.
 - [x] #305: applied `pr_305_agent_notes` on Nov 16 (evening ET); `agent_notes_list` answers for the app, `agent_note` is closed to it. The three agents' prompts updated in place (the old activity check deleted, the Greenkeeper switched on).
