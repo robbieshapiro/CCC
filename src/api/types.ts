@@ -122,6 +122,9 @@ export type OpenRow = { playerId: string; name: string; club: string; mine: bool
 // Today's field on a course, every club (course_field): a card in, or the holes so far of one in progress
 // playerId: the person as the Open names them; mine: you; at: when the card went in, or was started
 // best: their better card in today (also while they're out on another); cards: how many of today's cards they've posted
+// a scheduled agent's report (the Architect, the Greenkeeper, the Steward): link is a course preview or a PR; needsYou:
+// something only Robbie can sort out
+export type AgentNote = { id: number; agent: string; title: string; body: string | null; link: string | null; needsYou: boolean; at: string };
 export type FieldRow = { best?: number[] | null; bestAt?: string | null; cards?: number; par?: number | null; bestPar?: number | null; playerId: string; name: string; club: string; avatar: Avatar; holes: number[]; spots: ({ x: number; y: number } | null)[]; going: boolean; at: string; mine: boolean; localId: string | null };
 // A course's record over every round ever played on it, every club (course_records): free play on a classic course counts
 export type CourseRecord = { course: string; toPar: number; holders: { name: string; club: string }[] | null; mine: number | null; rounds: number; champions: { name: string; club: string; toPar: number }[] };
@@ -315,6 +318,8 @@ export interface Api {
   setCourseTweak(session: Session, course: string, hole: number, tweak: import('../golf3d/tweaks').Tweak | null): Promise<void>;
   // changes too big for a dial, asked of the Architect (course_requests)
   courseRequests(session: Session): Promise<CourseRequest[]>;
+  // what the scheduled agents did, newest first (the Committee only)
+  agentNotes(session: Session): Promise<AgentNote[]>;
   addCourseRequest(session: Session, course: string, hole: number | null, body: string): Promise<number>;
   courseRequestDone(session: Session, id: number, done: boolean): Promise<void>;
   roomSave(session: Session, c: { id: number | null; name: string; tagline: string; holes: import('../designer/hole').HoleSpec[]; draft: boolean }): Promise<number>;
