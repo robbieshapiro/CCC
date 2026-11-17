@@ -37,7 +37,7 @@ select course, hole, tweak from course_tweaks order by course, hole;
 The size, length and difficulty vary week to week, inside these lines (Robbie, Nov 17; members liked the Caldera and the Windy City Classic):
 
 - **5 to 9 holes**, a different count from the week before (look at last week's course in `COURSES`).
-- **A mix:** par 3 to 5; from 6 holes up at least one par 3 and one par 5. Card length averages roughly 75 to 95 yards a hole, with a real spread from short to long.
+- **A mix:** par 3 to 5; from 6 holes up at least one par 3 and one par 5. Lengths like the Caldera and the Windy City Classic: par 3s about 120 to 200 yd, par 4s 330 to 480, par 5s 550 to 680, with a real spread from short to long.
 - **Difficulty**, from the CCC Rating run (`QUICK=1 SEEDS=4 COURSE=<id> npm run check-holes -- rate`; the numbers in `src/golf3d/ratings.ts`): a member about **+1.2 to +1.8 a hole** on average, a strong player **+0.2 to +0.6**. The Caldera rates about +1.4 and +0.4, the Windy City Classic about +1.8 and +0.5. Make one or two holes clearly harder (member +2.5 or more) and one a breather. Put the run's `RATE` line into `ratings.ts`.
 
 Read two finished holes first as models: `src/golf3d/holes/thecarry.ts` and `src/golf3d/holes/creekbend.ts`. Then, for each hole, make a new file in `src/golf3d/holes/`:
