@@ -19,6 +19,12 @@ import { thegorge } from './holes/thegorge';
 import { theledges } from './holes/theledges';
 import { thequarry } from './holes/thequarry';
 import { thecarry } from './holes/thecarry';
+import { sheepwalk } from './holes/atlantic/sheepwalk';
+import { punchbowl } from './holes/atlantic/punchbowl';
+import { cliffroad } from './holes/atlantic/cliffroad';
+import { fairyfort } from './holes/atlantic/fairyfort';
+import { bogroad } from './holes/atlantic/bogroad';
+import { castlestrand } from './holes/atlantic/castlestrand';
 import { lakefront } from './holes/chicago/lakefront';
 import { lincolnpark } from './holes/chicago/lincolnpark';
 import { millennium } from './holes/chicago/millennium';
@@ -125,6 +131,16 @@ const COURSES: Course[] = [
     holes: [lakefront, millennium, lincolnpark, river, wrigleyville, navypier],
     par: par([lakefront, millennium, lincolnpark, river, wrigleyville, navypier]),
     playoff: { hole: navypier, from: { x: 0, y: 640 }, label: 'Off the end of the pier' },
+  },
+  {
+    id: 'atlanticlinks',
+    // the west coast of Ireland, in the Hole Lab's links look: six holes for the week of Nov 29
+    opens: '2026-11-29',
+    name: 'The Atlantic Links',
+    tagline: 'Six holes on the west coast of Ireland. Dunes, a cliff road, a fairy fort, a bog, and a castle over the sea.',
+    holes: [sheepwalk, punchbowl, cliffroad, fairyfort, bogroad, castlestrand],
+    par: par([sheepwalk, punchbowl, cliffroad, fairyfort, bogroad, castlestrand]),
+    playoff: { hole: castlestrand, from: { x: 40, y: 780 }, label: 'Under the castle' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------
   ...(
