@@ -5,3 +5,4 @@ dist
 dist-single
 .env.production.local
 public/version.json
+.claude/worktrees/
