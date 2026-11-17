@@ -2380,6 +2380,54 @@ language sql stable security definer set search_path = public, extensions as $$
 $$;
 revoke all on function ctp_winners() from public, anon, authenticated;
 
+-- Closest to the Pin and the long drive pay the day's top three across every club (from Nov 17, src/bonus.ts
+-- DAILY_PRIZES): $300, $150, $75, at midnight ET. Before that Closest to the Pin paid its winner $150 and the long
+-- drive nothing (not paid back).
+create or replace function daily_prize(p_day date, p_place int) returns int
+language sql immutable as $$
+  select case when p_day >= date '2026-11-17' then coalesce((array[300, 150, 75])[p_place], 0)
+    when p_place = 1 then 150 else 0 end
+$$;
+
+-- each closed day's top three at Closest to the Pin, ranked as ctp_winners ranks the winner
+create or replace function ctp_places() returns table (day date, k text, h text, place int)
+language sql stable security definer set search_path = public, extensions as $$
+  with t as (
+    select s.day, lower(p.name) as k, p.pin_hash as h, s.try, s.holed, s.lost, s.ft, s.created_at
+    from daily_shots s join players p on p.id = s.player_id
+    where s.day < (now() at time zone 'America/New_York')::date
+  ), best as (
+    select t.day, t.k, t.h, bool_or(t.holed) as holed, min(t.try) filter (where t.holed) as htry,
+      array_agg(case when t.holed then 0 when t.lost then null else t.ft end order by case when t.holed then 0 when t.lost then null else t.ft end asc nulls last) as fts,
+      min(t.created_at) as first_at
+    from t group by t.day, t.k, t.h
+  ), ranked as (
+    select b.day, b.k, b.h, row_number() over (partition by b.day
+      order by b.holed desc, b.htry asc nulls last, b.fts[1] asc nulls last, b.fts[2] asc nulls last, b.fts[3] asc nulls last, b.first_at)::int as place
+    from best b where b.holed or b.fts[1] is not null
+  )
+  select * from ranked where place <= 3
+$$;
+revoke all on function ctp_places() from public, anon, authenticated;
+
+-- each closed day's top three at the long drive (a daily board from Nov 17): the day's longest ball per person,
+-- the earlier one first on a tie
+create or replace function drive_places() returns table (day date, k text, h text, place int)
+language sql stable security definer set search_path = public, extensions as $$
+  with best as (
+    select (b.created_at at time zone 'America/New_York')::date as day, lower(p.name) as k, p.pin_hash as h,
+      max(b.score) as score, min(b.created_at) as first_at
+    from bar_scores b join players p on p.id = b.player_id
+    where b.game = 'drive' and (b.created_at at time zone 'America/New_York')::date < game_today()
+      and (b.created_at at time zone 'America/New_York')::date >= date '2026-11-17'
+    group by 1, 2, 3
+  ), ranked as (
+    select day, k, h, row_number() over (partition by day order by score desc, first_at)::int as place from best
+  )
+  select * from ranked where place <= 3
+$$;
+revoke all on function drive_places() from public, anon, authenticated;
+
 -- what a person has earned on the side, across their clubs: $50 a day they finish a round, $100 on the third day running
 -- at the club and $250 every seventh, $150 a Closest to the Pin win, and $25 a birdie, $100 an eagle, $500 an ace on
 -- the day's first finished round (so replaying a short course isn't a money farm). From the shots on their cards: $75 a
@@ -2441,7 +2489,9 @@ language sql stable security definer set search_path = public, extensions as $$
     select
       50 * (select count(distinct (r.created_at at time zone 'America/New_York')::date) from r)::int as rounds,
       (select coalesce(sum(case when n >= 3 then 100 else 0 end + (n / 7) * 250), 0) from runs)::int as streaks,
-      150 * (select count(*) from ctp_winners() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
+      -- Closest to the Pin and the long drive: the day's top three (daily_prize)
+      (select coalesce(sum(daily_prize(w.day, w.place)), 0) from ctp_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
+      (select coalesce(sum(daily_prize(w.day, w.place)), 0) from drive_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as drive,
       -- birdie $100, eagle $500, albatross $1,000, ace $2,500 (src/bonus.ts) for holes from Nov 10 2026; before that the
       -- old rates, $25, $100 (an albatross too) and $500: the raise isn't paid back
       (select coalesce(sum(case when created_at >= timestamp '2026-11-10 00:00' at time zone 'America/New_York'
@@ -2457,9 +2507,9 @@ language sql stable security definer set search_path = public, extensions as $$
       -- $250 for every week (from Nov 8) with a counted card, whoever you are on the board (src/bonus.ts BONUS.week)
       250 * (select count(distinct x.month) from rounds x where x.player_id in (select id from seats) and x.card and x.month >= '2026-11-08')::int as weeks
   )
-  select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'shots', b.shots,
+  select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'drive', b.drive, 'shots', b.shots,
     'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks,
-    'total', b.rounds + b.streaks + b.ctp + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies + b.weeks) from b
+    'total', b.rounds + b.streaks + b.ctp + b.drive + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies + b.weeks) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 

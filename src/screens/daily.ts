@@ -1,3 +1,4 @@
+import { prizesLine } from '../bonus';
 // The Daily Shot on the home page and after your last try: today's shot, your tries, your streak, the board across
 // every club, and a result to share.
 import { api } from '../api';
@@ -64,7 +65,7 @@ export async function bindDaily(day: string, crown?: DailyCrown | null) {
   // today's leader, across every club, as the long drive tile shows its own
   const top = state.board[0];
   const lead = `<em class="pm-lead">${top ? `Leader: ${esc(top.name)}, ${esc(top.holed ? 'holed it' : resultLabel({ ft: top.ft, holed: false, lost: top.ft === null }))}${top.mine ? ' (you)' : ''}` : 'Nobody yet today'}</em>`;
-  el.innerHTML = `<i>🎯</i><b>Closest to the Pin</b><span>${esc(status)}</span>${lead}${king}${state.streak ? `<em class="tile-badge">🔥 ${state.streak}</em>` : ''}`;
+  el.innerHTML = `<i>🎯</i><b>Closest to the Pin</b><span>${esc(status)} · pays ${esc(prizesLine())}</span>${lead}${king}${state.streak ? `<em class="tile-badge">🔥 ${state.streak}</em>` : ''}`;
 }
 
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
@@ -83,6 +84,7 @@ export async function dailySummary(day: string, onClose: () => void) {
         <h2>${esc(shot.label)}</h2>
         <p class="daily-mine big">${tries.map(tryMark).join(' ')}</p>
         <p>Your best: <b>${resultLabel(bestTry(tries))}</b>${state?.streak ? ` · 🔥 ${state.streak} ${state.streak === 1 ? 'day' : 'days in a row'}` : ''}</p>
+        <p class="fine">Today's top three are paid ${prizesLine()} at midnight.</p>
         <h3>Today's board</h3>
         ${state ? board(state, 10) : '<p class="muted">The board is on its way.</p>'}
         <p class="fine">A new shot at midnight, Eastern.</p>
