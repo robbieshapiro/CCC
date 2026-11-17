@@ -3,7 +3,7 @@
 // It's the first tab of the Clubhouse.
 import { api } from '../api';
 import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
-import { ACE_STAKE, ACE_SWINGS, aceShot, type AceState } from '../acepot';
+import { ACE_ADD, ACE_SWINGS, aceShot, type AceState } from '../acepot';
 import { money } from '../purse';
 import { prizesLine } from '../bonus';
 import { gameName, scoreLabel, type BarGame } from '../bar';
@@ -78,17 +78,17 @@ export function barPane(snap: Snapshot) {
         <div class="bar-counter" aria-hidden="true"></div>
       </section>
       <h2 class="bar-wall">Today's contests</h2>
-      <p class="bar-wall-sub">Free to play. Closest to the Pin and the long drive pay the day's top three.</p>
+      <p class="bar-wall-sub">The club puts up the prizes. Closest to the Pin and the long drive pay the day's top three; an ace takes the pot.</p>
       <div class="bar-games">
         <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · top 3 paid ${prizesLine()} today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
         <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 fireballs · top 3 paid ${prizesLine()} today</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
+        <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>Three swings a day at ${esc(aceShot(snap.today).label)} · the club adds ${money(ACE_ADD)} for every miss, and it carries over until someone aces it</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game members" href="#/bar/members" data-game="members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
       <h2 class="bar-wall">Mo's tables</h2>
       <p class="bar-wall-sub">Your club money on the line. At most $2,000 down a day.</p>
       <div class="bar-games">
-        <a class="bar-game stake ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot <em class="bar-stake">$50 a swing</em></b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · ace it and the pot is yours. It carries over until someone does</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
         <a class="bar-game stake" href="#/bar/book" data-game="book"><i>📒</i><div><b>Mo's Book <em class="bar-stake">$10 to $500</em></b><span>Bet on who wins the Open, or back yourself · prices move as cards come in</span></div><p data-mine="book">Mo's taking bets</p></a>
         <a class="bar-game stake" href="#/bar/blackjack" data-game="blackjack"><i>🃏</i><div><b>Blackjack <em class="bar-stake">$10 to $500</em></b><span>Against Mo, for club money · $10 to $500 a hand</span></div><p data-mine="blackjack">Pull up a stool</p></a>
         <a class="bar-game stake" href="#/bar/popashot" data-game="popashot"><i>🏀</i><div><b>Pop-a-Shot <em class="bar-stake">$10 to $500</em></b><span>Thirty seconds at the hoop · beat Mo's score for club money</span></div><p data-mine="popashot">Mo's waiting</p></a>
