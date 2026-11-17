@@ -1,8 +1,10 @@
-// The Nineteenth Hole: Mo's bar, and the games on the wall behind it. Closest to the Pin and the long drive (daily),
+// The Nineteenth Hole: Mo's bar, and the games on the wall behind it. Closest to the Pin, the Ace Pot and the long drive (daily),
 // the Members' Course (weekly). Each card: what it is in a line, where you stand, the top three, and Play.
 // It's the first tab of the Clubhouse.
 import { api } from '../api';
 import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
+import { ACE_STAKE, ACE_SWINGS, aceShot, type AceState } from '../acepot';
+import { money } from '../purse';
 import { gameName, scoreLabel, type BarGame } from '../bar';
 import { isHole } from '../designer/desk';
 import { bestTry, dailyShot, resultLabel } from '../daily';
@@ -77,6 +79,7 @@ export function barPane(snap: Snapshot) {
       <h2 class="bar-wall">On the wall</h2>
       <div class="bar-games">
         <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
+        <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>${money(ACE_STAKE)} a swing at ${esc(aceShot(snap.today).label)} · make an ace, take the pot</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game cards" href="#/bar/blackjack" data-game="blackjack"><i>🃏</i><div><b>Blackjack</b><span>Against Mo, for club money · $10 to $500 a hand</span></div><p data-mine="blackjack">Pull up a stool</p></a>
         <a class="bar-game cards" href="#/bar/popashot" data-game="popashot"><i>🏀</i><div><b>Pop-a-Shot</b><span>Thirty seconds at the hoop · beat Mo's score for club money</span></div><p data-mine="popashot">Mo's waiting</p></a>
@@ -97,12 +100,13 @@ export async function fillBar(snap: Snapshot) {
   const prize = document.querySelector<HTMLButtonElement>('[data-prize]');
   if (prize) prize.onclick = () => void openPrizeCounter();
   // (Hollow Hills mini golf is closed for now: its course and code stay, ready to come back)
-  const [daily, drive, members, course, midway] = await Promise.all([
+  const [daily, drive, members, course, midway, ace] = await Promise.all([
     api.dailyState(s, snap.today).catch(() => null as DailyState | null),
     api.barBoard(s, 'drive').catch(() => null as BarBoard | null),
     api.barBoard(s, 'members').catch(() => null as BarBoard | null),
     api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => [] as MembersHole[]),
     api.barBoard(s, 'midway').catch(() => null as BarBoard | null),
+    api.aceState(s).catch(() => null as AceState | null),
   ]);
   // curses waiting for your next Midway round: the count, not who or what
   const waiting = (await api.powerupState(s).catch(() => null))?.waiting ?? 0;
@@ -143,6 +147,15 @@ export async function fillBar(snap: Snapshot) {
   if (daily) {
     const best = bestTry(daily.mine);
     put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ playerId: r.playerId, name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
+  }
+  if (ace) {
+    const left = ACE_SWINGS - ace.swingsToday;
+    put(
+      'acepot',
+      `Pot: ${money(ace.pot)} · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left today` : 'your swings are in today'}`,
+      (ace.today.length ? top3(ace.today.map((r) => ({ playerId: r.playerId, name: r.name, label: r.holed ? 'Ace!' : r.ft === null ? 'No ball' : `${r.ft} ft`, mine: r.mine }))) : '<p class="bar-empty">No swings yet today.</p>') +
+        (ace.lastAce ? `<p class="bar-empty">Last ace: ${esc(ace.lastAce.name)}, for ${money(ace.lastAce.pot)}</p>` : ''),
+    );
   }
   for (const [game, b] of [['drive', drive], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;

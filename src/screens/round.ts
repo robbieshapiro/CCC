@@ -22,12 +22,14 @@ import { hostChip, REGINALD } from '../host';
 import { myBest, toParLabel } from '../standings';
 import { refresh, requireSession } from '../state';
 import { esc, navigate, render } from '../ui';
+import { tell } from '../dialog';
 import { openFeedback } from './feedback';
 import { joinPractice, leavePractice } from './practice';
 import { range, TARGETS } from '../golf3d/practice/range';
 import { shortgame, STATIONS } from '../golf3d/practice/shortgame';
 import { scoreClass } from './home';
 import { DAILY_TRIES, dailyShot } from '../daily';
+import { ACE_SEED, ACE_STAKE, ACE_SWINGS, aceShot } from '../acepot';
 import { HANK } from '../staff';
 import { askReginald } from '../reginald';
 import { DRIVES, driveYards, minigolfScore, type BarGame } from '../bar';
@@ -669,6 +671,87 @@ export async function dailyRound(snap: Snapshot) {
       return false;
     },
   });
+}
+
+// The Ace Pot (src/acepot.ts): today's par 3, $50 a swing, three a day. Each swing is settled as it lands; an ace takes
+// the pot. After the last swing (or if the bank or Mo says no), how it went.
+export async function aceRound(snap: Snapshot) {
+  closeRound();
+  const day = snap.today;
+  const state = await api.aceState(requireSession()).catch(() => null);
+  const back = () => {
+    closeRound();
+    navigate('#/bar');
+  };
+  if (!state) return back();
+  if (state.swingsToday >= ACE_SWINGS) return void aceSummary(state.swingsToday, back);
+  if (state.bank < ACE_STAKE) return void tell('Not enough in the bank', `<p>A swing at the Ace Pot is ${money(ACE_STAKE)}. Win some on the Open first.</p>`).then(back);
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const shot = aceShot(day);
+  let swings = state.swingsToday;
+  let pot = state.pot;
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  try {
+    game = new Course3D(el, me.avatar, back);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/bar">Back to the bar</a></main>`);
+    return;
+  }
+  game.leaveText = 'Leave';
+  game.howTo = 'ace';
+  game.practiceArea(shot.hole, {
+    title: `The Ace Pot · ${money(pot)}`,
+    stations: [{ name: shot.label, at: shot.from }],
+    wind: shot.wind,
+    eyebrow: `${money(ACE_STAKE)} a swing · ace takes the pot`,
+    tag: () => `Swing ${swings + 1} of ${ACE_SWINGS}`,
+    onResult: (r) => {
+      swings++;
+      api
+        .aceSwing(requireSession(), day, { holed: r.holed, ft: r.lost ? null : r.ft })
+        .then((res) => {
+          pot = res.pot;
+          if (res.holed) void tell('Ace! The pot is yours', `<p>${money(res.payout)} in the bank. The pot starts again at ${money(res.pot)}.</p>`);
+        })
+        .catch((e) => {
+          void tell("That swing didn't count", `<p>${esc((e as Error).message)}</p><p>No money changed hands.</p>`).then(back);
+        });
+      if (swings < ACE_SWINGS) return true;
+      window.setTimeout(() => void aceSummary(swings, back), 1900);
+      return false;
+    },
+  });
+}
+
+async function aceSummary(swings: number, back: () => void) {
+  const s = await api.aceState(requireSession()).catch(() => null);
+  closeRound();
+  const sheet = document.createElement('div');
+  sheet.className = 'practice-notes daily-summary';
+  const mine = s?.today.find((r) => r.mine);
+  sheet.innerHTML = `
+    <div class="notes-card">
+      <div class="notes-body">
+        <p class="eyebrow">The Ace Pot</p>
+        <h2>${money(s?.pot ?? ACE_SEED)} in the pot</h2>
+        <p>${swings >= ACE_SWINGS ? "That's your three swings today. Back tomorrow." : ''}${mine ? ` Your nearest: <b>${mine.holed ? 'in the hole' : mine.ft === null ? 'no ball' : `${mine.ft} ft`}</b>.` : ''}</p>
+        ${s?.lastAce ? `<p class="fine">Last ace: ${esc(s.lastAce.name)}, for ${money(s.lastAce.pot)}.</p>` : '<p class="fine">Nobody has aced it yet.</p>'}
+        ${s?.today.length ? `<h3>Closest today</h3><ol class="daily-board">${s.today
+          .slice(0, 10)
+          .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span><b>${esc(r.name)}</b><small></small><em>${r.holed ? 'Ace' : r.ft === null ? '–' : `${r.ft} ft`}</em></li>`)
+          .join('')}</ol>` : ''}
+      </div>
+      <div class="notes-foot daily-foot"><button class="btn" data-back>Back to the bar</button></div>
+    </div>`;
+  document.body.appendChild(sheet);
+  sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {
+    sheet.remove();
+    back();
+  };
+  window.addEventListener('hashchange', () => sheet.remove(), { once: true });
 }
 
 // The Members' Course: the approved holes from the Design Desk, each flying its designer's name on the flag

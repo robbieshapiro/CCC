@@ -334,6 +334,9 @@ export interface Api {
   bjDeal(session: Session, stake: number): Promise<import('../blackjack').BjView>;
   bjAct(session: Session, id: number, action: 'hit' | 'stand' | 'double'): Promise<import('../blackjack').BjView>;
   // Pop-a-Shot against Mo (pas_start, pas_finish)
+  // the Ace Pot (src/acepot.ts): the pot, your swings today, the last ace, and today's closest; a swing, settled at once
+  aceState(session: Session): Promise<import('../acepot').AceState>;
+  aceSwing(session: Session, day: string, r: { holed: boolean; ft: number | null }): Promise<import('../acepot').AceSwing>;
   pasStart(session: Session, stake: number): Promise<import('../popashot').PasStart>;
   pasFinish(session: Session, id: number, score: number): Promise<import('../popashot').PasEnd>;
   // which bar games are open (bar_open_games), and the Committee's Bar tab (admin_bar, set_bar_game)

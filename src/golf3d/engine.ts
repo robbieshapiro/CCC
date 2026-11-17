@@ -295,7 +295,7 @@ export class Course3D {
   // practice of any kind: the Leave button says so and doesn't ask
   leaveText = '';
   // which how-to card this game shows (first time, then on the ? button)
-  howTo: 'round' | 'practice' | 'daily' | 'minigolf' = 'round';
+  howTo: 'round' | 'practice' | 'daily' | 'ace' | 'minigolf' = 'round';
   // Hank the Starter's word on the first tee of a round
   starter = '';
   // told after every swing, for the practice log
@@ -1065,6 +1065,7 @@ export class Course3D {
       round: ['How to play', 'Fewest shots wins.'],
       practice: ['Practice', "Nothing counts. Hit as many as you like."],
       daily: ['Closest to the Pin', 'One shot, three tries. Closest wins.'],
+      ace: ['The Ace Pot', '$50 a swing, three a day. Make an ace and the whole pot is yours.'],
       minigolf: ['Hollow Hills Mini Golf', 'Six holes. Fewest strokes wins the week.'],
     }[this.howTo];
     const card = document.createElement('div');

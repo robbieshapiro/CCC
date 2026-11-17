@@ -14,7 +14,7 @@ import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
 import { leaveShop } from './screens/shop';
-import { barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
+import { aceRound, barRound, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { playoff } from './screens/playoff';
 import { clubhouse, isAboutPart, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
@@ -85,6 +85,7 @@ async function router() {
     if (page === 'round') return arg === 'practice' ? round(s, { course: courseFor(s.month), practice: true }) : round(s);
     if (page === 'daily') return dailyRound(s);
     if (page === 'playoff') return playoff(s);
+    if (page === 'bar' && arg === 'ace') return aceRound(s);
     if (page === 'bar' && arg === 'blackjack') return blackjack(s);
     if (page === 'bar' && arg === 'popashot') return popashot(s);
     if (page === 'bar' && arg === 'billiards') return billiards(s);
