@@ -1,6 +1,6 @@
 ---
 name: live-sql
-description: Run SQL against the live Claude Country Club database (Supabase project "CCC") safely. Use whenever a PR's SQL needs applying after merge, a one-off data fix is asked for (remove a round, correct a balance), or you need to read live data to check something. Covers testing on scratch Postgres first, the approval prompt Robbie answers, what to do when it times out, and how to verify.
+description: Run SQL against the live Claude Country Club database (Supabase project "CCC") safely. Use whenever a PR's SQL needs applying after merge, a one-off data fix is asked for (remove a round, correct a balance), or you need to read live data to check something. Covers testing on scratch Postgres first, what counts as Robbie's go-ahead, and how to verify.
 ---
 
 # Live SQL
@@ -12,8 +12,8 @@ The live database is Supabase project **CCC**, id `xixfekrwgyknbzttyrtp`. Load t
 | You want to | Use | Approval |
 |---|---|---|
 | Read anything (check a balance, count rows, confirm a function) | `execute_sql` with a `select` | None. Fine any time. |
-| Apply a merged PR's schema changes | `apply_migration`, named after the PR (`pr_252_midway`) | Robbie approves in the app |
-| A one-off data fix Robbie asked for | `apply_migration`, named `oneoff_<what>` | Robbie approves in the app |
+| Apply a merged PR's schema changes | `apply_migration`, named after the PR (`pr_252_midway`) | Robbie saying merge |
+| A one-off data fix Robbie asked for | `apply_migration`, named `oneoff_<what>` | Robbie asking for it in chat |
 
 Writes to live data go through `apply_migration`, so there's a record of them in the migration history. Never drop, delete or rewrite live data unless Robbie asked for that exact change.
 
@@ -40,13 +40,14 @@ end $$;
 
 Look the rows up with a read-only `select` first and name them to Robbie (who, what, when) before you send the change.
 
-## 3. The approval prompt
+## 3. Robbie's go-ahead (since Nov 17)
 
-Every live write opens a prompt in Robbie's Claude app. He has about 60 seconds to approve it.
+`apply_migration` runs without a prompt (it's allowed in `.claude/settings.json`). The prompt used to appear only inside the chat for about 60 seconds, with no notification, so Robbie never saw one and they timed out. His go-ahead is now what he says in chat:
 
-- Before you send it, say in one line what it changes, so he knows the prompt is coming.
-- If it times out ("the server asked the user a question, and no answer came"), nothing ran. Don't loop. Stop the turn and tell Robbie it timed out. Then he can either say "go" with the app open and you send it once more, or paste the SQL into the Supabase SQL editor himself. Give him the exact block.
-- Never try to get around the prompt (other tools, other routes). It's the safety check.
+- A PR's SQL: he said merge. Apply it right after the merge, nothing more.
+- A one-off data change: he asked for it in chat (remove this card, delete that test member). Never on your own initiative.
+- Nothing else writes to the live database. Say in one line what it changes as you send it.
+- If a call is still refused or times out, nothing ran: give him the exact block to paste into the Supabase SQL editor.
 
 ## 4. Verify
 
