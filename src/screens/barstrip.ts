@@ -6,6 +6,7 @@ import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { ACE_SEED, ACE_SWINGS } from '../acepot';
+import { KIND_NAME, KIND_ORDER } from '../replay';
 import { todayInGameTz } from '../day';
 import { scoreLabel } from '../bar';
 import { resultLabel } from '../daily';
@@ -33,6 +34,7 @@ export function barStrip() {
     <p class="bs-group">Today's contests</p>
     ${card(ACE, 'ace')}
     <div class="bs-row">${CONTESTS.map((c) => card(c)).join('')}</div>
+    <div class="bs-replays" data-bs-replays hidden></div>
   </section>`;
 }
 
@@ -45,6 +47,23 @@ const fill = (game: string, big: string, sub = '') => {
 
 export async function bindBarStrip(snap: Snapshot) {
   const s = requireSession();
+  // Shots of the day: the best of each kind today, rarest first, to watch (src/replay.ts)
+  void api
+    .replaysToday(s)
+    .then((rows) => {
+      const box = document.querySelector<HTMLElement>('[data-bs-replays]');
+      if (!box || !rows.length) return;
+      const top = [...rows].sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind)).slice(0, 3);
+      box.innerHTML = `<p class="bs-group">Shots of the day</p>${top
+        .map((r) => `<a class="bs-replay" href="#/replay/${r.id}"><i>▶</i><div><b>${r.mine ? 'You' : esc(r.name)} · ${esc(r.label)}</b><span>${esc(KIND_NAME[r.kind])}</span></div></a>`)
+        .join('')}`;
+      box.hidden = false;
+      // the ace banner plays the ace
+      const ace = rows.find((r) => r.kind === 'ace');
+      const news = document.querySelector<HTMLAnchorElement>('[data-bs-news]');
+      if (ace && news) news.href = `#/replay/${ace.id}`;
+    })
+    .catch(() => {});
   void api.barGames(s).then(({ settings, committee }) => {
     document.querySelectorAll<HTMLElement>('[data-bs]').forEach((el) => (el.hidden = settings[el.dataset.bs!] === false && !committee));
   });

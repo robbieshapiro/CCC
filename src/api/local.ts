@@ -29,7 +29,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { aceSwings?: { playerId: string; day: string; holed: boolean; ft: number | null; pot: number; payout: number; at: string }[]; schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book' | 'uth'; uth?: { cards: number[]; ante: number; trips: number; play: number; stage: UthStage; result: UthView['result'] }; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
+type Db = { replays?: { id: number; playerId: string; day: string; kind: import('../replay').ReplayKind; score: number; data: import('../replay').ReplayData; at: string }[]; aceSwings?: { playerId: string; day: string; holed: boolean; ft: number | null; pot: number; payout: number; at: string }[]; schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book' | 'uth'; uth?: { cards: number[]; ante: number; trips: number; play: number; stage: UthStage; result: UthView['result'] }; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -1356,6 +1356,42 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       lastAce: last ? { name: db.players.find((y) => y.id === last.playerId)?.name ?? '?', pot: last.payout, at: last.at } : null,
       today: [...best.values()].sort((a, b) => Number(b.holed) - Number(a.holed) || (a.ft ?? 1e9) - (b.ft ?? 1e9)),
     };
+  },
+
+  async saveReplay(session, kind, score, data) {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const day = todayInGameTz();
+    const list = (db.replays ??= []);
+    const had = list.find((x) => x.playerId === me.id && x.day === day && x.kind === kind);
+    if (had && had.score >= score) return;
+    if (had) Object.assign(had, { score, data, at: new Date().toISOString() });
+    else list.push({ id: list.length + 1, playerId: me.id, day, kind, score, data, at: new Date().toISOString() });
+    save(db);
+  },
+
+  async replaysToday(session) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const day = todayInGameTz();
+    const best = new Map<string, NonNullable<Db['replays']>[number]>();
+    for (const x of (db.replays ?? []).filter((x) => x.day === day)) {
+      const b = best.get(x.kind);
+      if (!b || x.score > b.score) best.set(x.kind, x);
+    }
+    return [...best.values()].map((x) => {
+      const p = db.players.find((y) => y.id === x.playerId);
+      return { id: x.id, kind: x.kind, name: p?.name ?? '?', label: x.data.label, score: x.score, mine: !!p && p.name.toLowerCase() === me.name.toLowerCase(), at: x.at };
+    });
+  },
+
+  async replay(session, id) {
+    const db = load();
+    playerByToken(db, session.token);
+    const x = (db.replays ?? []).find((r) => r.id === id);
+    if (!x) throw new Error('That replay has gone.');
+    const p = db.players.find((y) => y.id === x.playerId);
+    return { id: x.id, kind: x.kind, name: p?.name ?? '?', avatar: p!.avatar, data: x.data };
   },
 
   async aceSwing(session, day, r) {

@@ -309,7 +309,11 @@ export class Course3D {
   // practice of any kind: the Leave button says so and doesn't ask
   leaveText = '';
   // which how-to card this game shows (first time, then on the ? button)
-  howTo: 'round' | 'practice' | 'daily' | 'ace' | 'minigolf' | 'drive' | 'targets' = 'round';
+  howTo: 'round' | 'practice' | 'daily' | 'ace' | 'minigolf' | 'drive' | 'targets' | 'none' = 'round';
+  // the last shot struck: what a replay keeps (src/replay.ts)
+  lastPlayed: { club: ClubId; power: number; aim: number; from: V2; r: Result } | null = null;
+  // a replay: the next swing plays these frames rather than a new shot
+  private scripted: Result | null = null;
   // Hank the Starter's word on the first tee of a round
   starter = '';
   // told after every swing, for the practice log
@@ -421,6 +425,21 @@ export class Course3D {
   practiceArea(hole: Hole, drill: Omit<Drill, 'at'>) {
     this.drill = { ...drill, at: 0 };
     void this.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
+  }
+
+  // A replay (src/screens/replay.ts): the golfer lines up and swings, and the ball flies the saved frames. Call it once
+  // the practice area is ready to aim.
+  playScripted(club: ClubId, power: number, aim: number, r: Result) {
+    if (this.mode !== 'aim') return false;
+    this.club = club;
+    this.aim = aim;
+    this.power = power;
+    this.scripted = r;
+    this.swing(0, 'start');
+    return true;
+  }
+  get ready() {
+    return this.mode === 'aim';
   }
 
   // ---------- the Target Range's rings, and the burst when a ball scores in one ----------
@@ -1212,6 +1231,7 @@ export class Course3D {
   // The how-to card: three picture steps and a button. Shown the first time on this device for each kind of game,
   // then whenever the ? is tapped.
   private showHowTo(auto = false) {
+    if (this.howTo === 'none') return;
     const key = `ccc-howto-${this.howTo}`;
     if (auto) {
       try {
@@ -1753,8 +1773,10 @@ export class Course3D {
     const fx = full ? this.fx() : null;
     if (!fx?.clean) error += lieScatter(this.hole, this.pos, club, Math.random());
     const shot: Shot = { angle: this.aim, power, club, error, clock: this.clock, boost: full ? this.boost() * (this.bombSwing ? BOMB : 1) : 1, spin: full ? this.spin : 0, shape: full ? this.shape : 0, wind: this.wind && fx && fx.wind !== 1 ? { x: this.wind.accel.x * fx.wind, y: this.wind.accel.y * fx.wind } : this.wind?.accel, cleanLie: !!fx?.clean };
-    let r = simulate(this.hole, this.pos, shot);
-    if (this.drill?.catch) r = this.drill.catch(r);
+    let r = this.scripted ?? simulate(this.hole, this.pos, shot);
+    if (this.drill?.catch && !this.scripted) r = this.drill.catch(r);
+    this.scripted = null;
+    this.lastPlayed = { club, power, aim: this.aim, from: { ...this.pos }, r };
     if (!this.practice && !this.drill)
       this.onShotLog?.({ c: club, p: Math.round(power * 100) / 100, e: Math.round(swingError * 100) / 100, f: [Math.round(this.pos.x), Math.round(this.pos.y)], t: [Math.round(r.end.x), Math.round(r.end.y)], l: surfaceAt(this.hole, this.pos), x: r.penalty ? 1 : 0, i: r.holed ? 1 : 0 });
     // every shot starts from a stock strike

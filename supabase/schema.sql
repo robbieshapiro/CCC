@@ -4136,3 +4136,60 @@ begin
     from (select * from agent_notes order by created_at desc limit 20) n), '[]');
 end $$;
 grant execute on function agent_notes_list(uuid) to anon;
+
+-- Replays (Nov 18, src/replay.ts): the day's best shots, kept as the ball flew them so anyone can watch them from home.
+-- One row per person per kind per day, their best (score: higher is better: feet under 500 for Closest to the Pin, the
+-- yards for the long drive, the ball's points at the Target Range, how far under par on a card, 1000 for an ace). The
+-- data is the packed shot (frames, sounds, club, aim), capped at 24 KB.
+create table if not exists replays (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  day date not null,
+  kind text not null check (kind in ('daily', 'ace', 'drive', 'targets', 'card')),
+  score numeric not null,
+  data jsonb not null,
+  created_at timestamptz not null default now(),
+  unique (player_id, day, kind)
+);
+alter table replays enable row level security;
+create index if not exists replays_day on replays (day, kind);
+
+create or replace function save_replay(p_token uuid, p_kind text, p_score numeric, p_data jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token));
+begin
+  if p_kind not in ('daily', 'ace', 'drive', 'targets', 'card') then raise exception 'No such replay.'; end if;
+  if pg_column_size(p_data) > 24000 then raise exception 'That replay is too big.'; end if;
+  if jsonb_typeof(p_data->'frames') is distinct from 'array' then raise exception 'That replay doesn''t look right.'; end if;
+  insert into replays (player_id, day, kind, score, data) values (me.id, game_today(), p_kind, p_score, p_data)
+  on conflict (player_id, day, kind) do update set score = excluded.score, data = excluded.data, created_at = now()
+    where excluded.score > replays.score;
+end $$;
+
+-- today's best of each kind, across every club (no frames: replay_get fetches one to watch)
+create or replace function replays_today(p_token uuid) returns json
+language sql stable security definer set search_path = public, extensions as $$
+  with me as (select player_for(p_token) as p),
+  best as (
+    select distinct on (r.kind) r.id, r.kind, r.score, r.data->>'label' as label, r.created_at, pl.name, pl.pin_hash
+    from replays r join players pl on pl.id = r.player_id
+    where r.day = game_today() order by r.kind, r.score desc, r.created_at
+  )
+  select coalesce(json_agg(json_build_object('id', b.id, 'kind', b.kind, 'name', b.name, 'label', b.label, 'score', b.score,
+    'mine', lower(b.name) = lower((m.p).name) and b.pin_hash = (m.p).pin_hash, 'at', b.created_at)), '[]')
+  from best b, me m
+$$;
+
+create or replace function replay_get(p_token uuid, p_id bigint) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); out json;
+begin
+  select json_build_object('id', r.id, 'kind', r.kind, 'name', pl.name, 'avatar', pl.avatar, 'data', r.data) into out
+  from replays r join players pl on pl.id = r.player_id where r.id = p_id;
+  if out is null then raise exception 'That replay has gone.'; end if;
+  return out;
+end $$;
+
+grant execute on function save_replay(uuid, text, numeric, jsonb) to anon;
+grant execute on function replays_today(uuid) to anon;
+grant execute on function replay_get(uuid, bigint) to anon;

@@ -345,6 +345,11 @@ export interface Api {
   // the Ace Pot (src/acepot.ts): the pot, your swings today, the last ace, and today's closest; a swing, settled at once
   aceState(session: Session): Promise<import('../acepot').AceState>;
   aceSwing(session: Session, day: string, r: { holed: boolean; ft: number | null }): Promise<import('../acepot').AceSwing>;
+  // replays (src/replay.ts): keep a shot (the server keeps your best of each kind today), today's best of each kind, and
+  // one to watch
+  saveReplay(session: Session, kind: import('../replay').ReplayKind, score: number, data: import('../replay').ReplayData): Promise<void>;
+  replaysToday(session: Session): Promise<import('../replay').ReplayRow[]>;
+  replay(session: Session, id: number): Promise<import('../replay').Replay>;
   pasStart(session: Session, stake: number): Promise<import('../popashot').PasStart>;
   pasFinish(session: Session, id: number, score: number): Promise<import('../popashot').PasEnd>;
   // which bar games are open (bar_open_games), and the Committee's Bar tab (admin_bar, set_bar_game)
