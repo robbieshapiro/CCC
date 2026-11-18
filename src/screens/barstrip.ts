@@ -76,7 +76,7 @@ export async function bindBarStrip(snap: Snapshot) {
       if (news && a.lastAce && todayInGameTz(new Date(a.lastAce.at)) === snap.today) {
         const me = snap.players.find((p) => p.id === snap.me);
         const you = me && me.name.toLowerCase() === a.lastAce.name.toLowerCase();
-        news.innerHTML = `<i>🏆</i><div><b>${you ? 'You' : esc(a.lastAce.name)} aced the Ace Pot today</b><span>${money(a.lastAce.pot)} ${you ? 'is yours' : 'won'} · the pot started again at ${money(ACE_SEED)}</span></div>`;
+        news.innerHTML = `<i>🏆</i><div><b>${you ? 'You' : esc(a.lastAce.name)} won the Ace Pot today</b><span>${money(a.lastAce.pot)}${you ? ' is yours' : ''} · the pot started again at ${money(ACE_SEED)}</span></div>`;
         news.hidden = false;
       }
       fill('acepot', `${money(a.pot)} pot`, `Carries over · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left` : 'back tomorrow'}`);
