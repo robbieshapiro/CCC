@@ -5,8 +5,8 @@ import { sfx } from '../fx/sound';
 import { money } from '../purse';
 import { esc } from '../ui';
 
-export type Tier = 'birdie' | 'eagle' | 'putt' | 'streak';
-const COLOR: Record<Tier, string> = { birdie: '#3fbf5a', eagle: '#f2b705', putt: '#3f8ff0', streak: '#ff7a18' };
+export type Tier = 'birdie' | 'eagle' | 'putt';
+const COLOR: Record<Tier, string> = { birdie: '#3fbf5a', eagle: '#f2b705', putt: '#3f8ff0' };
 
 // title: what it was (Birdie); amount: what it paid (0: nothing to say); sub: the hole, or "rehearsal, not paid"
 export function scorePop(host: HTMLElement, tier: Tier, title: string, amount: number, sub = '') {

@@ -49,7 +49,6 @@ import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '.
 import { canShare, dailySummary, share } from './daily';
 import { aceWin, bigMoment } from './acewin';
 import { scorePop } from './moments';
-import { MILESTONES } from '../streak';
 import { KIND_NAME, packShot, unpackShot, type ReplayHole, type ReplayKind } from '../replay';
 import { courseById } from '../golf3d/courses';
 import { periodOf } from '../day';
@@ -433,9 +432,6 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     try {
       await api.submitRound(requireSession(), { course: course.id, holes: scores, pars: course.holes.map((h) => h.par), feats: [...feats], spots, card, shots: shotLog });
       progress(course.holes.length, true);
-      // the day's first card keeps the streak going: a pop at 3, 7, 14 and 30 days
-      const st = snap.players.find((p) => p.id === snap.me)?.streak;
-      if (card && st && !st.today && MILESTONES.includes(st.days + 1)) scorePop(el, 'streak', `🔥 ${st.days + 1} days in a row`, 0, 'Your streak');
       // a plaque this round earned pays now (trophy money, from Nov 12)
       if (!preview && !dry) void payTrophies(el);
       if (shotsFor) store.remove(SHOTS_KEY);

@@ -18,14 +18,7 @@ import { bindPlayoff, playoffCard } from './playoff';
 import { bindNominateTile, nominateTile } from './nominate';
 import { bindHomeScreenTip, homeScreenTip } from './homescreen';
 import { board, crownFor, myBest, toParLabel } from '../standings';
-import { flame, type Streak } from '../streak';
 
-// your streak on the Play card: the flame and the count once it's going, and a warning when today's card isn't in yet
-function streakLine(s: Streak | undefined) {
-  if (!s || s.days < 2) return '';
-  if (s.today) return `<p class="streak-line on">🔥 <b>${s.days} days in a row</b> · today's card is in</p>`;
-  return `<p class="streak-line warn">🔥 <b>Your ${s.days}-day streak</b> ends at midnight. Get a card in to keep it.</p>`;
-}
 import { refresh, requireSession } from '../state';
 import { store } from '../storage';
 import { esc, golferHref, header, navigate, render } from '../ui';
@@ -139,7 +132,7 @@ export function home(snap: Snapshot) {
         <td class="num topar ${where} ${r.best ? (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') : ''}">${r.best ? toParLabel(r.toPar) : '–'}</td>`;
       return `<tr class="${r.playerId === snap.me ? 'me' : ''}">
         <td class="rank">${r.best ? r.rank : ''}</td>
-        <td class="who"><a href="${golferHref(p.id, p.id === snap.me)}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}${flame(p.streak)}</i><em>${openMoney ? `<span data-pay-for="${p.id}">${guest(p) ? `<b class="pay away">Guest</b> · ` : ''}</span>` : guest(p) ? `<b class="pay away">Guest</b> · ` : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
+        <td class="who"><a href="${golferHref(p.id, p.id === snap.me)}">${portrait(p.avatar, 34)}<span><i class="nm">${esc(p.name)}${badgeFor(p)}${crownFor(snap, p.id)}</i><em>${openMoney ? `<span data-pay-for="${p.id}">${guest(p) ? `<b class="pay away">Guest</b> · ` : ''}</span>` : guest(p) ? `<b class="pay away">Guest</b> · ` : pay.get(p.id)?.payout ? `<b class="pay">${money(pay.get(p.id)!.payout)}</b> · ` : ''}${r.rounds ? `${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}<i class="last"> · last ${lastPlayed(r.last!)}</i>` : 'yet to play'}</em></span></a></td>
         ${score('m')}${cells}${score('d')}
       </tr>`;
     })
@@ -170,7 +163,6 @@ export function home(snap: Snapshot) {
           <p class="eyebrow">${leaf(course)}${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
           <p class="muted">${course.holes.length} holes · par ${course.par}${mine ? ` · your best <b>${toParLabel(mine.total - mine.par)}</b>` : ''}</p>
-          ${streakLine(snap.players.find((p) => p.id === snap.me)?.streak)}
           ${
             !cards
               ? `<a class="btn big" href="#/round" ${host ? 'data-play-home' : ''}>${mine ? 'Play again' : 'Play'}</a>`
