@@ -305,15 +305,19 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   const pops = card || rehearsal;
   const unpaid = dry ? 'rehearsal, not paid' : rehearsal ? 'preview, not paid' : '';
   const holeShots = new Map<number, number>();
+  // a holed long putt or chip-in, kept until the ball has dropped (the shot is worked out the moment it's struck, and
+  // a pop then gave it away: Nov 18)
+  let pending: { title: string; amount: number; sub: string } | null = null;
   if (!opts.practice)
     game.onShotLog = (s) => {
       // the moments worth a cheer, on a daily card only (practice and replays earn nothing)
       const first = !holeShots.get(holeAt);
       holeShots.set(holeAt, (holeShots.get(holeAt) ?? 0) + 1);
+      if (first) pending = null;
       if (pops && s.i) {
         const ft = Math.round(Math.hypot(s.t[0] - s.f[0], s.t[1] - s.f[1]));
-        if (s.c === 'putter' && puttBonus(ft)) scorePop(el, 'putt', ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', puttBonus(ft), unpaid || `${ft} ft`);
-        else if (s.c !== 'putter' && s.l !== 'green' && !first) scorePop(el, 'putt', 'Chip-in', BONUS.chipin, unpaid || 'from off the green');
+        if (s.c === 'putter' && puttBonus(ft)) pending = { title: ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', amount: puttBonus(ft), sub: unpaid || `${ft} ft` };
+        else if (s.c !== 'putter' && s.l !== 'green' && !first) pending = { title: 'Chip-in', amount: BONUS.chipin, sub: unpaid || 'from off the green' };
       }
       // the first time a swing past 100% goes badly wrong, say what the red zone is (once a device)
       if (s.p >= 1.05 && Math.abs(s.e) >= 0.5 && s.c !== 'putter' && !store.get('ccc-overswing-tip')) {
@@ -371,10 +375,19 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     // an eagle or better on a real card is kept as a replay of the shot that holed it
     if (h && card && !preview && !dry && par - strokes >= 2 && game)
       keepShot(game, 'card', (par - strokes) * 100 + (strokes === 1 ? 500 : 0), { kind: 'card', course: course.id, i: holeAt }, `${strokes === 1 ? 'Hole in one' : shotName(strokes, par)} on ${h.name}`);
+    // the ball has dropped: now the chip-in or long putt pops, and a birdie or eagle after it
+    const held = pending;
+    pending = null;
+    if (held) scorePop(el, 'putt', held.title, held.amount, held.sub);
     const sb = pops && !opts.practice && h ? shotBonus(strokes, par) : 0;
     if (!sb || strokes === 1 || par - strokes >= 3 || !game) return;
-    if (par - strokes >= 2) game.burst(h.cup, 5, 0xf2b705);
-    scorePop(el, par - strokes >= 2 ? 'eagle' : 'birdie', shotName(strokes, par), sb, unpaid || h.name);
+    const g = game;
+    const score = () => {
+      if (par - strokes >= 2) g.burst(h.cup, 5, 0xf2b705);
+      scorePop(el, par - strokes >= 2 ? 'eagle' : 'birdie', shotName(strokes, par), sb, unpaid || h.name);
+    };
+    if (held) window.setTimeout(score, 1400);
+    else score();
   };
   for (let i = scores.length; i < course.holes.length; ) {
     const h = course.holes[i];
