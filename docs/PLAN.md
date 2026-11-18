@@ -257,7 +257,7 @@ Last updated Nov 18, 2026 (a card's replay is played to that day's pin; Shots of
 
 ## Setup status
 
-- [ ] #340: apply `pr_340_replay_pin` (`replay_get` returns the day) after merge.
+- [x] #340: applied `pr_340_replay_pin` on Nov 18; replay_get returns the day.
 - [x] #339: applied `pr_339_shots` on Nov 18; the old unique constraint is gone, card rows have their hole slot, and replays_today lists both of the day's eagles.
 - [x] #336: applied `pr_336_no_streak` on Nov 18; neither get_snapshot nor open_board calls the streak.
 - [x] #335: applied `pr_335_replays` on Nov 17 (ET); the table is there with row security on, and the three functions answer.
