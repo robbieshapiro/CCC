@@ -252,7 +252,7 @@ Last updated Nov 18, 2026 (replays: the day's best shots to watch from home; the
 
 ## Setup status
 
-- [ ] #335: apply `pr_335_replays` after merge (the replays table, save_replay, replays_today, replay_get).
+- [x] #335: applied `pr_335_replays` on Nov 17 (ET); the table is there with row security on, and the three functions answer.
 - [x] #334: applied `pr_334_streak` on Nov 17; person_streak answers (Marc 10 days, Tommy 6).
 - [x] #331: applied `pr_331_ace_feed` on Nov 17; admin_today lists aces.
 - [x] #327: applied `pr_327_target_nets` on Nov 17; submit_bar takes the Target Range up to 1,080.
