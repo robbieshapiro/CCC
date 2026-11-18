@@ -1,7 +1,6 @@
 // Home, live: who's out on the course right now and today's cards, from every club, and the Open as a simple list
 // (place, name, club, cards, money, to par) with a tag on anyone still out. Each section shows only once there's
 // something in it. Refreshed every 30 seconds while home is open; the hole-by-hole scorecards stay a tap away.
-import { flame } from '../streak';
 import { api } from '../api';
 import type { FieldRow, OpenRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
@@ -145,7 +144,7 @@ function drawBoard() {
           const tied = rows.filter((x) => x.total - x.par === tp).length > 1;
           const won = pay.get(r.playerId)?.payout;
           const link = golferHref(r.playerId, r.mine);
-          const name = `<b>${esc(r.name)}${flame(r.streak)}</b><small>${tab === 'open' ? `${esc(r.club)} · ` : ''}${r.rounds} ${r.rounds === 1 ? 'card' : 'cards'}${out.has(r.playerId) ? ' · <span class="lv-on">on the course</span>' : ''}</small>`;
+          const name = `<b>${esc(r.name)}</b><small>${tab === 'open' ? `${esc(r.club)} · ` : ''}${r.rounds} ${r.rounds === 1 ? 'card' : 'cards'}${out.has(r.playerId) ? ' · <span class="lv-on">on the course</span>' : ''}</small>`;
           return `<tr class="${r.mine ? 'me ' : ''}${place === 1 ? 'lead' : ''}"><td class="pos">${tied ? 'T' : ''}${place}</td><td class="nm">${link ? `<a href="${link}">${name}</a>` : name}</td><td class="pay">${won ? money(won) : ''}</td><td class="tp">${toParLabel(tp)}</td></tr>`;
         })
         .join('')}</tbody></table>`

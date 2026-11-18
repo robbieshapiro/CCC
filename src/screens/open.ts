@@ -1,7 +1,6 @@
 // The Open: one board across every club, this month's best round per person. It sits beside the club's own
 // board as a tab, and is the one members see first. Clubs aren't shown; only members of your own club link
 // through to a card.
-import { flame } from '../streak';
 import { api } from '../api';
 import type { OpenChampion, OpenRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
@@ -32,7 +31,7 @@ function table(snap: Snapshot, rows: ReturnType<typeof ranked>, pay?: ReturnType
   const body = rows
     .map((r) => {
       const crowned = snap.crown && snap.crown.name === r.name && snap.crown.club === r.club ? ` <span class="crown" title="Yesterday's Closest to the Pin">🎯</span>` : '';
-      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}${crowned}${flame(r.streak)}<em>${pay?.get(r.playerId)?.payout ? `<b class="pay">${money(pay.get(r.playerId)!.payout)}</b> · ` : ''}${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
+      const who = `${portrait(r.avatar, 34)}<span>${esc(r.name)}${crowned}<em>${pay?.get(r.playerId)?.payout ? `<b class="pay">${money(pay.get(r.playerId)!.payout)}</b> · ` : ''}${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'} · last ${lastPlayed(r.last)}</em></span>`;
       const link = golferHref(r.playerId, r.mine);
       return `<tr class="${r.mine ? 'me' : ''}">
         <td class="rank">${r.rank}</td>

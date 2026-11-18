@@ -700,8 +700,9 @@ begin
   update players set avatar = p_avatar where id in (select person_seats(me));
 end $$;
 
--- The daily streak (Nov 17, src/streak.ts): days in a row a person got a card in, across their clubs. Alive while the
--- last card day is today or yesterday. today: whether today's is in.
+-- The daily streak (Nov 17): days in a row a person got a card in, across their clubs. Alive while the last card day is
+-- today or yesterday. today: whether today's is in. (Shown for a day in #334; taken off the boards and home in #336 at
+-- Robbie's word. Nothing calls it now; kept for an agent or a later idea.)
 create or replace function person_streak(p players) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with d as (
@@ -745,7 +746,6 @@ begin
         'owned', (select coalesce(json_agg(distinct item), '[]') from purchases where player_id in (select person_seats(pl))),
         -- the side money (club bonuses): counts toward career earnings and rank, not the board's purse column
         'bonus', person_bonus(pl),
-        'streak', person_streak(pl),
         -- playing here from another club: on the board and in for the title, but paid at home
         'away', (home_of(pl)).group_id <> pl.group_id,
         -- runs the clubs: shown as the Committee, never as a guest (display only; away still decides the purse)
@@ -943,9 +943,7 @@ begin
         'mine', lower(me.name) = b.k and me.pin_hash = b.h,
         'localId', (select p2.id from players p2 where p2.group_id = me.group_id and lower(p2.name) = b.k and p2.pin_hash = b.h),
         'avatar', b.avatar, 'holes', b.holes, 'total', b.total, 'par', b.par,
-        'rounds', c.n, 'last', c.last, 'createdAt', b.created_at,
-        -- days in a row with a card in (person_streak, Nov 17)
-        'streak', (select person_streak(pp) from players pp where pp.id = b.home_id)
+        'rounds', c.n, 'last', c.last, 'createdAt', b.created_at
       ) order by b.total - b.par, b.created_at)
     from best b join counts c using (home_id) join groups g on g.id = b.home_group
   ), '[]');

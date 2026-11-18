@@ -2348,13 +2348,6 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 .tr-pop.moment.eagle span { color: #2a1802; }
 .ace-big.long { font-size: 56px; line-height: 1.05; }
 
-/* the daily streak (Nov 17, src/streak.ts) */
-.flame { display: inline-block; margin-left: 5px; padding: 0 6px; border-radius: 999px; background: linear-gradient(135deg, #ff9a3c, #e8452a); color: #fff; font: 800 11px var(--font); font-style: normal; line-height: 17px; vertical-align: 2px; }
-.streak-line { margin: 6px 0 2px; padding: 7px 11px; border-radius: 10px; font-size: 14px; }
-.streak-line.on { background: rgba(255, 154, 60, 0.16); color: inherit; }
-.streak-line.warn { background: linear-gradient(135deg, #ff9a3c, #e8452a); color: #fff; animation: ace-throb 1.4s ease-in-out infinite alternate; }
-.tr-pop.moment.streak b { font-size: 40px; }
-
 /* Shots of the day (Nov 18, src/replay.ts): replays to watch, under the contests on home */
 .bs-replays { display: grid; gap: 6px; }
 .bs-replays[hidden] { display: none; }

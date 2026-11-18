@@ -33,7 +33,6 @@ export type Player = {
   top10s?: number;
   spent?: number; // what they've spent in the Pro Shop (src/shop.ts): their balance is earnings less this
   owned?: string[]; // the Pro Shop items they own (earnings, spent and owned follow the person across their clubs)
-  streak?: import('../streak').Streak; // days in a row with a card in (src/streak.ts)
   bonus?: Bonus; // the side money (src/bonus.ts): rounds, streaks, Closest to the Pin, birdies and better
   away?: boolean; // playing here from another club: on the board and in for the title, but their home club pays them
   committee?: boolean; // runs the clubs: shown as the Committee, never tagged a guest (display only)
@@ -119,7 +118,7 @@ export type ActivityKind = 'visit' | 'locker';
 export type MemberActivity = { name: string; lastSeen: string | null; days: number; rounds: number; practice: number; lockers: number };
 // The Open: this month's best round per person across every club. One entry a person, under their first club.
 // localId: their member id in the viewer's club, if they're in it.
-export type OpenRow = { playerId: string; name: string; club: string; mine: boolean; localId: string | null; avatar: Avatar; holes: number[]; total: number; par: number; rounds: number; last: string; createdAt: string; streak?: import('../streak').Streak };
+export type OpenRow = { playerId: string; name: string; club: string; mine: boolean; localId: string | null; avatar: Avatar; holes: number[]; total: number; par: number; rounds: number; last: string; createdAt: string };
 // Today's field on a course, every club (course_field): a card in, or the holes so far of one in progress
 // playerId: the person as the Open names them; mine: you; at: when the card went in, or was started
 // best: their better card in today (also while they're out on another); cards: how many of today's cards they've posted
