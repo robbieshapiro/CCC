@@ -22,7 +22,7 @@ import { bindClubMaker, clubMaker } from './clubs';
 import { inviteLink } from './invite';
 import { chartSections, loadKpis } from './adminKpis';
 import { ask, copyBox, tell } from '../dialog';
-import { agentsSections, coursesSections, loadHome, metricsSections, showCourse } from './adminHome';
+import { agentsSections, coursesSections, loadHome, metricsSections, showCourse, toTabs } from './adminHome';
 import { applyFeedFilter, loadToday, todaySections } from './adminToday';
 import { loadNominations, nominationsSection } from './nominate';
 import { bindNudge, nudgeSection } from './adminNudge';
@@ -55,6 +55,8 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
   if (shell && shell.dataset.group === requireSession().groupId) {
     showTab(tab);
     if (tab === 'courses') showCourse(course ?? null);
+    // the tab bar to the top, not the page (the who's-in box is above it)
+    toTabs();
     return;
   }
   render(`
