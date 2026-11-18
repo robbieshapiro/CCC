@@ -256,7 +256,7 @@ Last updated Nov 18, 2026 (Shots of the day: every eagle or better from the cour
 
 ## Setup status
 
-- [ ] #339: apply `pr_339_shots` (the `replays` slot column and unique index, `save_replay`, `replays_today`) after merge.
+- [x] #339: applied `pr_339_shots` on Nov 18; the old unique constraint is gone, card rows have their hole slot, and replays_today lists both of the day's eagles.
 - [x] #336: applied `pr_336_no_streak` on Nov 18; neither get_snapshot nor open_board calls the streak.
 - [x] #335: applied `pr_335_replays` on Nov 17 (ET); the table is there with row security on, and the three functions answer.
 - [x] #334: applied `pr_334_streak` on Nov 17; person_streak answers (Marc 10 days, Tommy 6).
