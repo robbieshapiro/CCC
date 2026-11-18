@@ -50,6 +50,16 @@ import { canShare, dailySummary, share } from './daily';
 import { aceWin, bigMoment } from './acewin';
 import { scorePop } from './moments';
 import { MILESTONES } from '../streak';
+import { KIND_NAME, packShot, unpackShot, type ReplayHole, type ReplayKind } from '../replay';
+import { courseById } from '../golf3d/courses';
+import { periodOf } from '../day';
+
+// keep the shot just played as a replay (the server keeps your best of each kind today)
+function keepShot(g: Course3D, kind: ReplayKind, score: number, hole: ReplayHole, label: string) {
+  const p = g.lastPlayed;
+  if (!p) return;
+  void api.saveReplay(requireSession(), kind, score, packShot(p, hole, label)).catch(() => {});
+}
 import { cardStatus, elsewhereLine } from './cardnote';
 import { earned, plaques } from '../trophies';
 
@@ -359,6 +369,9 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   // one waits for the engine's own replay and then gets the whole screen (below)
   game.onHoleDone = (strokes, par) => {
     const h = course.holes[holeAt];
+    // an eagle or better on a real card is kept as a replay of the shot that holed it
+    if (h && card && !preview && !dry && par - strokes >= 2 && game)
+      keepShot(game, 'card', (par - strokes) * 100 + (strokes === 1 ? 500 : 0), { kind: 'card', course: course.id, i: holeAt }, `${strokes === 1 ? 'Hole in one' : shotName(strokes, par)} on ${h.name}`);
     const sb = pops && !opts.practice && h ? shotBonus(strokes, par) : 0;
     if (!sb || strokes === 1 || par - strokes >= 3 || !game) return;
     if (par - strokes >= 2) game.burst(h.cup, 5, 0xf2b705);
@@ -706,6 +719,7 @@ export async function dailyRound(snap: Snapshot) {
     tag: () => `Try ${done.length + 1} of ${DAILY_TRIES}`,
     onResult: (r) => {
       const t = { try: done.length + 1, ...r };
+      if (!r.lost && r.ft !== null) keepShot(g, 'daily', r.holed ? 1000 : Math.max(0, 500 - r.ft), { kind: 'daily', day }, r.holed ? 'Holed it!' : `${r.ft} ft`);
       done.push(t);
       // a new closest of the day moves the ring (holed: the ring goes, nothing beats it)
       if (r.holed) g.setMark(null);
@@ -757,6 +771,7 @@ export async function aceRound(snap: Snapshot) {
     tag: () => `Swing ${swings + 1} of ${ACE_SWINGS}`,
     onResult: (r) => {
       swings++;
+      if (r.holed && game) keepShot(game, 'ace', 1000, { kind: 'ace', day }, `Ace for ${money(pot)}`);
       // an ace: the whole screen goes to it straight away, with the pot as it stood; the server's figure follows
       const win = r.holed ? aceWin(pot, shot.hole.name) : null;
       api
@@ -946,6 +961,8 @@ export async function targetRound(snap: Snapshot) {
         const mult = streakMult(run);
         const pts = hit.points * mult;
         total += pts;
+        if (hit.target < 0 || hit.ring === 0)
+          keepShot(g, 'targets', pts, { kind: 'targets', day: todayInGameTz() }, hit.target < 0 ? `Through the window · ${pts} pts` : `Bullseye at ${RANGE_TARGETS[hit.target].yards} yd · ${pts} pts`);
         if (hit.target < 0) {
           g.burst({ x: NET.x, y: NET.y - 1 }, NET.half * 1.6, NET.color);
           pop(pts, mult, -1, NET.color);
@@ -967,6 +984,83 @@ export async function targetRound(snap: Snapshot) {
       return false;
     },
   });
+}
+
+// A replay (#/replay/<id>, src/replay.ts): the hole the shot was played on, the player's own golfer lining up and
+// swinging, and the ball flying the saved frames, with the usual camera. Then watch it again, or back home.
+export async function watchReplay(snap: Snapshot, id: number) {
+  closeRound();
+  const back = () => {
+    closeRound();
+    navigate('#/');
+  };
+  const rep = await api.replay(requireSession(), id).catch(() => null);
+  if (!rep) return back();
+  const d = rep.data;
+  const h = d.hole;
+  const hole =
+    h.kind === 'card'
+      ? courseById(h.course)?.holes[h.i]
+      : h.kind === 'daily'
+        ? dailyShot(h.day).hole
+        : h.kind === 'ace'
+          ? aceShot(h.day).hole
+          : h.kind === 'drive'
+            ? driveHole(courseFor(periodOf(h.day)))
+            : targetRange;
+  if (!hole) return back();
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  let g: Course3D;
+  try {
+    g = new Course3D(el, rep.avatar, back);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/">Back to the club</a></main>`);
+    return;
+  }
+  game = g;
+  g.leaveText = 'Back';
+  g.howTo = 'none';
+  const from = { x: d.from[0], y: d.from[1] };
+  g.practiceArea(hole, {
+    title: `${rep.name} · ${d.label}`,
+    eyebrow: `Replay · ${KIND_NAME[rep.kind]}`,
+    stations: [{ name: d.label, at: from }],
+    ...(h.kind === 'targets' ? { rings: RANGE_TARGETS.map((t) => ({ center: t.at, r: RINGS, color: t.color })), net: { ...NET, label: `Window · ${NET.points}|${NET.yards} yd` } } : {}),
+    tag: () => 'Replay',
+    report: () => d.label,
+    onResult: () => {
+      window.setTimeout(() => {
+        if (game !== g) return;
+        const sheet = document.createElement('div');
+        sheet.className = 'practice-notes daily-summary';
+        sheet.innerHTML = `<div class="notes-card"><div class="notes-body"><p class="eyebrow">Replay · ${esc(KIND_NAME[rep.kind])}</p><h2>${esc(rep.name)}</h2><p>${esc(d.label)}</p></div>
+          <div class="notes-foot daily-foot"><button class="btn" data-again>Watch again</button><button class="btn ghost" data-back>Back to the club</button></div></div>`;
+        document.body.appendChild(sheet);
+        sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = () => {
+          sheet.remove();
+          void watchReplay(snap, id);
+        };
+        sheet.querySelector<HTMLButtonElement>('[data-back]')!.onclick = () => {
+          sheet.remove();
+          back();
+        };
+        window.addEventListener('hashchange', () => sheet.remove(), { once: true });
+      }, 1800);
+      return false;
+    },
+  });
+  // once the golfer is on the spot, they swing and the ball flies as it did
+  const r = unpackShot(d);
+  const start = performance.now();
+  const go = () => {
+    if (game !== g) return;
+    if (g.ready && performance.now() - start > 1200) g.playScripted(d.club, d.power, d.aim, r);
+    else if (performance.now() - start < 30000) window.setTimeout(go, 200);
+  };
+  window.setTimeout(go, 600);
 }
 
 // The week's long drive tee: the longest hole on the week's course (The Gorge on the Western Reserve)
@@ -1088,6 +1182,7 @@ export function barRound(snap: Snapshot, kind: BarGame) {
       onResult: (r) => {
         n++;
         if (!r.lost) best = Math.max(best ?? 0, driveYards(r.from, r.end));
+        if (!r.lost) keepShot(g, 'drive', driveYards(r.from, r.end), { kind: 'drive', day: todayInGameTz() }, `${driveYards(r.from, r.end)} yd`);
         // a new longest of the day moves the tape
         if (best !== null && (!lead || best > lead.yards)) {
           lead = { name: 'You', yards: best };

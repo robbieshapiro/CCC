@@ -183,6 +183,11 @@ export const supabaseApi: Api = {
   bookBet: (s, kind, pick, stake) => rpc('book_bet', { p_token: s.token, p_kind: kind, p_pick: pick, p_stake: stake }),
   aceState: (s) => rpc('ace_state', { p_token: s.token }),
   aceSwing: (s, day, r) => rpc('ace_swing', { p_token: s.token, p_day: day, p_holed: r.holed, p_ft: r.ft }),
+  saveReplay: async (s, kind, score, data) => {
+    await rpc('save_replay', { p_token: s.token, p_kind: kind, p_score: score, p_data: data });
+  },
+  replaysToday: (s) => rpc('replays_today', { p_token: s.token }),
+  replay: (s, id) => rpc('replay_get', { p_token: s.token, p_id: id }),
   pasStart: (s, stake) => rpc('pas_start', { p_token: s.token, p_stake: stake }),
   pasFinish: (s, id, score) => rpc('pas_finish', { p_token: s.token, p_id: id, p_score: score }),
   bjDeal: (s, stake) => rpc('bj_deal', { p_token: s.token, p_stake: stake }),

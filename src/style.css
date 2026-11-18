@@ -2354,3 +2354,11 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 .streak-line.on { background: rgba(255, 154, 60, 0.16); color: inherit; }
 .streak-line.warn { background: linear-gradient(135deg, #ff9a3c, #e8452a); color: #fff; animation: ace-throb 1.4s ease-in-out infinite alternate; }
 .tr-pop.moment.streak b { font-size: 40px; }
+
+/* Shots of the day (Nov 18, src/replay.ts): replays to watch, under the contests on home */
+.bs-replays { display: grid; gap: 6px; }
+.bs-replays[hidden] { display: none; }
+.bs-replay { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; text-decoration: none; background: #14231c; color: #fff; border: 1px solid #2f4a3c; }
+.bs-replay i { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: #ffd23f; color: #14231c; font-style: normal; font-size: 13px; padding-left: 2px; }
+.bs-replay b { display: block; font: 700 15px var(--serif); }
+.bs-replay span { font-size: 12px; color: #b9cfc2; }
