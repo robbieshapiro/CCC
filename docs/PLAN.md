@@ -251,7 +251,7 @@ Last updated Nov 17, 2026 (the daily streak: a flame on the boards, a warning on
 
 ## Setup status
 
-- [ ] #334: apply `pr_334_streak` after merge (person_streak, get_snapshot, open_board).
+- [x] #334: applied `pr_334_streak` on Nov 17; person_streak answers (Marc 10 days, Tommy 6).
 - [x] #331: applied `pr_331_ace_feed` on Nov 17; admin_today lists aces.
 - [x] #327: applied `pr_327_target_nets` on Nov 17; submit_bar takes the Target Range up to 1,080.
 - [x] #324: applied `pr_324_target_range` on Nov 17; the game check takes targets, submit_bar checks 0 to 810 and one a day, person_bonus has a targets line for everyone.
