@@ -1,6 +1,7 @@
 // The club's own dialogs, in place of the browser's confirm, alert and prompt (which show the site's address, like
 // "ccc.vercel.app says", in a plain grey box). One sheet on a dimmed page: a title, a line or two, and the buttons.
 import { esc } from './ui';
+import { endLoad } from './screens/loader';
 
 export type AskOpts = {
   title: string;
@@ -14,6 +15,8 @@ let open: (() => void) | null = null;
 
 function sheet(inner: string, onKey: (e: KeyboardEvent) => void): HTMLElement {
   open?.();
+  // a question or a notice needs answering: the loading card steps aside (screens/loader.ts)
+  endLoad();
   const back = document.createElement('div');
   back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg" role="dialog" aria-modal="true">${inner}</div>`;

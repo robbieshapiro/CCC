@@ -1,3 +1,4 @@
+import { loadStep } from './screens/loader';
 import { getSession, listSessions } from './api';
 import { crest } from './brand';
 import { soundOn } from './fx/sound';
@@ -15,6 +16,8 @@ export function render(html: string) {
   app().innerHTML = html;
   // the next screen is up: any "heading out" sheet (dialog.ts holdSheet) has done its job
   document.querySelectorAll('[data-hold]').forEach((x) => x.remove());
+  // and the loading card moves on (it waits for the course on a 3D screen)
+  loadStep('drawn');
 }
 
 export function navigate(hash: string) {

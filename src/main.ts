@@ -1,7 +1,7 @@
 import './style.css';
 import { inject, pageview } from '@vercel/analytics';
 import { getSession, listSessions, switchClub } from './api';
-import { holdSheet } from './dialog';
+import { endLoad, loadStep, startLoad } from './screens/loader';
 import { setSound, soundOn } from './fx/sound';
 import { admin } from './screens/admin';
 import { golfer, leaveGolfer } from './screens/golfer';
@@ -42,7 +42,33 @@ window.visualViewport?.addEventListener('resize', () => {
 let route = '';
 let routing = false; // the router draws the page itself; the refresh hook mustn't draw it a second time
 
+// the routes that open a course (3D)
+const COURSE = new Set(['round', 'practice', 'rehearse', 'preview', 'classic', 'daily', 'playoff', 'replay']);
+// where a tap is headed, in members' words, for the loading card
+function placeFor(page = '', arg = ''): string {
+  if (page === 'round') return arg === 'practice' ? 'the practice round' : 'the first tee';
+  if (page === 'practice' || page === 'rehearse' || page === 'preview' || page === 'classic') return 'the first tee';
+  if (page === 'daily') return 'Closest to the Pin';
+  if (page === 'playoff') return 'the playoff';
+  if (page === 'replay') return 'the replay';
+  if (page === 'bar')
+    return ({ ace: 'the Ace Pot', targets: 'the Target Range', drive: 'the long drive', midway: 'the Midway', members: 'the Members’ Course', book: 'Mo’s Book' } as Record<string, string>)[arg] ?? 'the bar';
+  if (page === 'facility') return arg === 'range' ? 'the range' : arg === 'shortgame' ? 'the short game area' : 'the practice facility';
+  if (page === 'clubhouse' || page === 'season') return 'the Clubhouse';
+  if (page === 'locker' || page === 'card' || page === 'lockers') return 'your Locker';
+  if (page === 'golfer' || page === 'member') return 'their card';
+  if (page === 'design') return 'the Design Desk';
+  if (page === 'admin') return 'the Committee Room';
+  return 'the club';
+}
+
+// a screen that settles without a course (a summary sheet, a notice) ends the loading card itself
 async function router() {
+  await routeTo();
+  if (!document.getElementById('g3')) endLoad();
+}
+
+async function routeTo() {
   closeRound();
   leaveCard();
   leaveShop();
@@ -57,8 +83,11 @@ async function router() {
   if (!getSession()) return landing();
 
   try {
+    // the loading card until the screen (and on a 3D one, its course) is up (screens/loader.ts)
+    startLoad(placeFor(page, arg), COURSE.has(page) || (page === 'bar' && !!arg && arg !== 'book') || (page === 'facility' && !!arg));
     routing = true;
     const s = await refresh().finally(() => (routing = false));
+    loadStep('data');
     const me = s.players.find((p) => p.id === s.me);
     // the admin's own comings and goings stay out of the activity log and Vercel's numbers
     if (s.admin) store.set('ccc-admin', '1');
@@ -143,6 +172,7 @@ async function router() {
     }
     return home(s);
   } catch (err) {
+    endLoad();
     render(`<main class="narrow"><h1>Something went wrong</h1><p class="error">${esc((err as Error).message)}</p>
       <p class="muted">If your session expired, open your group's invite link again.</p></main>`);
   }
@@ -153,13 +183,6 @@ onSnapshot((s) => {
   if (route === 'home' && !routing) home(s);
 });
 
-// Any way into a round (Practice round, Practise first, Continue today's card): hold a "heading out" sheet until the
-// course is up. A fresh card's Play button opens the note first, which does the same once a choice is made.
-document.addEventListener('click', (e) => {
-  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#/round"], a[href^="#/practice/"], a[href^="#/rehearse"], a[href^="#/preview/"]');
-  if (!a || a.hasAttribute('data-card-note') || e.defaultPrevented) return;
-  holdSheet(/practi|preview/.test(a.getAttribute('href')!) ? 'Opening the practice round' : 'Heading to the first tee', 'Setting out the course. It can take a few seconds.');
-});
 
 // "Go to Kellogg": today's card is at another of the member's clubs, so take them there
 document.addEventListener('click', (e) => {
