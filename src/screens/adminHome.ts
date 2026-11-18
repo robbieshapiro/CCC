@@ -78,9 +78,16 @@ export async function loadHome(snap: Snapshot, course?: string) {
 
 // open a course (or go back to every week) without reloading the numbers
 export function showCourse(id: string | null) {
+  const moved = view !== id;
   view = id;
   draw();
-  window.scrollTo({ top: 0 });
+  if (moved) toTabs();
+}
+// bring the tab bar to the top of the screen, if it's scrolled away above (the who's-in box sits above it)
+export function toTabs() {
+  const bar = document.getElementById('adm-tabs');
+  if (bar && bar.getBoundingClientRect().top < 0) bar.scrollIntoView({ block: 'start' });
+  else if (bar && bar.getBoundingClientRect().top > innerHeight * 0.4) bar.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 function draw() {
@@ -169,14 +176,9 @@ function pulse() {
 
 function home(snap: Snapshot): string {
   const now = courseFor(snap.month);
-  const ahead: string[] = [];
-  let w = snap.month;
-  for (let i = 0; i < AHEAD; i++) ahead.push((w = nextStart(w)));
   const back: string[] = [];
   // weeks only: the months before Nov 2026 aren't weeks
   for (let i = 1; i <= BACK; i++) if (addDays(snap.month, -7 * i) >= FIRST_WEEK) back.push(addDays(snap.month, -7 * i));
-  const onWeek = new Set([snap.month, ...ahead, ...back].map((x) => courseFor(x).id));
-  const bench = [...tourCourses(), ...labHoles()].filter((c) => !onWeek.has(c.id));
   const rows = board(snap);
   const played = rows.filter((r) => r.best);
   return `
@@ -192,45 +194,80 @@ function home(snap: Snapshot): string {
       <span class="jv-open">Open ›</span>
     </button>
 
-    <h2 class="jv-h" id="jv-coming">Coming up</h2>
-    <div class="jv-weeks">${ahead.map((x) => weekTile(x)).join('')}</div>
+    <h2 class="jv-h" id="jv-coming">The weeks ahead <small>pick a course on any week</small></h2>
+    ${calendar(snap)}
 
-    ${back.length ? `<h2 class="jv-h">Weeks gone by</h2><div class="jv-weeks past">${back.map((x) => weekTile(x, true)).join('')}</div>` : ''}
+    ${
+      back.length
+        ? `<details class="jv-past"><summary>Weeks gone by</summary><ul>${back
+            .map((x) => {
+              const c = courseFor(x);
+              const res = data.planner.results[c.id];
+              return `<li><span>${esc(weekLabel(x))}</span><button class="link" data-open="${c.id}">${artOf(c).emoji} ${esc(short(c))}</button><small>${res ? `${toParLabel(res.avg)} avg` : ''}</small></li>`;
+            })
+            .join('')}</ul></details>`
+        : ''
+    }
 
-    ${bench.length ? `<h2 class="jv-h" id="jv-benchh">The bench <small>on no week</small></h2><div class="jv-bench">${bench.map(benchTile).join('')}</div>` : ''}`;
+    <h2 class="jv-h" id="jv-benchh">Courses</h2>
+    ${courseList(snap)}`;
 }
 
-function weekTile(w: string, past = false): string {
-  const c = courseFor(w);
-  const picked = scheduleOf()[w] === c.id;
-  const prev = courseFor(addDays(w, -7));
-  const res = data.planner.results[c.id];
-  const r = ratingOf(c);
-  const chip = past
-    ? res
-      ? `<i>${toParLabel(res.avg)} avg</i>`
-      : ''
-    : picked
-      ? `<i class="ok">Picked</i>`
-      : prev.id === c.id
-        ? `<i class="dim">Carries on</i>`
-        : `<i>Calendar</i>`;
-  return `<button class="jv-tile" data-open="${c.id}" style="${style(c)}">
-    <small class="jv-wk">${esc(weekLabel(w))}</small>
-    <span class="jv-emoji" aria-hidden="true">${artOf(c).emoji}</span>
-    <b>${esc(short(c))}</b>
-    <em>${c.holes.length} holes · par ${c.par}${r ? ` · slope ${r.slope}` : ''}</em>
-    <span class="jv-chips">${chip}${Object.keys(tweaksOf()[c.id] ?? {}).length && !past ? '<i>🎛️ Tweaked</i>' : ''}${c.draft && !past ? `<i class="draft">${data.planner.approved[c.id] ? 'Approved' : 'Draft'}</i>` : ''}</span>
-  </button>`;
+// the next weeks, one row each: the dates, the course, why it's there, and a picker to change it there and then
+const WEEKS = 8;
+const aheadOf = (snap: Snapshot, n = WEEKS) => {
+  const out: string[] = [];
+  let w = snap.month;
+  for (let i = 0; i < n; i++) out.push((w = nextStart(w)));
+  return out;
+};
+const dates = (w: string) => {
+  const f = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const end = f(addDays(w, 6));
+  return `${f(w)} to ${end.slice(0, 3) === f(w).slice(0, 3) ? end.slice(4) : end}`;
+};
+function calendar(snap: Snapshot): string {
+  const weeks = aheadOf(snap);
+  const all = tourCourses();
+  return `<ol class="jv-cal">${weeks
+    .map((w) => {
+      const c = courseFor(w);
+      const pick = scheduleOf()[w];
+      const prev = courseFor(addDays(w, -7));
+      const carry = !pick && prev.id === c.id;
+      const chip = pick ? '<i class="ok">Picked</i>' : carry ? '<i class="dim">Carries on</i>' : '<i>Calendar</i>';
+      const options = `<option value="">${carry || !pick ? 'No pick (as now)' : 'Clear the pick'}</option>${all
+        .map((x) => `<option value="${x.id}"${pick === x.id ? ' selected' : ''}>${esc(short(x))}${x.draft ? ' (draft)' : ''}</option>`)
+        .join('')}`;
+      return `<li class="${carry ? 'carry' : ''}">
+        <div class="jv-cal-wk"><b>${esc(dates(w))}</b>${chip}</div>
+        ${
+          carry
+            ? `<p class="jv-cal-course dim">↳ ${esc(short(c))} carries on</p>`
+            : `<button class="jv-cal-course" data-open="${c.id}" style="${style(c)}"><span aria-hidden="true">${artOf(c).emoji}</span><b>${esc(short(c))}</b><small>${c.holes.length} holes · par ${c.par}</small></button>`
+        }
+        <select data-pick="${w}" aria-label="Course for ${esc(dates(w))}">${options}</select>
+      </li>`;
+    })
+    .join('')}</ol>`;
 }
 
-function benchTile(c: Course): string {
-  return `<button class="jv-tile small" data-open="${c.id}" style="${style(c)}">
-    <span class="jv-emoji" aria-hidden="true">${artOf(c).emoji}</span>
-    <b>${esc(short(c).replace(/^Lab · /, ''))}</b>
-    <em>${c.lab ? 'Hole Lab' : c.draft ? 'Draft' : 'Played before'} · par ${c.par}</em>
-    ${Object.keys(tweaksOf()[c.id] ?? {}).length ? '<span class="jv-chips"><i>🎛️ Tweaked</i></span>' : ''}
-  </button>`;
+// every course once: where it's on, and how it plays; then the Hole Lab's test holes
+function courseList(snap: Snapshot): string {
+  const weeks = [snap.month, ...aheadOf(snap)];
+  const row = (c: Course) => {
+    const on = weeks.filter((w) => courseFor(w).id === c.id);
+    const r = ratingOf(c);
+    const tweaked = Object.keys(tweaksOf()[c.id] ?? {}).length;
+    return `<li><button data-open="${c.id}" style="${style(c)}">
+      <span class="jv-sw" aria-hidden="true">${artOf(c).emoji}</span>
+      <span class="jv-cl-main"><b>${esc(short(c).replace(/^Lab · /, ''))}</b><small>${c.lab ? 'Hole Lab' : `${c.holes.length} holes · par ${c.par}${r ? ` · slope ${r.slope}` : ''}`}</small></span>
+      <span class="jv-chips">${c.lab ? '' : on.length ? `<i class="ok">${on[0] === snap.month ? 'Now' : esc(weekLabel(on[0]))}${on.length > 1 ? ` +${on.length - 1}` : ''}</i>` : '<i class="dim">On no week</i>'}${c.draft ? `<i class="draft">${data.planner.approved[c.id] ? 'Approved' : 'Draft'}</i>` : ''}${tweaked ? '<i>🎛️</i>' : ''}</span>
+    </button></li>`;
+  };
+  const labs = labHoles();
+  return `<ul class="jv-clist">${tourCourses().map(row).join('')}</ul>
+    ${labs.length ? `<details class="jv-past"><summary>Hole Lab <small>${labs.length} test ${labs.length === 1 ? 'hole' : 'holes'}</small></summary><ul class="jv-clist">${labs.map(row).join('')}</ul></details>` : ''}`;
 }
 
 // ---- one course: review, play and test, plan ----
@@ -241,10 +278,7 @@ function detail(snap: Snapshot, c: Course): string {
   const isNext = c.id === nextCourse(snap.month)?.id;
   const r = ratingOf(c);
   const res = data.planner.results[c.id];
-  const ahead: string[] = [];
-  let w = snap.month;
-  for (let i = 0; i < AHEAD; i++) ahead.push((w = nextStart(w)));
-  const mine = ahead.filter((x) => scheduleOf()[x] === c.id);
+  const ahead = aheadOf(snap);
   const playing = ahead.filter((x) => courseFor(x).id === c.id);
   const kh = (i: number) => (isNow ? data.kpis?.holes.find((h) => h.hole === i + 1) : undefined);
   const rh = (i: number) => (isNow ? data.report.find((h) => h.hole === i + 1) : undefined);
@@ -264,14 +298,15 @@ function detail(snap: Snapshot, c: Course): string {
         ? ''
         : `<section class="jv-sec">
       <h3>Schedule</h3>
-      <p>${mine.length ? `Picked for ${mine.map(weekLabel).join(', ')}.` : isNow ? 'This week. Pick it again for a coming week to keep it on.' : 'Not picked for a coming week.'}</p>
-      <div class="jv-plan">
-        <select id="jv-week" aria-label="Week">${ahead
-          .map((x) => `<option value="${x}">${esc(weekLabel(x))}${scheduleOf()[x] ? ` (now ${esc(short(courseFor(x)))})` : ''}</option>`)
-          .join('')}</select>
-        <button class="btn" data-put>Put it on that week</button>
-      </div>
-      ${mine.length ? `<div class="jv-off">${mine.map((x) => `<button class="link" data-off="${x}">Take it off ${esc(weekLabel(x))}</button>`).join('')}</div>` : ''}
+      <p class="fine">${isNow ? 'Playing this week. ' : ''}Tap a week to put it on; tap again to take your pick off.</p>
+      <ul class="jv-weekpick">${ahead
+        .map((x) => {
+          const there = courseFor(x);
+          const picked = scheduleOf()[x] === c.id;
+          const on = there.id === c.id;
+          return `<li><button class="${on ? 'on' : ''}" data-weekput="${x}" data-to="${picked ? '' : c.id}"><b>${esc(dates(x))}</b><small>${on ? (picked ? '✓ Picked' : '✓ On (calendar or carries on)') : `Now: ${esc(short(there))}`}</small></button></li>`;
+        })
+        .join('')}</ul>
       ${c.draft ? `<button class="link" data-approve>${data.planner.approved[c.id] ? 'Un-approve the draft' : '✓ Approve the draft'}</button>` : ''}
     </section>`
     }
@@ -331,8 +366,12 @@ function bind(el: HTMLElement, snap: Snapshot) {
     } catch (e) {
       void tell("That didn't save", `<p>${esc((e as Error).message)}</p>`);
     }
+    const y = scrollY;
     draw();
+    scrollTo({ top: y });
   };
+  el.querySelectorAll<HTMLSelectElement>('[data-pick]').forEach((sel) => (sel.onchange = () => void save(sel.dataset.pick!, sel.value || null)));
+  el.querySelectorAll<HTMLButtonElement>('[data-weekput]').forEach((b) => (b.onclick = () => void save(b.dataset.weekput!, b.dataset.to || null)));
   const put = el.querySelector<HTMLButtonElement>('[data-put]');
   if (put && view) put.onclick = () => void save(el.querySelector<HTMLSelectElement>('#jv-week')!.value, view);
   el.querySelectorAll<HTMLButtonElement>('[data-off]').forEach((b) => (b.onclick = () => void save(b.dataset.off!, null)));
