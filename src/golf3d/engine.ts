@@ -309,7 +309,7 @@ export class Course3D {
   // practice of any kind: the Leave button says so and doesn't ask
   leaveText = '';
   // which how-to card this game shows (first time, then on the ? button)
-  howTo: 'round' | 'practice' | 'daily' | 'ace' | 'minigolf' | 'drive' | 'targets' | 'none' = 'round';
+  howTo: 'round' | 'practice' | 'daily' | 'playoff' | 'ace' | 'minigolf' | 'midway' | 'members' | 'drive' | 'targets' | 'none' = 'round';
   // the last shot struck: what a replay keeps (src/replay.ts)
   lastPlayed: { club: ClubId; power: number; aim: number; from: V2; r: Result } | null = null;
   // a replay: the next swing plays these frames rather than a new shot
@@ -1245,29 +1245,29 @@ export class Course3D {
         return;
       }
     }
-    const head = {
-      round: ['How to play', 'Fewest shots wins.'],
-      practice: ['Practice', "Nothing counts. Hit as many as you like."],
-      daily: ['Closest to the Pin', 'One shot, three tries. Closest wins.'],
-      ace: ['The Ace Pot', 'Three swings a day at a new hole every day. The club adds $50 to the pot for every miss, and it carries over until someone makes an ace and takes the lot.'],
-      minigolf: ['Hollow Hills Mini Golf', 'Six holes. Fewest strokes wins the week.'],
-      drive: ['Long drive', 'Three swings with the wind at your back, the last two with a Fireball. The longest ball in play wins the day.'],
-      targets: ['The Target Range', 'Ten balls at six netted targets. Land one in a ring on the fly to score it: the bullseye and the far targets pay most. Roll in and you only get the outer ring. A drive through the back net\'s window pays most of all. Score on the next ball too and it doubles, then triples; a miss ends the streak.'],
-    }[this.howTo];
+    // each game says only what matters for it, in a few short lines (Nov 18: the same four controls on every card read
+    // as noise)
+    const SWING = ['👆', 'Drag to aim. Tap to swing, tap again in the gold.'];
+    const PUTT = ['🟢', 'On the green: drag down, let go.'];
+    const cards: Record<Exclude<typeof this.howTo, 'none'>, [string, string[][]]> = {
+      round: ['The course', [['🏌️', 'Fewest shots wins.'], SWING, PUTT, ['🍹', 'Wave the cart down. Every drink helps one way.']]],
+      practice: ['Practice', [['🆓', 'Nothing counts. Hit all you like.'], SWING, PUTT]],
+      daily: ['Closest to the Pin', [['🎯', 'One shot, three tries.'], ['🌎', 'Closest across every club wins the day.'], ['💰', 'Top three paid: $300, $150, $75.']]],
+      playoff: ['The playoff', [['🎯', 'One shot at the pin.'], ['🏆', 'Closest takes the title.']]],
+      ace: ['The Ace Pot', [['⛳', 'Three swings a day at a new par 3.'], ['💰', 'Hole it and the whole pot is yours.'], ['📈', 'Every miss adds $50. It carries over.']]],
+      minigolf: ['Hollow Hills', [['👻', 'Six holes. Fewest strokes wins the week.'], PUTT, ['⏱️', 'Things move. Wait for the gap.']]],
+      midway: ['The Midway', [['🎪', 'Three carnival holes. Fewest strokes wins.'], ['📅', 'One counted round a day. Best of the week takes it.'], ['⏱️', 'Things move. Wait for the gap.']]],
+      members: ["The Members' Course", [['🏗️', 'Holes built by members. Fewest strokes wins.'], ['💵', 'Finish one and its designer earns $100.']]],
+      drive: ['Long drive', [['💨', 'Three swings, wind at your back.'], ['🔥', 'The last two come with a Fireball.'], ['📏', 'Longest ball in play wins. Top three paid.']]],
+      targets: ['The Target Range', [['🎯', 'Ten balls, six netted targets.'], ['🪂', 'Land in a ring on the fly. A roll-in only gets the outer ring.'], ['✖️', 'Score again next ball: double, then triple.'], ['🥅', 'Drive through the back net’s window for 40.']]],
+    };
+    const [title, lines] = cards[this.howTo];
     const card = document.createElement('div');
     card.className = 'g3-howto';
-    card.innerHTML = `<div class="g3-howto-card" role="dialog" aria-label="${head[0]}">
-      <h2>${head[0]}</h2><p>${head[1]}</p>${!this.drill && this.hole?.teeTip ? `<p class="g3-howto-tip"><b>Hank on this hole:</b> ${this.hole.teeTip}</p>` : ''}
-      <ol>${
-        this.howTo === 'minigolf'
-          ? `<li><i>👆</i><b>Aim</b><span>Drag left or right</span></li>
-        <li><i>🟢</i><b>Putt</b><span>Drag down, let go</span></li>
-        <li><i>⏱️</i><b>Time it</b><span>Things move. Wait for the gap.</span></li>`
-          : `<li><i>👆</i><b>Aim</b><span>Drag left or right</span></li>
-        <li><i>🟡</i><b>Power</b><span>Tap to swing, tap again on the gold line</span></li>
-        <li><i>⛳</i><b>Hit</b><span>Tap when the needle is in the gold</span></li>
-        <li><i>🟢</i><b>Putt</b><span>Drag down, let go</span></li>`
-      }</ol>
+    card.innerHTML = `<div class="g3-howto-card" role="dialog" aria-label="${title}">
+      <h2>${title}</h2>
+      <ul>${lines.map(([i, t]) => `<li><i>${i}</i><span>${t}</span></li>`).join('')}</ul>
+      ${!this.drill && this.hole?.teeTip ? `<p class="g3-howto-tip"><b>Hank on this hole:</b> ${this.hole.teeTip}</p>` : ''}
       <button class="btn" data-go>Let's go</button>
     </div>`;
     this.overlay.appendChild(card);

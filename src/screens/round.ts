@@ -1089,7 +1089,7 @@ export function barRound(snap: Snapshot, kind: BarGame) {
   const again = () => barRound(snap, kind);
   if (kind === 'minigolf' || kind === 'members' || kind === 'midway') {
     // six holes of Hollow Hills, the members' own holes (up to nine), or the Midway's three: fewest strokes counts
-    g.howTo = kind === 'minigolf' ? 'minigolf' : 'round';
+    g.howTo = kind === 'minigolf' ? 'minigolf' : kind;
     // the members' holes and the Midway swing on the weekly course's meter
     if (kind !== 'minigolf') g.meterStyle = 'vertical';
     g.starter =

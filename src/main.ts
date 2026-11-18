@@ -20,7 +20,7 @@ import { facility } from './screens/practice';
 import { classics, courseById, courseFor, nextCourse } from './golf3d/courses';
 import { nextShown, todayInGameTz } from './day';
 import { checkIn } from './screens/activity';
-import { onSnapshot, refresh, startPolling } from './state';
+import { onSnapshot, recent, refresh, startPolling } from './state';
 import { store } from './storage';
 import { esc, muteButton, navigate, render } from './ui';
 
@@ -84,9 +84,11 @@ async function routeTo() {
 
   try {
     // the loading card until the screen (and on a 3D one, its course) is up (screens/loader.ts)
-    startLoad(placeFor(page, arg), COURSE.has(page) || (page === 'bar' && !!arg && arg !== 'book') || (page === 'facility' && !!arg));
+    const play = COURSE.has(page) || (page === 'bar' && !!arg && arg !== 'book') || (page === 'facility' && !!arg);
+    startLoad(placeFor(page, arg), play);
     routing = true;
-    const s = await refresh().finally(() => (routing = false));
+    // a screen to look at draws from the last half minute's data at once; anything you play waits for fresh data
+    const s = await (play ? refresh() : recent()).finally(() => (routing = false));
     loadStep('data');
     const me = s.players.find((p) => p.id === s.me);
     // the admin's own comings and goings stay out of the activity log and Vercel's numbers
