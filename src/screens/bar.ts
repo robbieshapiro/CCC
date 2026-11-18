@@ -169,7 +169,7 @@ export async function fillBar(snap: Snapshot) {
       'acepot',
       `Pot: ${money(ace.pot)} · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left today` : 'your swings are in today'}`,
       (ace.today.length ? top3(ace.today.map((r) => ({ playerId: r.playerId, name: r.name, label: r.holed ? 'Ace!' : r.ft === null ? 'No ball' : `${r.ft} ft`, mine: r.mine }))) : '<p class="bar-empty">No swings yet today.</p>') +
-        (ace.lastAce ? `<p class="bar-empty">Last ace: ${esc(ace.lastAce.name)}, for ${money(ace.lastAce.pot)}</p>` : ''),
+        (ace.lastAce ? `<p class="bar-empty">Last won by ${esc(ace.lastAce.name)}, for ${money(ace.lastAce.pot)}</p>` : ''),
     );
   }
   for (const [game, b] of [['drive', drive], ['targets', targets], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {

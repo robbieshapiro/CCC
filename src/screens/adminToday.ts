@@ -126,7 +126,7 @@ function line(e: AdminTodayEvent) {
   if (e.kind === 'daily') return e.ft === 0 ? 'holed the Daily Shot!' : `took the Daily Shot${e.ft !== null ? `, best ${e.ft} ft` : ''}${e.n && e.n > 1 ? ` (${e.n} tries)` : ''}`;
   if (e.kind === 'playoff') return `played the playoff in ${e.total ?? '?'}${e.ft !== null ? `, ${e.ft} ft from the pin` : ''}`;
   if (e.kind === 'join') return e.what === 'guest' ? `joined ${esc(e.club)} as a guest` : 'joined the club';
-  if (e.kind === 'ace') return `<b>aced the Ace Pot for ${money(e.total ?? 0)}!</b>`;
+  if (e.kind === 'ace') return `<b>won the Ace Pot: ${money(e.total ?? 0)}!</b>`;
   if (e.kind === 'midway') {
     // status:kind:target, from the Midway's power-ups
     const [status, kind, who] = (e.what ?? '').split(':');
