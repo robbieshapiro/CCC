@@ -1021,6 +1021,8 @@ export async function watchReplay(snap: Snapshot, id: number) {
     title: `${rep.name} · ${d.label}`,
     eyebrow: `Replay · ${KIND_NAME[rep.kind]}`,
     stations: [{ name: d.label, at: from }],
+    // a card's shot is played to that day's pin (and in its wind), as it was
+    ...(h.kind === 'card' ? { wind: conditionsFor(hole, rep.day ?? todayInGameTz()) } : {}),
     ...(h.kind === 'targets' ? { rings: RANGE_TARGETS.map((t) => ({ center: t.at, r: RINGS, color: t.color })), net: { ...NET, label: `Window · ${NET.points}|${NET.yards} yd` } } : {}),
     tag: () => 'Replay',
     report: () => d.label,

@@ -1388,7 +1388,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const x = (db.replays ?? []).find((r) => r.id === id);
     if (!x) throw new Error('That replay has gone.');
     const p = db.players.find((y) => y.id === x.playerId);
-    return { id: x.id, kind: x.kind, name: p?.name ?? '?', avatar: p!.avatar, data: x.data };
+    return { id: x.id, kind: x.kind, name: p?.name ?? '?', avatar: p!.avatar, day: x.day, data: x.data };
   },
 
   async aceSwing(session, day, r) {

@@ -4196,7 +4196,7 @@ create or replace function replay_get(p_token uuid, p_id bigint) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); out json;
 begin
-  select json_build_object('id', r.id, 'kind', r.kind, 'name', pl.name, 'avatar', pl.avatar, 'data', r.data) into out
+  select json_build_object('id', r.id, 'kind', r.kind, 'name', pl.name, 'avatar', pl.avatar, 'day', r.day, 'data', r.data) into out
   from replays r join players pl on pl.id = r.player_id where r.id = p_id;
   if out is null then raise exception 'That replay has gone.'; end if;
   return out;
