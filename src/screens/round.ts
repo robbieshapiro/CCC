@@ -1017,21 +1017,23 @@ export async function watchReplay(snap: Snapshot, id: number) {
   g.leaveText = 'Back';
   g.howTo = 'none';
   const from = { x: d.from[0], y: d.from[1] };
+  // a card's shot names its hole: "Eagle on hole 5, Wrigleyville"
+  const label = h.kind === 'card' ? d.label.replace(` on ${hole.name}`, ` on hole ${h.i + 1}, ${hole.name}`) : d.label;
   g.practiceArea(hole, {
-    title: `${rep.name} · ${d.label}`,
+    title: `${rep.name} · ${label}`,
     eyebrow: `Replay · ${KIND_NAME[rep.kind]}`,
-    stations: [{ name: d.label, at: from }],
+    stations: [{ name: label, at: from }],
     // a card's shot is played to that day's pin (and in its wind), as it was
     ...(h.kind === 'card' ? { wind: conditionsFor(hole, rep.day ?? todayInGameTz()) } : {}),
     ...(h.kind === 'targets' ? { rings: RANGE_TARGETS.map((t) => ({ center: t.at, r: RINGS, color: t.color })), net: { ...NET, label: `Window · ${NET.points}|${NET.yards} yd` } } : {}),
     tag: () => 'Replay',
-    report: () => d.label,
+    report: () => label,
     onResult: () => {
       window.setTimeout(() => {
         if (game !== g) return;
         const sheet = document.createElement('div');
         sheet.className = 'practice-notes daily-summary';
-        sheet.innerHTML = `<div class="notes-card"><div class="notes-body"><p class="eyebrow">Replay · ${esc(KIND_NAME[rep.kind])}</p><h2>${esc(rep.name)}</h2><p>${esc(d.label)}</p></div>
+        sheet.innerHTML = `<div class="notes-card"><div class="notes-body"><p class="eyebrow">Replay · ${esc(KIND_NAME[rep.kind])}</p><h2>${esc(rep.name)}</h2><p>${esc(label)}</p></div>
           <div class="notes-foot daily-foot"><button class="btn" data-again>Watch again</button><button class="btn ghost" data-back>Back to the club</button></div></div>`;
         document.body.appendChild(sheet);
         sheet.querySelector<HTMLButtonElement>('[data-again]')!.onclick = () => {
