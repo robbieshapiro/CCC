@@ -2390,3 +2390,17 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .jv-weekpick button { width: 100%; display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); text-align: left; cursor: pointer; }
 .jv-weekpick button.on { background: #d8f0dc; border-color: #8fcf9c; }
 .jv-weekpick small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The loading card (Nov 18, screens/loader.ts): the crest, where you're headed, a gold bar on real steps, Reginald's word */
+.ld { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 24px 16px; background: radial-gradient(120% 90% at 50% 30%, var(--green-2), var(--green) 70%); opacity: 0; transition: opacity 0.25s; }
+.ld.in { opacity: 1; }
+.ld-card { width: min(100%, 360px); display: grid; justify-items: center; gap: 10px; text-align: center; }
+.ld-card .crest { margin-bottom: 6px; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35)); }
+.ld-card h2 { color: #fff; font-size: 28px; line-height: 1.15; }
+.ld-bar { width: 78%; height: 6px; margin: 10px 0 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.ld-bar i { display: block; height: 100%; width: 8%; border-radius: inherit; background: linear-gradient(90deg, #b8955a, #f2d48a); box-shadow: 0 0 12px rgba(242, 212, 138, 0.55); transition: width 0.3s ease-out; }
+.ld-tip { margin: 14px 0 0; display: grid; gap: 6px; min-height: 4.6em; color: rgba(255, 255, 255, 0.86); font: italic 500 17px/1.4 var(--serif); }
+.ld-tip span { transition: opacity 0.3s; }
+.ld-tip span.out { opacity: 0; }
+.ld-tip small { font: 800 11px var(--font); letter-spacing: 0.18em; text-transform: uppercase; font-style: normal; color: var(--gold); }
+@media (prefers-reduced-motion: reduce) { .ld, .ld-bar i, .ld-tip span { transition: none; } }

@@ -314,6 +314,8 @@ export class Course3D {
   lastPlayed: { club: ClubId; power: number; aim: number; from: V2; r: Result } | null = null;
   // a replay: the next swing plays these frames rather than a new shot
   private scripted: Result | null = null;
+  // a hole just built: tell the loading card (screens/loader.ts) once its first frame is drawn
+  private firstFrame = false;
   // Hank the Starter's word on the first tee of a round
   starter = '';
   // told after every swing, for the practice log
@@ -677,6 +679,8 @@ export class Course3D {
     this.number = number;
     this.world = buildWorld(hole, number);
     this.scene.add(this.world.root);
+    window.dispatchEvent(new Event('g3:built'));
+    this.firstFrame = true;
     this.markObjs = [];
     if (this.drill?.mark) this.setMark(this.drill.mark);
     for (const t of this.drill?.rings ?? []) this.drawRings(t);
@@ -2685,6 +2689,10 @@ export class Course3D {
     this.effects(dt);
     this.mini();
     this.renderer.render(this.scene, this.camera);
+    if (this.firstFrame) {
+      this.firstFrame = false;
+      window.dispatchEvent(new Event('g3:frame'));
+    }
   };
 
   private effects(dt: number) {

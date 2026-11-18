@@ -1,3 +1,4 @@
+import { startLoad } from './loader';
 // Today's cards, as members meet them on home (and the Committee rehearses it in Admin): the Play tile in each state,
 // the note before a fresh card (the card counts, practice doesn't, pick one), and the line Leave shows mid-card.
 import type { CardToday } from '../api/types';
@@ -5,7 +6,6 @@ import { CARDS_A_DAY } from '../day';
 import type { Course } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { esc } from '../ui';
-import { holdSheet } from '../dialog';
 
 // "Hole 3 of 5 · +1 through 2 · 2 strokes in"
 export function cardStatus(course: Course, scores: number[], here = 0): string {
@@ -91,7 +91,7 @@ export function cardNote(): Promise<'card' | 'practice' | null> {
       window.removeEventListener('keydown', key, true);
       back.remove();
       // picked: a sheet that holds until the course is up, rather than a moment back on home
-      if (v) holdSheet(v === 'card' ? 'Heading to the first tee' : 'Opening the practice round', 'Setting out the course. It can take a few seconds.');
+      if (v) startLoad(v === 'card' ? 'the first tee' : 'the practice round', true);
       resolve(v);
     };
     const key = (e: KeyboardEvent) => {
