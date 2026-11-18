@@ -6,7 +6,7 @@ import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { ACE_SEED, ACE_SWINGS } from '../acepot';
-import { KIND_NAME } from '../replay';
+import { KIND_NAME, withHoleNo } from '../replay';
 import { todayInGameTz } from '../day';
 import { scoreLabel } from '../bar';
 import { resultLabel } from '../daily';
@@ -55,7 +55,7 @@ export async function bindBarStrip(snap: Snapshot) {
       if (!box) return;
       const top = rows.filter((r) => r.kind === 'card').slice(0, 8);
       if (top.length) box.innerHTML = `<p class="bs-group">Shots of the day</p>${top
-        .map((r) => `<a class="bs-replay" href="#/replay/${r.id}"><i>▶</i><div><b>${r.mine ? 'You' : esc(r.name)} · ${esc(r.label)}</b><span>${esc(KIND_NAME[r.kind])}</span></div></a>`)
+        .map((r) => `<a class="bs-replay" href="#/replay/${r.id}"><i>▶</i><div><b>${r.mine ? 'You' : esc(r.name)} · ${esc(withHoleNo(r.label, r.hole))}</b><span>${esc(KIND_NAME[r.kind])}</span></div></a>`)
         .join('')}`;
       box.hidden = !top.length;
       // the ace banner plays the ace

@@ -49,7 +49,7 @@ import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '.
 import { canShare, dailySummary, share } from './daily';
 import { aceWin, bigMoment } from './acewin';
 import { scorePop } from './moments';
-import { KIND_NAME, packShot, unpackShot, type ReplayHole, type ReplayKind } from '../replay';
+import { KIND_NAME, packShot, unpackShot, withHoleNo, type ReplayHole, type ReplayKind } from '../replay';
 import { courseById } from '../golf3d/courses';
 import { periodOf } from '../day';
 
@@ -1018,7 +1018,7 @@ export async function watchReplay(snap: Snapshot, id: number) {
   g.howTo = 'none';
   const from = { x: d.from[0], y: d.from[1] };
   // a card's shot names its hole: "Eagle on hole 5, Wrigleyville"
-  const label = h.kind === 'card' ? d.label.replace(` on ${hole.name}`, ` on hole ${h.i + 1}, ${hole.name}`) : d.label;
+  const label = h.kind === 'card' ? withHoleNo(d.label, h.i, hole.name) : d.label;
   g.practiceArea(hole, {
     title: `${rep.name} · ${label}`,
     eyebrow: `Replay · ${KIND_NAME[rep.kind]}`,

@@ -4178,15 +4178,15 @@ create or replace function replays_today(p_token uuid) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with me as (select player_for(p_token) as p),
   shots as (
-    (select r.id, r.kind, r.score, r.data->>'label' as label, r.created_at, pl.name, pl.pin_hash
+    (select r.id, r.kind, r.score, r.data->>'label' as label, (r.data->'hole'->>'i')::int as hole, r.created_at, pl.name, pl.pin_hash
      from replays r join players pl on pl.id = r.player_id
      where r.day = game_today() and r.kind = 'ace' order by r.score desc, r.created_at limit 1)
     union all
-    select r.id, r.kind, r.score, r.data->>'label', r.created_at, pl.name, pl.pin_hash
+    select r.id, r.kind, r.score, r.data->>'label', (r.data->'hole'->>'i')::int, r.created_at, pl.name, pl.pin_hash
     from replays r join players pl on pl.id = r.player_id
     where r.day = game_today() and r.kind = 'card'
   )
-  select coalesce(json_agg(json_build_object('id', b.id, 'kind', b.kind, 'name', b.name, 'label', b.label, 'score', b.score,
+  select coalesce(json_agg(json_build_object('id', b.id, 'kind', b.kind, 'name', b.name, 'label', b.label, 'hole', b.hole, 'score', b.score,
     'mine', lower(b.name) = lower((m.p).name) and b.pin_hash = (m.p).pin_hash, 'at', b.created_at)
     order by b.kind = 'card', b.score desc, b.created_at), '[]')
   from shots b, me m

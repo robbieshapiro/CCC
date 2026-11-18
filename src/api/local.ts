@@ -1378,7 +1378,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const cards = today.filter((x) => x.kind === 'card').sort(byBest);
     return [...(ace ? [ace] : []), ...cards].map((x) => {
       const p = db.players.find((y) => y.id === x.playerId);
-      return { id: x.id, kind: x.kind, name: p?.name ?? '?', label: x.data.label, score: x.score, mine: !!p && p.name.toLowerCase() === me.name.toLowerCase(), at: x.at };
+      return { id: x.id, kind: x.kind, name: p?.name ?? '?', label: x.data.label, hole: x.data.hole.kind === 'card' ? x.data.hole.i : null, score: x.score, mine: !!p && p.name.toLowerCase() === me.name.toLowerCase(), at: x.at };
     });
   },
 

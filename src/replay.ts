@@ -20,7 +20,11 @@ export type ReplayData = {
   sounds: [number, Sound['s']][];
   label: string; // what it was: "4.2 ft", "Hole in one on The River"
 };
-export type ReplayRow = { id: number; kind: ReplayKind; name: string; label: string; score: number; mine: boolean; at: string };
+// hole: a card's hole (0-based), so the label can say which
+export type ReplayRow = { id: number; kind: ReplayKind; name: string; label: string; hole?: number | null; score: number; mine: boolean; at: string };
+// "Eagle on Wrigleyville" with its hole: "Eagle on hole 5, Wrigleyville"
+export const withHoleNo = (label: string, i: number | null | undefined, name?: string) =>
+  i == null ? label : name ? label.replace(` on ${name}`, ` on hole ${i + 1}, ${name}`) : label.replace(/ on (.+)$/, ` on hole ${i + 1}, $1`);
 // day: the day it was played (a card's pin and wind are that day's)
 export type Replay = { id: number; kind: ReplayKind; name: string; avatar: import('./api/types').Avatar; day?: string; data: ReplayData };
 
