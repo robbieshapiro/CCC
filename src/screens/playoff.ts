@@ -58,7 +58,7 @@ export async function playoff(snap: Snapshot) {
   // the shot at the pin, once the hole is done
   const shoot = (g: Course3D, strokes: number) => {
     g.leaveText = 'Leave';
-    g.howTo = 'daily';
+    g.howTo = 'playoff';
     g.practiceArea(hole, {
       title: 'The playoff: closest to the pin',
       stations: [{ name: spot.label, at: spot.from }],
