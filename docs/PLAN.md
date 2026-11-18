@@ -253,7 +253,7 @@ Last updated Nov 18, 2026 (the streak flames taken off again; replays: the day's
 
 ## Setup status
 
-- [ ] #336: apply `pr_336_no_streak` after merge (get_snapshot and open_board without the streak).
+- [x] #336: applied `pr_336_no_streak` on Nov 18; neither get_snapshot nor open_board calls the streak.
 - [x] #335: applied `pr_335_replays` on Nov 17 (ET); the table is there with row security on, and the three functions answer.
 - [x] #334: applied `pr_334_streak` on Nov 17; person_streak answers (Marc 10 days, Tommy 6).
 - [x] #331: applied `pr_331_ace_feed` on Nov 17; admin_today lists aces.
