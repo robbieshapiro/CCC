@@ -715,7 +715,6 @@ export async function dailyRound(snap: Snapshot) {
     tag: () => `Try ${done.length + 1} of ${DAILY_TRIES}`,
     onResult: (r) => {
       const t = { try: done.length + 1, ...r };
-      if (!r.lost && r.ft !== null) keepShot(g, 'daily', r.holed ? 1000 : Math.max(0, 500 - r.ft), { kind: 'daily', day }, r.holed ? 'Holed it!' : `${r.ft} ft`);
       done.push(t);
       // a new closest of the day moves the ring (holed: the ring goes, nothing beats it)
       if (r.holed) g.setMark(null);
@@ -957,8 +956,6 @@ export async function targetRound(snap: Snapshot) {
         const mult = streakMult(run);
         const pts = hit.points * mult;
         total += pts;
-        if (hit.target < 0 || hit.ring === 0)
-          keepShot(g, 'targets', pts, { kind: 'targets', day: todayInGameTz() }, hit.target < 0 ? `Through the window · ${pts} pts` : `Bullseye at ${RANGE_TARGETS[hit.target].yards} yd · ${pts} pts`);
         if (hit.target < 0) {
           g.burst({ x: NET.x, y: NET.y - 1 }, NET.half * 1.6, NET.color);
           pop(pts, mult, -1, NET.color);
@@ -1178,7 +1175,6 @@ export function barRound(snap: Snapshot, kind: BarGame) {
       onResult: (r) => {
         n++;
         if (!r.lost) best = Math.max(best ?? 0, driveYards(r.from, r.end));
-        if (!r.lost) keepShot(g, 'drive', driveYards(r.from, r.end), { kind: 'drive', day: todayInGameTz() }, `${driveYards(r.from, r.end)} yd`);
         // a new longest of the day moves the tape
         if (best !== null && (!lead || best > lead.yards)) {
           lead = { name: 'You', yards: best };

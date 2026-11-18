@@ -1359,7 +1359,9 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const me = homeOf(db, playerByToken(db, session.token));
     const day = todayInGameTz();
     const list = (db.replays ??= []);
-    const had = list.find((x) => x.playerId === me.id && x.day === day && x.kind === kind);
+    // a card keeps one per hole (every eagle on a different hole stays); the bar games one a day
+    const slot = (d: typeof data) => (d.hole.kind === 'card' ? `${d.hole.course}:${d.hole.i}` : '');
+    const had = list.find((x) => x.playerId === me.id && x.day === day && x.kind === kind && slot(x.data) === slot(data));
     if (had && had.score >= score) return;
     if (had) Object.assign(had, { score, data, at: new Date().toISOString() });
     else list.push({ id: list.length + 1, playerId: me.id, day, kind, score, data, at: new Date().toISOString() });
@@ -1370,12 +1372,11 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const db = load();
     const me = playerByToken(db, session.token);
     const day = todayInGameTz();
-    const best = new Map<string, NonNullable<Db['replays']>[number]>();
-    for (const x of (db.replays ?? []).filter((x) => x.day === day)) {
-      const b = best.get(x.kind);
-      if (!b || x.score > b.score) best.set(x.kind, x);
-    }
-    return [...best.values()].map((x) => {
+    const today = (db.replays ?? []).filter((x) => x.day === day);
+    const byBest = (a: { score: number; at: string }, b: { score: number; at: string }) => b.score - a.score || a.at.localeCompare(b.at);
+    const ace = today.filter((x) => x.kind === 'ace').sort(byBest)[0];
+    const cards = today.filter((x) => x.kind === 'card').sort(byBest);
+    return [...(ace ? [ace] : []), ...cards].map((x) => {
       const p = db.players.find((y) => y.id === x.playerId);
       return { id: x.id, kind: x.kind, name: p?.name ?? '?', label: x.data.label, score: x.score, mine: !!p && p.name.toLowerCase() === me.name.toLowerCase(), at: x.at };
     });

@@ -1,7 +1,7 @@
 // Replays (Nov 18): the day's best shots, saved as the ball flew them and played back from home ("Shots of the day").
 // A shot is kept compact: its frames thinned to about 20 a second and rounded, its sounds, the club and power for the
-// golfer's swing, the aim, and where it was hit from. The server keeps each person's best of each kind each day
-// (save_replay in supabase/schema.sql); the best of each kind today goes on home.
+// golfer's swing, the aim, and where it was hit from. Kept: every eagle or better on a card (one per person per hole a
+// day, their best) and the Ace Pot ace (save_replay in supabase/schema.sql). Home shows the day's card shots.
 import type { ClubId } from './golf3d/clubs';
 import type { Frame, Result, Sound } from './golf3d/physics';
 import type { V2 } from './golf3d/types';

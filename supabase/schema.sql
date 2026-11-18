@@ -4146,11 +4146,16 @@ create table if not exists replays (
   kind text not null check (kind in ('daily', 'ace', 'drive', 'targets', 'card')),
   score numeric not null,
   data jsonb not null,
-  created_at timestamptz not null default now(),
-  unique (player_id, day, kind)
+  created_at timestamptz not null default now()
 );
 alter table replays enable row level security;
 create index if not exists replays_day on replays (day, kind);
+-- (Nov 18) one per person per kind per day per slot: a card's slot is its course and hole, so every eagle on a different
+-- hole is kept (the bar games have one slot, '')
+alter table replays add column if not exists slot text not null default '';
+alter table replays drop constraint if exists replays_player_id_day_kind_key;
+create unique index if not exists replays_slot on replays (player_id, day, kind, slot);
+update replays set slot = (data->'hole'->>'course') || ':' || (data->'hole'->>'i') where kind = 'card' and slot = '' and data->'hole' ? 'course';
 
 create or replace function save_replay(p_token uuid, p_kind text, p_score numeric, p_data jsonb) returns void
 language plpgsql security definer set search_path = public, extensions as $$
@@ -4159,23 +4164,32 @@ begin
   if p_kind not in ('daily', 'ace', 'drive', 'targets', 'card') then raise exception 'No such replay.'; end if;
   if pg_column_size(p_data) > 24000 then raise exception 'That replay is too big.'; end if;
   if jsonb_typeof(p_data->'frames') is distinct from 'array' then raise exception 'That replay doesn''t look right.'; end if;
-  insert into replays (player_id, day, kind, score, data) values (me.id, game_today(), p_kind, p_score, p_data)
-  on conflict (player_id, day, kind) do update set score = excluded.score, data = excluded.data, created_at = now()
+  insert into replays (player_id, day, kind, slot, score, data)
+  values (me.id, game_today(), p_kind,
+    case when p_kind = 'card' then coalesce(p_data->'hole'->>'course', '') || ':' || coalesce(p_data->'hole'->>'i', '') else '' end,
+    p_score, p_data)
+  on conflict (player_id, day, kind, slot) do update set score = excluded.score, data = excluded.data, created_at = now()
     where excluded.score > replays.score;
 end $$;
 
--- today's best of each kind, across every club (no frames: replay_get fetches one to watch)
+-- today's shots, across every club (no frames: replay_get fetches one to watch): every eagle or better from a card, best
+-- first, then earliest; and the day's Ace Pot ace, for the banner. The other bar games aren't shown (Nov 18).
 create or replace function replays_today(p_token uuid) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with me as (select player_for(p_token) as p),
-  best as (
-    select distinct on (r.kind) r.id, r.kind, r.score, r.data->>'label' as label, r.created_at, pl.name, pl.pin_hash
+  shots as (
+    (select r.id, r.kind, r.score, r.data->>'label' as label, r.created_at, pl.name, pl.pin_hash
+     from replays r join players pl on pl.id = r.player_id
+     where r.day = game_today() and r.kind = 'ace' order by r.score desc, r.created_at limit 1)
+    union all
+    select r.id, r.kind, r.score, r.data->>'label', r.created_at, pl.name, pl.pin_hash
     from replays r join players pl on pl.id = r.player_id
-    where r.day = game_today() order by r.kind, r.score desc, r.created_at
+    where r.day = game_today() and r.kind = 'card'
   )
   select coalesce(json_agg(json_build_object('id', b.id, 'kind', b.kind, 'name', b.name, 'label', b.label, 'score', b.score,
-    'mine', lower(b.name) = lower((m.p).name) and b.pin_hash = (m.p).pin_hash, 'at', b.created_at)), '[]')
-  from best b, me m
+    'mine', lower(b.name) = lower((m.p).name) and b.pin_hash = (m.p).pin_hash, 'at', b.created_at)
+    order by b.kind = 'card', b.score desc, b.created_at), '[]')
+  from shots b, me m
 $$;
 
 create or replace function replay_get(p_token uuid, p_id bigint) returns json
