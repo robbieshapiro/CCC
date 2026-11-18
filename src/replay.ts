@@ -21,7 +21,8 @@ export type ReplayData = {
   label: string; // what it was: "4.2 ft", "Hole in one on The River"
 };
 export type ReplayRow = { id: number; kind: ReplayKind; name: string; label: string; score: number; mine: boolean; at: string };
-export type Replay = { id: number; kind: ReplayKind; name: string; avatar: import('./api/types').Avatar; data: ReplayData };
+// day: the day it was played (a card's pin and wind are that day's)
+export type Replay = { id: number; kind: ReplayKind; name: string; avatar: import('./api/types').Avatar; day?: string; data: ReplayData };
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
