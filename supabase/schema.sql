@@ -2375,7 +2375,14 @@ insert into shop_items (id, price, rack) values
   ('celfist', 600, 'member'), ('celspot', 3000, 'pro'), ('celfireworks', 25000, 'legend'), ('celgoldrain', 90000, 'hof'),
   ('celfounders', 220000, 'founders'),
   -- the Hall of Fame and Founders' Circle racks
-  ('hofblazer', 85000, 'hof'), ('platdriver', 70000, 'hof'), ('founderscardi', 210000, 'founders'), ('foundersputter', 190000, 'founders')
+  ('hofblazer', 85000, 'hof'), ('platdriver', 70000, 'hof'), ('founderscardi', 210000, 'founders'), ('foundersputter', 190000, 'founders'),
+  -- (Nov 19) the Wizarding School on the shop floor, Maison Reginald (Hall of Fame) and Atelier CCC (Founders' Circle)
+  ('wizrobe', 3500, 'member'), ('scarfscarlet', 1200, 'member'), ('scarfemerald', 1200, 'member'), ('scarfblue', 1200, 'member'),
+  ('scarfyellow', 1200, 'member'), ('wizhat', 2000, 'member'), ('wirespecs', 900, 'member'),
+  ('maisonpolo', 75000, 'hof'), ('maisontrousers', 78000, 'hof'), ('maisonloafers', 80000, 'hof'), ('maisonpanama', 76000, 'hof'),
+  ('maisonbag', 95000, 'hof'),
+  ('atelierknit', 200000, 'founders'), ('atelierflannels', 205000, 'founders'), ('atelierbrogues', 215000, 'founders'),
+  ('atelierhomburg', 225000, 'founders'), ('signetwatch', 240000, 'founders'), ('ateliertrunk', 260000, 'founders')
 on conflict (id) do update set price = excluded.price, rack = excluded.rack;
 
 create table if not exists purchases (

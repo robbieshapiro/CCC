@@ -89,10 +89,11 @@ function racks(earned: number, titles: number, kind = '') {
   const shelves: { rack: (typeof RANKS)[number]; title: string; pick: (i: Item) => boolean }[] = [
     { rack: RANKS[0], title: 'Clubhouse Classics', pick: (i) => i.rack === 'member' && !i.collection },
     { rack: RANKS[0], title: 'The Tour Collection', pick: (i) => i.rack === 'member' && i.collection === 'tour' },
+    { rack: RANKS[0], title: 'The Wizarding School', pick: (i) => i.rack === 'member' && i.collection === 'wizard' },
     { rack: RANKS[1], title: `${RANKS[1].name} rack`, pick: (i) => i.rack === 'pro' },
     { rack: RANKS[2], title: `${RANKS[2].name} rack`, pick: (i) => i.rack === 'legend' },
-    { rack: RANKS[3], title: `The ${RANKS[3].name} rack`, pick: (i) => i.rack === 'hof' },
-    { rack: RANKS[4], title: `${RANKS[4].name} rack`, pick: (i) => i.rack === 'founders' },
+    { rack: RANKS[3], title: `The ${RANKS[3].name} rack · Maison Reginald`, pick: (i) => i.rack === 'hof' },
+    { rack: RANKS[4], title: `${RANKS[4].name} rack · Atelier CCC`, pick: (i) => i.rack === 'founders' },
   ];
   return shelves
     .map(({ rack: r, title, pick }) => {

@@ -62,7 +62,7 @@ export type Item = {
   off: (s: GolferSpec) => void;
   worn: (s: GolferSpec) => boolean;
   focus?: 'full' | 'head' | 'chest' | 'hands' | 'club' | 'feet' | 'bag';
-  collection?: 'tour'; // the shop floor's Tour Collection: modern tour gear (the rest of the floor is Clubhouse Classics)
+  collection?: 'tour' | 'wizard'; // the shop floor's Tour Collection (modern tour gear) and the Wizarding School; the rest is Clubhouse Classics
 };
 const top = (id: string, name: string, price: number, rack: Rack, what: string, t: GolferSpec['top']): Item => ({ id, name, kind: 'top', price, rack, what, wear: (s) => (s.top = t), off: (s) => (s.top = 'polo'), worn: (s) => s.top === t });
 const hat = (id: string, name: string, price: number, rack: Rack, what: string, h: GolferSpec['hat']): Item => ({ id, name, kind: 'hat', price, rack, what, wear: (s) => (s.hat = h), off: (s) => (s.hat = 'cap'), worn: (s) => s.hat === h });
@@ -140,8 +140,21 @@ const tourItems: Item[] = [
   slot('mattedriver', 'Matte black driver', 2800, 'member', 'driver', 'A matte black tour head. No shine, all business.', 'driver', 'matte', undefined, 'club'),
 ].map((i) => ({ ...i, collection: 'tour' as const }));
 
+// The Wizarding School, on the shop floor for everyone (Nov 19): robes, house scarves in the four classic colour pairs,
+// a pointed hat and round spectacles. Our own plain names: no outside school, houses or brands.
+const wizardItems: Item[] = [
+  slot('wizrobe', 'Wizarding school robe', 3500, 'member', 'outer', 'A long black robe over everything, a hood at the back, lined in your house colours.', 'outer', 'robe', undefined, 'full'),
+  slot('scarfscarlet', 'Scarlet and gold house scarf', 1200, 'member', 'outer', 'Wound twice round the neck in scarlet and gold. Brave, they say.', 'scarf', 'scarlet', undefined, 'chest'),
+  slot('scarfemerald', 'Emerald and silver house scarf', 1200, 'member', 'outer', 'Emerald and silver. Ambitious, and a little cunning on the greens.', 'scarf', 'emerald', undefined, 'chest'),
+  slot('scarfblue', 'Blue and bronze house scarf', 1200, 'member', 'outer', 'Blue and bronze, for the golfer who reads every break.', 'scarf', 'blue', undefined, 'chest'),
+  slot('scarfyellow', 'Yellow and black house scarf', 1200, 'member', 'outer', 'Yellow and black. Loyal, patient, never three-putts in anger.', 'scarf', 'yellow', undefined, 'chest'),
+  hat('wizhat', 'Pointed wizard hat', 2000, 'member', 'A tall purple hat with a bent tip and gold stars. Mind the low branches.', 'wizard'),
+  specs('wirespecs', 'Round wire spectacles', 900, 'member', 'Thin gold round frames. Very studious.', 'wire'),
+].map((i) => ({ ...i, collection: 'wizard' as const }));
+
 export const ITEMS: Item[] = [
   ...tourItems,
+  ...wizardItems,
   // tops
   top('stripepolo', 'Striped polo', 300, 'member', 'Fine stripes in your shirt colour and cream, collar out.', 'stripepolo'),
   top('hawaiian', 'Hawaiian shirt', 400, 'member', 'Pacific teal with coral hibiscus and palm fronds. Loud.', 'hawaiian'),
@@ -234,7 +247,20 @@ export const ITEMS: Item[] = [
   slot('celfireworks', 'Fireworks over the cup', 25000, 'legend', 'celebrate', 'The cup erupts in fireworks. The whole course looks round.', 'celebrate', 'fireworks', undefined),
   slot('celgoldrain', 'Gold rain', 90000, 'hof', 'celebrate', 'A shower of gold falls over the green, and the crowd roars.', 'celebrate', 'goldrain', undefined),
   slot('celfounders', 'Founders’ salute', 220000, 'founders', 'celebrate', 'Fireworks, gold rain, rings of light and the crowd on its feet. All of it.', 'celebrate', 'founders', undefined),
-  // ---------- the Hall of Fame and Founders' Circle racks ----------
+  // ---------- the Hall of Fame rack: Maison Reginald, the club's own couture house (deep green and gold) ----------
+  top('maisonpolo', 'Maison Reginald polo', 75000, 'hof', 'A fine green and gold check, a gold collar. Made to measure by Maison Reginald.', 'maisonpolo'),
+  slot('maisontrousers', 'Maison Reginald trousers', 78000, 'hof', 'bottoms', 'Deep green wool with a gold stripe down the side.', 'bottoms', 'maison', 'trousers', 'full'),
+  slot('maisonloafers', 'Maison Reginald loafers', 80000, 'hof', 'shoes', 'Green suede with a gold bit across the top.', 'shoeStyle', 'maison', undefined, 'feet'),
+  hat('maisonpanama', 'Maison Reginald Panama', 76000, 'hof', 'A fine straw Panama with a green and gold band.', 'panama'),
+  slot('maisonbag', 'Maison Reginald staff bag', 95000, 'hof', 'bag', 'Green and gold check, gold bands and a gold crest plate.', 'bagStyle', 'maison', undefined, 'bag'),
+  // ---------- the Founders' Circle rack: Atelier CCC (cream, charcoal, oxblood, rose gold) ----------
+  top('atelierknit', 'Atelier CCC cashmere rollneck', 200000, 'founders', 'Cream cashmere, rolled at the neck. Atelier CCC makes six a year.', 'atelierknit'),
+  slot('atelierflannels', 'Atelier CCC flannels', 205000, 'founders', 'bottoms', 'Charcoal flannel, sharply creased.', 'bottoms', 'flannel', 'trousers', 'full'),
+  slot('atelierbrogues', 'Atelier CCC brogues', 215000, 'founders', 'shoes', 'Oxblood leather, gold eyelets, polished to a mirror.', 'shoeStyle', 'atelier', undefined, 'feet'),
+  hat('atelierhomburg', 'Atelier CCC homburg', 225000, 'founders', 'Black felt with a gold band. Statesmanlike.', 'homburg'),
+  watch('signetwatch', 'Atelier CCC signet watch', 240000, 'founders', 'Rose gold, a cream dial. Engraved with your initials on the back.', 'signet'),
+  slot('ateliertrunk', 'Atelier CCC trunk bag', 260000, 'founders', 'bag', 'Cream leather, oxblood straps and gold corners. It has its own porter.', 'bagStyle', 'trunk', undefined, 'bag'),
+  // ---------- and the first pieces on the two top racks ----------
   slot('hofblazer', 'Hall of Fame blazer', 85000, 'hof', 'outer', 'Deep green wool, gold buttons and the Hall of Fame crest. Worn by very few.', 'outer', 'hofblazer', undefined, 'chest'),
   slot('platdriver', 'Platinum driver', 70000, 'hof', 'driver', 'A platinum head. Cold, bright and very expensive.', 'driver', 'platinum', undefined, 'club'),
   slot('founderscardi', 'Founders’ cardigan', 210000, 'founders', 'outer', 'Cream cable knit with the founders’ crest in gold. The club began with this cardigan.', 'outer', 'founders', undefined, 'chest'),
