@@ -1139,7 +1139,7 @@ begin
       from groups g cross join lateral period_payouts(g.id) pp join players s on s.id = pp.player_id
       join people pe on lower(s.name) = pe.k and s.pin_hash = pe.h group by pe.home_id
     )
-    select json_agg(json_build_object('playerId', t.home_id, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.home_group), 'mine', pe.k = lower(me.name) and pe.h = me.pin_hash,
+    select json_agg(json_build_object('playerId', t.home_id, 'avatar', (select pl.avatar from players pl where pl.id = t.home_id), 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.home_group), 'mine', pe.k = lower(me.name) and pe.h = me.pin_hash,
         'points', coalesce(t.points, 0), 'projected', coalesce(t.projected, 0), 'events', t.events, 'wins', t.wins, 'top10s', t.top10s, 'best', t.best,
         'earnings', coalesce(pay.earned, 0) + (person_bonus(hp)->>'total')::int)
       -- standings are banked points only; this week's place shows as projected but doesn't move anyone yet

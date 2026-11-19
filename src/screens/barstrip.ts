@@ -7,7 +7,6 @@ import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { ACE_SEED, ACE_SWINGS } from '../acepot';
-import { KIND_NAME, withHoleNo } from '../replay';
 import { todayInGameTz } from '../day';
 import { scoreLabel } from '../bar';
 import { resultLabel } from '../daily';
@@ -39,6 +38,9 @@ export function barStrip() {
   </section>`;
 }
 
+// a shot of the day in a few words: what it was and the hole ("Eagle · 5"), no course name
+const shotLine = (r: { label: string; hole?: number | null }) => `${r.label.replace(/ on .*$/, '')}${r.hole != null ? ` · ${r.hole + 1}` : ''}`;
+
 // who: today's leader, whose face goes in the corner of the card
 const fill = (game: string, big: string, sub = '', who?: Parameters<typeof face>[0]) => {
   const card = document.querySelector<HTMLElement>(`[data-bs="${game}"]`);
@@ -59,9 +61,9 @@ export async function bindBarStrip(snap: Snapshot) {
       const box = document.querySelector<HTMLElement>('[data-bs-replays]');
       if (!box) return;
       const top = rows.filter((r) => r.kind === 'card').slice(0, 8);
-      if (top.length) box.innerHTML = `<p class="bs-group">Shots of the day</p>${top
-        .map((r) => `<a class="bs-replay" href="#/replay/${r.id}">${face(r, 36) || '<i>▶</i>'}<div><b>${r.mine ? 'You' : esc(r.name)} · ${esc(withHoleNo(r.label, r.hole))}</b><span>${esc(KIND_NAME[r.kind])}</span></div></a>`)
-        .join('')}`;
+      if (top.length) box.innerHTML = `<p class="bs-group">Shots of the day</p><div class="bs-rp-row">${top
+        .map((r) => `<a class="bs-replay" href="#/replay/${r.id}" aria-label="Watch ${esc(r.name)}'s ${esc(shotLine(r))}"><span class="bs-rp-face">${face(r, 40)}<i aria-hidden="true">▶</i></span><div><b>${r.mine ? 'You' : esc(r.name)}</b><span>${esc(shotLine(r))}</span></div></a>`)
+        .join('')}</div>`;
       box.hidden = !top.length;
       // the ace banner plays the ace
       const ace = rows.find((r) => r.kind === 'ace');
