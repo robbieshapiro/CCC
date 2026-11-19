@@ -1454,6 +1454,17 @@ export class Golfer {
     return !!this.state.react;
   }
 
+  // the middle of the face in the world, wherever it's got to (a broom's hover, a jump, anything that lifts the body):
+  // what a portrait or a close-up frames
+  faceCenter() {
+    this.group.updateMatrixWorld(true);
+    return this.head.localToWorld(new THREE.Vector3(0, HEAD_Y, 0));
+  }
+  // how far the body is lifted off its feet right now (the broom's hover), in world units
+  get rise() {
+    return this.hover * 1.5 * this.group.scale.y;
+  }
+
   // the middle of the body in the world (it rises with a jump), for a camera to keep framed
   center() {
     return this.hips.getWorldPosition(new THREE.Vector3());
@@ -1706,9 +1717,10 @@ export function golferThumb(spec: GolferSpec, size = 96): string | null {
     for (let i = 0; i < 40; i++) g.update(0.05);
     scene.add(g.group);
     const cam = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
-    const hy = 5.4 * spec.height;
-    cam.position.set(0.9, hy + 0.2, 6.2);
-    cam.lookAt(0, hy - 0.25, 0);
+    // framed on the face itself, so a golfer lifted off the ground (on a broom, say) stays in the picture
+    const face = g.faceCenter();
+    cam.position.set(0.9, face.y + 0.1, 6.2);
+    cam.lookAt(face.x, face.y - 0.35, 0);
     r.setClearColor(0x000000, 0);
     r.render(scene, cam);
     const url = r.domElement.toDataURL('image/png');
