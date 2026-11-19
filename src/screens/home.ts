@@ -1,4 +1,5 @@
 import { api, listSessions, localApi, switchClub, useSupabase } from '../api';
+import { lookAttrs, looked } from '../courselook';
 import { badgeFor } from '../shop';
 import { clubPurse, money, OPEN_FLOOR, openPurseOf, placeLabel, purseOf } from '../purse';
 import type { Snapshot, CardToday } from '../api/types';
@@ -158,7 +159,7 @@ export function home(snap: Snapshot) {
       ${playoffCard()}
       ${noticesStrip()}
       ${shoutStrip()}
-      <section class="play-hero${look(course)}">
+      <section class="play-hero${look(course)}"${lookAttrs(course)}>
         <div class="play-main">
           <p class="eyebrow">${leaf(course)}${mine ? '' : 'Now open · '}${periodName(snap.month)}</p>
           <h1>${esc(course.name)}</h1>
@@ -174,7 +175,7 @@ export function home(snap: Snapshot) {
       ${liveNow()}
       ${liveCards()}
       ${barStrip()}
-      <section class="board${look(course)}">
+      <section class="board${look(course)}"${lookAttrs(course)}>
         ${countdown(snap.month, course, purse.field, openMoney)}
         <div class="board-head"><h2>${leaf(course)}${openPurseOn(snap.month) ? esc(openName(course.name, snap.month)) : 'The Open'}</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
         <div class="board-tabs" id="board-tabs" role="tablist">
@@ -276,7 +277,7 @@ export function home(snap: Snapshot) {
 function countdown(month: string, course: Course, field: number, open = false) {
   const ends = periodClosesAt(month);
   const day = new Date(ends.getTime() - 1).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
-  return `<div class="countdown${look(course)}" data-countdown="${ends.getTime()}">
+  return `<div class="countdown${look(course)}"${lookAttrs(course)} data-countdown="${ends.getTime()}">
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
     <small>${
       open
@@ -322,8 +323,9 @@ const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 // The week's course dresses the Play hero, the board and its countdown: ember red for the Caldera, Pacific blue and a
 // sunset for the coast
 // and fall orange with a maple leaf for the Western Reserve
-const LOOKS = ['volcanic', 'coastal', 'autumn', 'chicago', 'linksland'];
-export const look = (c: Course) => (LOOKS.includes(c.holes[0]?.theme ?? '') ? ` ${c.holes[0].theme}` : '');
+const LOOKS = ['volcanic', 'coastal', 'autumn', 'chicago'];
+// a course with its own look (CourseLook) wears that; the older ones their theme's
+export const look = (c: Course) => (c.look ? looked(c) : LOOKS.includes(c.holes[0]?.theme ?? '') ? ` ${c.holes[0].theme}` : '');
 const leaf = (c: Course) => (c.holes[0]?.theme === 'autumn' ? '🍁 ' : '');
 
 // Next week's course, under the nomination tile and above More to play: a warm band in the course's own colours (autumn leaves for
@@ -336,8 +338,8 @@ function previewBand(month: string) {
   const theme = next.holes[0]?.theme ?? '';
   const starts = periodClosesAt(month);
   const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
-  return `<a class="preview-band ${esc(theme)}" href="#/practice/${next.id}">
-    <span class="pb-icon" aria-hidden="true">${THEME_ICON[theme] ?? '⛳'}</span>
+  return `<a class="preview-band${next.look ? looked(next) : ` ${esc(theme)}`}"${lookAttrs(next)} href="#/practice/${next.id}">
+    <span class="pb-icon" aria-hidden="true">${next.look?.icon ?? THEME_ICON[theme] ?? '⛳'}</span>
     <span class="pb-text">
       <small><span class="pb-lead">Next week's course · </span><span data-countdown="${starts.getTime()}" data-done="Open now">opens in <em data-left>…</em></span></small>
       <b>${esc(shortName(next))}</b>

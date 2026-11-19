@@ -47,8 +47,23 @@ import { isWeek, nextStart } from '../day';
 // previewHoles: before it opens, members can practise this many of its holes (all of them if unset); the admin can
 // play them all. whatsNew: a few short lines shown before that practice starts.
 // playoff: the hole a tie for the week's title is played off on, and where the closest-to-the-pin decider is hit from
+// A course's own colours on home (Nov 19): the Play hero, its board and countdown in its week, next week's preview band,
+// the practice notes, its classic tile later and the Committee's tiles. Every course from Nov 22 has one, different from
+// the week before (check-holes holds it to that). colors: dark to light, the hero's gradient; glow: the light in the
+// corner; accent and ink: the buttons and eyebrows; soft: the small print; pattern: a faint line along the bottom.
+export type CourseLook = {
+  colors: [string, string, string];
+  glow: string;
+  accent: string;
+  ink: string;
+  soft: string;
+  icon: string;
+  pattern: 'waves' | 'dunes' | 'skyline' | 'peaks' | 'stars' | 'none';
+};
+
 export type Course = {
   id: string;
+  look?: CourseLook;
   opens: string;
   name: string;
   tagline: string;
@@ -86,6 +101,8 @@ const COURSES: Course[] = [
   },
   {
     id: 'pacificbluffs',
+    // golden hour on the California cliffs: dusk blue into a coral sunset, a poppy-orange light, the Pacific's swell
+    look: { colors: ['#1c2747', '#7a3b4a', '#e07a4a'], glow: 'rgba(255, 190, 110, 0.5)', accent: '#ffb347', ink: '#2a1a2e', soft: '#ffe2c4', icon: '🌅', pattern: 'waves' },
     // the California coast at golden hour. Robbie's pick for the week of Nov 22; grown from three holes to seven on
     // Nov 17, to the Architect's brief, and released
     opens: '2026-11-22',
@@ -144,6 +161,8 @@ const COURSES: Course[] = [
   },
   {
     id: 'atlanticlinks',
+    // the grey-green Atlantic into the dunes, gorse gold, a sea mist, a shamrock
+    look: { colors: ['#13262c', '#22423e', '#3b664c'], glow: 'rgba(232, 197, 71, 0.22)', accent: '#e8c547', ink: '#13262c', soft: '#d8e3c8', icon: '☘️', pattern: 'dunes' },
     // the west coast of Ireland, in the Hole Lab's links look: six holes for the week of Nov 29
     opens: '2026-11-29',
     name: 'The Atlantic Links',
