@@ -322,7 +322,10 @@ export class FittingRoom {
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     // the club view follows wherever the club's head ended up (it differs by club, pose and height)
-    const v = this.view === 'club' && this.clubAt ? { at: this.clubAt.clone().add(new THREE.Vector3(2.4, 1.7, 5.2)), look: this.clubAt.clone().add(new THREE.Vector3(-0.2, 0.35, 0)), spin: false } : VIEWS[this.view];
+    let v = this.view === 'club' && this.clubAt ? { at: this.clubAt.clone().add(new THREE.Vector3(2.4, 1.7, 5.2)), look: this.clubAt.clone().add(new THREE.Vector3(-0.2, 0.35, 0)), spin: false } : VIEWS[this.view];
+    // the face and chest views rise with a golfer lifted off the ground (on a broom), so the face stays in frame
+    const rise = this.golfer?.rise ?? 0;
+    if (rise && (this.view === 'head' || this.view === 'chest')) v = { ...v, at: v.at.clone().setY(v.at.y + rise), look: v.look.clone().setY(v.look.y + rise) };
     const k = 1 - Math.exp(-dt * 3.2);
     this.camAt.lerp(v.at, k);
     this.camLook.lerp(v.look, k);
