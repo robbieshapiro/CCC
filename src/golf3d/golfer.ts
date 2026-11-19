@@ -57,7 +57,7 @@ export type GolferSpec = {
   earring?: boolean;
   driver?: 'persimmon' | 'carbon' | 'gold' | 'matte' | 'platinum';
   // on the course (Nov 19, the Pro Shop): the ball, the line it draws in the air, and what happens when it drops
-  ball?: 'yellow' | 'pink' | 'black' | 'pearl' | 'gold' | 'diamond' | 'molten';
+  ball?: 'yellow' | 'pink' | 'black' | 'pearl' | 'gold' | 'diamond' | 'molten' | 'winged';
   tracer?: 'green' | 'yours' | 'gold' | 'fire' | 'rainbow' | 'comet';
   celebrate?: 'fist' | 'rings' | 'fireworks' | 'goldrain' | 'founders';
   headcover?: 'pompom' | 'tiger';

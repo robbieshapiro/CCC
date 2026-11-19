@@ -1,6 +1,7 @@
 // Mo's Book, at the bar (#/bar/book): bets on the week's Open. Pick a stake, then a name to win it (at Mo's price,
 // locked when you bet) or back yourself to beat your line. Your bets underneath, open and settled. The sums are in
 // src/book.ts and book_state / book_bet in supabase/schema.sql.
+import { face } from '../faces';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { CHIPS, DAILY_LOSS } from '../blackjack';
@@ -72,7 +73,7 @@ export async function book(snap: Snapshot) {
     const field = st.field.length
       ? `<ul class="book-field">${st.field
           .map(
-            (f) => `<li class="${f.mine ? 'me' : ''}"><div><b>${esc(f.name)}</b><small>${f.posted === null ? 'no card yet' : `best ${toParLabel(f.posted)}`}</small></div>
+            (f) => `<li class="${f.mine ? 'me' : ''}">${face(f, 28)}<div><b>${esc(f.name)}</b><small>${f.posted === null ? 'no card yet' : `best ${toParLabel(f.posted)}`}</small></div>
             <em>${odds(f.odds)}</em>${st!.open ? `<button class="btn small" data-win="${esc(f.playerId)}">Bet ${money(stake)}</button>` : ''}</li>`,
           )
           .join('')}</ul>`
