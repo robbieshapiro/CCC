@@ -264,7 +264,7 @@ Last updated Nov 19, 2026 (the Pro Shop on the course: balls, tracers and celebr
 
 ## Setup status
 
-- [ ] #347: apply `pr_347_shop` (the `shop_items` rack check, the 22 new items, `buy_item`) after merge.
+- [x] #347: applied `pr_347_shop` on Nov 19; shop_items has 5 Hall of Fame and 5 Founders' pieces, and buy_item checks $75,000 and $200,000.
 - [x] #342: applied `pr_342_replay_hole` on Nov 18; replays_today returns each card shot's hole.
 - [x] #340: applied `pr_340_replay_pin` on Nov 18; replay_get returns the day.
 - [x] #339: applied `pr_339_shots` on Nov 18; the old unique constraint is gone, card rows have their hole slot, and replays_today lists both of the day's eagles.
