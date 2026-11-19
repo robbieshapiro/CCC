@@ -1,5 +1,6 @@
 // The Daily Shot on the home page and after your last try: today's shot, your tries, your streak, the board across
 // every club, and a result to share.
+import { face } from '../faces';
 import { prizesLine } from '../bonus';
 import { api } from '../api';
 import type { DailyCrown, DailyState, DailyTry } from '../api/types';
@@ -36,7 +37,7 @@ function board(state: DailyState, top = 5) {
   return `<ol class="daily-board">${rows
     .map((r) => {
       const i = state.board.indexOf(r) + 1;
-      return `<li class="${r.mine ? 'me' : ''}"><span>${i}</span><b>${r.playerId ? `<a href="${golferHref(r.playerId, r.mine)}">${esc(r.name)}</a>` : esc(r.name)}</b><small></small><em>${r.holed ? `Holed${r.holedTry ? ` · try ${r.holedTry}` : ''}` : resultLabel({ ft: r.ft, holed: r.holed, lost: r.ft === null && !r.holed })}</em></li>`;
+      return `<li class="${r.mine ? 'me' : ''}"><span>${i}</span>${face(r, 24)}<b>${r.playerId ? `<a href="${golferHref(r.playerId, r.mine)}">${esc(r.name)}</a>` : esc(r.name)}</b><small></small><em>${r.holed ? `Holed${r.holedTry ? ` · try ${r.holedTry}` : ''}` : resultLabel({ ft: r.ft, holed: r.holed, lost: r.ft === null && !r.holed })}</em></li>`;
     })
     .join('')}</ol>`;
 }

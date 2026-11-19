@@ -1937,7 +1937,7 @@ begin
       'mine', coalesce((select json_agg(json_build_object('try', t.try, 'ft', t.ft, 'holed', t.holed, 'lost', t.lost) order by t.try)
         from tries t where t.k = lower(me.name) and t.h = me.pin_hash), '[]'),
       -- ranked: holed beats everything, holed sooner beats later, then nearest, then the next-best try, then the earlier player
-      'board', coalesce((select json_agg(json_build_object('playerId', pe.home_id, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.group_id), 'ft', b.fts[1], 'holed', b.holed, 'holedTry', b.htry, 'tries', b.n,
+      'board', coalesce((select json_agg(json_build_object('playerId', pe.home_id, 'avatar', (select pl.avatar from players pl where pl.id = pe.home_id), 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.group_id), 'ft', b.fts[1], 'holed', b.holed, 'holedTry', b.htry, 'tries', b.n,
           'mine', b.k = lower(me.name) and b.h = me.pin_hash)
         order by b.holed desc, b.htry asc nulls last, b.fts[1] asc nulls last, b.fts[2] asc nulls last, b.fts[3] asc nulls last, b.first_at)
         from best b join people pe on pe.k = b.k and pe.h = b.h join groups g on g.id = pe.group_id), '[]'),
@@ -2059,7 +2059,7 @@ begin
     )
     select json_build_object(
       'week', wk,
-      'board', coalesce((select json_agg(json_build_object('playerId', pe.home_id, 'name', pe.name, 'score', b.score, 'mine', b.k = lower(me.name) and b.h = me.pin_hash)
+      'board', coalesce((select json_agg(json_build_object('playerId', pe.home_id, 'avatar', (select pl.avatar from players pl where pl.id = pe.home_id), 'name', pe.name, 'score', b.score, 'mine', b.k = lower(me.name) and b.h = me.pin_hash)
         order by b.score desc, b.first_at) from best b join people pe on pe.k = b.k and pe.h = b.h), '[]'),
       'mine', (select score from best where k = lower(me.name) and h = me.pin_hash),
       'players', (select count(*) from best),
@@ -3552,8 +3552,8 @@ begin
       'pot', ace_pot(),
       'swingsToday', (select count(*) from ace_swings where day = game_today() and player_id in (select person_seats(me))),
       'bank', person_bank(me),
-      'lastAce', (select json_build_object('name', name, 'pot', payout, 'at', created_at) from swings where holed order by created_at desc limit 1),
-      'today', coalesce((select json_agg(json_build_object('playerId', home_id, 'name', name, 'ft', ft, 'holed', holed,
+      'lastAce', (select json_build_object('name', name, 'pot', payout, 'at', created_at, 'avatar', (select pl.avatar from players pl where pl.id = swings.home_id)) from swings where holed order by created_at desc limit 1),
+      'today', coalesce((select json_agg(json_build_object('playerId', home_id, 'avatar', (select pl.avatar from players pl where pl.id = today.home_id), 'name', name, 'ft', ft, 'holed', holed,
           'mine', k = lower(me.name) and h = me.pin_hash) order by holed desc, ft asc nulls last) from today), '[]')
     )
   );
@@ -4199,15 +4199,15 @@ create or replace function replays_today(p_token uuid) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with me as (select player_for(p_token) as p),
   shots as (
-    (select r.id, r.kind, r.score, r.data->>'label' as label, (r.data->'hole'->>'i')::int as hole, r.created_at, pl.name, pl.pin_hash
+    (select r.id, r.kind, r.score, r.data->>'label' as label, (r.data->'hole'->>'i')::int as hole, r.created_at, pl.name, pl.pin_hash, pl.avatar
      from replays r join players pl on pl.id = r.player_id
      where r.day = game_today() and r.kind = 'ace' order by r.score desc, r.created_at limit 1)
     union all
-    select r.id, r.kind, r.score, r.data->>'label', (r.data->'hole'->>'i')::int, r.created_at, pl.name, pl.pin_hash
+    select r.id, r.kind, r.score, r.data->>'label', (r.data->'hole'->>'i')::int, r.created_at, pl.name, pl.pin_hash, pl.avatar
     from replays r join players pl on pl.id = r.player_id
     where r.day = game_today() and r.kind = 'card'
   )
-  select coalesce(json_agg(json_build_object('id', b.id, 'kind', b.kind, 'name', b.name, 'label', b.label, 'hole', b.hole, 'score', b.score,
+  select coalesce(json_agg(json_build_object('id', b.id, 'kind', b.kind, 'name', b.name, 'avatar', b.avatar, 'label', b.label, 'hole', b.hole, 'score', b.score,
     'mine', lower(b.name) = lower((m.p).name) and b.pin_hash = (m.p).pin_hash, 'at', b.created_at)
     order by b.kind = 'card', b.score desc, b.created_at), '[]')
   from shots b, me m

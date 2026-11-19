@@ -21,9 +21,9 @@ export type AceState = {
   swingsToday: number;
   bank: number;
   // the last hole-in-one, across every club
-  lastAce: { name: string; pot: number; at: string } | null;
+  lastAce: { name: string; pot: number; at: string; avatar?: import('./api/types').Avatar } | null;
   // today's closest swings, across every club
-  today: { playerId: string; name: string; ft: number | null; holed: boolean; mine: boolean }[];
+  today: { playerId: string; avatar?: import('./api/types').Avatar; name: string; ft: number | null; holed: boolean; mine: boolean }[];
 };
 export type AceSwing = { holed: boolean; payout: number; pot: number; swingsToday: number; bank: number };
 
