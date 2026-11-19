@@ -271,7 +271,7 @@ Last updated Nov 19, 2026 (faces beside names on home and at the bar; broomstick
 
 ## Setup status
 
-- [ ] #354: apply `pr_354_faces` (`daily_state`, `bar_board`, `ace_state`, `replays_today`) after merge.
+- [x] #354: applied `pr_354_faces` on Nov 19; all four return the avatar live.
 - [x] #353: applied `pr_353_brooms` on Nov 19; shop_items has the three brooms (122 pieces in all).
 - [x] #349: applied `pr_349_couture` on Nov 19; shop_items has all 119 pieces (7 wizard, 5 Maison, 6 Atelier new).
 - [x] #347: applied `pr_347_shop` on Nov 19; shop_items has 5 Hall of Fame and 5 Founders' pieces, and buy_item checks $75,000 and $200,000.
