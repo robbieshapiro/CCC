@@ -8,7 +8,7 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
-import { dunes, gorse, LINKS_TURF, pot } from './common';
+import { LINKS_TURF, dunes, gorse, pot, slope } from './common';
 
 const GROUND = 8;
 const GREEN = { x: 48, y: 530, rx: 19, ry: 16 };
@@ -90,7 +90,7 @@ export const sheepwalk: Hole = {
     { kind: 'channel', pts: BURN, width: 12, depth: 3 },
     // the tee, up on a low dune
     { kind: 'disc', x: 0, y: -2, r: 18, h: GROUND + 5, edge: 12, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 0.6, edge: 14, tilt: [-0.9, 0.5], rolls: [[-9, -6, 9, 0.4], [11, 7, 8, -0.35], [2, 10, 7, 0.25]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.6, edge: 14, tilt: slope(GREEN, 14, [-0.9, 0.5]), rolls: [[-9, -6, 9, 0.4], [11, 7, 8, -0.35], [2, 10, 7, 0.25]] }),
     // the track is worn into the ground, so a rolling ball keeps to it
     { kind: 'channel', pts: TRACK, width: 4.5, depth: 0.6 },
     ...traps.flatMap((t) => t.pieces),

@@ -7,7 +7,7 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, V2 } from '../../types';
 import { greenComplex } from '../woods';
-import { dunes, gorse, LINKS_TURF, pot } from './common';
+import { LINKS_TURF, dunes, gorse, pot, slope } from './common';
 
 const GROUND = 8;
 const FORT = { x: 0, y: 170, r: 38 };
@@ -33,7 +33,7 @@ export const fairyfort: Hole = {
   gusts: true,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.08,
+  greenFirm: 0.11, // Nov 19: a step firmer (was 0.08), the easiest hole
   yards: 125,
   blurb: 'A short iron into an old ring fort. A big green, a bank all round it, and a gap at the front.',
   teeTip: 'A short iron at the middle. The bank inside the fort feeds the ball down.',
@@ -63,7 +63,7 @@ export const fairyfort: Hole = {
     { kind: 'ramp', x0: -120, y0: -50, x1: 120, y1: 280, axis: 'y', h0: GROUND, h1: GROUND, op: 'set' },
     { kind: 'disc', x: 0, y: -2, r: 15, h: GROUND + 3, edge: 8, op: 'set' },
     ...dunes([[-90, 60, 40, 7], [92, 70, 40, 7], [-84, 230, 40, 8], [86, 236, 40, 8]]),
-    ...greenComplex(GREEN, GROUND, { lift: 0.3, edge: 8, tilt: [0.4, 0.5], rolls: [[-9, -6, 8, 0.3], [10, 7, 7, -0.25], [0, 11, 6, 0.2]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.3, edge: 8, tilt: slope(GREEN, 8, [0.4, 0.5]), rolls: [[-9, -6, 8, 0.3], [10, 7, 7, -0.25], [0, 11, 6, 0.2]] }),
     // the bank: four feet high, its inside face running down to the green
     { kind: 'embankment', pts: RING, h: RING.map(() => GROUND + 4), width: 3, edge: 9 },
     ...traps.flatMap((t) => t.pieces),

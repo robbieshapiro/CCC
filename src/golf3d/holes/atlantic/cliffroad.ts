@@ -7,7 +7,7 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
-import { dunes, gorse, LINKS_TURF, pot } from './common';
+import { LINKS_TURF, dunes, gorse, pot, slope } from './common';
 
 const GROUND = 8;
 const GREEN = { x: 18, y: 648, rx: 20, ry: 16 };
@@ -83,7 +83,7 @@ export const cliffroad: Hole = {
     // rumples in the fairway
     ...dunes([[-14, 160, 22, 1.4], [6, 230, 20, -1], [-20, 330, 22, 1.2], [4, 410, 20, 1.1], [-12, 480, 20, 1.2]]),
     { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 4, edge: 10, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 0.8, edge: 12, tilt: [0.8, 0.6], rolls: [[-9, -6, 8, 0.35], [10, 6, 7, -0.3], [0, 9, 6, 0.2]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.8, edge: 12, tilt: slope(GREEN, 12, [0.8, 0.6]), rolls: [[-9, -6, 8, 0.35], [10, 6, 7, -0.3], [0, 9, 6, 0.2]] }),
     // the track is worn a little into the ground, so a running ball keeps to it
     { kind: 'channel', pts: TRACK, width: 5, depth: 0.5 },
     ...traps.flatMap((t) => t.pieces),

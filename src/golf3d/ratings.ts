@@ -74,12 +74,12 @@ export const RATINGS: Record<string, Rated> = {
     at: "2026-11-19",
     seeds: 4,
     holes: [
-      { id: "sheepwalk", member: 1, strong: 0 },
+      { id: "sheepwalk", member: 1, strong: 0.3 },
       { id: "punchbowl", member: 0.5, strong: 0.5 },
-      { id: "cliffroad", member: 3, strong: 0.3 },
-      { id: "fairyfort", member: 0.5, strong: 0 },
-      { id: "bogroad", member: 0.8, strong: 0 },
-      { id: "castlestrand", member: 0.5, strong: 1 },
+      { id: "cliffroad", member: 3, strong: 0.5 },
+      { id: "fairyfort", member: 0.5, strong: 0.3 },
+      { id: "bogroad", member: 0.5, strong: 0.3 },
+      { id: "castlestrand", member: 1, strong: 1 },
     ],
   },
 };

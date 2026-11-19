@@ -7,7 +7,7 @@
 import { blob, rect } from '../../terrain';
 import type { Hole } from '../../types';
 import { greenComplex, greenside } from '../woods';
-import { dunes, gorse, LINKS_TURF } from './common';
+import { LINKS_TURF, dunes, gorse, slope } from './common';
 
 const GROUND = 8;
 const GREEN = { x: 0, y: 218, rx: 16, ry: 14 };
@@ -62,7 +62,7 @@ export const punchbowl: Hole = {
     { kind: 'disc', x: -4, y: 92, r: 44, h: -2.5, edge: 16, op: 'add' },
     // the bowl: dunes left, right and behind, their feet at the edge of the green
     ...dunes([[-52, 220, 31, 10], [52, 222, 31, 10], [-40, 270, 34, 9], [42, 272, 34, 9], [0, 272, 36, 12], [-78, 120, 40, 7], [80, 110, 40, 8], [-84, 20, 40, 6], [86, 10, 36, 6]]),
-    ...greenComplex(GREEN, GROUND, { lift: 0.5, edge: 12, tilt: [0.7, 0.9], rolls: [[-8, -5, 8, 0.35], [9, 6, 7, -0.3], [0, 9, 6, 0.2]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.5, edge: 12, tilt: slope(GREEN, 12, [0.7, 0.9]), rolls: [[-8, -5, 8, 0.35], [9, 6, 7, -0.3], [0, 9, 6, 0.2]] }),
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: [],
