@@ -105,7 +105,7 @@ function draw() {
           .map((r) => {
             // the card's own par (as the board scores it), worked out from the course only for an older server
             const t = r.par != null ? r.holes.reduce((a, b) => a + b, 0) - r.par : toParOf(course, r.holes);
-            return `<div class="lv-card${r.mine ? ' me' : ''}${before && !before.has(r.playerId) ? ' new' : ''}"><span class="lv-tp ${t < 0 ? 'under' : t > 0 ? 'over' : ''}">${toParLabel(t)}</span><b>${who(r)}${tag(r)}</b><small>${r.holes.reduce((a, b) => a + b, 0)} · ${ago(r.at)}${(r.cards ?? 1) > 1 ? ` · best of ${r.cards}` : ''}</small>
+            return `<div class="lv-card${r.mine ? ' me' : ''}${before && !before.has(r.playerId) ? ' new' : ''}"><span class="lv-top">${face(r, 30)}<span class="lv-tp ${t < 0 ? 'under' : t > 0 ? 'over' : ''}">${toParLabel(t)}</span></span><b>${who(r)}${tag(r)}</b><small>${r.holes.reduce((a, b) => a + b, 0)} · ${ago(r.at)}${(r.cards ?? 1) > 1 ? ` · best of ${r.cards}` : ''}</small>
               <span class="lv-sq">${r.holes.map((s, i) => `<i class="${sq(s, course.holes[i]?.par ?? 4)}"></i>`).join('')}</span></div>`;
           })
           .join('')}</div>${practice}`;
