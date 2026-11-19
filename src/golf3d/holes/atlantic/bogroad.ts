@@ -7,7 +7,7 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
-import { dunes, gorse, LINKS_TURF, pot } from './common';
+import { LINKS_TURF, dunes, gorse, pot, slope } from './common';
 
 const GROUND = 8;
 const GREEN = { x: -14, y: 446, rx: 19, ry: 16 };
@@ -80,7 +80,7 @@ export const bogroad: Hole = {
     // the road across it, a little above the ground either side
     { kind: 'embankment', pts: ROAD, h: [GROUND + 0.6, GROUND + 0.6, GROUND + 0.6, GROUND + 0.6], width: 10, edge: 3 },
     { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 4, edge: 10, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 0.6, edge: 12, tilt: [0.6, 0.6], rolls: [[-9, -6, 8, 0.35], [10, 6, 7, -0.3], [-2, 9, 6, 0.2]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.6, edge: 12, tilt: slope(GREEN, 12, [0.6, 0.6]), rolls: [[-9, -6, 8, 0.35], [10, 6, 7, -0.3], [-2, 9, 6, 0.2]] }),
     ...traps.flatMap((t) => t.pieces),
     { kind: 'box', x0: POOL.x0, y0: POOL.y0, x1: POOL.x1, y1: POOL.y1, h: GROUND - 3, edge: 3, op: 'set' },
   ],

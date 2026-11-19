@@ -7,7 +7,7 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
-import { dunes, gorse, LINKS_TURF, pot } from './common';
+import { LINKS_TURF, dunes, gorse, pot, slope } from './common';
 
 const GROUND = 8;
 const GREEN = { x: 56, y: 922, rx: 18, ry: 15 };
@@ -63,7 +63,7 @@ export const castlestrand: Hole = {
   gusts: true,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.12,
+  greenFirm: 0.15, // Nov 19: a step firmer (was 0.12)
   yards: 680,
   blurb: 'Up the cliff top with the sea all down your right, over the burn, to a green on the edge under the castle.',
   teeTip: 'Left is always land. The burn crosses at the end of a big drive.',
@@ -114,7 +114,7 @@ export const castlestrand: Hole = {
     // rumples in the fairways
     ...dunes([[-18, 170, 24, 1.5], [14, 240, 22, -1.1], [-12, 330, 22, 1.3], [12, 400, 20, 1.2], [30, 730, 20, 1.4], [54, 790, 18, -1]]),
     { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 4, edge: 10, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 0.8, edge: 12, tilt: [-1, 0.5], rolls: [[-10, -7, 9, 0.4], [11, 8, 8, -0.35], [0, 10, 6, 0.2]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.8, edge: 12, tilt: slope(GREEN, 12, [-1, 0.5]), rolls: [[-10, -7, 9, 0.4], [11, 8, 8, -0.35], [0, 10, 6, 0.2]] }),
     ...traps.flatMap((t) => t.pieces),
     // the burn, cut into the cliff top
     { kind: 'channel', pts: BURN, width: 12, depth: 3 },
