@@ -2279,9 +2279,12 @@ grant execute on function record_design_play(uuid, bigint) to anon;
 create table if not exists shop_items (
   id text primary key,
   price int not null check (price > 0),
-  rack text not null check (rack in ('member', 'pro', 'legend'))
+  rack text not null check (rack in ('member', 'pro', 'legend', 'hof', 'founders'))
 );
 alter table shop_items enable row level security;
+-- (Nov 19) two ranks past Club Legend: the Hall of Fame ($75,000) and the Founders' Circle ($200,000)
+alter table shop_items drop constraint if exists shop_items_rack_check;
+alter table shop_items add constraint shop_items_rack_check check (rack in ('member', 'pro', 'legend', 'hof', 'founders'));
 -- the Pro Shop catalogue (src/shop.ts ITEMS): about 60 pieces, mirrored here so the server can check every purchase
 insert into shop_items (id, price, rack) values
   ('stripepolo', 300, 'member'),
@@ -2363,7 +2366,16 @@ insert into shop_items (id, price, rack) values
   ('tourstaff', 3500, 'member'),
   ('standbag', 1500, 'member'),
   ('bladeputter', 2200, 'member'),
-  ('mattedriver', 2800, 'member')
+  ('mattedriver', 2800, 'member'),
+  -- on the course (Nov 19): the ball, the tracer and the celebration
+  ('ballyellow', 200, 'member'), ('ballpink', 250, 'member'), ('ballblack', 900, 'member'), ('ballpearl', 4000, 'pro'),
+  ('ballgold', 18000, 'legend'), ('balldiamond', 60000, 'hof'), ('ballmolten', 150000, 'founders'),
+  ('tracegreen', 400, 'member'), ('traceyours', 1200, 'member'), ('tracegold', 6000, 'pro'), ('tracefire', 20000, 'legend'),
+  ('tracerainbow', 80000, 'hof'), ('tracecomet', 175000, 'founders'),
+  ('celfist', 600, 'member'), ('celspot', 3000, 'pro'), ('celfireworks', 25000, 'legend'), ('celgoldrain', 90000, 'hof'),
+  ('celfounders', 220000, 'founders'),
+  -- the Hall of Fame and Founders' Circle racks
+  ('hofblazer', 85000, 'hof'), ('platdriver', 70000, 'hof'), ('founderscardi', 210000, 'founders'), ('foundersputter', 190000, 'founders')
 on conflict (id) do update set price = excluded.price, rack = excluded.rack;
 
 create table if not exists purchases (
@@ -2589,14 +2601,15 @@ begin
     cross join lateral period_payouts(g.group_id) pp where pp.player_id in (select person_seats(me));
   earned := earned + (person_bonus(me)->>'total')::int;
   spent := person_spent(me);
-  -- the Club Legend rack also needs a weekly title, at any of their clubs
-  if it.rack = 'legend' and not exists (
+  -- the Club Legend rack and those above it also need a weekly title, at any of their clubs
+  if it.rack in ('legend', 'hof', 'founders') and not exists (
     select 1 from (select distinct s.group_id from players s where s.id in (select person_seats(me))) g
     cross join lateral period_champs(g.group_id) c where c.player_id in (select person_seats(me)) and c.how <> 'playoff'
   ) then
     raise exception 'The Club Legend rack opens with a weekly title.';
   end if;
-  if (it.rack = 'pro' and earned < 5000) or (it.rack = 'legend' and earned < 25000) then
+  if (it.rack = 'pro' and earned < 5000) or (it.rack = 'legend' and earned < 25000) or (it.rack = 'hof' and earned < 75000)
+    or (it.rack = 'founders' and earned < 200000) then
     raise exception 'That rack is for higher ranks.';
   end if;
   if earned - spent < it.price then raise exception 'Not enough in the bank for that.'; end if;

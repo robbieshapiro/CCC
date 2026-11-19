@@ -30,12 +30,12 @@ export type GolferSpec = {
   glove: boolean;
   shoes: 'white' | 'saddle' | 'black';
   bag: string;
-  putter?: 'classic' | 'gold' | 'chrome' | 'mallet' | 'hickory' | 'blackout' | 'diamond' | 'blade';
+  putter?: 'classic' | 'gold' | 'chrome' | 'mallet' | 'hickory' | 'blackout' | 'diamond' | 'blade' | 'founders';
   crestBag?: boolean;
   // Pro Shop pieces (src/shop.ts)
   bagStyle?: 'goldstaff' | 'school' | 'pencil' | 'leather' | 'croc' | 'tourstaff' | 'stand';
   // more Pro Shop pieces: a layer over the top, shoes, gloves, glasses, a watch's style, jewellery, the driver, headcovers
-  outer?: 'windbreaker' | 'gilet' | 'rainjacket' | 'puffer' | 'velvet' | 'overcoat' | 'quiltvest';
+  outer?: 'windbreaker' | 'gilet' | 'rainjacket' | 'puffer' | 'velvet' | 'overcoat' | 'quiltvest' | 'hofblazer' | 'founders';
   shoeStyle?: 'sneaker' | 'spectator' | 'croc' | 'gold' | 'tourspike' | 'hightop';
   gloveStyle?: 'black' | 'pair' | 'gold' | 'tour';
   eyewear?: 'sport' | 'round' | 'shield' | 'diamond' | 'halfrim';
@@ -43,7 +43,11 @@ export type GolferSpec = {
   chainStyle?: 'gold' | 'diamond';
   bracelet?: boolean;
   earring?: boolean;
-  driver?: 'persimmon' | 'carbon' | 'gold' | 'matte';
+  driver?: 'persimmon' | 'carbon' | 'gold' | 'matte' | 'platinum';
+  // on the course (Nov 19, the Pro Shop): the ball, the line it draws in the air, and what happens when it drops
+  ball?: 'yellow' | 'pink' | 'black' | 'pearl' | 'gold' | 'diamond' | 'molten';
+  tracer?: 'green' | 'yours' | 'gold' | 'fire' | 'rainbow' | 'comet';
+  celebrate?: 'fist' | 'rings' | 'fireworks' | 'goldrain' | 'founders';
   headcover?: 'pompom' | 'tiger';
   aviators?: boolean;
   chain?: boolean;
@@ -387,19 +391,19 @@ export function buildClub(id: ClubId, finish: GolferSpec['putter'] = 'classic', 
   const len = id === 'driver' ? 3.7 : id === 'wood' ? 3.5 : id === 'iron' ? 3.3 : id === 'wedge' || id === 'chip' ? 3.1 : 2.9;
   const putting = id === 'putter';
   // the shaft: hickory for the wooden putter, black for the blackout one, steel otherwise
-  const shaftM = putting && finish === 'hickory' ? m('#8a5a32', 0.6) : putting && finish === 'blackout' ? m('#1a1a1a', 0.4) : wood === 'carbon' ? m('#2a2a2a', 0.3) : m('#c9ccd1', 0.25, { metalness: 0.8 });
+  const shaftM = putting && finish === 'hickory' ? m('#8a5a32', 0.6) : putting && finish === 'founders' ? m('#2a1a12', 0.35) : putting && finish === 'blackout' ? m('#1a1a1a', 0.4) : wood === 'carbon' ? m('#2a2a2a', 0.3) : m('#c9ccd1', 0.25, { metalness: 0.8 });
   g.add(limb(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -len, 0), 0.035, shaftM));
   g.add(limb(new THREE.Vector3(0, 0.05, 0), new THREE.Vector3(0, -0.75, 0), 0.06, m(putting && finish === 'hickory' ? '#3a2416' : '#1b1b1b', 0.9)));
   let head: THREE.Mesh;
   if (id === 'driver' || id === 'wood') {
     // the head: black titanium, or persimmon, carbon weave, or gold
-    const look = wood === 'matte' ? m('#121214', 0.9, { metalness: 0.1 }) : wood === 'persimmon' ? m('#7a3f1c', 0.25, { metalness: 0.1 }) : wood === 'carbon' ? patternTex('check', '#1c1c1c', '#3a3a3a') : wood === 'gold' ? m('#d4af37', 0.2, { metalness: 0.95 }) : m('#1d1f24', 0.3, { metalness: 0.5 });
+    const look = wood === 'matte' ? m('#121214', 0.9, { metalness: 0.1 }) : wood === 'persimmon' ? m('#7a3f1c', 0.25, { metalness: 0.1 }) : wood === 'carbon' ? patternTex('check', '#1c1c1c', '#3a3a3a') : wood === 'gold' ? m('#d4af37', 0.2, { metalness: 0.95 }) : wood === 'platinum' ? m('#e5e4e2', 0.08, { metalness: 1 }) : m('#1d1f24', 0.3, { metalness: 0.5 });
     head = mesh(new THREE.SphereGeometry(id === 'wood' ? 0.2 : 0.26, 16, 10), look);
     head.scale.set(1.35, 0.7, 1);
     head.position.set(0.2, -len, 0.04);
   } else if (putting) {
     const look =
-      finish === 'gold' ? m('#d4af37', 0.25, { metalness: 0.9 }) : finish === 'chrome' || finish === 'diamond' ? m('#eef2f6', 0.05, { metalness: 1 }) : finish === 'blackout' ? m('#141414', 0.5, { metalness: 0.3 }) : finish === 'hickory' ? m('#b08a3c', 0.3, { metalness: 0.8 }) : finish === 'blade' ? m('#cfd2d6', 0.5, { metalness: 0.85 }) : m('#b9bcc2', 0.25, { metalness: 0.9 });
+      finish === 'gold' || finish === 'founders' ? m('#d4af37', 0.25, { metalness: 0.9 }) : finish === 'chrome' || finish === 'diamond' ? m('#eef2f6', 0.05, { metalness: 1 }) : finish === 'blackout' ? m('#141414', 0.5, { metalness: 0.3 }) : finish === 'hickory' ? m('#b08a3c', 0.3, { metalness: 0.8 }) : finish === 'blade' ? m('#cfd2d6', 0.5, { metalness: 0.85 }) : m('#b9bcc2', 0.25, { metalness: 0.9 });
     if (finish === 'mallet') {
       // a big half-moon mallet head, with a white sight line
       head = mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.12, 22), m('#c9ccd1', 0.2, { metalness: 0.9 }));
@@ -589,6 +593,8 @@ export class Golfer {
       overcoat: m('#b8906a', 0.9),
       gilet: m('#2b2b2b', 0.5),
       quiltvest: patternTex('quilt', s.accent, shade(s.accent, -0.18)),
+      hofblazer: m('#1a4a33', 0.75),
+      founders: patternTex('tweed', '#efe6cf', '#00000018'),
     };
     // a jacket over the top: its own material, long sleeves (a gilet leaves the shirt's sleeves showing)
     const outer = s.outer && s.outer !== 'gilet' && s.outer !== 'quiltvest' ? OUTER[s.outer] : null;
@@ -827,21 +833,25 @@ export class Golfer {
       band.scale.set(w * 1.05, 1, 0.66 * w);
       this.spine.add(band);
     }
-    if (s.top === 'cardigan' || s.top === 'blazer' || s.top === 'goldblazer' || s.top === 'tweed' || s.outer === 'velvet' || s.outer === 'overcoat') {
+    if (s.top === 'cardigan' || s.top === 'blazer' || s.top === 'goldblazer' || s.top === 'tweed' || s.outer === 'velvet' || s.outer === 'overcoat' || s.outer === 'hofblazer' || s.outer === 'founders') {
       // shirt and tie showing at the open front, and lapels
       this.spine.add(mesh(new THREE.BoxGeometry(0.34, 0.75, 0.05), m('#f6f3ea', 0.6)).translateY(1.45).translateZ(frontZ(1.45)));
-      if (s.top !== 'cardigan' && !s.bowtie) this.spine.add(mesh(new THREE.BoxGeometry(0.1, 0.6, 0.03), m(s.top === 'goldblazer' ? '#b8955a' : '#7a1f2b', 0.5)).translateY(1.4).translateZ(frontZ(1.4) + 0.02));
-      const trim = s.top === 'goldblazer' && !outer ? m('#c9a24a', 0.3, { metalness: 0.6 }) : s.outer === 'velvet' ? m('#141414', 0.2) : topMat;
+      if (s.top !== 'cardigan' && s.outer !== 'founders' && !s.bowtie) this.spine.add(mesh(new THREE.BoxGeometry(0.1, 0.6, 0.03), m(s.top === 'goldblazer' ? '#b8955a' : '#7a1f2b', 0.5)).translateY(1.4).translateZ(frontZ(1.4) + 0.02));
+      const trim = (s.top === 'goldblazer' && !outer) || s.outer === 'hofblazer' ? m('#c9a24a', 0.3, { metalness: 0.6 }) : s.outer === 'velvet' ? m('#141414', 0.2) : topMat;
       for (const side of [-1, 1]) {
         const lap = mesh(new THREE.BoxGeometry(0.14, 0.7, 0.04), trim);
         lap.position.set(0.17 * side, 1.45, frontZ(1.45) + 0.02);
         lap.rotation.z = 0.25 * side;
         this.spine.add(lap);
       }
-      if (s.top === 'blazer' || s.top === 'goldblazer') {
-        const badge = mesh(new THREE.CircleGeometry(0.08, 12), m('#b8955a', 0.3, { metalness: 0.6 }));
+      if (s.top === 'blazer' || s.top === 'goldblazer' || s.outer === 'hofblazer' || s.outer === 'founders') {
+        const badge = mesh(new THREE.CircleGeometry(s.outer === 'hofblazer' || s.outer === 'founders' ? 0.11 : 0.08, 12), m('#d4af37', 0.25, { metalness: 0.8 }));
         badge.position.set(-0.3, 1.35, frontZ(1.35) + 0.03);
         this.spine.add(badge);
+      }
+      if (s.outer === 'hofblazer' || s.outer === 'founders') {
+        // gold buttons down the front
+        for (const y of [1.0, 0.8, 0.6]) this.spine.add(mesh(new THREE.SphereGeometry(0.035, 8, 6), m('#d4af37', 0.25, { metalness: 0.9 })).translateY(y).translateZ(frontZ(y) + 0.03));
       }
     }
     // a gold chain round the neck, with a little club-head pendant

@@ -2404,3 +2404,12 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .ld-tip span.out { opacity: 0; }
 .ld-tip small { font: 800 11px var(--font); letter-spacing: 0.18em; text-transform: uppercase; font-style: normal; color: var(--gold); }
 @media (prefers-reduced-motion: reduce) { .ld, .ld-bar i, .ld-tip span { transition: none; } }
+
+/* Pro Shop on-course pieces (Nov 19): a swatch of the ball or the tracer on the rack, not an emoji */
+.fi-icon.fi-sw { width: 34px; height: 34px; border-radius: 50%; background: var(--sw); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.25); }
+.fi-icon.fi-sw.tracer { width: 46px; height: 8px; margin: 13px 0; border-radius: 999px; box-shadow: 0 0 8px rgba(255, 255, 255, 0.3); }
+.rb-hof, .rb-founders { filter: drop-shadow(0 0 3px rgba(230, 195, 92, 0.55)); }
+.fit-rack.rack-hof .fit-item { background: linear-gradient(135deg, #0f3d2a, #1d5a3e); border-color: #e6c35c; color: #f3ecdc; }
+.fit-rack.rack-hof .fit-item b { color: #f3d98a; }
+.fit-rack.rack-founders .fit-item { background: linear-gradient(135deg, #fbf5e6, #efe0b8); border-color: #b8862a; box-shadow: 0 0 0 1px #e6c35c inset, 0 4px 14px rgba(184, 134, 42, 0.25); }
+.fit-rack.rack-founders .fit-item b { color: #6b4a10; }
