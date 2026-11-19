@@ -1,6 +1,7 @@
 // The Season: FedEx Cup style points from every week's Open finish, the year so far, as a Clubhouse tab. Banked points
 // from closed weeks, with this week's place shown as projected until it closes. Each row shows the golfer's Open wins
 // and career earnings, and opens their card (golfer.ts), whatever club they're in.
+import { face } from '../faces';
 import { api } from '../api';
 import type { Season, Snapshot } from '../api/types';
 import { courseFor } from '../golf3d/courses';
@@ -49,7 +50,7 @@ export async function fillSeason() {
         const href = r.mine ? '#/locker' : `#/golfer/${r.playerId}`;
         // on a phone the wins and earnings columns fold into the line under the name
         const fold = [r.wins ? `${r.wins} ${r.wins === 1 ? 'win' : 'wins'}` : '', money(r.earnings ?? 0)].filter(Boolean).join(' · ');
-        return `<tr class="${r.mine ? 'me' : ''}" data-href="${href}"><td class="pos">${place}</td><td class="nm"><a href="${href}"><b>${esc(r.name)}${r.mine ? ' <small class="you">you</small>' : ''}</b></a><small>${sub}</small><small class="ph">${fold}</small></td><td class="num wins">${r.wins || ''}</td><td class="num earn">${money(r.earnings ?? 0)}</td><td class="num pts"><b>${total(r).toLocaleString('en-US')}</b>${r.projected ? `<small>+${r.projected} this week</small>` : ''}</td></tr>`;
+        return `<tr class="${r.mine ? 'me' : ''}" data-href="${href}"><td class="pos">${place}</td><td class="nm"><a href="${href}">${face(r, 30)}<b>${esc(r.name)}${r.mine ? ' <small class="you">you</small>' : ''}</b></a><small>${sub}</small><small class="ph">${fold}</small></td><td class="num wins">${r.wins || ''}</td><td class="num earn">${money(r.earnings ?? 0)}</td><td class="num pts"><b>${total(r).toLocaleString('en-US')}</b>${r.projected ? `<small>+${r.projected} this week</small>` : ''}</td></tr>`;
       })
       .join('')}</tbody></table></div>`;
   // the whole row opens the card, not just the name

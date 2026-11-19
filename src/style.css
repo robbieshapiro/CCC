@@ -2449,3 +2449,15 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 /* Today's cards: the face up top beside the score (Nov 19) */
 .lv-card .lv-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
 .lv-card .lv-top .face { margin: 0; }
+
+/* Shots of the day, compact (Nov 19): a row of small tiles, a face with a gold play badge, the name and the shot */
+.bs-rp-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(140px, 1fr); gap: 6px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 2px; }
+.bs-replay { scroll-snap-align: start; gap: 8px; padding: 7px 10px 7px 7px; min-width: 0; }
+.bs-replay > div { min-width: 0; }
+.bs-replay b { font: 700 14px var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bs-replay span { white-space: nowrap; }
+.bs-rp-face { position: relative; flex: none; display: grid; }
+.bs-rp-face .face { margin: 0; }
+.bs-rp-face i { position: absolute; right: -4px; bottom: -3px; width: 20px; height: 20px; font-size: 9px; padding-left: 1px; box-shadow: 0 0 0 2px #14231c; }
+/* faces on the Season standings */
+.season-table td.nm a { display: inline-flex; align-items: center; }

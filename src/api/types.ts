@@ -129,7 +129,7 @@ export type FieldRow = { best?: number[] | null; bestAt?: string | null; cards?:
 // A course's record over every round ever played on it, every club (course_records): free play on a classic course counts
 export type CourseRecord = { course: string; toPar: number; holders: { name: string; club: string }[] | null; mine: number | null; rounds: number; champions: { name: string; club: string; toPar: number }[] };
 // Season points, FedEx Cup style (season_standings): banked from closed weeks, projected from this week's place
-export type SeasonRow = { playerId: string; name: string; club: string; mine: boolean; points: number; projected: number; events: number; wins: number; top10s: number; best: number | null; earnings: number };
+export type SeasonRow = { playerId: string; avatar?: Avatar; name: string; club: string; mine: boolean; points: number; projected: number; events: number; wins: number; top10s: number; best: number | null; earnings: number };
 // One golfer's card from any club (golfer_card): their Open weeks this season, career and money across their seats
 export type GolferWeek = { week: string; course: string; place: number; tied: boolean; field: number; toPar: number; holes: number[]; total: number; par: number; points: number; banked: boolean };
 export type GolferCard = { playerId: string; name: string; avatar: Avatar; club: string; clubs: string[] | null; joined: string; mine: boolean; earnings: number; top10s: number; titles: number; career: { rounds: number; best: number | null; avg: number | null }; feats: string[]; weeks: GolferWeek[] };
