@@ -276,7 +276,7 @@ Last updated Nov 19, 2026 (the Members' Course's featured hole on home; faces on
 
 ## Setup status
 
-- [ ] #359: apply `pr_359_featured_hole` (`members_course`) after merge.
+- [x] #359: applied `pr_359_featured_hole` on Nov 19; members_course returns Tyler's Lost in Orbit with his avatar.
 - [x] #358: applied `pr_358_winged_ball` on Nov 19; the winged golden ball is in shop_items at $3,500.
 - [x] #357: applied `pr_357_season_faces` on Nov 19; season_standings returns the avatar live.
 - [x] #354: applied `pr_354_faces` on Nov 19; all four return the avatar live.
