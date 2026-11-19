@@ -275,7 +275,7 @@ Last updated Nov 19, 2026 (faces on the bar's boards and Mo's Book, a winged gol
 
 ## Setup status
 
-- [ ] #358: apply `pr_358_winged_ball` (1 `shop_items` row) after merge.
+- [x] #358: applied `pr_358_winged_ball` on Nov 19; the winged golden ball is in shop_items at $3,500.
 - [x] #357: applied `pr_357_season_faces` on Nov 19; season_standings returns the avatar live.
 - [x] #354: applied `pr_354_faces` on Nov 19; all four return the avatar live.
 - [x] #353: applied `pr_353_brooms` on Nov 19; shop_items has the three brooms (122 pieces in all).
