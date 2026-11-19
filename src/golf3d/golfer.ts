@@ -46,6 +46,8 @@ export type GolferSpec = {
   outer?: 'windbreaker' | 'gilet' | 'rainjacket' | 'puffer' | 'velvet' | 'overcoat' | 'quiltvest' | 'hofblazer' | 'founders' | 'robe';
   // the Wizarding School's house scarf (Nov 19), in one of the four classic colour pairs
   scarf?: 'scarlet' | 'emerald' | 'blue' | 'yellow';
+  // a broomstick (Nov 19): between shots the golfer sits on it and hovers, and hops off to swing
+  broom?: 'school' | 'racer' | 'champion';
   shoeStyle?: 'sneaker' | 'spectator' | 'croc' | 'gold' | 'tourspike' | 'hightop' | 'maison' | 'atelier';
   gloveStyle?: 'black' | 'pair' | 'gold' | 'tour';
   eyewear?: 'sport' | 'round' | 'shield' | 'diamond' | 'halfrim' | 'wire';
@@ -442,6 +444,33 @@ export function buildClub(id: ClubId, finish: GolferSpec['putter'] = 'classic', 
   return g;
 }
 
+// A broomstick, lying front to back (+z forward): a long handle, a binding, and a bundle of twigs at the back.
+// The school broom is plain ash and birch; the racer sleek and dark with its twigs swept tight; the championship broom
+// polished, bound in gold, with gold-tipped twigs.
+function buildBroom(kind: NonNullable<GolferSpec['broom']>) {
+  const g = new THREE.Group();
+  const wood = kind === 'racer' ? m('#2a1a12', 0.3) : kind === 'champion' ? m('#5a2e14', 0.2) : m('#a07a4a', 0.75);
+  const bind = kind === 'champion' ? GOLD() : kind === 'racer' ? m('#c9ccd1', 0.25, { metalness: 0.85 }) : m('#5a4630', 0.9);
+  const twig = kind === 'champion' ? m('#d9b65a', 0.6, { metalness: 0.4 }) : kind === 'racer' ? m('#3a2c1e', 0.8) : m('#b8955a', 0.95);
+  const handle = mesh(new THREE.CylinderGeometry(0.07, 0.085, 5.2, 8), wood);
+  handle.rotation.x = Math.PI / 2;
+  handle.position.z = 0.6;
+  g.add(handle);
+  // the binding, where the twigs meet the handle
+  for (const z of [-1.95, -2.1]) g.add(mesh(new THREE.TorusGeometry(0.14, 0.035, 6, 14), bind).translateZ(z));
+  // the twigs: a cone flaring back (the racer's swept narrow, the others full)
+  const flare = kind === 'racer' ? 0.32 : 0.48;
+  const bundle = mesh(new THREE.CylinderGeometry(0.15, flare, 1.5, 12, 1, true), twig);
+  bundle.rotation.x = -Math.PI / 2;
+  bundle.position.z = -2.85;
+  g.add(bundle);
+  bundle.material = twig;
+  // a little stirrup each side for the feet, and a gold tip on the championship broom
+  for (const side of [-1, 1]) g.add(mesh(new THREE.TorusGeometry(0.12, 0.025, 5, 10, Math.PI), bind).translateX(0.28 * side).translateY(-0.55).translateZ(-0.6).rotateZ(Math.PI));
+  if (kind === 'champion') g.add(mesh(new THREE.SphereGeometry(0.11, 10, 8), GOLD()).translateZ(3.22));
+  return g;
+}
+
 function buildBag(color: string, crest: boolean, style?: GolferSpec['bagStyle'], kit?: { primary: string; secondary: string; mono: string }, cover?: GolferSpec['headcover']) {
   const g = new THREE.Group();
   const gold = style === 'goldstaff';
@@ -584,6 +613,8 @@ export class Golfer {
   private club: THREE.Group | null = null;
   private clubId: ClubId | null = null;
   private legs: THREE.Group[] = [];
+  private broom: THREE.Group | null = null;
+  private hover = 0; // 0 standing, 1 sat on the broom in the air
   private arms: { upper: THREE.Group; lower: THREE.Group; side: number }[] = [];
   private t = 0;
   private state: { pose: PoseName; hold?: number; react?: { kind: Reaction; t: number }; swing?: { t: number; back: number; dur: number; impact: () => void; done: () => void; hit: boolean } } = { pose: 'idle' };
@@ -1152,6 +1183,14 @@ export class Golfer {
       }
     }
 
+    // the broomstick, out of sight until the golfer sits on it (see update)
+    if (s.broom) {
+      const b = buildBroom(s.broom);
+      b.name = 'broom';
+      b.visible = false;
+      this.broom = b;
+      this.group.add(b);
+    }
     // bag at the side
     // the bag at the side, or for a Club Legend, their caddie standing by with it
     if (s.caddie) {
@@ -1552,6 +1591,18 @@ export class Golfer {
       if (t > REACT_FOR[k]) this.state = { pose: 'idle' };
     }
     if (lead >= 0 && rc?.kind === 'pump') arm[lead] = { ux: 0, uz: 0, lx: 0, lz: 0 };
+    // on a broom: sat on it and floating while standing about or lining up, down to the ground for the swing
+    const aloft = !!this.broom && !rc && !this.state.swing && this.state.hold === undefined && (p === 'idle' || p === 'address' || p === 'clasp');
+    this.hover += ((aloft ? 1 : 0) - this.hover) * (1 - Math.exp(-dt * (aloft ? 2.5 : 9)));
+    if (this.hover > 0.01) {
+      const h = this.hover;
+      // sat up straight on it, not bent over a ball
+      target.bend *= 1 - h;
+      target.tilt += (-0.35 - target.tilt) * h;
+      target.knee *= 1 - h;
+      target.headTilt *= 1 - h;
+      lift += h * (1.5 + 0.18 * Math.sin(this.t * 2.2));
+    }
     const sw = this.state.swing;
     if (sw) {
       sw.t += dt;
@@ -1591,7 +1642,18 @@ export class Golfer {
     this.head.rotation.y += shake;
     this.hips.position.y = 3.05 - c.knee * 0.5 + lift;
     this.hips.rotation.x = -c.bend * 0.25 + flip;
-    this.legs.forEach((l, i) => (l.rotation.x = c.knee * 0.4 + (i === 0 ? kick : 0)));
+    this.legs.forEach((l, i) => {
+      // astride the broom: legs hanging either side of it, a little forward and apart
+      l.rotation.x = c.knee * 0.4 + (i === 0 ? kick : 0) - 0.4 * this.hover;
+      l.rotation.z = (i === 0 ? -1 : 1) * 0.3 * this.hover;
+    });
+    if (this.broom) {
+      // the broom under the seat, nose up a touch, rocking with the hover
+      this.broom.visible = this.hover > 0.03;
+      this.broom.position.y = this.hips.position.y - 0.42;
+      this.broom.rotation.x = -0.08 + 0.04 * Math.sin(this.t * 2.2 + 0.6);
+      this.broom.scale.setScalar(Math.max(0.001, Math.min(1, this.hover * 1.4)));
+    }
     // the arms ease to where the reaction wants them (all at rest for the swing)
     const armEase = 1 - Math.exp(-dt * 16);
     this.arms.forEach((a, i) => {
