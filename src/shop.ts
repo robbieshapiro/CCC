@@ -151,6 +151,7 @@ const wizardItems: Item[] = [
   hat('wizhat', 'Pointed wizard hat', 2000, 'member', 'A tall purple hat with a bent tip and gold stars. Mind the low branches.', 'wizard'),
   specs('wirespecs', 'Round wire spectacles', 900, 'member', 'Thin gold round frames. Very studious.', 'wire'),
   // broomsticks: sat on between shots, hovering a few feet up, and off to swing (looks only: the ball doesn't know)
+  slot('ballwinged', 'Winged golden ball', 3500, 'member', 'ball', 'A small gold ball with fine silver wings that beat as it flies. Catch it if you can.', 'ball', 'winged', undefined),
   slot('broomschool', 'School broom', 2000, 'member', 'bag', 'Plain ash and birch twigs. Your golfer hovers on it between shots.', 'broom', 'school', undefined, 'full'),
   slot('broomracer', 'Racing broom', 5500, 'member', 'bag', 'Dark polished handle, twigs swept tight, a steel binding. Built for speed between shots.', 'broom', 'racer', undefined, 'full'),
   slot('broomchamp', 'Championship broom', 12000, 'member', 'bag', 'Bound in gold with gold-tipped twigs. The broom of champions.', 'broom', 'champion', undefined, 'full'),
@@ -279,6 +280,7 @@ export const SWATCH: Record<string, string> = {
   ballgold: 'radial-gradient(circle at 35% 35%, #fff2b0, #d4af37 55%, #8a6a14)',
   balldiamond: 'conic-gradient(#e8f6ff, #a7d8ff, #ffffff, #c8b6ff, #e8f6ff)',
   ballmolten: 'radial-gradient(circle at 40% 40%, #fff3a0, #ff8a1c 50%, #b3200c)',
+  ballwinged: 'radial-gradient(circle at 35% 35%, #fff6c2, #f0c84a 50%, #a07a14)',
   tracegreen: 'linear-gradient(90deg, transparent, #2f8a52)',
   traceyours: 'linear-gradient(90deg, transparent, #4f6d8f)',
   tracegold: 'linear-gradient(90deg, transparent, #e6c35c)',

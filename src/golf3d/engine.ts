@@ -2205,9 +2205,36 @@ export class Course3D {
     else if (b === 'gold') set('#e8c34a', 0.25, 0.55, '#6a4a00', 0.45);
     else if (b === 'diamond') set('#e8f6ff', 0.04, 0.7, '#9fd4ff', 0.35);
     else if (b === 'molten') set('#ff7a1a', 0.5, 0, '#ff4a00', 1.3);
+    else if (b === 'winged') {
+      // a polished gold ball with two fine silver wings that beat as it flies
+      set('#f5cf4f', 0.25, 0.5, '#9a6c00', 0.75);
+      const wing = new THREE.MeshStandardMaterial({ color: '#f4f2ec', roughness: 0.4, metalness: 0.3, side: THREE.DoubleSide, transparent: true, opacity: 0.92 });
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0);
+      shape.quadraticCurveTo(0.25, 0.32, 0.95, 0.42);
+      shape.quadraticCurveTo(0.7, 0.16, 0.85, 0.02);
+      shape.quadraticCurveTo(0.45, 0.04, 0, 0);
+      const geo = new THREE.ShapeGeometry(shape);
+      this.wings = [-1, 1].map((side) => {
+        const pivot = new THREE.Group();
+        const w = new THREE.Mesh(geo, wing);
+        w.scale.set(side * BALL_R * 2.4, BALL_R * 2.4, 1);
+        pivot.add(w);
+        pivot.position.set(side * BALL_R * 0.6, BALL_R * 0.3, 0);
+        this.ball.add(pivot);
+        return pivot;
+      });
+    }
   }
   // the diamond ball glitters as it goes
+  private wings: THREE.Group[] = [];
   private shimmer(clock: number) {
+    // the winged ball's wings beat, fast in flight, slow at rest
+    if (this.wings.length) {
+      const flying = this.trailPts.length > 2;
+      const beat = Math.sin(clock * (flying ? 38 : 7)) * (flying ? 0.9 : 0.35);
+      this.wings.forEach((w, i) => (w.rotation.y = (i ? -1 : 1) * beat));
+    }
     if (this.gear.ball !== 'diamond') return;
     (this.ball.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.25 + 0.3 * Math.max(0, Math.sin(clock * 11)) ** 3;
   }
