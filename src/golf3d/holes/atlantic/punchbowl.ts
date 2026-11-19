@@ -1,4 +1,4 @@
-// Hole 2, The Punchbowl (par 3, 160 yd as shown): off a high dune, over a blown-out waste of sand, to a small green
+// Hole 2, The Punchbowl (par 3, 160 yd as shown): off a high dune, over a blown-out waste of sand, to a big green
 // sunk in a bowl of dunes.
 // The play: a full iron, all carry, to the middle of the green. The dunes left and right are thick fescue: a ball that
 // lands in them stays up there.
@@ -10,8 +10,8 @@ import { greenComplex, greenside } from '../woods';
 import { dunes, gorse, LINKS_TURF } from './common';
 
 const GROUND = 8;
-const GREEN = { x: 0, y: 218, rx: 12, ry: 11 };
-const BANK = { x: 0, y: 249, rx: 18, ry: 17 };
+const GREEN = { x: 0, y: 218, rx: 16, ry: 14 };
+const BANK = { x: 0, y: 254, rx: 20, ry: 17 };
 const traps = [greenside(GREEN, -15, 194, 6, 5, 1, 3.4, 0.4), greenside(GREEN, 17, 196, 6, 5, 2, 3.4, -0.4)];
 
 export const punchbowl: Hole = {
@@ -24,12 +24,12 @@ export const punchbowl: Hole = {
   gusts: true,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.1,
+  greenFirm: 0.14,
   yards: 160,
-  blurb: 'All carry over the sand to a small green down in the dunes. Long is better than short.',
+  blurb: 'All carry over the sand to a big green down in the dunes. Long is better than short.',
   tee: { x: 0, y: 0 },
   cup: { x: 1, y: 219 },
-  pins: [{ x: 1, y: 219 }, { x: -8, y: 213 }, { x: 8, y: 222 }, { x: -3, y: 226 }],
+  pins: [{ x: 1, y: 219 }, { x: -10, y: 211 }, { x: 10, y: 223 }, { x: -4, y: 229 }],
   aim: 0,
   bounds: { x0: -120, y0: -50, x1: 120, y1: 330 },
   border: [
@@ -44,10 +44,11 @@ export const punchbowl: Hole = {
     // the waste: a blown-out dune, all sand
     { poly: blob(-4, 92, 44, 46, 1, 0.12), surface: 'sand' },
     // the way in, short of the green
-    { poly: blob(1, 188, 9, 13, 2, 0.08), surface: 'fairway' },
+    { poly: blob(1, 186, 12, 14, 2, 0.08), surface: 'fairway' },
     // the Backstop: the mown bank behind the green
     { poly: blob(BANK.x, BANK.y, BANK.rx, BANK.ry, 4, 0.06), surface: 'fairway' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 4, GREEN.ry + 4, 3, 0.06), surface: 'fringe' },
+    // a wide collar, mown for the run-up (Nov 18: bigger, lower links greens)
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 6, GREEN.ry + 6, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     ...traps.map((t) => t.region),
   ],
@@ -61,7 +62,7 @@ export const punchbowl: Hole = {
     { kind: 'disc', x: -4, y: 92, r: 44, h: -2.5, edge: 16, op: 'add' },
     // the bowl: dunes left, right and behind, their feet at the edge of the green
     ...dunes([[-52, 220, 31, 10], [52, 222, 31, 10], [-40, 270, 34, 9], [42, 272, 34, 9], [0, 272, 36, 12], [-78, 120, 40, 7], [80, 110, 40, 8], [-84, 20, 40, 6], [86, 10, 36, 6]]),
-    ...greenComplex(GREEN, GROUND, { lift: 1.4, edge: 8, tilt: [0.7, 0.9], rolls: [[-6, -4, 6, 0.3], [7, 5, 6, -0.25]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.5, edge: 12, tilt: [0.7, 0.9], rolls: [[-8, -5, 8, 0.35], [9, 6, 7, -0.3], [0, 9, 6, 0.2]] }),
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: [],

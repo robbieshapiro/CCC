@@ -1,5 +1,5 @@
 // Hole 1, Sheep Walk (par 4, 390 yd as shown): inland through a valley in the dunes on the west coast of Ireland, a
-// dry-stone wall across the end of the fairway and a small green set just beyond it.
+// dry-stone wall across the end of the fairway and a big links green set just beyond it.
 // The play: a drive between the two pots and short of the burn, then an iron over the burn and the wall to a green that
 // tips to the right.
 // The bail-out: left, off the tee and at the green. The burn runs all down the right, and right of the green is a deep pot.
@@ -11,7 +11,7 @@ import { greenComplex, greenside } from '../woods';
 import { dunes, gorse, LINKS_TURF, pot } from './common';
 
 const GROUND = 8;
-const GREEN = { x: 48, y: 530, rx: 14, ry: 12 };
+const GREEN = { x: 48, y: 530, rx: 19, ry: 16 };
 // the wall runs a little uphill of square; the gate is the gap in it
 const wallY = (x: number) => 446 + (x - 2) * 0.047;
 const GATE = { x0: 8, x1: 20 };
@@ -37,6 +37,7 @@ const traps = [
   pot(22, 282, 7, 2), // right of it, further on
   greenside(GREEN, 70, 522, 6, 8, 3, 3.4, 0), // right of the green
   greenside(GREEN, 52, 552, 9, 6, 4, 3.4, 0), // behind it
+  greenside(GREEN, 64, 506, 6, 6, 5, 3.4, 0), // short and right: a links pot guarding the bigger green
 ];
 
 export const sheepwalk: Hole = {
@@ -49,13 +50,13 @@ export const sheepwalk: Hole = {
   gusts: true,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.06,
+  greenFirm: 0.1,
   yards: 390,
-  blurb: 'Down the valley between the dunes, over the burn and the old wall to a small green. Miss it short and left, never right.',
+  blurb: 'Down the valley between the dunes, over the burn and the old wall to a big links green. Miss it short and left, never right.',
   teeTip: 'The burn runs down the right and then across. Favour the left, and stay short of it.',
   tee: { x: 0, y: 0 },
   cup: { x: 48, y: 532 },
-  pins: [{ x: 48, y: 532 }, { x: 41, y: 526 }, { x: 55, y: 535 }, { x: 47, y: 538 }],
+  pins: [{ x: 48, y: 532 }, { x: 38, y: 524 }, { x: 59, y: 536 }, { x: 46, y: 541 }],
   aim: 0.01,
   bounds: { x0: -130, y0: -50, x1: 150, y1: 620 },
   border: [
@@ -71,7 +72,8 @@ export const sheepwalk: Hole = {
     { poly: blob(2, 216, 28, 140, 1, 0.06), surface: 'fairway' },
     // past the wall, the run-up to the green
     { poly: blob(32, 486, 15, 22, 2, 0.08), surface: 'fairway' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.07), surface: 'fringe' },
+    // a wide collar, mown for the run-up (Nov 18: bigger, lower links greens)
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 7, GREEN.ry + 7, 3, 0.07), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.07), surface: 'green' },
     // the sheep track, worn to bare earth
     { poly: band(TRACK, 2.6), surface: 'path' },
@@ -88,7 +90,7 @@ export const sheepwalk: Hole = {
     { kind: 'channel', pts: BURN, width: 12, depth: 3 },
     // the tee, up on a low dune
     { kind: 'disc', x: 0, y: -2, r: 18, h: GROUND + 5, edge: 12, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 2, edge: 10, tilt: [-0.9, 0.5], rolls: [[-7, -5, 7, 0.35], [9, 6, 6, -0.3]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.6, edge: 14, tilt: [-0.9, 0.5], rolls: [[-9, -6, 9, 0.4], [11, 7, 8, -0.35], [2, 10, 7, 0.25]] }),
     // the track is worn into the ground, so a rolling ball keeps to it
     { kind: 'channel', pts: TRACK, width: 4.5, depth: 0.6 },
     ...traps.flatMap((t) => t.pieces),

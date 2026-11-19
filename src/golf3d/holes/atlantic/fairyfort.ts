@@ -11,7 +11,7 @@ import { dunes, gorse, LINKS_TURF, pot } from './common';
 
 const GROUND = 8;
 const FORT = { x: 0, y: 170, r: 38 };
-const GREEN = { x: 0, y: 170, rx: 22, ry: 19 };
+const GREEN = { x: 0, y: 170, rx: 25, ry: 22 };
 // the bank: a ring round the fort, open at the front (toward the tee)
 const RING: V2[] = Array.from({ length: 23 }, (_, i) => {
   const a = -Math.PI / 2 + 0.42 + (i / 22) * (2 * Math.PI - 0.84);
@@ -33,13 +33,13 @@ export const fairyfort: Hole = {
   gusts: true,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.04,
+  greenFirm: 0.08,
   yards: 125,
   blurb: 'A short iron into an old ring fort. A big green, a bank all round it, and a gap at the front.',
   teeTip: 'A short iron at the middle. The bank inside the fort feeds the ball down.',
   tee: { x: 0, y: 0 },
   cup: { x: 0, y: 172 },
-  pins: [{ x: 0, y: 172 }, { x: -11, y: 164 }, { x: 10, y: 176 }, { x: -4, y: 182 }],
+  pins: [{ x: 0, y: 172 }, { x: -14, y: 162 }, { x: 13, y: 177 }, { x: -5, y: 186 }],
   aim: 0,
   bounds: { x0: -120, y0: -50, x1: 120, y1: 280 },
   border: [
@@ -63,7 +63,7 @@ export const fairyfort: Hole = {
     { kind: 'ramp', x0: -120, y0: -50, x1: 120, y1: 280, axis: 'y', h0: GROUND, h1: GROUND, op: 'set' },
     { kind: 'disc', x: 0, y: -2, r: 15, h: GROUND + 3, edge: 8, op: 'set' },
     ...dunes([[-90, 60, 40, 7], [92, 70, 40, 7], [-84, 230, 40, 8], [86, 236, 40, 8]]),
-    ...greenComplex(GREEN, GROUND, { lift: 0.4, edge: 8, tilt: [0.4, 0.5], rolls: [[-7, -5, 6, 0.25], [8, 6, 6, -0.2]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.3, edge: 8, tilt: [0.4, 0.5], rolls: [[-9, -6, 8, 0.3], [10, 7, 7, -0.25], [0, 11, 6, 0.2]] }),
     // the bank: four feet high, its inside face running down to the green
     { kind: 'embankment', pts: RING, h: RING.map(() => GROUND + 4), width: 3, edge: 9 },
     ...traps.flatMap((t) => t.pieces),
