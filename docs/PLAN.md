@@ -274,7 +274,7 @@ Last updated Nov 19, 2026 (faces on the Season standings, compact Shots of the d
 
 ## Setup status
 
-- [ ] #357: apply `pr_357_season_faces` (`season_standings`) after merge.
+- [x] #357: applied `pr_357_season_faces` on Nov 19; season_standings returns the avatar live.
 - [x] #354: applied `pr_354_faces` on Nov 19; all four return the avatar live.
 - [x] #353: applied `pr_353_brooms` on Nov 19; shop_items has the three brooms (122 pieces in all).
 - [x] #349: applied `pr_349_couture` on Nov 19; shop_items has all 119 pieces (7 wizard, 5 Maison, 6 Atelier new).
