@@ -3,6 +3,7 @@ import { freshBeforeCard } from '../version';
 // today's card: one a day counts, locked at the first swing, and picked up where it left off if it's cut short.
 // A preview round (the admin, every hole of a course still to come) and a practice round (any member: the first few
 // holes of the next course, or the whole of the week's course once cards start) are played the same way but never posted.
+import { lookAttrs, looked } from '../courselook';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { crest } from '../brand';
@@ -645,7 +646,7 @@ export function practice(snap: Snapshot, next: Course) {
   if (!next.whatsNew?.length) return go();
   closeRound();
   const theme = next.holes[0]?.theme ?? '';
-  render(`<main class="narrow whats-new ${esc(theme)}">
+  render(`<main class="narrow whats-new${next.look ? looked(next) : ` ${esc(theme)}`}"${lookAttrs(next)}>
     <section class="wn-card">
       <p class="eyebrow">Practice · nothing counts</p>
       <h1>${esc(next.name)}</h1>

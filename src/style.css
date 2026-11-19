@@ -2142,6 +2142,7 @@ button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer;
 .whats-new.chicago .wn-card { border-top-color: #2c4a8a; background: linear-gradient(180deg, #eef2fb, var(--paper) 40%); }
 .pm-classic.chicago { background: linear-gradient(160deg, #0b1428, #142650 55%, #22407a); }
 
+
 /* From the agents, at the top of the Committee Room (Nov 17) */
 .jv-agents { display: grid; gap: 8px; margin: 0 0 16px; }
 .jv-agent { display: grid; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--green); }
@@ -2413,3 +2414,23 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .fit-rack.rack-hof .fit-item b { color: #f3d98a; }
 .fit-rack.rack-founders .fit-item { background: linear-gradient(135deg, #fbf5e6, #efe0b8); border-color: #b8862a; box-shadow: 0 0 0 1px #e6c35c inset, 0 4px 14px rgba(184, 134, 42, 0.25); }
 .fit-rack.rack-founders .fit-item b { color: #6b4a10; }
+
+/* A course's own look (Nov 19, src/courselook.ts): its colours as variables, so a new course needs only its CourseLook */
+.looked { --pat: none; }
+.looked[data-pattern="waves"] { --pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='26' viewBox='0 0 120 26'%3E%3Cpath d='M0 9 Q15 2 30 9 T60 9 T90 9 T120 9' fill='none' stroke='white' stroke-opacity='0.3' stroke-width='1.6'/%3E%3Cpath d='M0 20 Q15 13 30 20 T60 20 T90 20 T120 20' fill='none' stroke='white' stroke-opacity='0.18' stroke-width='1.2'/%3E%3C/svg%3E") 0 100% / 120px 26px repeat-x; }
+.looked[data-pattern="dunes"] { --pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='30' viewBox='0 0 240 30'%3E%3Cpath d='M0 30 Q30 8 60 22 T120 16 T180 24 T240 12 V30 Z' fill='white' fill-opacity='0.1'/%3E%3Cpath d='M0 30 Q40 18 80 26 T160 22 T240 26 V30 Z' fill='white' fill-opacity='0.08'/%3E%3C/svg%3E") 0 100% / 240px 30px repeat-x; }
+.looked[data-pattern="skyline"] { --pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='40' viewBox='0 0 200 40'%3E%3Cpath d='M0 40 V24 H14 V14 H26 V28 H40 V8 H52 V30 H66 V18 H80 V26 H96 V4 H104 V26 H120 V16 H134 V30 H150 V12 H164 V26 H180 V20 H200 V40 Z' fill='white' fill-opacity='0.09'/%3E%3C/svg%3E") 0 100% / 200px 40px repeat-x; }
+.looked[data-pattern="peaks"] { --pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='40' viewBox='0 0 220 40'%3E%3Cpath d='M0 40 L30 14 L50 26 L80 4 L110 30 L140 12 L170 28 L195 10 L220 24 V40 Z' fill='white' fill-opacity='0.09'/%3E%3C/svg%3E") 0 100% / 220px 40px repeat-x; }
+.looked[data-pattern="stars"] { --pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='70' viewBox='0 0 90 70'%3E%3Cg fill='white' fill-opacity='0.35'%3E%3Ccircle cx='10' cy='12' r='1'/%3E%3Ccircle cx='48' cy='6' r='1.3'/%3E%3Ccircle cx='72' cy='30' r='0.9'/%3E%3Ccircle cx='28' cy='44' r='1.1'/%3E%3Ccircle cx='80' cy='60' r='0.8'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 90px 70px repeat; }
+.play-hero.looked { background: var(--pat), radial-gradient(90% 70% at 100% 105%, var(--glow), transparent 62%), radial-gradient(110% 150% at 100% 0%, rgba(255, 255, 255, 0.16), transparent 58%), linear-gradient(160deg, var(--c1), var(--c2) 55%, var(--c3)); box-shadow: 0 12px 34px -12px rgba(0, 0, 0, 0.55); color: #fff; }
+.play-hero.looked .btn.big { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); }
+.play-hero.looked .btn.big:hover { filter: brightness(1.08); }
+.play-hero.looked .play-main .eyebrow, .play-hero.looked .play-reg b { color: var(--acc); }
+.play-hero.looked .play-main .muted { color: var(--soft); }
+.preview-band.looked { background: var(--pat), radial-gradient(110% 150% at 100% 0%, var(--glow), transparent 58%), linear-gradient(120deg, var(--c1), var(--c2) 55%, var(--c3)); border-color: var(--c3); }
+.preview-band.looked .pb-go { background: var(--acc); color: var(--acc-ink); }
+.board.looked { --felt: var(--c1); background: linear-gradient(160deg, var(--c1), color-mix(in srgb, var(--c1) 70%, var(--c2)) 60%, color-mix(in srgb, var(--c1) 45%, var(--c2))); border-color: color-mix(in srgb, var(--c1) 70%, black); }
+.board.looked td.who em, .board.looked .scorecard tr.par td { color: var(--soft); }
+.countdown.looked { background: linear-gradient(90deg, var(--c1), var(--c2), var(--c3)); color: #fff; }
+.whats-new.looked .wn-card { border-top-color: var(--c2); background: linear-gradient(180deg, color-mix(in srgb, var(--c3) 12%, var(--paper)), var(--paper) 40%); }
+.pm-classic.looked { background: var(--pat), linear-gradient(160deg, var(--c1), var(--c2) 55%, var(--c3)); }

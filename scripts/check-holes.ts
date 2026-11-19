@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 // Headless checks for the 3D holes: determinism, slopes, secret routes, a greedy solver, and a novice sim.
 // Run: npm run check-holes
 import { bagFor, CLUBS, type ClubId } from '../src/golf3d/clubs';
-import { courseById, courseFor } from '../src/golf3d/courses';
+import { courseById, courseFor, tourCourses } from '../src/golf3d/courses';
 import { MIDWAY, MIDWAY_PAR } from '../src/golf3d/midway';
 import { periodClosesAt, periodOf } from '../src/day';
 import { conditionsFor, gusted, withPin } from '../src/golf3d/conditions';
@@ -444,6 +444,18 @@ if (mode === 'all' || mode === 'basic') {
   ok(periodOf('2026-10-29') === '2026-10' && periodOf('2026-10-30') === '2026-10-30' && periodOf('2026-11-07') === '2026-10-30' && periodOf('2026-11-08') === '2026-11-08' && periodOf('2026-11-14') === '2026-11-08' && periodOf('2026-11-15') === '2026-11-15', 'weeks start on Sunday from November 8');
   ok(periodClosesAt('2026-11-08').toISOString() === '2026-11-15T05:00:00.000Z', 'a week closes at midnight Eastern going into Sunday');
   ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 6 && courseFor('2026-11-08').id === 'westernreserve' && courseFor('2026-11-15').id === 'windycity', 'October is the Highlands, the Caldera challenge is all six holes, the Western Reserve from Nov 8, then the Windy City from Nov 15');
+  // every weekly course from Nov 22 has its own look on home (CourseLook), and no two weeks in a row look alike
+  {
+    const weekly = tourCourses().filter((c) => !c.lab && c.opens >= '2026-11-22');
+    const bare = weekly.filter((c) => !c.look);
+    ok(!bare.length, `every course from Nov 22 has its own look${bare.length ? `: ${bare.map((c) => c.id).join(', ')} has none (add a look in courses.ts)` : ''}`);
+    const same = weekly.slice(1).filter((c, i) => {
+      const a = weekly[i].look;
+      const b = c.look;
+      return a && b && (a.colors.join() === b.colors.join() || a.icon === b.icon || (a.accent === b.accent && a.pattern === b.pattern));
+    });
+    ok(!same.length, `each week looks different from the week before${same.length ? `: ${same.map((c) => c.id).join(', ')} too like the week before` : ''}`);
+  }
   // course_pars in supabase/schema.sql must hold every course's holes as they are now: submit_round refuses a card whose
   // pars differ (from Nov 15), so a change to a course's holes without it would refuse every card on that course
   {

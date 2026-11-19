@@ -1,6 +1,7 @@
 // Home, under the Open: Around the club. Practise the course, the range, design a hole, the Members' Course (with its
 // leader), a course idea for Reginald; then the classic courses of weeks gone by, each with its course record and the
 // champions of its week. The bar's games are in the Nineteenth Hole row above the Open (barstrip.ts).
+import { lookAttrs, looked } from '../courselook';
 import { api } from '../api';
 import type { CourseRecord, Snapshot } from '../api/types';
 import { scoreLabel } from '../bar';
@@ -9,7 +10,7 @@ import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 
-const ICON: Record<string, string> = { volcanic: '🌋', coastal: '🌊', autumn: '🍁' };
+const ICON: Record<string, string> = { volcanic: '🌋', coastal: '🌊', autumn: '🍁', chicago: '🏙️', linksland: '☘️' };
 
 export function playTiles(snap: Snapshot) {
   const course = courseFor(snap.month);
@@ -32,8 +33,8 @@ export function playTiles(snap: Snapshot) {
     </section>`;
 }
 
-const classicTile = (c: Course) => `<a class="pm-classic ${esc(c.holes[0]?.theme ?? '')}" href="#/classic/${c.id}" data-classic="${c.id}">
-    <span class="pm-ic">${ICON[c.holes[0]?.theme ?? ''] ?? '⛳'}</span>
+const classicTile = (c: Course) => `<a class="pm-classic${c.look ? looked(c) : ` ${esc(c.holes[0]?.theme ?? '')}`}"${lookAttrs(c)} href="#/classic/${c.id}" data-classic="${c.id}">
+    <span class="pm-ic">${c.look?.icon ?? ICON[c.holes[0]?.theme ?? ''] ?? '⛳'}</span>
     <b>${esc(c.name)}</b>
     <span class="pm-meta">${c.holes.length} holes · par ${c.par}</span>
     <span class="pm-rec" data-rec>Course record loading…</span>
