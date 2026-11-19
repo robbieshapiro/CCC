@@ -2379,6 +2379,7 @@ insert into shop_items (id, price, rack) values
   -- (Nov 19) the Wizarding School on the shop floor, Maison Reginald (Hall of Fame) and Atelier CCC (Founders' Circle)
   ('wizrobe', 3500, 'member'), ('scarfscarlet', 1200, 'member'), ('scarfemerald', 1200, 'member'), ('scarfblue', 1200, 'member'),
   ('scarfyellow', 1200, 'member'), ('wizhat', 2000, 'member'), ('wirespecs', 900, 'member'),
+  ('broomschool', 2000, 'member'), ('broomracer', 5500, 'member'), ('broomchamp', 12000, 'member'),
   ('maisonpolo', 75000, 'hof'), ('maisontrousers', 78000, 'hof'), ('maisonloafers', 80000, 'hof'), ('maisonpanama', 76000, 'hof'),
   ('maisonbag', 95000, 'hof'),
   ('atelierknit', 200000, 'founders'), ('atelierflannels', 205000, 'founders'), ('atelierbrogues', 215000, 'founders'),

@@ -150,6 +150,10 @@ const wizardItems: Item[] = [
   slot('scarfyellow', 'Yellow and black house scarf', 1200, 'member', 'outer', 'Yellow and black. Loyal, patient, never three-putts in anger.', 'scarf', 'yellow', undefined, 'chest'),
   hat('wizhat', 'Pointed wizard hat', 2000, 'member', 'A tall purple hat with a bent tip and gold stars. Mind the low branches.', 'wizard'),
   specs('wirespecs', 'Round wire spectacles', 900, 'member', 'Thin gold round frames. Very studious.', 'wire'),
+  // broomsticks: sat on between shots, hovering a few feet up, and off to swing (looks only: the ball doesn't know)
+  slot('broomschool', 'School broom', 2000, 'member', 'bag', 'Plain ash and birch twigs. Your golfer hovers on it between shots.', 'broom', 'school', undefined, 'full'),
+  slot('broomracer', 'Racing broom', 5500, 'member', 'bag', 'Dark polished handle, twigs swept tight, a steel binding. Built for speed between shots.', 'broom', 'racer', undefined, 'full'),
+  slot('broomchamp', 'Championship broom', 12000, 'member', 'bag', 'Bound in gold with gold-tipped twigs. The broom of champions.', 'broom', 'champion', undefined, 'full'),
 ].map((i) => ({ ...i, collection: 'wizard' as const }));
 
 export const ITEMS: Item[] = [
