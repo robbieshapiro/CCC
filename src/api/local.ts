@@ -849,7 +849,10 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     return (db.designs ?? [])
       .filter((d) => d.status === 'approved')
       .slice(-9)
-      .map((d) => ({ id: d.id, spec: d.spec, par: d.par ?? 3, by: db.players.find((p) => p.id === d.playerId)?.name ?? '?' }));
+      .map((d) => {
+        const p = db.players.find((x) => x.id === d.playerId);
+        return { id: d.id, spec: d.spec, par: d.par ?? 3, by: p?.name ?? '?', byId: p?.id, avatar: p?.avatar, approvedAt: d.reviewedAt };
+      });
   },
   // local mode's architect: a stock hole, so the Desk can be tried without the server
   localDesign(session, prompt, id, change) {

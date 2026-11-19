@@ -2243,10 +2243,11 @@ language plpgsql stable security definer set search_path = public, extensions as
 declare me players := player_for(p_token); monday timestamptz := date_trunc('week', now() at time zone 'America/New_York') at time zone 'America/New_York';
 begin
   return coalesce((
-    with ok as (select d.*, p.name as by from designs d join players p on p.id = d.player_id where d.status = 'approved'),
+    with ok as (select d.*, p.name as by, p.avatar as by_avatar from designs d join players p on p.id = d.player_id where d.status = 'approved'),
     week as (select * from ok where reviewed_at < monday),
     pick as (select * from week union all select * from ok where not exists (select 1 from week))
-    select json_agg(json_build_object('id', x.id, 'spec', x.spec, 'par', x.par, 'by', x.by) order by x.reviewed_at)
+    -- byId, avatar, approvedAt (Nov 19): home features the newest hole with its designer's face
+    select json_agg(json_build_object('id', x.id, 'spec', x.spec, 'par', x.par, 'by', x.by, 'byId', x.player_id, 'avatar', x.by_avatar, 'approvedAt', x.reviewed_at) order by x.reviewed_at)
     from (select * from pick order by reviewed_at desc limit 9) x
   ), '[]');
 end $$;
