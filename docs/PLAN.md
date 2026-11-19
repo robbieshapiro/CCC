@@ -266,7 +266,7 @@ Last updated Nov 19, 2026 (the Wizarding School on the shop floor, and couture f
 
 ## Setup status
 
-- [ ] #349: apply `pr_349_couture` (18 new `shop_items` rows) after merge.
+- [x] #349: applied `pr_349_couture` on Nov 19; shop_items has all 119 pieces (7 wizard, 5 Maison, 6 Atelier new).
 - [x] #347: applied `pr_347_shop` on Nov 19; shop_items has 5 Hall of Fame and 5 Founders' pieces, and buy_item checks $75,000 and $200,000.
 - [x] #342: applied `pr_342_replay_hole` on Nov 18; replays_today returns each card shot's hole.
 - [x] #340: applied `pr_340_replay_pin` on Nov 18; replay_get returns the day.
