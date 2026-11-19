@@ -203,7 +203,7 @@ export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 export type Design = { id: number; prompt: string; spec: import('../designer/hole').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string };
 // a change too big for a dial, asked of the Architect (course_requests)
 export type CourseRequest = { id: number; course: string; hole: number | null; body: string; done: boolean; createdAt: string };
-export type MembersHole = { id: number; spec: import('../designer/hole').HoleSpec; par: number; by: string };
+export type MembersHole = { id: number; spec: import('../designer/hole').HoleSpec; par: number; by: string; byId?: string; avatar?: Avatar; approvedAt?: string };
 // One counted stroke of a round (h: the hole's index); see ShotLog in golf3d/engine.ts
 export type RoundShot = { h: number; c: string; p: number; e: number; f: [number, number]; t: [number, number]; l: string; x: 0 | 1; i: 0 | 1 };
 // The Committee's hole report for this week's course (admin_holes): how each hole is really being played

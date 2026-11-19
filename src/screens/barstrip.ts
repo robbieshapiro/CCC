@@ -3,6 +3,7 @@
 // long drive and Target Range leaders, the Ace Pot, the Midway's leader). Mo's tables (your money) are at the bar,
 // not here (Nov 17: with poker off it was one card). A game the Committee has closed drops out for members. And once today's cards are in, the Play card's button points here (barCta).
 import { face } from '../faces';
+import { isHole } from '../designer/desk';
 import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
@@ -34,6 +35,7 @@ export function barStrip() {
     <p class="bs-group">Today's contests</p>
     ${card(ACE, 'ace')}
     <div class="bs-row">${CONTESTS.map((c) => card(c)).join('')}</div>
+    <a class="bs-featured" href="#/bar/members" data-bs="members" data-bs-featured hidden></a>
     <div class="bs-replays" data-bs-replays hidden></div>
   </section>`;
 }
@@ -71,8 +73,22 @@ export async function bindBarStrip(snap: Snapshot) {
       if (ace && news) news.href = `#/replay/${ace.id}`;
     })
     .catch(() => {});
-  void api.barGames(s).then(({ settings, committee }) => {
-    document.querySelectorAll<HTMLElement>('[data-bs]').forEach((el) => (el.hidden = settings[el.dataset.bs!] === false && !committee));
+  // the Members' Course's featured hole: the newest one approved, with its designer
+  const gamesOpen = api.barGames(s).catch(() => null);
+  void Promise.all([api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => []), gamesOpen]).then(([holes, games]) => {
+    const el = document.querySelector<HTMLElement>('[data-bs-featured]');
+    if (!el || !holes.length) return;
+    if (games && games.settings.members === false && !games.committee) return;
+    const h = [...holes].sort((a, b) => (b.approvedAt ?? '').localeCompare(a.approvedAt ?? '') || b.id - a.id)[0];
+    const who = { avatar: h.avatar, playerId: h.byId, name: h.by };
+    el.innerHTML = `<div class="bsf-main"><small>Featured · Members' Course</small><b>${esc(h.spec.name)}</b><span>Par ${h.par} · ${h.spec.yards} yd${holes.length > 1 ? ` · ${holes.length} holes this week` : ''}</span>
+      <span class="bsf-by">${face(who, 30)}Designed by <em>${esc(h.by)}</em></span></div><span class="bsf-go">Play it ›</span>`;
+    el.hidden = false;
+  });
+  void gamesOpen.then((g) => {
+    if (!g) return;
+    const { settings, committee } = g;
+    document.querySelectorAll<HTMLElement>('[data-bs]:not([data-bs-featured])').forEach((el) => (el.hidden = settings[el.dataset.bs!] === false && !committee));
   });
   void api
     .aceState(s)
