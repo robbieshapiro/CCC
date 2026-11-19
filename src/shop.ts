@@ -50,7 +50,7 @@ export const badgeFor = (p: Player, size = 18) => (p.host ? '' : badgeSvg(rankOf
 
 export type Kind = 'top' | 'outer' | 'bottoms' | 'shoes' | 'gloves' | 'hat' | 'eyewear' | 'bling' | 'putter' | 'driver' | 'bag' | 'caddie' | 'ball' | 'tracer' | 'celebrate';
 // the order the racks and the fitting room's tabs go in
-export const KINDS: Kind[] = ['ball', 'tracer', 'celebrate', 'top', 'outer', 'bottoms', 'shoes', 'gloves', 'hat', 'eyewear', 'bling', 'putter', 'driver', 'bag', 'caddie'];
+export const KINDS: Kind[] = ['top', 'outer', 'bottoms', 'shoes', 'gloves', 'hat', 'eyewear', 'bling', 'putter', 'driver', 'bag', 'caddie', 'ball', 'tracer', 'celebrate'];
 export type Item = {
   id: string;
   name: string;
