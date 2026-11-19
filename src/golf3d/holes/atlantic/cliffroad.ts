@@ -1,5 +1,5 @@
 // Hole 3, The Cliff Road (par 4, 480 yd as shown): the hard one. Along the cliff top with the Atlantic all down the
-// right and the wind off it, to a small green on the edge of the drop.
+// right and the wind off it, to a big green on the edge of the drop.
 // The play: a long drive up the left half of the cliff top, clear of the pots, then a long iron held into the wind.
 // The bail-out: left. Gorse and fescue, but land. Right is the sea, all the way.
 // The secret: the Cart Track. An old track runs down the left side to the front of the green, worn hard. From the end
@@ -10,7 +10,7 @@ import { greenComplex, greenside } from '../woods';
 import { dunes, gorse, LINKS_TURF, pot } from './common';
 
 const GROUND = 8;
-const GREEN = { x: 18, y: 648, rx: 15, ry: 12 };
+const GREEN = { x: 18, y: 648, rx: 20, ry: 16 };
 // the cliff top the hole runs along; the sea is everything to the right of it
 const COAST: V2[] = [
   { x: -20, y: -50 },
@@ -42,13 +42,13 @@ export const cliffroad: Hole = {
   gusts: true,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.09,
+  greenFirm: 0.13,
   yards: 480,
   blurb: 'Along the cliff top with the sea all down the right. Long, narrow, and into the wind. Par is a good score.',
   teeTip: 'Drive up the left half. Everything right is the Atlantic.',
   tee: { x: 0, y: 0 },
   cup: { x: 18, y: 650 },
-  pins: [{ x: 18, y: 650 }, { x: 8, y: 642 }, { x: 26, y: 654 }, { x: 14, y: 656 }],
+  pins: [{ x: 18, y: 650 }, { x: 5, y: 640 }, { x: 30, y: 655 }, { x: 13, y: 660 }],
   aim: -0.02,
   bounds: { x0: -150, y0: -50, x1: 190, y1: 750 },
   border: [
@@ -64,7 +64,8 @@ export const cliffroad: Hole = {
     { poly: blob(-8, 330, 22, 170, 1, 0.06), surface: 'fairway' },
     // the run-in to the green
     { poly: blob(6, 600, 18, 26, 2, 0.08), surface: 'fairway' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.07), surface: 'fringe' },
+    // a wide collar, mown for the run-up (Nov 18: bigger, lower links greens)
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 7, GREEN.ry + 7, 3, 0.07), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.07), surface: 'green' },
     // the cart track, worn hard
     { poly: band(TRACK, 3), surface: 'path' },
@@ -76,13 +77,13 @@ export const cliffroad: Hole = {
     // the cliff top: from the left edge of the hole out to the cliff, the green right on the edge
     { kind: 'embankment', pts: COAST, h: [GROUND, GROUND, GROUND, GROUND], width: 40, edge: 9, wobble: 4 },
     { kind: 'embankment', pts: [{ x: -130, y: -50 }, { x: -130, y: 750 }], h: [GROUND, GROUND], width: 70, edge: 12 },
-    { kind: 'disc', x: GREEN.x - 4, y: GREEN.y, r: 34, h: GROUND, edge: 8, op: 'set' },
+    { kind: 'disc', x: GREEN.x - 2, y: GREEN.y, r: 40, h: GROUND, edge: 8, op: 'set' },
     // dunes along the landward side
     ...dunes([[-120, 60, 40, 8], [-116, 220, 44, 9], [-118, 380, 42, 8], [-112, 520, 42, 8], [-110, 640, 44, 9], [-60, 720, 40, 7]]),
     // rumples in the fairway
     ...dunes([[-14, 160, 22, 1.4], [6, 230, 20, -1], [-20, 330, 22, 1.2], [4, 410, 20, 1.1], [-12, 480, 20, 1.2]]),
     { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 4, edge: 10, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 2, edge: 9, tilt: [0.8, 0.6], rolls: [[-6, -5, 6, 0.3], [7, 5, 5, -0.25]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.8, edge: 12, tilt: [0.8, 0.6], rolls: [[-9, -6, 8, 0.35], [10, 6, 7, -0.3], [0, 9, 6, 0.2]] }),
     // the track is worn a little into the ground, so a running ball keeps to it
     { kind: 'channel', pts: TRACK, width: 5, depth: 0.5 },
     ...traps.flatMap((t) => t.pieces),

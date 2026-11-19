@@ -10,10 +10,10 @@ import { greenComplex, greenside } from '../woods';
 import { dunes, gorse, LINKS_TURF, pot } from './common';
 
 const GROUND = 8;
-const GREEN = { x: -14, y: 446, rx: 14, ry: 12 };
+const GREEN = { x: -14, y: 446, rx: 19, ry: 16 };
 const BOG = { x0: -112, y0: 214, x1: 112, y1: 330 };
 // a pool of bog water right of the green
-const POOL = { x0: 6, y0: 418, x1: 70, y1: 480 };
+const POOL = { x0: 14, y0: 418, x1: 76, y1: 480 };
 // the turf-cutters' road across the bog
 const ROAD: V2[] = [
   { x: -54, y: 200 },
@@ -25,6 +25,7 @@ const traps = [
   pot(26, 176, 7, 1), // right of the lay-up
   pot(-2, 384, 6, 2), // over the bog, in the run-in
   greenside(GREEN, -36, 452, 7, 8, 3, 3.4, 0), // left of the green
+  greenside(GREEN, -30, 424, 6, 6, 6, 3.4, 0), // short and left: a links pot guarding the bigger green
 ];
 
 export const bogroad: Hole = {
@@ -37,13 +38,13 @@ export const bogroad: Hole = {
   gusts: true,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.05,
+  greenFirm: 0.09,
   yards: 330,
   blurb: 'A short one over the bog, to a green with bog water right of it. The old road across is the safe way over.',
   teeTip: 'Short of the bog is safe. The road across it on the left runs a long way.',
   tee: { x: 0, y: 0 },
   cup: { x: -14, y: 448 },
-  pins: [{ x: -14, y: 448 }, { x: -21, y: 442 }, { x: -7, y: 452 }, { x: -15, y: 454 }],
+  pins: [{ x: -14, y: 448 }, { x: -24, y: 440 }, { x: -4, y: 452 }, { x: -16, y: 457 }],
   aim: 0,
   bounds: { x0: -130, y0: -50, x1: 130, y1: 520 },
   border: [
@@ -59,7 +60,8 @@ export const bogroad: Hole = {
     { poly: blob(-4, 150, 28, 56, 1, 0.06), surface: 'fairway' },
     // over the bog, the run-in
     { poly: blob(-10, 380, 26, 36, 2, 0.08), surface: 'fairway' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.07), surface: 'fringe' },
+    // a wide collar, mown for the run-up (Nov 18: bigger, lower links greens)
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 7, GREEN.ry + 7, 3, 0.07), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.07), surface: 'green' },
     // the road, packed hard
     { poly: band(ROAD, 5), surface: 'path' },
@@ -78,7 +80,7 @@ export const bogroad: Hole = {
     // the road across it, a little above the ground either side
     { kind: 'embankment', pts: ROAD, h: [GROUND + 0.6, GROUND + 0.6, GROUND + 0.6, GROUND + 0.6], width: 10, edge: 3 },
     { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 4, edge: 10, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 1.8, edge: 10, tilt: [0.6, 0.6], rolls: [[-6, -5, 6, 0.3], [7, 5, 5, -0.25]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.6, edge: 12, tilt: [0.6, 0.6], rolls: [[-9, -6, 8, 0.35], [10, 6, 7, -0.3], [-2, 9, 6, 0.2]] }),
     ...traps.flatMap((t) => t.pieces),
     { kind: 'box', x0: POOL.x0, y0: POOL.y0, x1: POOL.x1, y1: POOL.y1, h: GROUND - 3, edge: 3, op: 'set' },
   ],

@@ -71,15 +71,15 @@ export const RATINGS: Record<string, Rated> = {
     ],
   },
   atlanticlinks: {
-    at: "2026-11-17",
+    at: "2026-11-19",
     seeds: 4,
     holes: [
-      { id: "sheepwalk", member: 1.3, strong: 0.5 },
-      { id: "punchbowl", member: 0.5, strong: 0.8 },
-      { id: "cliffroad", member: 3.3, strong: 0.3 },
+      { id: "sheepwalk", member: 1, strong: 0 },
+      { id: "punchbowl", member: 0.5, strong: 0.5 },
+      { id: "cliffroad", member: 3, strong: 0.3 },
       { id: "fairyfort", member: 0.5, strong: 0 },
-      { id: "bogroad", member: 1.3, strong: 0.8 },
-      { id: "castlestrand", member: 0.8, strong: 1 },
+      { id: "bogroad", member: 0.8, strong: 0 },
+      { id: "castlestrand", member: 0.5, strong: 1 },
     ],
   },
 };

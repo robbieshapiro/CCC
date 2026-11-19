@@ -10,7 +10,7 @@ import { greenComplex, greenside } from '../woods';
 import { dunes, gorse, LINKS_TURF, pot } from './common';
 
 const GROUND = 8;
-const GREEN = { x: 56, y: 922, rx: 14, ry: 12 };
+const GREEN = { x: 56, y: 922, rx: 18, ry: 15 };
 // the coast: the cliff top the hole runs along, and the point the green sits on
 const COAST: V2[] = [
   { x: 2, y: -50 },
@@ -50,6 +50,7 @@ const traps = [
   pot(72, 820, 7, 3), // the end of the second fairway
   greenside(GREEN, 36, 910, 7, 9, 4, 3.4, 0), // left of the green
   greenside(GREEN, 60, 948, 9, 6, 5, 3.4, 0), // behind it
+  greenside(GREEN, 72, 898, 6, 6, 7, 3.4, 0), // short and right: a links pot guarding the bigger green
 ];
 
 export const castlestrand: Hole = {
@@ -62,13 +63,13 @@ export const castlestrand: Hole = {
   gusts: true,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.08,
+  greenFirm: 0.12,
   yards: 680,
   blurb: 'Up the cliff top with the sea all down your right, over the burn, to a green on the edge under the castle.',
   teeTip: 'Left is always land. The burn crosses at the end of a big drive.',
   tee: { x: 0, y: 0 },
   cup: { x: 56, y: 924 },
-  pins: [{ x: 56, y: 924 }, { x: 48, y: 918 }, { x: 63, y: 928 }, { x: 54, y: 930 }],
+  pins: [{ x: 56, y: 924 }, { x: 45, y: 916 }, { x: 66, y: 928 }, { x: 53, y: 933 }],
   aim: 0,
   bounds: { x0: -150, y0: -50, x1: 230, y1: 1000 },
   border: [
@@ -86,7 +87,8 @@ export const castlestrand: Hole = {
     { poly: blob(0, 290, 26, 140, 1, 0.06), surface: 'fairway' },
     // the second: on up the cliff top
     { poly: blob(36, 700, 32, 90, 2, 0.08), surface: 'fairway' },
-    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.07), surface: 'fringe' },
+    // a wide collar, mown for the run-up (Nov 18: bigger, lower links greens)
+    { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 7, GREEN.ry + 7, 3, 0.07), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.07), surface: 'green' },
     // the strand: hard wet sand, as firm as a road
     { poly: band(REEF, 5), surface: 'rock' },
@@ -112,7 +114,7 @@ export const castlestrand: Hole = {
     // rumples in the fairways
     ...dunes([[-18, 170, 24, 1.5], [14, 240, 22, -1.1], [-12, 330, 22, 1.3], [12, 400, 20, 1.2], [30, 730, 20, 1.4], [54, 790, 18, -1]]),
     { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 4, edge: 10, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 2, edge: 10, tilt: [-1, 0.5], rolls: [[-8, -6, 7, 0.35], [9, 7, 6, -0.3]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.8, edge: 12, tilt: [-1, 0.5], rolls: [[-10, -7, 9, 0.4], [11, 8, 8, -0.35], [0, 10, 6, 0.2]] }),
     ...traps.flatMap((t) => t.pieces),
     // the burn, cut into the cliff top
     { kind: 'channel', pts: BURN, width: 12, depth: 3 },

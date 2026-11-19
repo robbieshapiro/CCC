@@ -1,5 +1,6 @@
 // Links land, Ireland and the west of Scotland: rumpled dunes, marram and gold fescue, gorse in flower, dry-stone walls,
-// a ruined castle on the headland, sheep grazing past the out-of-bounds, and a grey Atlantic under a moving sky.
+// a ruined castle on the headland, flocks of sheep and shaggy Highland cattle on the rough and past the out-of-bounds,
+// and a grey Atlantic under a moving sky.
 import * as THREE from 'three';
 import { makeRng } from '../../seed';
 import type { Kit } from '../kits';
@@ -7,6 +8,7 @@ import { gorse } from '../lands';
 import { mat, mesh } from '../props';
 import { heightAt, inPoly } from '../terrain';
 import type { Hole } from '../types';
+import { flock, herd, highlandCow } from './livestock';
 
 // a ruined tower house: a square keep with a broken top, a gable end and a curtain wall running off it
 export function ruin(seed = 0) {
@@ -73,6 +75,7 @@ export const linksland: Kit = {
   decor(_h, d) {
     if (d.kind === 'ruin') return ruin(Math.round(d.x));
     if (d.kind === 'sheep') return sheep();
+    if (d.kind === 'cow') return highlandCow(Math.round(d.x + d.y));
     if (d.kind === 'stonewall') return stoneWall(d.scale ?? 60, Math.round(d.x + d.y));
     return null;
   },
@@ -97,6 +100,9 @@ export const linksland: Kit = {
         root.add(gz);
       }
     }
+    // way more sheep, everywhere, and a few hairy cows (Robbie, Nov 18): see livestock.ts
+    root.add(flock(h, floor, 55));
+    root.add(herd(h, floor, 5));
     // the Atlantic beyond everything, grey and wide
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), new THREE.MeshStandardMaterial({ color: '#5a7480', roughness: 0.15, metalness: 0.2 }));
     sea.rotation.x = -Math.PI / 2;
