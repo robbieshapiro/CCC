@@ -1,6 +1,7 @@
 // Home, live: who's out on the course right now and today's cards, from every club, and the Open as a simple list
 // (place, name, club, cards, money, to par) with a tag on anyone still out. Each section shows only once there's
 // something in it. Refreshed every 30 seconds while home is open; the hole-by-hole scorecards stay a tap away.
+import { face } from '../faces';
 import { api } from '../api';
 import type { FieldRow, OpenRow, Snapshot } from '../api/types';
 import { portrait } from '../avatar';
@@ -95,7 +96,7 @@ function draw() {
     cards.hidden = !done.length && !prac.length;
     const before = seen;
     seen = new Set(done.map((r) => r.playerId));
-    const names = prac.slice(0, 8).map((r) => `<a class="lv-who${r.mine ? ' me' : ''}" href="${golferHref(r.playerId, r.mine)}">${r.mine ? 'You' : esc(r.name)}</a>`).join(' · ');
+    const names = prac.slice(0, 8).map((r) => `<a class="lv-who${r.mine ? ' me' : ''}" href="${golferHref(r.playerId, r.mine)}">${face(r, 18)}${r.mine ? 'You' : esc(r.name)}</a>`).join(' · ');
     const practice = prac.length ? `<p class="lv-practice"><b>⛳ Practised today</b> ${names}${prac.length > 8 ? ` · +${prac.length - 8} more` : ''}</p>` : '';
     cards.innerHTML = !done.length
       ? practice
@@ -144,7 +145,7 @@ function drawBoard() {
           const tied = rows.filter((x) => x.total - x.par === tp).length > 1;
           const won = pay.get(r.playerId)?.payout;
           const link = golferHref(r.playerId, r.mine);
-          const name = `<b>${esc(r.name)}</b><small>${tab === 'open' ? `${esc(r.club)} · ` : ''}${r.rounds} ${r.rounds === 1 ? 'card' : 'cards'}${out.has(r.playerId) ? ' · <span class="lv-on">on the course</span>' : ''}</small>`;
+          const name = `${face(r, 28)}<b>${esc(r.name)}</b><small>${tab === 'open' ? `${esc(r.club)} · ` : ''}${r.rounds} ${r.rounds === 1 ? 'card' : 'cards'}${out.has(r.playerId) ? ' · <span class="lv-on">on the course</span>' : ''}</small>`;
           return `<tr class="${r.mine ? 'me ' : ''}${place === 1 ? 'lead' : ''}"><td class="pos">${tied ? 'T' : ''}${place}</td><td class="nm">${link ? `<a href="${link}">${name}</a>` : name}</td><td class="pay">${won ? money(won) : ''}</td><td class="tp">${toParLabel(tp)}</td></tr>`;
         })
         .join('')}</tbody></table>`

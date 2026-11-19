@@ -2,6 +2,7 @@
 // by everyone who comes in. Today's contests first (each leads with its live number: today's Closest to the Pin and
 // long drive and Target Range leaders, the Ace Pot, the Midway's leader). Mo's tables (your money) are at the bar,
 // not here (Nov 17: with poker off it was one card). A game the Committee has closed drops out for members. And once today's cards are in, the Play card's button points here (barCta).
+import { face } from '../faces';
 import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
@@ -38,11 +39,15 @@ export function barStrip() {
   </section>`;
 }
 
-const fill = (game: string, big: string, sub = '') => {
+// who: today's leader, whose face goes in the corner of the card
+const fill = (game: string, big: string, sub = '', who?: Parameters<typeof face>[0]) => {
   const card = document.querySelector<HTMLElement>(`[data-bs="${game}"]`);
   if (!card) return;
   card.querySelector('[data-bs-big]')!.textContent = big;
   card.querySelector('[data-bs-sub]')!.textContent = sub;
+  card.querySelector('.bs-lead')?.remove();
+  const f = who ? face(who, 30) : '';
+  if (f) card.insertAdjacentHTML('beforeend', `<span class="bs-lead" aria-hidden="true">${f}</span>`);
 };
 
 export async function bindBarStrip(snap: Snapshot) {
@@ -55,7 +60,7 @@ export async function bindBarStrip(snap: Snapshot) {
       if (!box) return;
       const top = rows.filter((r) => r.kind === 'card').slice(0, 8);
       if (top.length) box.innerHTML = `<p class="bs-group">Shots of the day</p>${top
-        .map((r) => `<a class="bs-replay" href="#/replay/${r.id}"><i>▶</i><div><b>${r.mine ? 'You' : esc(r.name)} · ${esc(withHoleNo(r.label, r.hole))}</b><span>${esc(KIND_NAME[r.kind])}</span></div></a>`)
+        .map((r) => `<a class="bs-replay" href="#/replay/${r.id}">${face(r, 36) || '<i>▶</i>'}<div><b>${r.mine ? 'You' : esc(r.name)} · ${esc(withHoleNo(r.label, r.hole))}</b><span>${esc(KIND_NAME[r.kind])}</span></div></a>`)
         .join('')}`;
       box.hidden = !top.length;
       // the ace banner plays the ace
@@ -76,7 +81,7 @@ export async function bindBarStrip(snap: Snapshot) {
       if (news && a.lastAce && todayInGameTz(new Date(a.lastAce.at)) === snap.today) {
         const me = snap.players.find((p) => p.id === snap.me);
         const you = me && me.name.toLowerCase() === a.lastAce.name.toLowerCase();
-        news.innerHTML = `<i>🏆</i><div><b>${you ? 'You' : esc(a.lastAce.name)} won the Ace Pot today</b><span>${money(a.lastAce.pot)}${you ? ' is yours' : ''} · the pot started again at ${money(ACE_SEED)}</span></div>`;
+        news.innerHTML = `${face(a.lastAce, 40) || '<i>🏆</i>'}<div><b>${you ? 'You' : esc(a.lastAce.name)} won the Ace Pot today</b><span>${money(a.lastAce.pot)}${you ? ' is yours' : ''} · the pot started again at ${money(ACE_SEED)}</span></div>`;
         news.hidden = false;
       }
       fill('acepot', `${money(a.pot)} pot`, `Carries over · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left` : 'back tomorrow'}`);
@@ -86,28 +91,28 @@ export async function bindBarStrip(snap: Snapshot) {
     .dailyState(s, snap.today)
     .then((d) => {
       const top = d.board[0];
-      if (top) fill('daily', `${top.name} · ${top.holed ? 'holed it' : resultLabel({ ft: top.ft, holed: false, lost: top.ft === null })}`, `${top.mine ? "You're leading" : `${d.players} in`} · 1st pays $${DAILY_PRIZES[0]}`);
+      if (top) fill('daily', `${top.name} · ${top.holed ? 'holed it' : resultLabel({ ft: top.ft, holed: false, lost: top.ft === null })}`, `${top.mine ? "You're leading" : `${d.players} in`} · 1st pays $${DAILY_PRIZES[0]}`, top);
     })
     .catch(() => {});
   void api
     .barBoard(s, 'drive')
     .then((b) => {
       const top = b.board[0];
-      if (top) fill('drive', `${top.name} · ${scoreLabel('drive', top.score)}`, `${top.mine ? "You're leading" : b.mine !== null ? `You: ${scoreLabel('drive', b.mine)}` : 'Beat it'} · 1st pays $${DAILY_PRIZES[0]}`);
+      if (top) fill('drive', `${top.name} · ${scoreLabel('drive', top.score)}`, `${top.mine ? "You're leading" : b.mine !== null ? `You: ${scoreLabel('drive', b.mine)}` : 'Beat it'} · 1st pays $${DAILY_PRIZES[0]}`, top);
     })
     .catch(() => {});
   void api
     .barBoard(s, 'targets')
     .then((b) => {
       const top = b.board[0];
-      if (top) fill('targets', `${top.name} · ${scoreLabel('targets', top.score)}`, `${top.mine ? "You're leading" : b.mine !== null ? `You: ${scoreLabel('targets', b.mine)}` : 'Beat it'} · 1st pays $${DAILY_PRIZES[0]}`);
+      if (top) fill('targets', `${top.name} · ${scoreLabel('targets', top.score)}`, `${top.mine ? "You're leading" : b.mine !== null ? `You: ${scoreLabel('targets', b.mine)}` : 'Beat it'} · 1st pays $${DAILY_PRIZES[0]}`, top);
     })
     .catch(() => {});
   void api
     .barBoard(s, 'midway')
     .then((b) => {
       const top = b.board[0];
-      if (top) fill('midway', `${top.name} · ${scoreLabel('midway', top.score)}`, b.playedToday ? "Today's round is in" : "Today's round is waiting");
+      if (top) fill('midway', `${top.name} · ${scoreLabel('midway', top.score)}`, b.playedToday ? "Today's round is in" : "Today's round is waiting", top);
     })
     .catch(() => {});
 }

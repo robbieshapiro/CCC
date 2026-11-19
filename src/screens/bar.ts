@@ -1,6 +1,7 @@
 // The Nineteenth Hole: Mo's bar, and the games on the wall behind it. Closest to the Pin, the Ace Pot and the long drive (daily),
 // the Members' Course (weekly). Each card: what it is in a line, where you stand, the top three, and Play.
 // It's the first tab of the Clubhouse.
+import { face } from '../faces';
 import { api } from '../api';
 import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
 import { ACE_ADD, ACE_SWINGS, aceShot, type AceState } from '../acepot';
@@ -15,11 +16,11 @@ import { esc, golferHref } from '../ui';
 import { openPrizeCounter } from './prizecounter';
 import { payTrophies } from './trophyroom';
 
-const top3 = (rows: { playerId?: string; name: string; label: string; mine: boolean }[]) =>
+const top3 = (rows: { playerId?: string; avatar?: import('../api/types').Avatar; name: string; label: string; mine: boolean }[]) =>
   rows.length
     ? `<ol class="bar-top">${rows
         .slice(0, 3)
-        .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i]}</span><b>${r.playerId ? `<a href="${golferHref(r.playerId, r.mine)}">${esc(r.name)}</a>` : esc(r.name)}</b><em>${esc(r.label)}</em></li>`)
+        .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i]}</span>${face(r, 26)}<b>${r.playerId ? `<a href="${golferHref(r.playerId, r.mine)}">${esc(r.name)}</a>` : esc(r.name)}</b><em>${esc(r.label)}</em></li>`)
         .join('')}</ol>`
     : '<p class="bar-empty">Nobody yet. Be first.</p>';
 
@@ -152,7 +153,7 @@ export async function fillBar(snap: Snapshot) {
   };
   if (daily) {
     const best = bestTry(daily.mine);
-    put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ playerId: r.playerId, name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
+    put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
   }
   // Mo's Book: the favourite's price and your open bets
   void api
@@ -168,14 +169,14 @@ export async function fillBar(snap: Snapshot) {
     put(
       'acepot',
       `Pot: ${money(ace.pot)} · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left today` : 'your swings are in today'}`,
-      (ace.today.length ? top3(ace.today.map((r) => ({ playerId: r.playerId, name: r.name, label: r.holed ? 'Ace!' : r.ft === null ? 'No ball' : `${r.ft} ft`, mine: r.mine }))) : '<p class="bar-empty">No swings yet today.</p>') +
-        (ace.lastAce ? `<p class="bar-empty">Last won by ${esc(ace.lastAce.name)}, for ${money(ace.lastAce.pot)}</p>` : ''),
+      (ace.today.length ? top3(ace.today.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: r.holed ? 'Ace!' : r.ft === null ? 'No ball' : `${r.ft} ft`, mine: r.mine }))) : '<p class="bar-empty">No swings yet today.</p>') +
+        (ace.lastAce ? `<p class="bar-empty">${face(ace.lastAce, 22)}Last won by ${esc(ace.lastAce.name)}, for ${money(ace.lastAce.pot)}</p>` : ''),
     );
   }
   for (const [game, b] of [['drive', drive], ['targets', targets], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
     const today = game === 'targets' ? (b.playedToday ? " · today's game is in" : '') : game === 'midway' ? (b.playedToday ? " · today's round is in" : ' · today’s round is waiting') + (waiting ? ` · ${waiting === 1 ? 'a curse is' : `${waiting} curses are`} waiting for you` : '') : '';
-    put(game, (b.mine === null ? (DAILY_BOARD.includes(game) ? 'Not played today' : 'Not played this week') : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
+    put(game, (b.mine === null ? (DAILY_BOARD.includes(game) ? 'Not played today' : 'Not played this week') : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));
   }
 }
 
@@ -196,7 +197,7 @@ export async function barSummary(game: BarGame, score: number | null, again: () 
         ${b && b.mine !== null ? `<p>Your best ${DAILY_BOARD.includes(game) ? 'today' : 'this week'}: <b>${esc(scoreLabel(game, b.mine))}</b></p>` : ''}
         ${b ? `<ol class="daily-board">${b.board
           .slice(0, 10)
-          .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span><b>${esc(r.name)}</b><small></small><em>${esc(scoreLabel(game, r.score))}</em></li>`)
+          .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span>${face(r, 24)}<b>${esc(r.name)}</b><small></small><em>${esc(scoreLabel(game, r.score))}</em></li>`)
           .join('')}</ol>` : ''}
       </div>
       <div class="notes-foot daily-foot"><button class="btn" data-again>${game === 'midway' || game === 'targets' ? 'Again, for fun' : 'Play again'}</button><button class="btn ghost" data-back>Back to the bar</button></div>

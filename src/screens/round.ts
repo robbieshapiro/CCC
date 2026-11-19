@@ -3,6 +3,7 @@ import { freshBeforeCard } from '../version';
 // today's card: one a day counts, locked at the first swing, and picked up where it left off if it's cut short.
 // A preview round (the admin, every hole of a course still to come) and a practice round (any member: the first few
 // holes of the next course, or the whole of the week's course once cards start) are played the same way but never posted.
+import { face } from '../faces';
 import { lookAttrs, looked } from '../courselook';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
@@ -819,7 +820,7 @@ async function aceSummary(swings: number, back: () => void) {
         ${s?.lastAce ? `<p class="fine">Last won by ${esc(s.lastAce.name)}, for ${money(s.lastAce.pot)}.</p>` : '<p class="fine">Nobody has won it yet.</p>'}
         ${s?.today.length ? `<h3>Closest today</h3><ol class="daily-board">${s.today
           .slice(0, 10)
-          .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span><b>${esc(r.name)}</b><small></small><em>${r.holed ? 'Ace' : r.ft === null ? '–' : `${r.ft} ft`}</em></li>`)
+          .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span>${face(r, 24)}<b>${esc(r.name)}</b><small></small><em>${r.holed ? 'Ace' : r.ft === null ? '–' : `${r.ft} ft`}</em></li>`)
           .join('')}</ol>` : ''}
       </div>
       <div class="notes-foot daily-foot"><button class="btn" data-back>Back to the bar</button></div>
