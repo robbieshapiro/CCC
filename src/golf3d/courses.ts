@@ -142,6 +142,8 @@ const COURSES: Course[] = [
   },
   {
     id: 'windycity',
+    // Chicago at dusk (Nov 19): navy over the lake into a violet-pink sky above the skyline, the flag's red star and sky blue
+    look: { colors: ['#0e1838', '#3a3f86', '#c0558a'], glow: 'rgba(255, 120, 150, 0.4)', accent: '#ff3b4e', ink: '#ffffff', soft: '#b3ddf2', icon: '🌆', pattern: 'skyline' },
     // Chicago in late November, built from the Hole Lab's city. Released for the week of Nov 15 (Robbie picked it for
     // that week in Admin on Nov 12, and played it through); no longer a draft, so its plaques show.
     opens: '2026-11-15',
