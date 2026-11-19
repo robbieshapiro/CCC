@@ -9,16 +9,20 @@ import type { GolferSpec } from './golf3d/golfer';
 
 // ---------- rank, by career earnings ----------
 
-export type Rack = 'member' | 'pro' | 'legend';
+export type Rack = 'member' | 'pro' | 'legend' | 'hof' | 'founders';
 export const RANKS: { id: Rack; name: string; from: number }[] = [
   { id: 'member', name: 'Club Member', from: 0 },
   { id: 'pro', name: 'Club Pro', from: 5000 },
   { id: 'legend', name: 'Club Legend', from: 25000 },
+  // past Legend (Nov 19): long chases for the club's biggest earners, money only (the title is already in)
+  { id: 'hof', name: 'Hall of Fame', from: 75000 },
+  { id: 'founders', name: "The Founders' Circle", from: 200000 },
 ];
-// Club Legend needs a weekly title as well as the earnings; without one, the best you are is Club Pro
-export const rankOf = (earnings: number, titles = 0) => [...RANKS].reverse().find((r) => earnings >= r.from && (r.id !== 'legend' || titles > 0))!;
+// Club Legend and up need a weekly title as well as the earnings; without one, the best you are is Club Pro
+const ORDER: Record<Rack, number> = { member: 0, pro: 1, legend: 2, hof: 3, founders: 4 };
+export const rankOf = (earnings: number, titles = 0) => [...RANKS].reverse().find((r) => earnings >= r.from && (ORDER[r.id] < 2 || titles > 0))!;
 export const nextRank = (earnings: number) => RANKS.find((r) => r.from > earnings) ?? null;
-const ORDER: Record<Rack, number> = { member: 0, pro: 1, legend: 2 };
+export const needsTitle = (rack: Rack) => ORDER[rack] >= 2;
 export const canShop = (rack: Rack, earnings: number, titles = 0) => ORDER[rankOf(earnings, titles).id] >= ORDER[rack];
 
 // career earnings: the purses (p.earnings, the board's money column) and the club bonuses
@@ -29,21 +33,24 @@ export const balanceOf = (p: Player) => Math.max(0, earningsOf(p) - (p.spent ?? 
 // black and gold under a laurel.
 export function badgeSvg(rack: Rack, size = 18) {
   const r = RANKS.find((x) => x.id === rack)!;
-  const [fill, rim] = rack === 'legend' ? ['#141414', '#e6c35c'] : rack === 'pro' ? ['#d6a940', '#7a5a14'] : ['#1f5c43', '#e6cf9f'];
+  const [fill, rim] =
+    rack === 'founders' ? ['#f4ecd8', '#b8862a'] : rack === 'hof' ? ['#0f3d2a', '#e6c35c'] : rack === 'legend' ? ['#141414', '#e6c35c'] : rack === 'pro' ? ['#d6a940', '#7a5a14'] : ['#1f5c43', '#e6cf9f'];
   const mark =
     rack === 'member'
       ? `<path d="M11 16 L16 20 L21 16" fill="none" stroke="${rim}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`
       : `<path d="M16 8.5 l1.9 3.9 4.3 .6 -3.1 3 .7 4.3 -3.8 -2 -3.8 2 .7 -4.3 -3.1 -3 4.3 -.6z" fill="${rim}"/>`;
-  const laurel = rack === 'legend' ? `<path d="M8.5 25 q-3.5 -6 0 -13 M23.5 25 q3.5 -6 0 -13" fill="none" stroke="${rim}" stroke-width="1.6"/>` : '';
-  return `<svg class="rank-badge rb-${rack}" width="${size}" height="${size}" viewBox="0 0 32 32" role="img" aria-label="${r.name}"><title>${r.name}</title><path d="M16 2.5 L27.5 6.5 V15.5 C27.5 23 22.5 27.5 16 30 C9.5 27.5 4.5 23 4.5 15.5 V6.5 Z" fill="${fill}" stroke="${rim}" stroke-width="1.6"/>${mark}${laurel}</svg>`;
+  const laurel = ORDER[rack] >= 2 ? `<path d="M8.5 25 q-3.5 -6 0 -13 M23.5 25 q3.5 -6 0 -13" fill="none" stroke="${rim}" stroke-width="1.6"/>` : '';
+  // the Founders' Circle wears a crown over the shield
+  const crown = rack === 'founders' ? `<path d="M10.5 6 l2 -4 3.5 3 3.5 -3 2 4 z" fill="${rim}"/>` : '';
+  return `<svg class="rank-badge rb-${rack}" width="${size}" height="${size}" viewBox="0 0 32 32" role="img" aria-label="${r.name}"><title>${r.name}</title><path d="M16 2.5 L27.5 6.5 V15.5 C27.5 23 22.5 27.5 16 30 C9.5 27.5 4.5 23 4.5 15.5 V6.5 Z" fill="${fill}" stroke="${rim}" stroke-width="1.6"/>${mark}${laurel}${crown}</svg>`;
 }
 export const badgeFor = (p: Player, size = 18) => (p.host ? '' : badgeSvg(rankOf(earningsOf(p), p.wins ?? 0).id, size));
 
 // ---------- the catalogue ----------
 
-export type Kind = 'top' | 'outer' | 'bottoms' | 'shoes' | 'gloves' | 'hat' | 'eyewear' | 'bling' | 'putter' | 'driver' | 'bag' | 'caddie';
+export type Kind = 'top' | 'outer' | 'bottoms' | 'shoes' | 'gloves' | 'hat' | 'eyewear' | 'bling' | 'putter' | 'driver' | 'bag' | 'caddie' | 'ball' | 'tracer' | 'celebrate';
 // the order the racks and the fitting room's tabs go in
-export const KINDS: Kind[] = ['top', 'outer', 'bottoms', 'shoes', 'gloves', 'hat', 'eyewear', 'bling', 'putter', 'driver', 'bag', 'caddie'];
+export const KINDS: Kind[] = ['ball', 'tracer', 'celebrate', 'top', 'outer', 'bottoms', 'shoes', 'gloves', 'hat', 'eyewear', 'bling', 'putter', 'driver', 'bag', 'caddie'];
 export type Item = {
   id: string;
   name: string;
@@ -207,10 +214,51 @@ export const ITEMS: Item[] = [
   slot('leatherbag', 'Vintage leather bag', 4000, 'pro', 'bag', 'Tan leather and brass, worn in just right.', 'bagStyle', 'leather', undefined, 'bag'),
   slot('crocbag', 'Croc staff bag', 16000, 'legend', 'bag', 'Bottle-green croc with gold trim. The bag of the year.', 'bagStyle', 'croc', undefined, 'bag'),
   caddieItem,
+  // ---------- on the course (Nov 19): the ball, the line it draws, and what happens when it drops ----------
+  // seen on every shot by everyone watching (and in Shots of the day), so they're priced as the big chases
+  slot('ballyellow', 'Optic yellow ball', 200, 'member', 'ball', 'A bright yellow ball. You will never lose it in the rough again. You will, but less.', 'ball', 'yellow', undefined),
+  slot('ballpink', 'Hot pink ball', 250, 'member', 'ball', 'Matte hot pink. Visible from space.', 'ball', 'pink', undefined),
+  slot('ballblack', 'Matte black ball', 900, 'member', 'ball', 'Stealth. Black as a bunker at night.', 'ball', 'black', undefined),
+  slot('ballpearl', 'Pearl ball', 4000, 'pro', 'ball', 'A pearlescent finish that catches every colour of the sky.', 'ball', 'pearl', undefined),
+  slot('ballgold', 'Gold ball', 18000, 'legend', 'ball', 'Polished gold. It flashes in the sun all the way down the fairway.', 'ball', 'gold', undefined),
+  slot('balldiamond', 'Diamond ball', 60000, 'hof', 'ball', 'Faceted and glittering. It sparkles in flight.', 'ball', 'diamond', undefined),
+  slot('ballmolten', 'Molten ball', 150000, 'founders', 'ball', 'It glows like a coal fresh from the fire. Mind your fingers.', 'ball', 'molten', undefined),
+  slot('tracegreen', 'Club green tracer', 400, 'member', 'tracer', 'The line your ball draws in the air, in club green.', 'tracer', 'green', undefined),
+  slot('traceyours', 'Your colours tracer', 1200, 'member', 'tracer', 'Your shot drawn in your shirt colour, so everyone knows whose it was.', 'tracer', 'yours', undefined),
+  slot('tracegold', 'Gold tracer', 6000, 'pro', 'tracer', 'A line of gold across the sky.', 'tracer', 'gold', undefined),
+  slot('tracefire', 'Fire tracer', 20000, 'legend', 'tracer', 'Yellow at the ball, burning to red behind it.', 'tracer', 'fire', undefined),
+  slot('tracerainbow', 'Rainbow tracer', 80000, 'hof', 'tracer', 'Every colour, all the way from the club to where it lands.', 'tracer', 'rainbow', undefined),
+  slot('tracecomet', 'Comet tracer', 175000, 'founders', 'tracer', 'A glowing head and a long bright tail. The sky remembers.', 'tracer', 'comet', undefined),
+  slot('celfist', 'Fist pump', 600, 'member', 'celebrate', 'Hole out from off the green, or make birdie or better, and give it a fist pump.', 'celebrate', 'fist', undefined),
+  slot('celspot', 'Golden rings', 3000, 'pro', 'celebrate', 'Arms up, and rings of gold ripple out from the cup.', 'celebrate', 'rings', undefined),
+  slot('celfireworks', 'Fireworks over the cup', 25000, 'legend', 'celebrate', 'The cup erupts in fireworks. The whole course looks round.', 'celebrate', 'fireworks', undefined),
+  slot('celgoldrain', 'Gold rain', 90000, 'hof', 'celebrate', 'A shower of gold falls over the green, and the crowd roars.', 'celebrate', 'goldrain', undefined),
+  slot('celfounders', 'Founders’ salute', 220000, 'founders', 'celebrate', 'Fireworks, gold rain, rings of light and the crowd on its feet. All of it.', 'celebrate', 'founders', undefined),
+  // ---------- the Hall of Fame and Founders' Circle racks ----------
+  slot('hofblazer', 'Hall of Fame blazer', 85000, 'hof', 'outer', 'Deep green wool, gold buttons and the Hall of Fame crest. Worn by very few.', 'outer', 'hofblazer', undefined, 'chest'),
+  slot('platdriver', 'Platinum driver', 70000, 'hof', 'driver', 'A platinum head. Cold, bright and very expensive.', 'driver', 'platinum', undefined, 'club'),
+  slot('founderscardi', 'Founders’ cardigan', 210000, 'founders', 'outer', 'Cream cable knit with the founders’ crest in gold. The club began with this cardigan.', 'outer', 'founders', undefined, 'chest'),
+  slot('foundersputter', 'Founders’ putter', 190000, 'founders', 'putter', 'A gold head on an ebony shaft. Made for one hand at a time.', 'putter', 'founders', 'classic', 'club'),
 ];
+// a little picture of the on-course pieces for the rack (the fitting room can't show a ball in flight)
+export const SWATCH: Record<string, string> = {
+  ballyellow: 'radial-gradient(circle at 35% 35%, #fbff8a, #d7e61c 70%)',
+  ballpink: 'radial-gradient(circle at 35% 35%, #ff9ccc, #e8338a 70%)',
+  ballblack: 'radial-gradient(circle at 35% 35%, #4a4a4a, #111 70%)',
+  ballpearl: 'radial-gradient(circle at 35% 35%, #ffffff, #f2e6f6 45%, #cfe3ef 75%)',
+  ballgold: 'radial-gradient(circle at 35% 35%, #fff2b0, #d4af37 55%, #8a6a14)',
+  balldiamond: 'conic-gradient(#e8f6ff, #a7d8ff, #ffffff, #c8b6ff, #e8f6ff)',
+  ballmolten: 'radial-gradient(circle at 40% 40%, #fff3a0, #ff8a1c 50%, #b3200c)',
+  tracegreen: 'linear-gradient(90deg, transparent, #2f8a52)',
+  traceyours: 'linear-gradient(90deg, transparent, #4f6d8f)',
+  tracegold: 'linear-gradient(90deg, transparent, #e6c35c)',
+  tracefire: 'linear-gradient(90deg, #b3200c, #ff6a00, #ffe14a)',
+  tracerainbow: 'linear-gradient(90deg, #e53935, #fb8c00, #fdd835, #43a047, #1e88e5, #8e24aa)',
+  tracecomet: 'linear-gradient(90deg, transparent, #8fd3ff 70%, #ffffff)',
+};
 export const itemById = (id: string) => ITEMS.find((i) => i.id === id);
-export const KIND_NAME: Record<Kind, string> = { top: 'Tops', outer: 'Outerwear', bottoms: 'Trousers', shoes: 'Shoes', gloves: 'Gloves', hat: 'Headwear', eyewear: 'Eyewear', bling: 'Watches & jewellery', putter: 'Putters', driver: 'Drivers', bag: 'Bags', caddie: 'Service' };
-export const KIND_ICON: Record<Kind, string> = { top: '👕', outer: '🧥', bottoms: '👖', shoes: '👟', gloves: '🧤', hat: '🧢', eyewear: '🕶️', bling: '⌚', putter: '⛳', driver: '🏌️', bag: '🎒', caddie: '🤵' };
+export const KIND_NAME: Record<Kind, string> = { ball: 'Balls', tracer: 'Tracers', celebrate: 'Celebrations', top: 'Tops', outer: 'Outerwear', bottoms: 'Trousers', shoes: 'Shoes', gloves: 'Gloves', hat: 'Headwear', eyewear: 'Eyewear', bling: 'Watches & jewellery', putter: 'Putters', driver: 'Drivers', bag: 'Bags', caddie: 'Service' };
+export const KIND_ICON: Record<Kind, string> = { ball: '⚪', tracer: '☄️', celebrate: '🎆', top: '👕', outer: '🧥', bottoms: '👖', shoes: '👟', gloves: '🧤', hat: '🧢', eyewear: '🕶️', bling: '⌚', putter: '⛳', driver: '🏌️', bag: '🎒', caddie: '🤵' };
 
 // where the fitting room's camera goes for a piece: the face for hats and glasses, the hands for watches, gloves,
 // putters and drivers, round the back for a bag

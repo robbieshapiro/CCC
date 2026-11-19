@@ -8,7 +8,7 @@ import { specOf } from '../avatar';
 import type { GolferSpec } from '../golf3d/golfer';
 import { reginaldSvg } from '../host';
 import { money, OPEN_FLOOR, OPEN_PER_PLAYER } from '../purse';
-import { badgeSvg, balanceOf, canShop, earningsOf, focusOf, ITEMS, KIND_ICON, KIND_NAME, KINDS, nextRank, rankOf, RANKS, type Item, type Kind } from '../shop';
+import { badgeSvg, balanceOf, canShop, earningsOf, focusOf, ITEMS, KIND_ICON, KIND_NAME, KINDS, needsTitle, nextRank, rankOf, RANKS, SWATCH, type Item, type Kind } from '../shop';
 import { refresh, requireSession } from '../state';
 import { toast } from '../nudges';
 import { esc } from '../ui';
@@ -22,6 +22,9 @@ export const leaveShop = () => {
 
 // Reginald's word on each piece: the same line for the same piece, a few for each kind
 const SAY: Record<Kind, string[]> = {
+  ball: ['A ball says a great deal about a golfer. Mostly where it went.', 'You will see that one coming from the clubhouse. So will everyone.', 'Tee it up. Let them watch it fly.'],
+  tracer: ['Every shot, drawn across the sky for the whole club to admire. Or not.', 'A line like that is a signature.', 'Now they will know exactly where it went. Choose your shots carefully.'],
+  celebrate: ['For when it drops. Do try not to overdo it. Actually, do.', 'The membership expects a little theatre. Give it to them.', 'I have arranged for this personally. The groundsman is not pleased.'],
   top: ['A fine cut. The tailor would approve, and he approves of very little.', 'It sits well across the shoulders. Turn round, let me see.', 'Bold. The membership will talk. Let them.'],
   outer: ['For the days the weather has opinions.', 'Warm, smart, and it keeps the swing free. I tried.', 'One for the early tee times.'],
   bottoms: ['A good trouser makes the golfer. A bad one makes the newsletter.', 'The break over the shoe is correct. I checked.', 'Comfortable through the turn. Very important.'],
@@ -75,7 +78,7 @@ export function shopPane(snap: Snapshot) {
         <p><b>Every day you play your card:</b> ${money(BONUS.round)}, plus ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle, ${money(BONUS.albatross)} an albatross and ${money(BONUS.ace)} a hole in one. ${money(BONUS.streak3)} for three days running at the club, ${money(BONUS.streak7)} for every full week.</p>
         <p><b>The moments:</b> hole a putt from ${LONG_PUTT_FT} ft for ${money(BONUS.longPutt)}, from ${MONSTER_PUTT_FT} ft for ${money(BONUS.monsterPutt)}. Chip in from off the green for ${money(BONUS.chipin)}. Find a hole's secret route for the first time for ${money(BONUS.secret)}.</p>
         <p><b>Around the club:</b> Closest to the Pin, the long drive and the Target Range each pay the day's top three ${DAILY_PRIZES.map(money).join(', ')}. Make an ace at the Ace Pot and the whole pot is yours. ${money(BONUS.designPlay)} each time another member finishes a hole you designed on the Members' Course (once each a week, up to ${money(BONUS.designWeek)} a week).</p>
-        <p class="muted">Only your daily card counts; practice is free and earns nothing. Spending never touches your career earnings. The Club Legend rack also needs a weekly title.</p>
+        <p class="muted">Only your daily card counts; practice is free and earns nothing. Spending never touches your career earnings. The Club Legend rack and those above it also need a weekly title.</p>
       </details>
     </div>`;
 }
@@ -88,13 +91,15 @@ function racks(earned: number, titles: number, kind = '') {
     { rack: RANKS[0], title: 'The Tour Collection', pick: (i) => i.rack === 'member' && i.collection === 'tour' },
     { rack: RANKS[1], title: `${RANKS[1].name} rack`, pick: (i) => i.rack === 'pro' },
     { rack: RANKS[2], title: `${RANKS[2].name} rack`, pick: (i) => i.rack === 'legend' },
+    { rack: RANKS[3], title: `The ${RANKS[3].name} rack`, pick: (i) => i.rack === 'hof' },
+    { rack: RANKS[4], title: `${RANKS[4].name} rack`, pick: (i) => i.rack === 'founders' },
   ];
   return shelves
     .map(({ rack: r, title, pick }) => {
       const items = KINDS.flatMap((k) => ITEMS.filter((i) => pick(i) && i.kind === k && (!kind || i.kind === kind)));
       if (!items.length) return '';
       const open = canShop(r.id, earned, titles);
-      const why = r.id === 'legend' && earned >= r.from && !titles ? 'opens with a weekly title' : `opens at ${money(r.from)} career${r.id === 'legend' ? ' and a weekly title' : ''}`;
+      const why = needsTitle(r.id) && earned >= r.from && !titles ? 'opens with a weekly title' : `opens at ${money(r.from)} career${needsTitle(r.id) ? ' and a weekly title' : ''}`;
       return `<section class="fit-rack rack-${r.id}${open ? '' : ' locked'}">
       <h3>${badgeSvg(r.id, 18)} ${title}${open ? '' : ` <small>🔒 ${why}</small>`}</h3>
       <div class="fit-row">${items.map(card).join('')}</div>
@@ -104,7 +109,9 @@ function racks(earned: number, titles: number, kind = '') {
 }
 
 function card(i: Item) {
-  return `<button class="fit-item" data-item="${i.id}"><i class="fi-icon" aria-hidden="true">${KIND_ICON[i.kind]}</i><b>${esc(i.name)}</b><em data-state>${money(i.price)}</em></button>`;
+  const sw = SWATCH[i.id];
+  const icon = sw ? `<i class="fi-icon fi-sw ${i.kind}" aria-hidden="true" style="--sw:${sw}"></i>` : `<i class="fi-icon" aria-hidden="true">${KIND_ICON[i.kind]}</i>`;
+  return `<button class="fit-item" data-item="${i.id}">${icon}<b>${esc(i.name)}</b><em data-state>${money(i.price)}</em></button>`;
 }
 
 // where the money came from, biggest first

@@ -12,7 +12,7 @@ import { moTarget, pasPay, PAS_MAX } from '../popashot';
 import { BJ_MAX, BJ_MIN, bjSettle, bjValue, DAILY_LOSS, type BjOutcome, type BjView } from '../blackjack';
 import { DAILY_BOARD, weekOf } from '../bar';
 import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
-import { balanceOf, canShop, earningsOf, itemById } from '../shop';
+import { balanceOf, canShop, earningsOf, itemById, needsTitle } from '../shop';
 import { SAMPLES } from '../designer/samples';
 import { CURSES_A_WEEK, LOCKER_MAX, powerOf } from '../powerups';
 import type { Tweaks } from '../golf3d/tweaks';
@@ -375,7 +375,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const item = itemById(id);
     if (!item || !p) throw new Error('That isn’t in the shop.');
     if (p.owned?.includes(id)) return;
-    if (item.rack === 'legend' && !(p.wins ?? 0)) throw new Error('The Club Legend rack opens with a weekly title.');
+    if (needsTitle(item.rack) && !(p.wins ?? 0)) throw new Error('The Club Legend rack opens with a weekly title.');
     if (!canShop(item.rack, earningsOf(p), p.wins ?? 0)) throw new Error('That rack is for higher ranks.');
     if (balanceOf(p) < item.price) throw new Error('Not enough in the bank for that.');
     (db.purchases ??= []).push({ playerId: me.id, item: id, price: item.price });

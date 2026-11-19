@@ -13,7 +13,7 @@ import { conditionsFor, gusted, tempestOn, WIND_PER_MPH, withPin, type Condition
 import { bagFor, carryOf, CLUBS, drinksOn, SCALE, type ClubId, type Drink } from './clubs';
 import { MAGNET_FT } from '../powerups';
 import { pour } from './drinks';
-import { Golfer, HANK_SPEC, reactionFor, type Reaction } from './golfer';
+import { Golfer, HANK_SPEC, reactionFor, type GolferSpec, type Reaction } from './golfer';
 import { BALL_R, dropPoint, escapeLoft, G, launch, lieFactor, lieScatter, simulate, TOUR_GREEN, type Frame, type Result } from './physics';
 import * as stands from './stands';
 import * as props from './props';
@@ -25,6 +25,22 @@ import { KITS, nightFor } from './kits';
 
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
+// a soft round glow, for sparks and the comet's head (drawn once)
+let sparkTexture: THREE.Texture | null = null;
+function sparkTex() {
+  if (sparkTexture) return sparkTexture;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const x = cv.getContext('2d')!;
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.6)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 64, 64);
+  sparkTexture = new THREE.CanvasTexture(cv);
+  return sparkTexture;
+}
 
 // A practice area: the stations you can hit from (the short game), and the flags out on the range.
 export type Drill = {
@@ -375,7 +391,9 @@ export class Course3D {
 
     this.ball.castShadow = true;
     this.scene.add(this.ball);
-    this.golfer = new Golfer(specOf(avatar));
+    this.gear = specOf(avatar);
+    this.dressBall();
+    this.golfer = new Golfer(this.gear);
     this.golfer.holdClub('driver');
     this.scene.add(this.golfer.group);
 
@@ -385,10 +403,20 @@ export class Course3D {
     this.scene.add(this.ring);
     const tg = new THREE.BufferGeometry();
     tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL * 3), 3));
+    tg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TRAIL * 3).fill(1), 3));
     tg.setDrawRange(0, 0);
-    this.trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55 }));
+    // the tracer: white as it always was, or the colours bought in the Pro Shop
+    this.trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: this.gear.tracer ? 0.92 : 0.55, fog: false, toneMapped: !this.gear.tracer }));
     this.trail.frustumCulled = false;
     this.scene.add(this.trail);
+    // a bought tracer is drawn bold: soft glowing points along the same path, in the tracer's colours
+    if (this.gear.tracer) {
+      const band = new THREE.Points(tg, new THREE.PointsMaterial({ size: this.gear.tracer === 'comet' ? 2 : 1.5, map: sparkTex(), vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, fog: false, toneMapped: false }));
+      band.frustumCulled = false;
+      this.scene.add(band);
+    }
+    this.glow.visible = false;
+    this.scene.add(this.glow);
 
     for (let i = 0; i < 8; i++) {
       const c = props.cloud();
@@ -1960,6 +1988,8 @@ export class Course3D {
       // quiet: the cup's own sound, and a soft clap only for an ace
       if (this.strokes === 1) window.setTimeout(() => sfx('clap'), 250);
       this.holedFrames = r.frames;
+      // a chip-in, a birdie or better, or anything holed in a bar game: the celebration bought in the Pro Shop
+      if (this.drill || s.club !== 'putter' || this.strokes < this.hole.par) this.celebrate();
       const feats = [...this.zones];
       if (this.strokes === 1) feats.push('ace');
       if (s.club === 'wedge' || s.club === 'chip') feats.push('chipin');
@@ -2130,6 +2160,136 @@ export class Course3D {
     this.trailPts.forEach((p, i) => attr.setXYZ(i, p.x, p.y, p.z));
     attr.needsUpdate = true;
     this.trail.geometry.setDrawRange(0, this.trailPts.length);
+    // the tracer's colours, from the tail (0) to the ball (1)
+    const tr = this.gear.tracer;
+    if (tr) {
+      const col = this.trail.geometry.attributes.color as THREE.BufferAttribute;
+      const n = this.trailPts.length;
+      const c = new THREE.Color();
+      for (let i = 0; i < n; i++) {
+        const t = n > 1 ? i / (n - 1) : 1;
+        if (tr === 'fire') c.set('#c4200a').lerp(new THREE.Color('#ff8a1a'), Math.min(1, t * 1.4)).lerp(new THREE.Color('#ffe14a'), Math.max(0, t - 0.8) * 5);
+        else if (tr === 'rainbow') c.setHSL((1 - t) * 0.8, 1, 0.55);
+        else if (tr === 'comet') c.set('#2a5fb0').lerp(new THREE.Color('#ffffff'), t * t);
+        else c.set(tr === 'green' ? '#3fbf6a' : tr === 'gold' ? '#f2d06a' : this.gear.topColor);
+        col.setXYZ(i, c.r, c.g, c.b);
+      }
+      col.needsUpdate = true;
+    }
+    // the comet's glowing head, and the molten ball's halo, ride with the ball while it flies
+    this.glow.visible = (tr === 'comet' && this.trailPts.length > 2) || this.gear.ball === 'molten';
+    if (this.glow.visible) {
+      this.glow.position.copy(this.ball.position);
+      this.glow.scale.setScalar(tr === 'comet' && this.trailPts.length > 2 ? 4.2 : 1.6);
+      (this.glow.material as THREE.SpriteMaterial).color.set(tr === 'comet' && this.trailPts.length > 2 ? '#bfe4ff' : '#ff8a2a');
+    }
+  }
+
+  // ---------- the Pro Shop on the course: the ball, the tracer and the celebrations (Nov 19) ----------
+  private gear: GolferSpec;
+  private glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }));
+  private dressBall() {
+    const m = this.ball.material as THREE.MeshStandardMaterial;
+    const b = this.gear.ball;
+    const set = (color: string, rough: number, metal = 0, glow = '#000000', gi = 0) => {
+      m.color.set(color);
+      m.roughness = rough;
+      m.metalness = metal;
+      m.emissive.set(glow);
+      m.emissiveIntensity = gi;
+    };
+    if (b === 'yellow') set('#e8f53a', 0.35, 0, '#3a3d00', 0.4);
+    else if (b === 'pink') set('#ff4fa3', 0.55, 0, '#3d0018', 0.4);
+    else if (b === 'black') set('#1b1b1d', 0.75);
+    else if (b === 'pearl') set('#fbf7ff', 0.12, 0.35, '#e6dcff', 0.12);
+    else if (b === 'gold') set('#e8c34a', 0.25, 0.55, '#6a4a00', 0.45);
+    else if (b === 'diamond') set('#e8f6ff', 0.04, 0.7, '#9fd4ff', 0.35);
+    else if (b === 'molten') set('#ff7a1a', 0.5, 0, '#ff4a00', 1.3);
+  }
+  // the diamond ball glitters as it goes
+  private shimmer(clock: number) {
+    if (this.gear.ball !== 'diamond') return;
+    (this.ball.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.25 + 0.3 * Math.max(0, Math.sin(clock * 11)) ** 3;
+  }
+
+  private sparks: { pts: THREE.Points; vel: Float32Array; t: number; life: number; fall: number }[] = [];
+  // a burst of light: n sparks from a point, flung out and falling, fading as they go
+  private spray(at: THREE.Vector3, n: number, color: string, speed: number, fall: number, life: number, size: number, rain = 0) {
+    const pos = new Float32Array(n * 3);
+    const vel = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      if (rain) {
+        // rain: spread over a disc high above, drifting down
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random()) * rain;
+        pos.set([at.x + Math.cos(a) * r, at.y + Math.random() * 14, at.z + Math.sin(a) * r], i * 3);
+        vel.set([(Math.random() - 0.5) * 2, -speed * (0.6 + Math.random() * 0.6), (Math.random() - 0.5) * 2], i * 3);
+      } else {
+        const u = Math.random() * 2 - 1;
+        const a = Math.random() * Math.PI * 2;
+        const k = Math.sqrt(1 - u * u) * speed * (0.75 + Math.random() * 0.25);
+        pos.set([at.x, at.y, at.z], i * 3);
+        vel.set([Math.cos(a) * k, u * speed, Math.sin(a) * k], i * 3);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color, size, map: sparkTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }));
+    pts.frustumCulled = false;
+    this.scene.add(pts);
+    this.sparks.push({ pts, vel, t: 0, life, fall });
+  }
+  private stepSparks(dt: number) {
+    this.sparks = this.sparks.filter((s) => {
+      s.t += dt;
+      const attr = s.pts.geometry.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < attr.count; i++) {
+        s.vel[i * 3 + 1] -= s.fall * dt;
+        attr.setXYZ(i, attr.getX(i) + s.vel[i * 3] * dt, attr.getY(i) + s.vel[i * 3 + 1] * dt, attr.getZ(i) + s.vel[i * 3 + 2] * dt);
+      }
+      attr.needsUpdate = true;
+      (s.pts.material as THREE.PointsMaterial).opacity = Math.max(0, 1 - (s.t / s.life) ** 2);
+      if (s.t < s.life) return true;
+      this.scene.remove(s.pts);
+      s.pts.geometry.dispose();
+      (s.pts.material as THREE.Material).dispose();
+      return false;
+    });
+  }
+  // The celebration bought in the Pro Shop, when a ball drops: a fist pump, rings of gold, fireworks, gold rain, or the lot
+  private celebrate() {
+    const c = this.gear.celebrate;
+    if (!c) return;
+    window.setTimeout(() => this.golfer.setPose('cheer'), 350);
+    // after the camera has settled over the cup, so the show is in frame
+    window.setTimeout(() => this.showtime(c), 900);
+  }
+  private showtime(c: NonNullable<GolferSpec['celebrate']>) {
+    if (!this.hole) return;
+    // the camera is on the golfer for the reaction: the show goes up in the sky just behind them, rings at their feet
+    const me = this.golfer.group.position.clone().add(new THREE.Vector3(0, 6, 0));
+    const back = me.clone().sub(this.camera.position).setY(0);
+    const away = Math.max(6, Math.min(40, back.length()));
+    const top = me.clone().add(back.normalize().multiplyScalar(away * 0.9)).add(new THREE.Vector3(0, away * 0.45, 0));
+    const feet = { x: this.golfer.group.position.x, y: -this.golfer.group.position.z };
+    const rings = () => [0, 450, 900].forEach((ms) => window.setTimeout(() => this.burst(feet, 2.5 + ms / 300, 0xf2c94c), ms));
+    const fireworks = () => {
+      const colours = ['#ff4d4d', '#ffd84a', '#4dd2ff', '#b06bff', '#6bff8a', '#ffffff'];
+      for (let k = 0; k < 6; k++)
+        window.setTimeout(() => {
+          const at = top.clone().add(new THREE.Vector3((Math.random() - 0.5) * away * 0.6, (Math.random() - 0.5) * away * 0.3, (Math.random() - 0.5) * away * 0.6));
+          this.spray(at, 90, colours[k % colours.length], away * 0.22, away * 0.1, 1.7, away * 0.035);
+          sfx('pop');
+        }, k * 380);
+    };
+    const rain = () => {
+      this.spray(top.clone().add(new THREE.Vector3(0, away * 0.3, 0)), 220, '#ffd65a', away * 0.18, away * 0.03, 3.2, away * 0.028, away * 0.6);
+      window.setTimeout(() => sfx('cheer'), 300);
+    };
+    if (c === 'rings' || c === 'founders') rings();
+    if (c === 'fireworks' || c === 'founders') fireworks();
+    if (c === 'goldrain' || c === 'founders') rain();
+    if (c === 'founders') window.setTimeout(() => sfx('cheer'), 1600);
   }
 
   // ---------- today's players ----------
@@ -2607,6 +2767,8 @@ export class Course3D {
     this.clock += dt;
     this.world?.update(this.clock, dt);
     this.stepBursts(now);
+    this.stepSparks(dt);
+    this.shimmer(now / 1000);
     if (this.replay) this.stepReplay(dt);
     this.cart?.update(dt);
 
