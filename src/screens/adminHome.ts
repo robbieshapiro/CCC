@@ -36,6 +36,7 @@ const ART: Record<string, { from: string; to: string; ink: string; emoji: string
   desert: { from: '#5a2e14', to: '#e2a14a', ink: '#fff0d6', emoji: '🌵' },
   highland: { from: '#1c3328', to: '#5f8f6a', ink: '#eef6e4', emoji: '🌲' },
   links: { from: '#1f3a2c', to: '#7fa36a', ink: '#eef6e4', emoji: '⛰️' },
+  linksland: { from: '#13262c', to: '#3b664c', ink: '#f3efd2', emoji: '☘️' },
 };
 export const artOf = (c: Course) => ART[c.holes[0]?.theme ?? ''] ?? ART.links;
 const yardsOf = (h: Course['holes'][number]) => h.yards ?? Math.round((Math.hypot(h.cup.x - h.tee.x, h.cup.y - h.tee.y) * SCALE) / 3);

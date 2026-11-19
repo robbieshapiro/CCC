@@ -9,7 +9,7 @@ import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 
-const ICON: Record<string, string> = { volcanic: '🌋', coastal: '🌊', autumn: '🍁' };
+const ICON: Record<string, string> = { volcanic: '🌋', coastal: '🌊', autumn: '🍁', chicago: '🏙️', linksland: '☘️' };
 
 export function playTiles(snap: Snapshot) {
   const course = courseFor(snap.month);

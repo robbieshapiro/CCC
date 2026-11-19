@@ -2142,6 +2142,20 @@ button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer;
 .whats-new.chicago .wn-card { border-top-color: #2c4a8a; background: linear-gradient(180deg, #eef2fb, var(--paper) 40%); }
 .pm-classic.chicago { background: linear-gradient(160deg, #0b1428, #142650 55%, #22407a); }
 
+/* The Atlantic Links: the grey-green Atlantic, dunes and fescue, gorse gold, a sea mist in the corner (Nov 19) */
+.preview-band.linksland { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='30' viewBox='0 0 240 30'%3E%3Cpath d='M0 30 Q30 8 60 22 T120 16 T180 24 T240 12 V30 Z' fill='%23d8e3c8' opacity='0.12'/%3E%3Cpath d='M0 30 Q40 18 80 26 T160 22 T240 26 V30 Z' fill='%23e8c547' opacity='0.1'/%3E%3C/svg%3E") 0 100% / 240px 30px repeat-x, radial-gradient(110% 150% at 100% 0%, rgba(220, 232, 226, 0.28), transparent 58%), linear-gradient(120deg, #13262c, #22423e 55%, #3b664c); border-color: #4f7a5c; }
+.preview-band.linksland .pb-go { background: #e8c547; color: #13262c; }
+.play-hero.linksland { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='30' viewBox='0 0 240 30'%3E%3Cpath d='M0 30 Q30 8 60 22 T120 16 T180 24 T240 12 V30 Z' fill='%23d8e3c8' opacity='0.12'/%3E%3Cpath d='M0 30 Q40 18 80 26 T160 22 T240 26 V30 Z' fill='%23e8c547' opacity='0.1'/%3E%3C/svg%3E") 0 100% / 240px 30px repeat-x, radial-gradient(90% 70% at 100% 105%, rgba(232, 197, 71, 0.2), transparent 62%), radial-gradient(110% 150% at 100% 0%, rgba(220, 232, 226, 0.25), transparent 58%), linear-gradient(160deg, #13262c, #22423e 55%, #3b664c); box-shadow: 0 12px 34px -12px rgba(19, 38, 44, 0.65); }
+.play-hero.linksland .btn.big { background: #e8c547; border-color: #e8c547; color: #13262c; }
+.play-hero.linksland .btn.big:hover { background: #f0d46a; }
+.play-hero.linksland .play-main .eyebrow, .play-hero.linksland .play-reg b { color: #e8c547; }
+.play-hero.linksland .play-main .muted { color: #d8e3c8; }
+.board.linksland { --felt: #1c3a36; background: linear-gradient(160deg, #13262c, #1c3a36 60%, #284c40); border-color: #0b171a; }
+.board.linksland td.who em, .board.linksland .scorecard tr.par td { color: #b8cbb4; }
+.countdown.linksland { background: linear-gradient(90deg, #1c3a36, #3b664c); color: #f3efd2; }
+.whats-new.linksland .wn-card { border-top-color: #3b664c; background: linear-gradient(180deg, #edf3ea, var(--paper) 40%); }
+.pm-classic.linksland { background: linear-gradient(160deg, #13262c, #22423e 55%, #3b664c); }
+
 /* From the agents, at the top of the Committee Room (Nov 17) */
 .jv-agents { display: grid; gap: 8px; margin: 0 0 16px; }
 .jv-agent { display: grid; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--green); }

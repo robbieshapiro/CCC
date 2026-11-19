@@ -322,13 +322,13 @@ const shortName = (c: Course) => c.name.replace(/ Course$/, '');
 // The week's course dresses the Play hero, the board and its countdown: ember red for the Caldera, Pacific blue and a
 // sunset for the coast
 // and fall orange with a maple leaf for the Western Reserve
-const LOOKS = ['volcanic', 'coastal', 'autumn', 'chicago'];
+const LOOKS = ['volcanic', 'coastal', 'autumn', 'chicago', 'linksland'];
 export const look = (c: Course) => (LOOKS.includes(c.holes[0]?.theme ?? '') ? ` ${c.holes[0].theme}` : '');
 const leaf = (c: Course) => (c.holes[0]?.theme === 'autumn' ? '🍁 ' : '');
 
 // Next week's course, under the nomination tile and above More to play: a warm band in the course's own colours (autumn leaves for
 // the Western Reserve), counting down to its first day, with its practice as the button
-const THEME_ICON: Record<string, string> = { autumn: '🍁', volcanic: '🌋', coastal: '🌊', chicago: '🏙️' };
+const THEME_ICON: Record<string, string> = { autumn: '🍁', volcanic: '🌋', coastal: '🌊', chicago: '🏙️', linksland: '☘️' };
 function previewBand(month: string) {
   const next = nextCourse(month);
   // not until Thursday: the week's own course has the stage until then
