@@ -7,14 +7,14 @@
 //   (a change to a course comes back as the whole course; it can name one hole)
 // -> { id, spec } or { error }
 // The spec is checked and clamped again in the app (src/designer/hole.ts tidy) before anything is built.
-// Caps: 8 designs a day per member, 80 a day across the club. Needs ANTHROPIC_API_KEY, SUPABASE_URL and
+// Caps: 15 drawings a day per member, 150 a day across the club, only drawings that come back counting; none for the Committee. Needs ANTHROPIC_API_KEY, SUPABASE_URL and
 // SUPABASE_SERVICE_ROLE_KEY.
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 
 const MODEL = 'claude-opus-5-5';
-const PER_MEMBER = 8;
-const PER_CLUB = 80;
+const PER_MEMBER = 15;
+const PER_CLUB = 150;
 
 const SYSTEM = `You are the golf course architect for the Claude Country Club, a small private online golf club for friends. Members describe a golf hole they'd love to play; you lay it out so it can be built and played in 3D. You work for Reginald, the club's dry, unhurried English secretary, who writes a one-line review of every hole.
 
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
   if (!body?.token || (!prompt && !(body.id && change))) return json({ error: 'Describe your hole first.' }, 400);
 
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-  const { data: me } = await db.from('players').select('id, name').eq('token', body.token).maybeSingle();
+  const { data: me } = await db.from('players').select('id, name, role').eq('token', body.token).maybeSingle();
   if (!me) return json({ error: 'Members only.' }, 401);
 
   const since = new Date(Date.now() - 86400000).toISOString();
@@ -188,8 +188,10 @@ export async function POST(request: Request) {
     db.from('design_calls').select('id', { count: 'exact', head: true }).eq('player_id', me.id).gte('created_at', since),
     db.from('design_calls').select('id', { count: 'exact', head: true }).gte('created_at', since),
   ]);
-  if ((mine ?? 0) >= PER_MEMBER) return json({ error: "That's enough architecture for one day. The Desk reopens tomorrow." }, 429);
-  if ((all ?? 0) >= PER_CLUB) return json({ error: 'The Desk is closed for the day. Too many architects.' }, 429);
+  // the Committee draws as much as it likes (for testing); its draws still count toward the club's
+  const committee = me.role === 'admin';
+  if (!committee && (mine ?? 0) >= PER_MEMBER) return json({ error: "That's enough architecture for one day. The Desk reopens tomorrow." }, 429);
+  if (!committee && (all ?? 0) >= PER_CLUB) return json({ error: 'The Desk is closed for the day. Too many architects.' }, 429);
 
   // the design to change, if this is a change
   let previous: { id: number; prompt: string; spec: unknown } | null = null;
@@ -215,7 +217,12 @@ export async function POST(request: Request) {
   // against the schema, and the app tidies every value (src/designer/course.ts, hole.ts, world.ts)
   const ask = course ? `${content}\n\nReply with only the JSON for the course, nothing else, in exactly this shape (a JSON Schema):\n${JSON.stringify(COURSE)}` : content;
 
-  await db.from('design_calls').insert({ player_id: me.id });
+  // the call is logged before it's made (so two taps can't race past the cap), and taken off again if no drawing comes
+  // back: only real draws count
+  const { data: call } = await db.from('design_calls').insert({ player_id: me.id }).select('id').single();
+  const refund = async () => {
+    if (call?.id) await db.from('design_calls').delete().eq('id', call.id);
+  };
   const claude = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   try {
     // streamed: a three-hole course with its world can take minutes, and the SDK won't wait that long on a plain request
@@ -232,9 +239,9 @@ export async function POST(request: Request) {
       .finalMessage();
     console.log('design', course ? 'course' : 'hole', res.stop_reason, `${res.usage.output_tokens} out`, `${res.usage.input_tokens} in`);
     if (res.stop_reason === 'refusal') return json({ error: "The architect won't build that one. Try another idea." }, 422);
-    if (res.stop_reason !== 'end_turn') return json({ error: 'The architect ran out of paper. Try a simpler idea.' }, 502);
+    if (res.stop_reason !== 'end_turn') return (await refund(), json({ error: 'The architect ran out of paper. Try a simpler idea.' }, 502));
     const out = readJson(res.content.map((b) => (b.type === 'text' ? b.text : '')).join(''));
-    if (!out) return json({ error: 'The architect smudged the drawing. Try again.' }, 502);
+    if (!out) return (await refund(), json({ error: 'The architect smudged the drawing. Try again.' }, 502));
     const clean = (o: Record<string, unknown>) => {
       for (const k of ['review', 'hint', 'name']) if (typeof o[k] === 'string') o[k] = (o[k] as string).replace(/\s*[—–]\s*/g, ', ');
       return o;
@@ -248,10 +255,11 @@ export async function POST(request: Request) {
       return json({ id: previous.id, spec });
     }
     const { data: row, error } = await db.from('designs').insert({ player_id: me.id, prompt, spec }).select('id').single();
-    if (error || !row) return json({ error: "Couldn't file the drawing. Try again." }, 500);
+    if (error || !row) return (await refund(), json({ error: "Couldn't file the drawing. Try again." }, 500));
     return json({ id: row.id, spec });
   } catch (err) {
     console.error('design', err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err);
+    await refund();
     return json({ error: 'The architect is out. Try again in a minute.' }, 502);
   }
 }
