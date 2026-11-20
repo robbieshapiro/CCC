@@ -286,7 +286,7 @@ Last updated Nov 20, 2026 (one signature hole per members' course, dreamed big, 
 
 ## Setup status
 
-- [ ] #369: apply `pr_369_one_hole` (post_designer_round, finish_member_card, discard_design) after merge.
+- [x] #369: applied `pr_369_one_hole` on Nov 20; post_designer_round and finish_member_card take the course's hole count, discard_design is live.
 - [x] #362: applied `pr_362_duel` on Nov 20; member_cards, live_member_course, start/finish_member_card and the duel money in person_bonus are live.
 - [x] #361: applied `pr_361_member_courses` on Nov 20; designs.mark and post_designer_round are live.
 - [x] #359: applied `pr_359_featured_hole` on Nov 19; members_course returns Tyler's Lost in Orbit with his avatar.
