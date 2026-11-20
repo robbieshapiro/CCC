@@ -22,13 +22,15 @@ export type DailyHoles = { day: string; number: number; holes: DailyHole[] };
 export const isShotDay = (day: string) => day >= SHOT_FROM;
 const dayNumber = (day: string) => Math.round((Date.parse(`${day}T12:00:00Z`) - Date.parse(`${FIRST}T12:00:00Z`)) / 86_400_000) + 1;
 
-// The three steps of difficulty, all on an iron (Robbie, Nov 20: the wood made holes 2 and 3 too hard). Longer within
-// the iron's reach, a smaller green, more trouble round it, more tilt, a tougher pin and more wind, hole by hole.
+// The three steps of difficulty, all on an iron (Robbie, Nov 20: the wood made holes 2 and 3 too hard). Hole by hole:
+// a smaller green, more trouble round it, more tilt, a tougher pin, more wind, and a shorter, more delicate swing.
 // Tuned with scripts/check-holes.ts (npm run check-holes -- daily).
 const STEPS = [
-  { yards: [100, 110], green: 'large', bunkers: 1, carry: false, pin: 'middle', tilt: 0, wind: 1 },
-  { yards: [110, 120], green: 'medium', bunkers: 2, carry: false, pin: 'edge', tilt: 0.7, wind: 1.25 },
-  { yards: [118, 128], green: 'small', bunkers: 2, carry: true, pin: 'tucked', tilt: 1.4, wind: 1.5 },
+  // (a full iron is the steadiest shot in the bag; a part swing is the hardest to judge, so the yards come down as the
+  // holes get harder)
+  { yards: [125, 132], green: 'large', bunkers: 1, carry: false, pin: 'middle', tilt: 0, wind: 1 },
+  { yards: [112, 122], green: 'medium', bunkers: 2, carry: false, pin: 'edge', tilt: 0.8, wind: 1.3 },
+  { yards: [100, 112], green: 'small', bunkers: 2, carry: true, pin: 'tucked', tilt: 1.5, wind: 1.6 },
 ] as const;
 
 const NAMES = ['The Leap', 'Long Shadow', 'The Lantern', 'Last Light', 'The Steps', 'The Spire', 'Far Flag', 'The Gate', 'Hollow Point', 'The Edge', 'Skyfall', 'The Basin', 'Whisper', 'The Drop', 'High Wire', 'The Crown'];
