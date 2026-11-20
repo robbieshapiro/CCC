@@ -6,7 +6,8 @@
 // down the centre line; `across` is measured in fairway half-widths from that line (0 the middle, ±1 the fairway's
 // edges, ±2 deep in the rough, ±3.5 the edge of the property), left negative as you look from the tee. So nothing
 // can land off the course, and the builder clamps whatever it's given.
-import { band, blob, heightAt, inPoly, isWater } from '../golf3d/terrain';
+import { band, blob, heightAt, inPoly, isWater, surfaceAt } from '../golf3d/terrain';
+import { simulate } from '../golf3d/physics';
 import type { Decor, Hole, Piece, Post, Region, V2, Water } from '../golf3d/types';
 import { makeRng } from '../seed';
 
@@ -325,6 +326,15 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {
     par: s.par,
     theme: s.look === 'caldera' ? 'volcanic' : s.look === 'highlands' ? 'highland' : s.look,
     noCart: true,
+    // played as the weekly course is (Nov 20): tour greens (quicker, the smaller cup, a putt must be dying to drop), the
+    // bag with the wood, spin that bites, the green read, drops where it went in, gusting wind that grows with height
+    tour: true,
+    gusts: true,
+    windByHeight: true,
+    chipDrop: 0.7,
+    greenFirm: 0.08,
+    yards: s.yards,
+    ...(s.hint ? { teeTip: s.hint } : {}),
     flag,
     tee,
     cup: pins[0],
@@ -372,6 +382,21 @@ export function checkHole(hole: Hole, spec: HoleSpec): Check {
   }
   // a par 3 can't ask for a carry longer than a good iron over water
   if (s.par === 3 && s.water.some((w) => w.kind !== 'sea') && s.yards > 230) problems.push('That carry over water is too long for a par 3.');
+  // the green has to hold a putt: a gentle one from 12 ft at each pin, from four sides, mustn't run off it
+  let off = 0;
+  let tried = 0;
+  for (const pin of hole.pins ?? [hole.cup]) {
+    const h = { ...hole, cup: pin };
+    for (let k = 0; k < 4; k++) {
+      const a = (k / 4) * Math.PI * 2 + 0.4;
+      const from = { x: pin.x + Math.cos(a) * 12, y: pin.y + Math.sin(a) * 12 };
+      if (surfaceAt(h, from) !== 'green') continue;
+      tried++;
+      const r = simulate(h, from, { angle: Math.atan2(pin.x - from.x, pin.y - from.y), power: 0.12, club: 'putter', error: 0, clock: 0 });
+      if (!r.holed && surfaceAt(h, r.end) !== 'green' && surfaceAt(h, r.end) !== 'fringe') off++;
+    }
+  }
+  if (tried && off / tried > 0.25) problems.push('The green is too steep: putts run off it.');
   return { ok: !problems.length, par: s.par, problems };
 }
 
