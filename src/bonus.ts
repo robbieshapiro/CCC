@@ -31,7 +31,7 @@ export const MONSTER_PUTT_FT = 60;
 // every hole's secret route, by its zone (secret_feats in supabase/schema.sql)
 export const SECRET_FEATS = ['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch', 'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk', 'breakwater', 'plaza', 'lowerwacker', 'gangway', 'boardwalk', 'rooftop'];
 
-export type Bonus = { rounds: number; streaks: number; ctp: number; drive?: number; targets?: number; acepot?: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; grants?: number; trophies?: number; weeks?: number; total: number };
+export type Bonus = { rounds: number; streaks: number; ctp: number; drive?: number; targets?: number; acepot?: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; duels?: number; grants?: number; trophies?: number; weeks?: number; total: number };
 
 // before Nov 10 2026 great holes paid the old rates (person_bonus in supabase/schema.sql)
 export const RAISE_FROM = '2026-11-10';

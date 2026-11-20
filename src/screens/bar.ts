@@ -3,12 +3,12 @@
 // It's the first tab of the Clubhouse.
 import { face } from '../faces';
 import { api } from '../api';
-import type { BarBoard, DailyState, MembersHole, Snapshot } from '../api/types';
+import type { BarBoard, DailyState, LiveCourse, Snapshot } from '../api/types';
+import { tidyCourse } from '../designer/course';
 import { ACE_ADD, ACE_SWINGS, aceShot, type AceState } from '../acepot';
 import { money } from '../purse';
 import { prizesLine } from '../bonus';
 import { DAILY_BOARD, gameName, scoreLabel, type BarGame } from '../bar';
-import { isHole } from '../designer/desk';
 import { bestTry, dailyShot, resultLabel } from '../daily';
 import { MO, staffFace } from '../staff';
 import { requireSession } from '../state';
@@ -86,7 +86,7 @@ export function barPane(snap: Snapshot) {
         <a class="bar-game" href="#/bar/targets" data-game="targets"><i>🏹</i><div><b>The Target Range</b><span>10 balls from the top deck · land it in a ring on the fly, or drive it through the back net's window · streaks multiply · one game counts a day · top 3 paid ${prizesLine()} today</span></div><p data-mine="targets"></p><div data-board="targets"></div></a>
         <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>Three swings a day at ${esc(aceShot(snap.today).label)} · the club adds ${money(ACE_ADD)} for every miss, and it carries over until someone aces it</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
-        <a class="bar-game members" href="#/bar/members" data-game="members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>Holes the members built</span></div><p data-mine="members"></p><div data-board="members"></div></a>
+        <a class="bar-game members" href="#/bar/members" data-game="members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>A course a member built. Beat their score: $300</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
       <h2 class="bar-wall">Mo's tables</h2>
       <p class="bar-wall-sub">Your club money on the line. At most $2,000 down a day.</p>
@@ -106,11 +106,10 @@ export async function fillBar(snap: Snapshot) {
   const prize = document.querySelector<HTMLButtonElement>('[data-prize]');
   if (prize) prize.onclick = () => void openPrizeCounter();
   // (Hollow Hills mini golf is closed for now: its course and code stay, ready to come back)
-  const [daily, drive, members, course, midway, ace, targets] = await Promise.all([
+  const [daily, drive, course, midway, ace, targets] = await Promise.all([
     api.dailyState(s, snap.today).catch(() => null as DailyState | null),
     api.barBoard(s, 'drive').catch(() => null as BarBoard | null),
-    api.barBoard(s, 'members').catch(() => null as BarBoard | null),
-    api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => [] as MembersHole[]),
+    api.liveMemberCourse(s).catch(() => null as LiveCourse | null),
     api.barBoard(s, 'midway').catch(() => null as BarBoard | null),
     api.aceState(s).catch(() => null as AceState | null),
     api.barBoard(s, 'targets').catch(() => null as BarBoard | null),
@@ -138,12 +137,14 @@ export async function fillBar(snap: Snapshot) {
     };
   }
 
-  // the Members' Course: how many holes this week, and until there are any, a way to build the first
+  // the Members' Course: the live course and its designer's mark, and until there is one, a way to build the first
   const card = document.querySelector<HTMLAnchorElement>('[data-members]');
   const count = document.querySelector('[data-members-count]');
   if (card && count) {
-    count.textContent = course.length ? `${course.length} ${course.length === 1 ? 'hole' : 'holes'} by ${[...new Set(course.map((h) => h.by))].slice(0, 3).join(', ')} · this week` : 'No member holes yet. Design the first.';
-    if (!course.length) card.href = '#/design';
+    count.textContent = course
+      ? `${tidyCourse(course.spec).name} · by ${course.by} · their mark ${course.mark.total} · beat it: $300, tie it: $100 · three cards a day`
+      : "No member's course yet. Design the first: three holes, and everyone plays you.";
+    if (!course) card.href = '#/design';
   }
   const put = (game: string, mine: string, board: string) => {
     const m = document.querySelector(`[data-mine="${game}"]`);
@@ -173,7 +174,15 @@ export async function fillBar(snap: Snapshot) {
         (ace.lastAce ? `<p class="bar-empty">${face(ace.lastAce, 22)}Last won by ${esc(ace.lastAce.name)}, for ${money(ace.lastAce.pot)}</p>` : ''),
     );
   }
-  for (const [game, b] of [['drive', drive], ['targets', targets], ['members', members], ['midway', midway]] as [BarGame, BarBoard | null][]) {
+  if (course) {
+    const left = 3 - course.cardsToday;
+    put(
+      'members',
+      course.mine ? 'Your course is on: everyone plays you' : course.bestToday !== null ? `You: ${course.bestToday} · ${left ? `${left} ${left === 1 ? 'card' : 'cards'} left` : 'your cards are in today'}` : `${left} ${left === 1 ? 'card' : 'cards'} today`,
+      top3(course.board.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: `${r.total}${r.total < course.mark.total ? ' · beat it' : r.total === course.mark.total ? ' · tied' : ''}`, mine: r.mine }))),
+    );
+  }
+  for (const [game, b] of [['drive', drive], ['targets', targets], ['midway', midway]] as [BarGame, BarBoard | null][]) {
     if (!b) continue;
     const today = game === 'targets' ? (b.playedToday ? " · today's game is in" : '') : game === 'midway' ? (b.playedToday ? " · today's round is in" : ' · today’s round is waiting') + (waiting ? ` · ${waiting === 1 ? 'a curse is' : `${waiting} curses are`} waiting for you` : '') : '';
     put(game, (b.mine === null ? (DAILY_BOARD.includes(game) ? 'Not played today' : 'Not played this week') : `You: ${scoreLabel(game, b.mine)}`) + today, top3(b.board.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: scoreLabel(game, r.score), mine: r.mine }))));

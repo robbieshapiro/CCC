@@ -11,7 +11,7 @@ import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
 import { leaveShop } from './screens/shop';
-import { aceRound, barRound, targetRound, watchReplay, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
+import { membersDuel, aceRound, barRound, targetRound, watchReplay, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { playoff } from './screens/playoff';
 import { book } from './screens/book';
 import { clubhouse, isAboutPart, isClubhouseTab } from './screens/clubhouse';
@@ -120,7 +120,9 @@ async function routeTo() {
     if (page === 'bar' && arg === 'book') return book(s);
     if (page === 'bar' && arg === 'targets') return targetRound(s);
     if (page === 'replay') return watchReplay(s, Number(arg));
-    if (page === 'bar') return arg === 'drive' || arg === 'members' || arg === 'midway' ? barRound(s, arg) : clubhouse(s, 'bar');
+    // the Members' Course is a duel with the designer (Nov 20)
+    if (page === 'bar' && arg === 'members') return membersDuel(s);
+    if (page === 'bar') return arg === 'drive' || arg === 'midway' ? barRound(s, arg) : clubhouse(s, 'bar');
     if (page === 'design') return designDesk(s, Number(arg) || undefined);
     // the old Clubs tab became the Season
     if (page === 'clubhouse') return isAboutPart(arg) ? clubhouse(s, 'about', arg) : clubhouse(s, arg === 'clubs' ? 'season' : isClubhouseTab(arg) ? arg : 'members', extra);

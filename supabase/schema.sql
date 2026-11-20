@@ -2240,6 +2240,89 @@ begin
 end $$;
 grant execute on function post_designer_round(uuid, bigint, jsonb) to anon;
 
+-- The duel (Nov 20): the newest approved course is the Members' Course. Everyone gets three cards a day on it against
+-- the designer's mark (their publishing round, played back as a ghost). A card is taken at its first swing
+-- (start_member_card) and scored at the end (finish_member_card). Beat the mark: $300; tie it: $100 (your best card of
+-- the day, once a day). The designer: $50 for every challenger's card that doesn't beat them, up to $500 a day. Paid
+-- in person_bonus ('duels', and 'designs' for the designer).
+create table if not exists member_cards (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade,
+  design_id bigint not null references designs on delete cascade,
+  day date not null,
+  holes int[],
+  total int,
+  created_at timestamptz not null default now()
+);
+alter table member_cards enable row level security;
+create index if not exists member_cards_day on member_cards (design_id, day);
+
+create or replace function live_course_id() returns bigint language sql stable security definer set search_path = public, extensions as $$
+  select id from designs where status = 'approved' and spec->>'kind' = 'course' and mark is not null order by reviewed_at desc, id desc limit 1
+$$;
+
+create or replace function live_member_course(p_token uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); cid bigint := live_course_id();
+begin
+  if cid is null then return null; end if;
+  return (
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.id as home_id, p.name, p.avatar
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+    ), today as (
+      select pe.k, pe.h, pe.home_id, pe.name, pe.avatar, c.total
+      from member_cards c join players p on p.id = c.player_id join people pe on pe.k = lower(p.name) and pe.h = p.pin_hash
+      where c.design_id = cid and c.day = game_today()
+    ), best as (
+      select k, h, home_id, name, avatar, min(total) as total from today where total is not null group by k, h, home_id, name, avatar
+    )
+    select json_build_object('id', d.id, 'spec', d.spec, 'mark', d.mark, 'approvedAt', d.reviewed_at,
+      'by', pl.name, 'byId', pl.id, 'avatar', pl.avatar,
+      'mine', lower(pl.name) = lower(me.name) and pl.pin_hash = me.pin_hash,
+      'cardsToday', (select count(*) from today where k = lower(me.name) and h = me.pin_hash),
+      'bestToday', (select min(total) from today where k = lower(me.name) and h = me.pin_hash),
+      'board', coalesce((select json_agg(json_build_object('playerId', b.home_id, 'name', b.name, 'avatar', b.avatar, 'total', b.total,
+          'mine', b.k = lower(me.name) and b.h = me.pin_hash) order by b.total, b.name) from best b), '[]'))
+    from designs d join players pl on pl.id = d.player_id where d.id = cid
+  );
+end $$;
+
+create or replace function start_member_card(p_token uuid, p_design bigint) returns bigint
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); n int; v_id bigint;
+begin
+  if p_design is distinct from live_course_id() then raise exception 'That course isn''t on any more.'; end if;
+  select count(*) into n from member_cards c join players p on p.id = c.player_id
+    where c.design_id = p_design and c.day = game_today() and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash;
+  if n >= 3 then raise exception 'That''s your three cards today. Back tomorrow.'; end if;
+  insert into member_cards (player_id, design_id, day) values (me.id, p_design, game_today()) returning id into v_id;
+  return v_id;
+end $$;
+
+create or replace function finish_member_card(p_token uuid, p_card bigint, p_holes int[]) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); c member_cards; d designs; mk int; t int := 0; designer boolean;
+begin
+  select * into c from member_cards where id = p_card and player_id = me.id;
+  if c.id is null or c.total is not null then raise exception 'That card is already in.'; end if;
+  if array_length(p_holes, 1) is distinct from 3 then raise exception 'A card is three holes.'; end if;
+  for i in 1..3 loop
+    if p_holes[i] is null or p_holes[i] < 1 or p_holes[i] > 12 then raise exception 'That score doesn''t look right.'; end if;
+    t := t + p_holes[i];
+  end loop;
+  update member_cards set holes = p_holes, total = t where id = c.id;
+  select * into d from designs where id = c.design_id;
+  mk := (d.mark->>'total')::int;
+  designer := exists (select 1 from players p where p.id = d.player_id and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash);
+  return json_build_object('total', t, 'mark', mk, 'beat', not designer and t < mk, 'tie', not designer and t = mk, 'designer', designer);
+end $$;
+
+grant execute on function live_member_course(uuid) to anon;
+grant execute on function start_member_card(uuid, bigint) to anon;
+grant execute on function finish_member_card(uuid, bigint, int[]) to anon;
+revoke all on function live_course_id() from public, anon, authenticated;
+
 -- the admin's queue: holes waiting, and the ones already on the course
 create or replace function design_queue(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
@@ -2609,7 +2692,18 @@ language sql stable security definer set search_path = public, extensions as $$
       (select coalesce(sum(case when d >= 60 then 200 when d >= 30 then 75 else 0 end), 0) from strokes where c = 'putter' and i = 1)::int as putts,
       100 * (select count(*) from strokes where c <> 'putter' and i = 1 and coalesce(l, '') <> 'green' and nth > 1)::int as chipins,
       150 * (select count(distinct f) from rounds x cross join lateral unnest(x.feats) f where x.player_id in (select id from seats) and x.card and f = any (secret_feats()))::int as secrets,
-      (select coalesce(sum(least(500, 100 * n)), 0) from (select dp.week, count(*) as n from design_plays dp join designs d on d.id = dp.design_id where d.player_id in (select id from seats) group by dp.week) w)::int as designs,
+      (select coalesce(sum(least(500, 100 * n)), 0) from (select dp.week, count(*) as n from design_plays dp join designs d on d.id = dp.design_id where d.player_id in (select id from seats) group by dp.week) w)::int
+        -- the duel (Nov 20): $50 for every challenger's card that doesn't beat your mark, up to $500 a day
+        + (select coalesce(sum(least(500, 50 * n)), 0) from (
+            select c.day, count(*) as n from member_cards c join designs d on d.id = c.design_id
+            where d.player_id in (select id from seats) and c.player_id not in (select id from seats)
+              and c.total is not null and c.total >= (d.mark->>'total')::int group by c.design_id, c.day) w)::int as designs,
+      -- the duel: your best card of the day on a member's course beats their mark $300, ties it $100 (never your own course)
+      (select coalesce(sum(case when best < mk then 300 when best = mk then 100 else 0 end), 0) from (
+          select c.design_id, c.day, min(c.total) as best, min((d.mark->>'total')::int) as mk
+          from member_cards c join designs d on d.id = c.design_id
+          where c.player_id in (select id from seats) and d.player_id not in (select id from seats) and c.total is not null
+          group by c.design_id, c.day) w)::int as duels,
       (select coalesce(sum(amount), 0) from bonus_grants g where g.k = lower(p.name) and g.h = p.pin_hash)::int as grants,
       -- plaques earned from Nov 12 (trophy_pay, above)
       (select coalesce(sum(amount), 0) from trophy_pay t where t.k = lower(p.name) and t.h = p.pin_hash)::int as trophies,
@@ -2617,8 +2711,8 @@ language sql stable security definer set search_path = public, extensions as $$
       250 * (select count(distinct x.month) from rounds x where x.player_id in (select id from seats) and x.card and x.month >= '2026-11-08')::int as weeks
   )
   select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'drive', b.drive, 'targets', b.targets, 'acepot', b.acepot, 'shots', b.shots,
-    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks,
-    'total', b.rounds + b.streaks + b.ctp + b.drive + b.targets + b.acepot + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.grants + b.trophies + b.weeks) from b
+    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'duels', b.duels, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks,
+    'total', b.rounds + b.streaks + b.ctp + b.drive + b.targets + b.acepot + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.duels + b.grants + b.trophies + b.weeks) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 
