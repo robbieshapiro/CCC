@@ -137,6 +137,7 @@ export const supabaseApi: Api = {
   clubList: (s) => rpc<ClubRow[]>('club_list', { p_token: s.token }),
   chronicles: (s) => rpc<Chronicle[]>('chronicles', { p_token: s.token }),
   myDesigns: (s) => rpc<Design[]>('my_designs', { p_token: s.token }),
+  discardDesign: (s, id) => rpc<void>('discard_design', { p_token: s.token, p_id: id }),
   submitDesign: (s, id, par) => rpc<void>('submit_design', { p_token: s.token, p_id: id, p_par: par }),
   liveMemberCourse: (s) => rpc<LiveCourse | null>('live_member_course', { p_token: s.token }),
   startMemberCard: (s, design) => rpc<number>('start_member_card', { p_token: s.token, p_design: design }),

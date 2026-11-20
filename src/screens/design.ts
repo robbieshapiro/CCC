@@ -1,5 +1,5 @@
-// The Design Desk (#/design, a design: #/design/<id>): describe a three-hole course (Nov 20), the architect (Claude)
-// lays out all three holes (tee, fairway, green, bunkers, water, trees, the lie of the land) in one go, a quick check
+// The Design Desk (#/design, a design: #/design/<id>): describe a signature hole (Nov 20; the first courses had three), the architect (Claude)
+// lays it out (tee, fairway, green, bunkers, water, trees, the lie of the land) in a world of its own, a quick check
 // makes sure each is fair, and you try any of them. Ask for changes (to the course, or to one hole) as often as you
 // like. Then play it to publish: that round is your mark, the score challengers have to beat, and it goes to the
 // Committee. The newest approved course is the Members' Course. Older single holes are listed underneath.
@@ -9,6 +9,7 @@ import { askArchitect, isHole, tryHole } from '../designer/desk';
 import { checkCourse, courseHoles, coursePar, courseYards, isCourse, tidyCourse, type CourseSpec } from '../designer/course';
 import { buildHole, tidy } from '../designer/hole';
 import { planCanvas } from '../designer/plan';
+import { ask } from '../dialog';
 import { hostChip } from '../host';
 import { requireSession } from '../state';
 import { esc, header, navigate, render } from '../ui';
@@ -27,28 +28,28 @@ const WORLDS = [
   ['🍁', 'Autumn farm', 'an autumn farm: maples turning, a red barn, silo, hay bales, pumpkins, leaves falling'],
   ['🐊', 'Florida swamp', 'a Florida swamp at sunset: sabal palms, live oaks, gators, egrets'],
   ['🌆', 'City skyline', 'a city course: towers all round, streetlights, the skyline beyond'],
-  ['🌃', 'Neon night', 'a neon city at night: glowing greens, a dark purple sky, streetlights'],
+  ['🌃', 'Neon night', 'a neon city at night: electric pink and cyan, a violet sky, streetlights, a ferris wheel'],
   ['🌸', 'Cherry blossom', 'a spring garden: pink blossom trees, petals drifting, azaleas'],
   ['🌴', 'Tropical island', 'a tropical island: palms, white sand, turquoise sea all round'],
-  ['🌕', 'The Moon', 'the Moon: grey dust, a black sky full of stars, craters, no trees, just rocks'],
+  ['🌕', 'The Moon', 'the Moon: silver dust, Earth rising on the horizon, a starfield, craters, a lunar lander and a flag'],
   ['🍭', 'Candy land', 'candy land: pink and mint ground, a cotton-candy sky, confetti in the air'],
   ['🦖', 'Jurassic jungle', 'a prehistoric jungle: huge palms, a waterfall, steam, a green haze'],
   ['👻', 'Haunted', 'a haunted graveyard at night: dead trees, tombstones, lanterns, a giant pumpkin'],
   ['🎪', 'Carnival', 'a carnival at dusk: a big top, booths, a ferris wheel, confetti'],
   ['🏰', 'Castle ruins', 'old castle ruins on the moors: stone, gorse, sheep, grey skies'],
-  ['🧊', 'Ice planet', 'an ice planet: pale blue ground, frozen lakes, snow, a strange green sky'],
+  ['🧊', 'Ice planet', 'an ice planet: glacier-blue ground, frozen lakes, snow swirling, an aurora-green sky'],
   ['🔥', 'Inferno', 'an inferno: scorched red ground, lava everywhere, ash falling, a blood-red sky'],
   ['🌅', 'Sunset beach', 'a beach at golden hour: palms, sand, the sea, a big low sun'],
   ['🪐', 'Alien planet', 'an alien planet: purple grass, a teal sky, glowing slime pools, strange rocks'],
-  ['🫧', 'Underwater', 'the sea floor: blue-green light, bubbles rising, coral-coloured rocks'],
+  ['🫧', 'Underwater', 'the sea floor: teal light, bubbles rising, coral reefs in pinks and oranges, a sunken lighthouse'],
   ['🎲', 'Surprise me', 'somewhere nobody has ever played golf: surprise me'],
 ] as const;
 const IDEAS = [
-  'A volcanic island course: a par 3 over lava, a risky par 4 along the sea, a par 5 into the crater',
-  'Three holes on the Moon, the last a long par 5 across the craters',
-  'A links course on the cliffs: wind, pot bunkers, and a par 3 to a green on the edge',
-  'A candy land course with a lollipop forest and a chocolate river to carry',
-  'A haunted graveyard course, a drivable par 4 in the middle',
+  'A par 3 over a river of lava to a green on the crater rim',
+  'A par 5 on the Moon, across the craters to a green by the lunar lander',
+  'A cliff-top links par 4: wind, pot bunkers, a green on the edge',
+  'A candy land par 4 with a lollipop forest and a chocolate river to carry',
+  'A drivable par 4 through a haunted graveyard',
 ];
 const STATUS: Record<Design['status'], string> = { draft: 'Draft', submitted: 'With the Committee', approved: 'Approved', rejected: 'Not this time' };
 const LOOK_NAME: Record<string, string> = { highlands: 'Highlands', caldera: 'Caldera', links: 'Links', desert: 'Desert' };
@@ -61,7 +62,7 @@ export async function designDesk(snap: Snapshot, id?: number) {
       <section class="desk-head">
         <p class="eyebrow">The Design Desk</p>
         <h1>Design a course</h1>
-        ${hostChip('Three holes, one idea. The architect lays them out, you play it first, and your score is the one to beat. The Committee has the final say. It usually does.')}
+        ${hostChip('One hole, one big idea. Dream it, the architect builds it, you play it first, and your score is the one to beat. The Committee has the final say. It usually does.')}
       </section>
       <section class="desk-new" id="desk-new">
         <textarea id="desk-prompt" maxlength="600" rows="3" placeholder="${esc(IDEAS[Math.floor(Math.random() * IDEAS.length)])}" aria-label="Describe your course"></textarea>
@@ -85,7 +86,7 @@ export async function designDesk(snap: Snapshot, id?: number) {
     const typed = (document.getElementById('desk-prompt') as HTMLTextAreaElement).value.trim();
     const world = WORLDS[look]?.[2] ?? '';
     // a world on its own is enough: the architect designs the holes to suit it
-    const text = typed || (world ? `Three holes in ${world}` : '');
+    const text = typed || (world ? `A signature hole in ${world}` : '');
     if (text.length < 8) return void (document.getElementById('desk-err')!.textContent = 'Pick a world or tell the architect a little more.');
     document.getElementById('desk-err')!.textContent = '';
     await draw(snap, () => askArchitect({ prompt: world && typed ? `${typed} (World: ${world})` : text, kind: 'course' }));
@@ -105,7 +106,7 @@ function drawList(list: Design[]) {
   const holes = list.filter(isHole);
   const courseRow = (d: Design) => {
     const c = tidyCourse(d.spec as unknown as CourseSpec);
-    return `<li><a href="#/design/${d.id}"><b>${esc(c.name)}</b><span class="pill ${d.status}">${STATUS[d.status]}</span><small>3 holes · par ${coursePar(c)} · ${courseYards(c)} yd${d.mark ? ` · your mark ${d.mark.total}` : ''}</small></a></li>`;
+    return `<li><a href="#/design/${d.id}"><b>${esc(c.name)}</b><span class="pill ${d.status}">${STATUS[d.status]}</span><small>${c.holes.length === 1 ? 'One hole' : `${c.holes.length} holes`} · par ${coursePar(c)} · ${courseYards(c)} yd${d.mark ? ` · your mark ${d.mark.total}` : ''}</small></a></li>`;
   };
   const holeRow = (d: Design) => {
     const s = tidy(d.spec);
@@ -120,25 +121,23 @@ const WORK = [
   'The architect is sharpening a pencil…',
   'Walking the land…',
   'Building your world: the sky, the ground, what’s beyond…',
-  'Laying out the first hole…',
+  'Laying out your hole…',
   'Moving a bunker. Moving it back…',
   'Arguing with the greenkeeper…',
-  'Now the second hole…',
+  'Making it unforgettable…',
   'Measuring the yardage…',
-  'Now the third hole…',
+  'Dreaming bigger…',
   'Planting the trees…',
   'Cutting the cups…',
   'Reginald is reading it over…',
 ];
 
-// three holes on a blueprint, drawing themselves tee to green, a flag popping on each, over and over
-const BLUEPRINT = `<svg class="bp" viewBox="0 0 300 130" aria-hidden="true">
+// your hole on a blueprint, drawing itself tee to green, the flag popping in, over and over
+const BLUEPRINT = `<svg class="bp" viewBox="70 6 160 124" aria-hidden="true">
   <defs><pattern id="bpg" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"/></pattern></defs>
-  <rect width="300" height="130" rx="10" fill="#1d4f7a"/><rect width="300" height="130" rx="10" fill="url(#bpg)"/>
+  <rect x="70" y="6" width="160" height="124" rx="8" fill="#1d4f7a"/><rect x="70" y="6" width="160" height="124" rx="8" fill="url(#bpg)"/>
   ${[
-    ['M50 112 C 46 86, 64 64, 58 30', 58, 30],
     ['M150 112 C 150 92, 132 80, 140 56 S 170 34, 160 22', 160, 22],
-    ['M250 112 C 262 90, 238 70, 246 40', 246, 40],
   ]
     .map(
       ([d, x, y], i) => `<g class="bp-hole" style="--d:${i * 1.7}s">
@@ -147,7 +146,6 @@ const BLUEPRINT = `<svg class="bp" viewBox="0 0 300 130" aria-hidden="true">
       <circle class="bp-tee" cx="${d.toString().split(' ')[0].slice(1)}" cy="112" r="3"/>
       <circle class="bp-green" cx="${x}" cy="${y}" r="9"/>
       <g class="bp-flag" transform="translate(${x} ${y})"><path d="M0 0V-14" stroke="#fff" stroke-width="1.4"/><path d="M0 -14L8 -11L0 -8Z" fill="#e6c35c"/></g>
-      <text class="bp-n" x="${Number(x) - 4}" y="126">${i + 1}</text>
     </g>`,
     )
     .join('')}
@@ -221,7 +219,7 @@ function show(snap: Snapshot, d: Design) {
   showHole(snap, d);
 }
 
-// a course: its name and review, the three holes side by side (each to try), changes, and the round that publishes it
+// a course: its name and review, its hole (or the first courses' three) to try, changes, binning it, and the round that publishes it
 function showCourse(snap: Snapshot, d: Design) {
   const el = document.getElementById('desk-hole');
   if (!el) return;
@@ -232,14 +230,14 @@ function showCourse(snap: Snapshot, d: Design) {
   el.innerHTML = `
     <article class="desk-card desk-course">
       <div class="desk-info">
-        <p class="eyebrow">A members’ course · 3 holes · par ${coursePar(c)} · ${courseYards(c).toLocaleString('en-US')} yd</p>
+        <p class="eyebrow">A members’ course · ${c.holes.length === 1 ? 'one hole' : `${c.holes.length} holes`} · par ${coursePar(c)} · ${courseYards(c).toLocaleString('en-US')} yd</p>
         <h2>${esc(c.name)}</h2>
         ${c.review ? hostChip(esc(c.review)) : ''}
       </div>
-      <ol class="desk-holes">${c.holes
+      <ol class="desk-holes${c.holes.length === 1 ? ' one' : ''}">${c.holes
         .map(
           (h, i) => `<li><div class="desk-plan" data-plan="${i}"></div>
-            <p class="eyebrow">Hole ${i + 1} · ${esc(worldOf(c, i))}</p><b>${esc(h.name)}</b><span class="desk-par">Par ${h.par} · ${h.yards} yd</span>
+            <p class="eyebrow">${c.holes.length > 1 ? `Hole ${i + 1} · ` : ''}${esc(worldOf(c, i))}</p><b>${esc(h.name)}</b><span class="desk-par">Par ${h.par} · ${h.yards} yd</span>
             ${h.hint ? `<p class="desk-hint">${esc(h.hint)}</p>` : ''}
             <button class="btn ghost small" data-try="${i}">Try it</button></li>`,
         )
@@ -247,13 +245,14 @@ function showCourse(snap: Snapshot, d: Design) {
       ${check.problems.length ? `<p class="fine error">${check.problems.map(esc).join(' ')}</p>` : ''}
       ${
         draft
-          ? `<div class="desk-change"><input id="desk-change" maxlength="400" placeholder="Change something: “hole 2: move the pond to the left”" aria-label="Change it"><button class="btn ghost" data-change>Change it</button></div>
-             <div class="desk-actions"><button class="btn gold" data-publish>Play it to publish</button><span class="fine">Your score is the mark to beat. Then it goes to the Committee.</span></div>`
+          ? `<div class="desk-change"><input id="desk-change" maxlength="400" placeholder="Change something: “move the pond left”, “make the sky pink”" aria-label="Change it"><button class="btn ghost" data-change>Change it</button></div>
+             <div class="desk-actions"><button class="btn gold" data-publish>Play it to publish</button><span class="fine">Your score is the mark to beat. Then it goes to the Committee.</span></div>
+             <button class="link" data-discard>Back to the drawing board</button>`
           : `<div class="desk-actions"><span class="pill ${d.status}">${STATUS[d.status]}</span>${d.mark ? `<span class="desk-mark">Your mark: <b>${d.mark.total}</b> (${d.mark.holes.join(', ')})</span>` : ''}</div>`
       }
       <p class="error" id="desk-card-err" role="alert"></p>
     </article>`;
-  const w = Math.min(200, Math.max(90, (el.clientWidth - 90) / 3));
+  const w = c.holes.length === 1 ? 150 : Math.min(200, Math.max(90, (el.clientWidth - 90) / 3));
   holes.forEach((h, i) => el.querySelector(`[data-plan="${i}"]`)!.appendChild(planCanvas(h, w)));
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   el.querySelectorAll<HTMLButtonElement>('[data-try]').forEach((b) => (b.onclick = () => testHole(snap, holes[Number(b.dataset.try)], () => navigate(`#/design/${d.id}`))));
@@ -261,6 +260,24 @@ function showCourse(snap: Snapshot, d: Design) {
     const change = (document.getElementById('desk-change') as HTMLInputElement).value.trim();
     if (change.length < 3) return;
     await draw(snap, () => askArchitect({ id: d.id, change }));
+  });
+  // bin a draft and start again (the prompt stays in the box)
+  el.querySelector<HTMLButtonElement>('[data-discard]')?.addEventListener('click', async () => {
+    if (!(await ask({ title: 'Bin this one?', body: '<p>Back to the drawing board. This design goes for good.</p>', ok: 'Bin it', cancel: 'Keep it' }))) return;
+    try {
+      await api.discardDesign(requireSession(), d.id);
+    } catch (e) {
+      return void (document.getElementById('desk-card-err')!.textContent = (e as Error).message);
+    }
+    history.replaceState(null, '', '#/design');
+    el.innerHTML = '';
+    drawList(await mine());
+    const box = document.getElementById('desk-prompt') as HTMLTextAreaElement | null;
+    if (box) {
+      if (!box.value && d.prompt) box.value = d.prompt.replace(/\s*\(World: .*\)$/, '');
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      box.focus();
+    }
   });
   el.querySelector<HTMLButtonElement>('[data-publish]')?.addEventListener('click', () => {
     const err = document.getElementById('desk-card-err')!;
@@ -301,7 +318,7 @@ function showHole(snap: Snapshot, d: Design) {
         ${spec.review ? hostChip(esc(spec.review)) : ''}
         ${spec.hint ? `<p class="desk-hint">${esc(spec.hint)}</p>` : ''}
         <div class="desk-actions"><button class="btn" data-play>Play it</button></div>
-        <p class="fine">The Members’ Course is three-hole courses now. Draw one above.</p>
+        <p class="fine">The Members’ Course is signature holes in worlds of their own now. Draw one above.</p>
       </div>
     </article>`;
   document.getElementById('desk-plan')!.appendChild(planCanvas(hole, el.clientWidth > 600 ? 260 : Math.min(300, el.clientWidth - 40)));

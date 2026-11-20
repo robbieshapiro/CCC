@@ -38,7 +38,7 @@ export function barStrip() {
     <a class="bs-featured" href="#/bar/members" data-bs="members" data-bs-featured hidden></a>
     <a class="bs-design" href="#/design" data-bs-design>
       <i aria-hidden="true">✏️</i>
-      <div><small>The Design Desk</small><b data-bs-design-big>Design a course</b><span>Any world you can dream up. Three holes, your score to beat, $50 every time it holds.</span></div>
+      <div><small>The Design Desk</small><b data-bs-design-big>Design a course</b><span>One signature hole, any world you can dream up. Your score to beat, $50 every time it holds.</span></div>
       <span class="bsf-go">Design ›</span>
     </a>
     <div class="bs-replays" data-bs-replays hidden></div>

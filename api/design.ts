@@ -3,7 +3,7 @@
 // when its quick check finds a problem.
 // POST /api/design { token, prompt }                     a new hole
 // POST /api/design { token, id, change }                 the same hole, changed
-// POST /api/design { token, prompt, kind: 'course' }     a three-hole course (Nov 20): one call, three holes
+// POST /api/design { token, prompt, kind: 'course' }     a members' course (Nov 20): one signature hole in a world of its own
 //   (a change to a course comes back as the whole course; it can name one hole)
 // -> { id, spec } or { error }
 // The spec is checked and clamped again in the app (src/designer/hole.ts tidy) before anything is built.
@@ -46,11 +46,13 @@ GOOD HOLES
 
 When you're given an existing design and a change, return the whole design with the change made and everything else kept as it was.
 
-A COURSE
-When asked for a course, design three holes that play as a little course of their own: a name for the course (2 to 4 words), Reginald's one-line review of the course, and the holes: exactly three, in playing order, each a complete hole as above. Give it variety: unless the member asks otherwise, one par 3, one par 4 and one par 5, in an order that flows, about 1,000 to 1,300 yards in all. The holes can share a look or move between looks, as the member's idea suggests. A change to a course may name one hole ("hole 2: longer"): change only that hole and keep the others exactly as they were; a change that names no hole may touch any of them.
+ONE SIGNATURE HOLE
+When asked for a course, design one signature hole: the kind of hole people fly across the world to play and talk about for years. Give it a name for the course (2 to 4 words), Reginald's one-line review, its world, and the holes: exactly one hole, complete as above. Build it around one big, bold idea and push every part to serve it: a carry over a river of lava or glowing slime, a tee perched high above everything, a green ringed by water like an island, a double dogleg threaded through a field of hoodoos, a par 5 with a heroic second over a creek. Make it dramatic and memorable, never plain, while still fair to play. Dream big: the member's idea is the floor, not the ceiling.
+When the member asks for something the parts can't build (a wormhole, a spaceship, a dragon), build its spirit: a glowing slime pool as the wormhole, a lighthouse as the launch tower, landmarks gathered round to tell the story, and say in the hint what stands in for what.
+A course drawn before may have three holes: a change to it keeps three, and may name one hole ("hole 2: longer"), changing only that one.
 
 THE WORLD
-A course also has a world: the place it's set in, as the member imagines it. Anything goes (the Moon, a candy land, a haunted graveyard, a neon city, the sea floor, a Scottish moor), so build exactly what they describe. It changes how the course looks, never how it plays, so be bold. If they name no place, pick one that suits their idea and surprises them a little. On a course the world sets the scene, and each hole's look only matters if there's no world.
+A course also has a world: the place it's set in, as the member imagines it. Anything goes (the Moon, a candy land, a haunted graveyard, a neon city, the sea floor, a Scottish moor), so build exactly what they describe and then go further. It changes how the course looks, never how it plays, so be bold. If they name no place, pick one that suits their idea and surprises them a little. On a course the world sets the scene, and each hole's look only matters if there's no world.
 - name: the world in 2 to 4 words ("The Sea of Tranquility").
 - light: one of day, golden (late afternoon), dusk, night (moonlit), overcast.
 - sky: three colours as #rrggbb: overhead, the middle, the horizon. A night sky is near black overhead.
@@ -61,6 +63,7 @@ A course also has a world: the place it's set in, as the member imagines it. Any
 - trees: 1 to 4 kinds planted through the course, mixed: pine, oak, maple, palm, sabal (a Florida palm), cypress, monterey (a windswept coastal cypress), torrey (a gnarled pine), snowpine (a fir under snow), tree (a round leafy tree), cactus, gorse (low bushes), rock (boulders), hoodoo (a tall red rock spire), deadtree, tomb (gravestones), streetlight, column (stone columns). Pick what gets the world across (on the Moon: rock only; a graveyard: deadtree and tomb).
 - landmarks (up to 12): scenery out beyond the play, each with hole (1 to 3), along and across (keep them well out, across beyond ±2.4): lodge, lighthouse, ruin, barn, silo, farmhouse, falls (a waterfall), cider (a stand), haybale, pumpkins, corn, sheep, cow, gator, egret, sealions, bigtop, booth, ferris (a ferris wheel), lantern, mausoleum, bigpumpkin, candles, crow, poppies, iceplant, azalea, fountain, craftsman (a house), umbrella, flagpole.
 - backdrop: what lies beyond the grounds, as built for the club's courses: none (just the land, in the beyond colour), mountains (a ski resort: snowy firs, a chairlift, skiers, big peaks), mesas (red buttes, hoodoos and a rock arch), skyline (city towers all round, a lake on one side), swamp (Florida: palms, live oaks, low condos on the far shore), dunes (sand dunes, sheep and cows, the grey sea), carnival (tents, booths and bulb poles all round). Pick none when nothing fits: the world's own colours, trees and landmarks carry it.
+Make the world vivid and surprising: saturated colour with real character (a teal sky over violet rough, glowing green slime, sunset pinks, gold sand), never a grey or timid palette unless the idea truly is grey, and even then give it one striking accent. Fill it: trees in a mix, up to 12 landmarks set round the hole to tell its story, a backdrop, and something drifting in the air whenever it adds atmosphere. Bare ground only when the idea demands it.
 In the review, Reginald can mention the world.`;
 
 const spot = (extra: Record<string, unknown>, req: string[]) => ({
@@ -144,7 +147,7 @@ const WORLD = {
   additionalProperties: false,
 };
 
-// a course: its name, Reginald's review, its world, and three holes
+// a course: its name, Reginald's review, its world, and its hole (one; the first courses had three)
 const COURSE = {
   type: 'object',
   // one copy of the hole schema, as an array: three copies (hole1 to hole3) compiled to a grammar too large for the API
@@ -206,7 +209,7 @@ export async function POST(request: Request) {
   const content = previous
     ? `${me.name} described this ${course ? 'course' : 'hole'}: "${previous.prompt}"\n\nThe current design:\n${current(previous.spec)}\n\nChange it: ${change}`
     : course
-      ? `${me.name} describes the three-hole course they'd like:\n"${prompt}"`
+      ? `${me.name} describes the signature hole they'd like:\n"${prompt}"`
       : `${me.name} describes the hole they'd like:\n"${prompt}"`;
   // a course is too big for a strict answer form (the API refuses its grammar), so the architect writes the JSON itself
   // against the schema, and the app tidies every value (src/designer/course.ts, hole.ts, world.ts)
@@ -220,7 +223,7 @@ export async function POST(request: Request) {
       .stream({
       model: MODEL,
       max_tokens: course ? 32000 : 16000,
-      output_config: course ? { effort: 'medium' } : { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
+      output_config: course ? { effort: 'high' } : { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       system: SYSTEM,

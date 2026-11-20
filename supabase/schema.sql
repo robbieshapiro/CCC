@@ -2222,10 +2222,13 @@ alter table designs add column if not exists mark jsonb;
 
 create or replace function post_designer_round(p_token uuid, p_id bigint, p_mark jsonb) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me players := player_for(p_token); n int; t int := 0; s int;
+declare me players := player_for(p_token); n int; t int := 0; s int; want int;
 begin
-  if jsonb_typeof(p_mark->'holes') is distinct from 'array' or jsonb_array_length(p_mark->'holes') <> 3 then raise exception 'A course is three holes.'; end if;
-  for i in 0..2 loop
+  -- as many scores as the course has holes (one signature hole from Nov 20; the first courses had three)
+  select jsonb_array_length(d.spec->'holes') into want from designs d where d.id = p_id;
+  if want is null or want < 1 or want > 3 then raise exception 'That course can''t be published.'; end if;
+  if jsonb_typeof(p_mark->'holes') is distinct from 'array' or jsonb_array_length(p_mark->'holes') <> want then raise exception 'That round doesn''t match the course.'; end if;
+  for i in 0..want - 1 loop
     s := (p_mark->'holes'->>i)::int;
     if s is null or s < 1 or s > 12 then raise exception 'That score doesn''t look right.'; end if;
     t := t + s;
@@ -2239,6 +2242,19 @@ begin
   if n = 0 then raise exception 'That course can''t be published.'; end if;
 end $$;
 grant execute on function post_designer_round(uuid, bigint, jsonb) to anon;
+
+-- Back to the drawing board (Nov 20): a member bins their own draft. Never one with the Committee, approved or played.
+create or replace function discard_design(p_token uuid, p_id bigint) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); n int;
+begin
+  delete from designs d using players p
+  where d.id = p_id and d.status = 'draft' and p.id = d.player_id and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash
+    and not exists (select 1 from member_cards c where c.design_id = d.id);
+  get diagnostics n = row_count;
+  if n = 0 then raise exception 'That one can''t be binned.'; end if;
+end $$;
+grant execute on function discard_design(uuid, bigint) to anon;
 
 -- The duel (Nov 20): the newest approved course is the Members' Course. Everyone gets three cards a day on it against
 -- the designer's mark (their publishing round, played back as a ghost). A card is taken at its first swing
@@ -2306,13 +2322,14 @@ declare me players := player_for(p_token); c member_cards; d designs; mk int; t 
 begin
   select * into c from member_cards where id = p_card and player_id = me.id;
   if c.id is null or c.total is not null then raise exception 'That card is already in.'; end if;
-  if array_length(p_holes, 1) is distinct from 3 then raise exception 'A card is three holes.'; end if;
-  for i in 1..3 loop
+  select * into d from designs where id = c.design_id;
+  -- one score for each of the course's holes (one, or three on the first courses)
+  if array_length(p_holes, 1) is distinct from jsonb_array_length(d.spec->'holes') then raise exception 'That card doesn''t match the course.'; end if;
+  for i in 1..array_length(p_holes, 1) loop
     if p_holes[i] is null or p_holes[i] < 1 or p_holes[i] > 12 then raise exception 'That score doesn''t look right.'; end if;
     t := t + p_holes[i];
   end loop;
   update member_cards set holes = p_holes, total = t where id = c.id;
-  select * into d from designs where id = c.design_id;
   mk := (d.mark->>'total')::int;
   designer := exists (select 1 from players p where p.id = d.player_id and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash);
   return json_build_object('total', t, 'mark', mk, 'beat', not designer and t < mk, 'tie', not designer and t = mk, 'designer', designer);

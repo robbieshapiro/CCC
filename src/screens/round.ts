@@ -853,7 +853,7 @@ async function membersHoles(): Promise<Hole[]> {
   return list.map((m) => buildHole(m.spec, `members-${m.id}`, m.by.slice(0, 9)).hole);
 }
 
-// The Members' Course duel (Nov 20): the newest approved course, against its designer. Each card is three holes; the
+// The Members' Course duel (Nov 20): the newest approved course, against its designer. Each card is its hole (three on the first courses); the
 // designer's ghost plays their publishing round alongside you, stroke for stroke, and the match stands after every
 // hole ("1 up after 2"). Beat their mark: $300; tie it: $100 (your best card of the day). Three cards a day, each taken
 // at the first swing. The designer's banner over each tee, their face on the scoreboard by each green.
@@ -900,6 +900,8 @@ export async function membersDuel(snap: Snapshot) {
     scores.forEach((x, i) => (up += Math.sign(mark.holes[i] - x)));
     const left = 3 - scores.length;
     const who = live.mine ? 'your mark' : live.by;
+    // one signature hole: no match play, just the result
+    if (mark.holes.length === 1) return up > 0 ? 'You beat the mark' : up < 0 ? `${who} holds` : 'Level with the mark';
     return up === 0 ? 'All square' : Math.abs(up) > left && left > 0 ? (up > 0 ? `You're ${up} up: it's yours` : `${who} is ${-up} up: it's theirs`) : up > 0 ? `You're ${up} up` : `${who} ${-up} up`;
   };
   const drawHud = () => {
@@ -983,7 +985,7 @@ async function duelSummary(live: LiveCourse, res: DuelResult | null, back: () =>
   document.querySelector<HTMLButtonElement>('[data-back]')!.onclick = back;
 }
 
-// The designer plays their own course to publish it (Nov 20): three holes, played as a card is, every stroke kept as
+// The designer plays their own course to publish it (Nov 20): its hole (or three), played as a card is, every stroke kept as
 // it flew (packShot) for the challengers' ghost. Finishing hands back the mark; leaving part way keeps nothing.
 export function designerRound(snap: Snapshot, holes: Hole[], done: (mark: DesignerMark) => void, back: () => void) {
   closeRound();

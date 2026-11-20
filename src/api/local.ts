@@ -820,6 +820,14 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const me = playerByToken(db, session.token);
     return (db.designs ?? []).filter((d) => d.playerId === me.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
+  async discardDesign(session, id) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const i = (db.designs ?? []).findIndex((x) => x.id === id && x.playerId === me.id && x.status === 'draft');
+    if (i < 0) throw new Error('That one can’t be binned.');
+    db.designs!.splice(i, 1);
+    save(db);
+  },
   async submitDesign(session, id, par) {
     const db = load();
     const me = playerByToken(db, session.token);
@@ -2085,11 +2093,10 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
 // the stand-in architect's hole: one of the samples, in the look the description mentions
 function sampleCourse(prompt: string, change?: string) {
   const first = sampleSpec(prompt, change);
-  const others = (['highlands', 'links', 'desert', 'caldera'] as const).filter((l) => l !== first.look);
-  const holes = [first, { ...SAMPLES[others[0]] }, { ...SAMPLES[others[1]] }].map((h, i) => ({ ...h, name: `${h.name}${i ? '' : ''}` }));
+  const holes = [first]; // one signature hole (Nov 20)
   const text = `${prompt} ${change ?? ''}`.toLowerCase();
   const world = Object.entries(SAMPLE_WORLDS).find(([k]) => text.includes(k))?.[1];
-  return { kind: 'course' as const, name: 'The Practice Course', review: 'Three holes, each a little harder than it looks. The local architect is on holiday.', holes, ...(world ? { world } : {}) };
+  return { kind: 'course' as const, name: 'The Practice Course', review: 'One hole, a little harder than it looks. The local architect is on holiday.', holes, ...(world ? { world } : {}) };
 }
 // a few worlds the local architect knows, so the Desk's worlds can be tried with no key
 const SAMPLE_WORLDS: Record<string, unknown> = {

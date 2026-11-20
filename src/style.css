@@ -2533,7 +2533,7 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .pm-grid .pm-shop .pm-shop-go { color: #fff; }
 /* the Design Desk while the architect draws (Nov 20): a blueprint drawing itself, a line from the architect, a creeping bar */
 .desk-work { display: grid; gap: 8px; padding: 12px; }
-.bp { width: 100%; max-width: 420px; justify-self: center; display: block; }
+.bp { width: 100%; max-width: 300px; justify-self: center; display: block; }
 .bp-fw { fill: none; stroke: rgba(143, 211, 173, 0.35); stroke-width: 12; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; animation: bpDraw 5.1s var(--d) ease-in-out infinite; }
 .bp-line { fill: none; stroke: #fff; stroke-width: 1.6; opacity: 0.9; }
 .bp-line { stroke-dasharray: 100; stroke-dashoffset: 100; animation: bpDraw 5.1s var(--d) ease-in-out infinite; }
@@ -2551,3 +2551,10 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .bp-bar i.go { width: 92%; }
 .bp-time { margin: 0; text-align: center; font-size: 12px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .bp-fw, .bp-line, .bp-green, .bp-flag { animation: none; stroke-dashoffset: 0; opacity: 1; } }
+/* one signature hole: the plan on the left, its name, hint and Try it beside it */
+.desk-holes.one { grid-template-columns: 1fr; }
+.desk-holes.one li { grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; padding: 12px; }
+.desk-holes.one .desk-plan { grid-row: 1 / span 6; }
+.desk-holes.one li b { font-size: 22px; }
+.desk-holes.one .desk-hint { display: block; }
+.desk-holes.one .btn { justify-self: start; }
