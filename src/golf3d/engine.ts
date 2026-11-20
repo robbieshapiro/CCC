@@ -2270,7 +2270,7 @@ export class Course3D {
       }
     };
     // the banner: out ahead on the left of the drive, facing back to the tee (behind the tee it filled the camera)
-    const back = { x: h.tee.x + Math.sin(h.aim) * 55 - Math.cos(h.aim) * 30, y: h.tee.y + Math.cos(h.aim) * 55 + Math.sin(h.aim) * 30 };
+    const back = { x: h.tee.x + Math.sin(h.aim) * 75 - Math.cos(h.aim) * 22, y: h.tee.y + Math.cos(h.aim) * 75 + Math.sin(h.aim) * 22 };
     const banner = new THREE.Group();
     const bn = board(26, 5, (x, c) => {
       const grd = x.createLinearGradient(0, 0, c.width, 0);
