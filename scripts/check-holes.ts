@@ -720,7 +720,7 @@ if (mode === 'daily' && !process.env.NO_SIM) {
     }
   byHole.forEach((r, i) => stats(`hole ${i + 1}`, r));
   const a = stats(`all three, ${dailyDays.length} days`, after);
-  console.log(`  median ${((a.med / b.med - 1) * 100).toFixed(0)}% farther than before`);
-  ok(a.med > b.med, 'the Daily Shot plays harder than the one-shot game');
+  console.log(`  median ${((a.med / b.med - 1) * 100).toFixed(0)}% against before`);
+  ok(Math.abs(a.med / b.med - 1) <= 0.15, 'the Daily Shot plays about as hard as the one-shot game (median within 15%)');
   ok(a.aces > 0 || after.length < 1000, 'an ace is still possible');
 }

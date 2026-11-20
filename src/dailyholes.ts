@@ -23,12 +23,13 @@ export const isShotDay = (day: string) => day >= SHOT_FROM;
 const dayNumber = (day: string) => Math.round((Date.parse(`${day}T12:00:00Z`) - Date.parse(`${FIRST}T12:00:00Z`)) / 86_400_000) + 1;
 
 // The three steps of difficulty, all on an iron (Robbie, Nov 20: the wood made holes 2 and 3 too hard). Hole by hole:
-// longer within the iron's reach, a smaller green, more trouble round it, more tilt, a tougher pin and more wind.
+// longer within the iron's reach, a smaller green, more trouble round it, a sloped green, a tougher pin and more wind.
+// (extra tilt, a rise behind the green, was tried: it caught shots like a backstop and made the holes easier)
 // Tuned with scripts/check-holes.ts (npm run check-holes -- daily).
 const STEPS = [
   { yards: [100, 108], green: 'large', bunkers: 1, carry: false, pin: 'middle', tilt: 0, wind: 1 },
-  { yards: [112, 120], green: 'medium', bunkers: 2, carry: false, pin: 'edge', tilt: 0.8, wind: 1.3 },
-  { yards: [124, 132], green: 'small', bunkers: 2, carry: true, pin: 'tucked', tilt: 1.5, wind: 1.6 },
+  { yards: [112, 120], green: 'medium', bunkers: 2, carry: false, pin: 'edge', tilt: 0, wind: 1.3 },
+  { yards: [124, 132], green: 'small', bunkers: 2, carry: true, pin: 'tucked', tilt: 0, wind: 1.6 },
 ] as const;
 
 const NAMES = ['The Leap', 'Long Shadow', 'The Lantern', 'Last Light', 'The Steps', 'The Spire', 'Far Flag', 'The Gate', 'Hollow Point', 'The Edge', 'Skyfall', 'The Basin', 'Whisper', 'The Drop', 'High Wire', 'The Crown'];
@@ -56,7 +57,7 @@ function spec(day: string, i: number): HoleSpec {
     bend: 10,
     elevation: pick(i === 0 ? (['flat', 'downhill'] as const) : (['flat', 'downhill', 'uphill', 'tee-high'] as const)),
     fairway: { width: 'medium', from: 0.8, to: 0.97 },
-    green: { size: s.green, slope: s.tilt ? pick(['back-to-front', 'front-to-back', 'left-to-right', 'right-to-left'] as const) : 'flat', tiered: false, raised: false, across: (r() - 0.5) * 0.4 },
+    green: { size: s.green, slope: i > 0 ? pick(['back-to-front', 'front-to-back', 'left-to-right', 'right-to-left'] as const) : 'flat', tiered: false, raised: false, across: (r() - 0.5) * 0.4 },
     bunkers,
     water,
     trees: [
