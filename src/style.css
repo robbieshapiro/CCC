@@ -2599,3 +2599,6 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .shot-closer { font: 700 18px var(--serif); color: var(--green); margin: 6px 0; }
 .shot-pot b { color: #8a6514; }
 .daily-summary h2 small { font: 600 14px var(--font); color: var(--muted); }
+.shot-top h2 span { color: #ffe08a; font-size: 0.8em; margin-left: 4px; }
+.shot-top { align-items: center; }
+.shot-holes li { grid-template-columns: 1fr auto; }

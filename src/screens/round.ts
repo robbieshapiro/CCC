@@ -787,7 +787,7 @@ async function shotRound(snap: Snapshot) {
   hud.className = 'shot-hud';
   el.appendChild(hud);
   const drawHud = () => {
-    hud.innerHTML = `<span class="sh-pot"><small>Ace Pot</small><b>${money(pot)}</b></span><span class="sh-total"><small>Your total</small><b>${done.length ? ftLabel(totalFt(done)) : '–'}</b></span><span class="sh-dots">${set.holes.map((_, i) => `<i class="${i < done.length ? 'on' : i === done.length ? 'now' : ''}"></i>`).join('')}</span>`;
+    hud.innerHTML = `<span class="sh-pot"><small>Pot</small><b>${money(pot)}</b></span><span class="sh-total"><small>Total</small><b>${done.length ? ftLabel(totalFt(done)) : '–'}</b></span>`;
   };
   drawHud();
   const tick = window.setInterval(() => {
@@ -803,11 +803,12 @@ async function shotRound(snap: Snapshot) {
     const cup = x.hole.cup;
     g.practiceArea(x.hole, {
       ticker: (_from, at) => `${Math.round(Math.hypot(at.x - cup.x, at.y - cup.y) * SCALE)} ft`,
-      title: `The Daily Shot · Hole ${i + 1} of ${SHOT_HOLES}`,
-      stations: [{ name: x.label, at: x.from }],
+      title: `Hole ${i + 1} of ${SHOT_HOLES}`,
+      eyebrow: 'The Daily Shot',
+      stations: [{ name: `${x.yards} yd`, at: x.from }],
       wind: x.wind,
-      eyebrow: `${x.world.icon} ${x.world.world.name}`,
-      tag: () => `Hole ${i + 1} of ${SHOT_HOLES}`,
+      tag: () => '',
+      report: (r) => (r.holed ? 'In the hole!' : r.lost ? 'Wet' : ftLabel(Math.hypot(r.end.x - cup.x, r.end.y - cup.y) * SCALE)),
       onResult: (r) => {
         const t = { hole: i + 1, ft: r.ft, holed: r.holed, lost: r.lost };
         done.push(t);

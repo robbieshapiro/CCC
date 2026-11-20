@@ -122,7 +122,7 @@ export function shotShareText(day: string, b: ShotBoard) {
   const set = dailyHoles(day);
   const holes = set.holes.map((x) => {
     const t = b.tries.find((y) => y.hole === x.n);
-    return `${x.world.icon} ${t ? shotMark(t) : '–'}`;
+    return t ? shotMark(t) : '–';
   });
   const closer = closerLine(b);
   return `CCC Daily Shot #${set.number}\n${holes.join(' · ')}\n${ftLabel(totalFt(b.tries))} total${closer ? ` · ${closer.replace(/^Closer/, 'closer').replace(/ today$/, '')}` : ''}\n${location.origin}`;
@@ -157,14 +157,13 @@ export async function shotSummary(day: string, clubName: string, onClose: () => 
         <ul class="shot-holes">${set.holes
           .map((x) => {
             const t = b?.tries.find((y) => y.hole === x.n);
-            return `<li><span>${x.world.icon}</span><b>${esc(x.world.world.name)}</b><small>${x.yards} yd</small><em>${t ? shotMark(t) : '–'}</em></li>`;
+            return `<li><b>Hole ${x.n}</b><em>${t ? shotMark(t) : '–'}</em></li>`;
           })
           .join('')}</ul>
         ${closer ? `<p class="shot-closer">${esc(closer)}</p>` : ''}
         ${b?.place && b.clubPlayers > 1 ? `<p>${ordinalOf(b.clubPlace)} of ${b.clubPlayers} at ${esc(clubName)}</p>` : ''}
-        <p class="shot-pot">Ace Pot <b>${money(b?.pot ?? 1000)}</b>. A new three at midnight, and the pot carries over until someone aces one.</p>
-        <p class="fine">Today's three lowest totals are paid ${prizesLine()} at midnight.${b?.lastAce ? ` Last ace: ${esc(b.lastAce.name)}, ${money(b.lastAce.pot)}.` : ''}</p>
-        <h3>Today's board</h3>
+        <p class="shot-pot">Ace Pot <b>${money(b?.pot ?? 1000)}</b></p>
+        <h3>Today</h3>
         ${b ? shotBoardList(b) : '<p class="muted">The board is on its way.</p>'}
       </div>
       <div class="notes-foot daily-foot"><button class="btn" data-share>${canShare() ? 'Send to the group' : 'Copy result'}</button><button class="btn ghost" data-close>Back to the club</button></div>
@@ -186,13 +185,9 @@ export { SHOT_HOLES };
 export function dailyShotCard(day: string) {
   const set = dailyHoles(day);
   return `<section class="shot-card" id="shot-card" data-state="fresh">
-    <div class="shot-top"><p class="eyebrow">The Daily Shot · #${set.number}</p><span class="shot-potline">Ace Pot <b data-shot-pot>…</b></span></div>
-    <div data-shot-body>
-      <h2>Three shots. Lowest total wins.</h2>
-      <ul class="shot-worlds">${set.holes.map((x) => `<li><span>${x.world.icon}</span>${esc(x.world.world.name)}<small>${x.yards} yd</small></li>`).join('')}</ul>
-      <a class="btn big gold" href="#/daily">Play</a>
-    </div>
-    <p class="shot-next" data-shot-next></p>
+    <div class="shot-top"><h2>The Daily Shot <span>#${set.number}</span></h2><span class="shot-potline">Ace Pot <b data-shot-pot>…</b></span></div>
+    <div data-shot-body><a class="btn big gold" href="#/daily">Play</a></div>
+    <p class="shot-next" data-shot-next hidden></p>
   </section>`;
 }
 
@@ -206,24 +201,19 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
   const played = b.tries.length;
   const body = el.querySelector<HTMLElement>('[data-shot-body]')!;
   const next = el.querySelector<HTMLElement>('[data-shot-next]')!;
-  const cardsLine = cardsLeft ? `<a href="#/round">Now your daily card: ${cardsLeft} left today ›</a>` : '';
-  if (!played) {
-    body.querySelector('h2')!.textContent = `Three shots. Lowest total wins. An ace takes ${money(b.pot)}.`;
-    next.innerHTML = b.players ? `${b.players} ${b.players === 1 ? 'player has' : 'players have'} finished today. Leader: ${esc(b.board[0].name)}, ${ftLabel(b.board[0].total)}.` : 'Nobody has finished yet today. First on the board?';
-    return;
-  }
+  const cardsLine = cardsLeft ? `<a href="#/round">Now your daily card ›</a>` : '';
+  void set;
+  if (!played) return;
+  next.hidden = false;
   if (played < SHOT_HOLES) {
     el.dataset.state = 'going';
-    const x = set.holes[played];
-    body.innerHTML = `<h2>Hole ${played + 1} of ${SHOT_HOLES} · ${ftLabel(totalFt(b.tries))} so far</h2>
-      <p class="muted">Next: ${x.world.icon} ${esc(x.world.world.name)}, ${x.yards} yd</p>
-      <a class="btn big gold" href="#/daily">Continue</a>`;
-    next.innerHTML = 'Finish all three to make the board.';
+    body.innerHTML = `<a class="btn big gold" href="#/daily">Continue · hole ${played + 1} of ${SHOT_HOLES}</a>`;
+    next.textContent = `${ftLabel(totalFt(b.tries))} so far`;
     return;
   }
   el.dataset.state = 'done';
   const closer = closerLine(b);
-  body.innerHTML = `<a class="shot-done" href="#/daily"><b>${ftLabel(totalFt(b.tries))}</b><span>${b.tries.map(shotMark).join(' · ')}</span>${closer ? `<em>${esc(closer)}${b.place ? ` · ${ordinalOf(b.place)} of ${b.players}` : ''}</em>` : ''}</a>`;
-  next.innerHTML = cardsLine || 'All done today. Back tomorrow: a new three at midnight.';
+  body.innerHTML = `<a class="shot-done" href="#/daily"><b>${ftLabel(totalFt(b.tries))}</b>${closer ? `<em>${esc(closer)}</em>` : ''}</a>`;
+  next.innerHTML = cardsLine || 'Back tomorrow.';
   if (!cardsLine) next.classList.add('quiet');
 }

@@ -7,6 +7,7 @@ import { conditionsFor, type Conditions } from './golf3d/conditions';
 import { SCALE } from './golf3d/clubs';
 import type { Hole, V2 } from './golf3d/types';
 import { buildHole, type HoleSpec } from './designer/hole';
+import { surfaceAt } from './golf3d/terrain';
 import { WORLD_PRESETS, type DailyWorld } from './designer/worlds';
 import { makeRng } from './seed';
 
@@ -21,16 +22,14 @@ export type DailyHoles = { day: string; number: number; holes: DailyHole[] };
 export const isShotDay = (day: string) => day >= SHOT_FROM;
 const dayNumber = (day: string) => Math.round((Date.parse(`${day}T12:00:00Z`) - Date.parse(`${FIRST}T12:00:00Z`)) / 86_400_000) + 1;
 
-// The three steps of difficulty: how long, how big a green, and what guards it. Tuned with scripts/check-holes.ts
-// (npm run check-holes -- daily) so the day's median miss lands 20 to 30% farther than the one-shot game's.
+// The three steps of difficulty, all on an iron (Robbie, Nov 20: the wood made holes 2 and 3 too hard). Longer within
+// the iron's reach, a smaller green, more trouble round it, more tilt, a tougher pin and more wind, hole by hole.
+// Tuned with scripts/check-holes.ts (npm run check-holes -- daily).
 const STEPS = [
-  // (the bag has a gap between the iron, 132 yd, and the wood, 220: each hole sits where a club plays it)
-  { yards: [135, 145], green: 'medium', bunkers: 1, carry: false, sideWater: false },
-  { yards: [140, 152], green: 'medium', bunkers: 2, carry: false, sideWater: true },
-  { yards: [165, 178], green: 'small', bunkers: 2, carry: true, sideWater: false },
+  { yards: [100, 110], green: 'large', bunkers: 1, carry: false, pin: 'middle', tilt: 0, wind: 1 },
+  { yards: [110, 120], green: 'medium', bunkers: 2, carry: false, pin: 'edge', tilt: 0.7, wind: 1.25 },
+  { yards: [118, 128], green: 'small', bunkers: 2, carry: true, pin: 'tucked', tilt: 1.4, wind: 1.5 },
 ] as const;
-
-const WIND_STEP = [1, 1.25, 1.5];
 
 const NAMES = ['The Leap', 'Long Shadow', 'The Lantern', 'Last Light', 'The Steps', 'The Spire', 'Far Flag', 'The Gate', 'Hollow Point', 'The Edge', 'Skyfall', 'The Basin', 'Whisper', 'The Drop', 'High Wire', 'The Crown'];
 
@@ -44,8 +43,8 @@ function spec(day: string, i: number): HoleSpec {
   const bunkers: HoleSpec['bunkers'] = [];
   for (let b = 0; b < s.bunkers; b++) bunkers.push({ along: 0.94 + r() * 0.08, across: (b % 2 ? -side : side) * (1.2 + r() * 0.3), size: pick(['small', 'medium'] as const), kind: 'greenside' });
   const water: HoleSpec['water'] = [];
-  if (s.carry) water.push({ kind: 'creek', along: 0.55 + r() * 0.12, across: 0, size: 'medium', side: 'right' });
-  if (s.sideWater) water.push({ kind: 'pond', along: 0.75 + r() * 0.1, across: side * 3.1, size: 'small', side: side < 0 ? 'left' : 'right' });
+  // water short of the green on the last: all carry
+  if (s.carry) water.push({ kind: 'creek', along: 0.68 + r() * 0.08, across: 0, size: 'medium', side: 'right' });
   return {
     kind: 'hole',
     name: pick(NAMES),
@@ -55,9 +54,9 @@ function spec(day: string, i: number): HoleSpec {
     shape: 'straight',
     bend_at: 0.5,
     bend: 10,
-    elevation: pick(i === 0 ? (['flat', 'downhill', 'tee-high'] as const) : (['flat', 'downhill', 'uphill', 'tee-high', 'valley'] as const)),
+    elevation: pick(i === 0 ? (['flat', 'downhill'] as const) : (['flat', 'downhill', 'uphill', 'tee-high'] as const)),
     fairway: { width: 'medium', from: 0.8, to: 0.97 },
-    green: { size: s.green, slope: pick(['flat', 'back-to-front', 'front-to-back', 'left-to-right', 'right-to-left'] as const), tiered: false, raised: i > 0 && r() < 0.4, across: (r() - 0.5) * 0.6 },
+    green: { size: s.green, slope: s.tilt ? pick(['back-to-front', 'front-to-back', 'left-to-right', 'right-to-left'] as const) : 'flat', tiered: false, raised: false, across: (r() - 0.5) * 0.4 },
     bunkers,
     water,
     trees: [
@@ -66,7 +65,7 @@ function spec(day: string, i: number): HoleSpec {
     ],
     mounds: [],
     review: '',
-    hint: s.carry ? 'All carry. Take enough club.' : s.sideWater ? 'Water off the side of the green. Favour the other half.' : 'Big green. Go at the flag.',
+    hint: '',
   };
 }
 
@@ -88,16 +87,41 @@ export function dailyHoles(day: string): DailyHoles {
   const holes = worlds.map((w, i) => {
     const s = spec(day, i);
     const hole = buildHole(s, `daily-${day}-${i + 1}`, 'CCC', w.world, w.world.landmarks).hole;
-    // the pin: one of the hole's four, by the date; the wind: that day's
-    const pins = hole.pins?.length ? hole.pins : [hole.cup];
-    const pin = pins[Math.floor(makeRng(`dailypin:${day}:${i}`).next() * pins.length)];
-    const h: Hole = { ...hole, cup: pin, name: s.name };
-    // the wind gets up hole by hole: the day's own on the first, a quarter stronger on the second, half on the third
+    const step = STEPS[i];
+    const gc = (hole.pins ?? [hole.cup])[0]; // the middle of the green
+    const greenPoly = hole.regions.find((g) => g.surface === 'green')?.poly ?? [];
+    const R = Math.max(10, ...greenPoly.map((q) => Math.hypot(q.x - gc.x, q.y - gc.y)));
+    // more tilt: a rise on the high side of the green, as the builder's own slope, only stronger
+    if (step.tilt && s.green.slope !== 'flat') {
+      const len = Math.hypot(gc.x - hole.tee.x, gc.y - hole.tee.y) || 1;
+      const fwd = { x: (gc.x - hole.tee.x) / len, y: (gc.y - hole.tee.y) / len };
+      const right = { x: fwd.y, y: -fwd.x };
+      const t = s.green.slope === 'back-to-front' ? fwd : s.green.slope === 'front-to-back' ? { x: -fwd.x, y: -fwd.y } : s.green.slope === 'left-to-right' ? { x: -right.x, y: -right.y } : right;
+      hole.terrain.push({ kind: 'hill', x: gc.x + t.x * R * 1.05, y: gc.y + t.y * R * 1.05, r: R * 1.7, h: step.tilt });
+    }
+    // the pin: the middle on the first; near the edge on the second; tucked by the trouble on the third
+    const prng = makeRng(`dailypin:${day}:${i}`);
+    const spots = Array.from({ length: 16 }, (_, k) => (k / 16) * Math.PI * 2 + prng.next() * 0.1)
+      .map((a) => ({ x: gc.x + Math.cos(a) * R * 0.58, y: gc.y + Math.sin(a) * R * 0.58 }))
+      .filter((q) => surfaceAt(hole, q) === 'green' && Math.hypot(q.x - gc.x, q.y - gc.y) < R - 6);
+    const trouble = (q: V2) =>
+      Math.min(
+        ...hole.regions.filter((g) => g.surface === 'sand').flatMap((g) => g.poly.map((v) => Math.hypot(v.x - q.x, v.y - q.y))),
+        ...hole.water.flatMap((wt) => wt.poly.map((v) => Math.hypot(v.x - q.x, v.y - q.y))),
+        999,
+      );
+    const pin =
+      step.pin === 'middle' || !spots.length
+        ? gc
+        : step.pin === 'edge'
+          ? spots[Math.floor(prng.next() * spots.length)]
+          : spots.reduce((b, q) => (trouble(q) < trouble(b) ? q : b), spots[0]);
+    const h: Hole = { ...hole, cup: pin, pins: [pin], name: s.name };
     const base = conditionsFor(h, day);
-    const k = WIND_STEP[i];
+    const k = step.wind;
     const wind = { ...base, pin, mph: Math.round(base.mph * k), accel: { x: base.accel.x * k, y: base.accel.y * k } };
     const yards = Math.round((Math.hypot(h.tee.x - pin.x, h.tee.y - pin.y) * SCALE) / 3);
-    return { n: i + 1, world: w, spec: s, hole: h, from: h.tee, wind, yards, label: `${w.world.name} · ${yards} yd` };
+    return { n: i + 1, world: w, spec: s, hole: h, from: h.tee, wind, yards, label: `${yards} yd` };
   });
   const out = { day, number: dayNumber(day), holes };
   cache.set(day, out);
