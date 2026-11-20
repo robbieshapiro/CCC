@@ -1,6 +1,7 @@
 // A member's hole drawn from above, for the Design Desk and the Committee's queue: the rough, fairway, green,
 // bunkers, water and trees, the tee and the flag, in the colours of its look. Drawn once into a canvas.
 import type { Hole, Surface, V2 } from '../golf3d/types';
+import { kitOf } from '../golf3d/kits';
 
 const BASE: Record<Surface, string> = {
   green: '#6fc062', fairway: '#62ae52', fringe: '#55993f', rough: '#3e6a31', path: '#cbb88f', stone: '#d2c9b6', wood: '#9b6c44', sand: '#ead9a6', rock: '#4a4541', cinder: '#5e3c30',
@@ -40,7 +41,9 @@ export function planCanvas(hole: Hole, width = 260, dots: { p: V2; color: string
     pts.forEach((p, i) => (i ? g.lineTo(...P(p)) : g.moveTo(...P(p))));
     g.closePath();
   };
-  const look = LOOKS[hole.theme ?? 'highland'] ?? LOOKS.highland;
+  // a member's world: its own ground colours
+  const kit = hole.theme?.startsWith('member:') ? kitOf(hole) : undefined;
+  const look = kit ? { ...kit.surface, out: kit.floor } : (LOOKS[hole.theme ?? 'highland'] ?? LOOKS.highland);
   const colour = (s: Surface) => look[s] ?? BASE[s];
   g.fillStyle = look.out;
   g.fillRect(0, 0, w, h);
@@ -49,7 +52,7 @@ export function planCanvas(hole: Hole, width = 260, dots: { p: V2; color: string
   g.fill();
   for (const w of hole.water) {
     poly(w.poly);
-    g.fillStyle = WATER[w.look ?? 'lake'];
+    g.fillStyle = kit && w.look === 'lake' ? (kit.lake ?? WATER.lake) : WATER[w.look ?? 'lake'];
     g.fill();
   }
   // the land shown again over the sea where it stands above it, so a shore reads as a shore

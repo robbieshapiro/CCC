@@ -21,7 +21,7 @@ import { buildWorld, w3, type World } from './scene';
 import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
 import { accuracyError, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, stretched, stretchRate, type MeterStyle } from './swing';
 import type { Hole, Shot, V2 } from './types';
-import { KITS, nightFor } from './kits';
+import { KITS, nightFor, type Kit } from './kits';
 import { gallery } from './looks/chicago';
 
 export const MAX_OVER = 3; // pick up at par + 3
@@ -822,33 +822,42 @@ export class Course3D {
     const tempest = this.skyMesh(1, ['#474c57', '#6c717d', '#86685f']);
     this.skies = { day: [day, sun], night: [night, moon, stars], links: [links, pale], desert: [desert, hot], autumn: [autumn, low], coastal: [coastal, evening], storm: [storm], tempest: [tempest] };
     // each look kit's sky, and its sun with a glow if it has one
-    for (const [k, kit] of Object.entries(KITS)) {
-      const objs: THREE.Object3D[] = [this.skyMesh(1, kit.skyColors)];
-      if (kit.sun) {
-        const g = new THREE.Group();
-        g.add(new THREE.Mesh(new THREE.SphereGeometry(kit.sun.size, 20, 12), new THREE.MeshBasicMaterial({ color: kit.sun.color, fog: false })));
-        if (kit.sun.glow) {
-          const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(kit.sun.glow), transparent: true, opacity: 0.85, fog: false, depthWrite: false }));
-          halo.scale.setScalar(kit.sun.size * 12);
-          g.add(halo);
-        }
-        g.position.set(...kit.sun.at);
-        objs.push(g);
-      }
-      this.skies[k] = objs;
-    }
+    for (const [k, kit] of Object.entries(KITS)) this.skies[k] = this.kitSky(kit);
     for (const o of Object.values(this.skies).flat()) this.scene.add(o);
     this.setLook('day');
+  }
+
+  private kitSky(kit: Kit) {
+    const objs: THREE.Object3D[] = [this.skyMesh(1, kit.skyColors)];
+    if (kit.sun) {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.SphereGeometry(kit.sun.size, 20, 12), new THREE.MeshBasicMaterial({ color: kit.sun.color, fog: false })));
+      if (kit.sun.glow) {
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(kit.sun.glow), transparent: true, opacity: 0.85, fog: false, depthWrite: false }));
+        halo.scale.setScalar(kit.sun.size * 12);
+        g.add(halo);
+      }
+      g.position.set(...kit.sun.at);
+      objs.push(g);
+    }
+    return objs;
   }
 
   // Sky, light and fog for the country the hole is in. The haunted mini golf is played by moonlight: cold blue light,
   // a purple fog close in, no clouds, bats not birds. Links: soft grey light and sea haze. Desert: hard warm light.
   private setLook(look: Look) {
+    // a kit made after the engine started (a member's world): its sky is made the first time it's needed
+    if (!this.skies[look] && KITS[look]) {
+      this.skies[look] = this.kitSky(KITS[look]);
+      for (const o of this.skies[look]) this.scene.add(o);
+    }
     this.look = look;
     this.night = look === 'night';
     for (const [k, objs] of Object.entries(this.skies)) objs.forEach((o) => (o.visible = k === look));
     this.clouds.forEach((c) => (c.visible = look === 'day' || look === 'links' || look === 'autumn' || look === 'coastal' || look === 'storm' || !!KITS[look]?.clouds));
-    const L = LOOKS[look];
+    // a member's world under the stars
+    if (KITS[look]?.stars) this.skies.night[2].visible = true;
+    const L = LOOKS[look] ?? KITS[look]?.light ?? LOOKS.day;
     this.hemi.color.set(L.sky);
     this.hemi.groundColor.set(L.ground);
     this.hemi.intensity = L.hemi;
@@ -3105,6 +3114,7 @@ export class Course3D {
         arr[i + 1] -= dt * (this.snow.userData.fall ?? 4.5);
         arr[i + 2] += dt * wz;
         if (arr[i + 1] < 0) arr[i + 1] += 70;
+        else if (arr[i + 1] > 70) arr[i + 1] -= 70; // embers and bubbles rise
         if (arr[i] > 80) arr[i] -= 160;
         else if (arr[i] < -80) arr[i] += 160;
         if (arr[i + 2] > 80) arr[i + 2] -= 160;

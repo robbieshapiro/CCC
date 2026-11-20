@@ -5,8 +5,10 @@
 import type { Hole } from '../golf3d/types';
 import type { ReplayData } from '../replay';
 import { buildHole, checkHole, tidy, type HoleSpec } from './hole';
+import { tidyWorld, type World } from './world';
 
-export type CourseSpec = { kind: 'course'; name: string; review: string; holes: HoleSpec[] };
+// world: the place it's set in, the member's own (Nov 20); courses drawn before it are in their holes' looks
+export type CourseSpec = { kind: 'course'; name: string; review: string; holes: HoleSpec[]; world?: World };
 // the designer's round: strokes on each hole, and every stroke as it flew (for the ghost)
 export type DesignerMark = { holes: number[]; total: number; shots: ReplayData[][] };
 
@@ -21,12 +23,14 @@ export function tidyCourse(raw: CourseSpec): CourseSpec {
     name: String(raw?.name ?? 'A Members’ Course').slice(0, 40),
     review: String(raw?.review ?? '').slice(0, 220),
     holes,
+    ...(raw?.world ? { world: tidyWorld(raw.world) } : {}),
   };
 }
 
 // the three holes, built: their ids say which course and hole they are; the designer's name flies on the flags
 export function courseHoles(spec: CourseSpec, id: string, by?: string): Hole[] {
-  return tidyCourse(spec).holes.map((h, i) => buildHole(h, `${id}-${i + 1}`, by?.slice(0, 9)).hole);
+  const c = tidyCourse(spec);
+  return c.holes.map((h, i) => buildHole(h, `${id}-${i + 1}`, by?.slice(0, 9), c.world, c.world?.landmarks.filter((l) => l.hole === i + 1)).hole);
 }
 
 // the quick check on every hole: what's wrong where, so the architect can be asked to fix just that
@@ -34,7 +38,7 @@ export function checkCourse(spec: CourseSpec): { ok: boolean; problems: string[]
   const s = tidyCourse(spec);
   if (s.holes.length !== COURSE_HOLES) return { ok: false, problems: ['A course needs three holes.'] };
   const problems = s.holes.flatMap((h, i) => {
-    const { hole } = buildHole(h, `check-${i}`);
+    const { hole } = buildHole(h, `check-${i}`, undefined, s.world);
     return checkHole(hole, h).problems.map((p) => `Hole ${i + 1}: ${p}`);
   });
   return { ok: !problems.length, problems };

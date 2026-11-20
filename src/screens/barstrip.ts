@@ -36,6 +36,11 @@ export function barStrip() {
     ${card(ACE, 'ace')}
     <div class="bs-row">${CONTESTS.map((c) => card(c)).join('')}</div>
     <a class="bs-featured" href="#/bar/members" data-bs="members" data-bs-featured hidden></a>
+    <a class="bs-design" href="#/design" data-bs-design>
+      <i aria-hidden="true">✏️</i>
+      <div><small>The Design Desk</small><b data-bs-design-big>Design a course</b><span>Any world you can dream up. Three holes, your score to beat, $50 every time it holds.</span></div>
+      <span class="bsf-go">Design ›</span>
+    </a>
     <div class="bs-replays" data-bs-replays hidden></div>
   </section>`;
 }
@@ -77,6 +82,9 @@ export async function bindBarStrip(snap: Snapshot) {
   const gamesOpen = api.barGames(s).catch(() => null);
   void Promise.all([api.liveMemberCourse(s).catch(() => null), gamesOpen]).then(([live, games]) => {
     const el = document.querySelector<HTMLElement>('[data-bs-featured]');
+    // no course on yet: the Desk asks for the first one
+    const big = document.querySelector<HTMLElement>('[data-bs-design-big]');
+    if (big && !live) big.textContent = 'Design the first members’ course';
     if (!el || !live) return;
     if (games && games.settings.members === false && !games.committee) return;
     const c = tidyCourse(live.spec);
