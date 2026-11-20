@@ -25,10 +25,12 @@ const dayNumber = (day: string) => Math.round((Date.parse(`${day}T12:00:00Z`) - 
 // (npm run check-holes -- daily) so the day's median miss lands 20 to 30% farther than the one-shot game's.
 const STEPS = [
   // (the bag has a gap between the iron, 132 yd, and the wood, 220: each hole sits where a club plays it)
-  { yards: [120, 130], green: 'medium', bunkers: 1, carry: false, sideWater: false },
+  { yards: [135, 145], green: 'medium', bunkers: 1, carry: false, sideWater: false },
   { yards: [140, 152], green: 'medium', bunkers: 2, carry: false, sideWater: true },
   { yards: [165, 178], green: 'small', bunkers: 2, carry: true, sideWater: false },
 ] as const;
+
+const WIND_STEP = [1, 1.25, 1.5];
 
 const NAMES = ['The Leap', 'Long Shadow', 'The Lantern', 'Last Light', 'The Steps', 'The Spire', 'Far Flag', 'The Gate', 'Hollow Point', 'The Edge', 'Skyfall', 'The Basin', 'Whisper', 'The Drop', 'High Wire', 'The Crown'];
 
@@ -90,7 +92,10 @@ export function dailyHoles(day: string): DailyHoles {
     const pins = hole.pins?.length ? hole.pins : [hole.cup];
     const pin = pins[Math.floor(makeRng(`dailypin:${day}:${i}`).next() * pins.length)];
     const h: Hole = { ...hole, cup: pin, name: s.name };
-    const wind = { ...conditionsFor(h, day), pin };
+    // the wind gets up hole by hole: the day's own on the first, a quarter stronger on the second, half on the third
+    const base = conditionsFor(h, day);
+    const k = WIND_STEP[i];
+    const wind = { ...base, pin, mph: Math.round(base.mph * k), accel: { x: base.accel.x * k, y: base.accel.y * k } };
     const yards = Math.round((Math.hypot(h.tee.x - pin.x, h.tee.y - pin.y) * SCALE) / 3);
     return { n: i + 1, world: w, spec: s, hole: h, from: h.tee, wind, yards, label: `${w.world.name} · ${yards} yd` };
   });
