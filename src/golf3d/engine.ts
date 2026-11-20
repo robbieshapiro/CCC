@@ -1296,7 +1296,7 @@ export class Course3D {
     const cards: Record<Exclude<typeof this.howTo, 'none'>, [string, string[][]]> = {
       round: ['The course', [['🏌️', 'Fewest shots wins.'], SWING, PUTT, ['🍹', 'Wave the cart down. Every drink helps one way.']]],
       practice: ['Practice', [['🆓', 'Nothing counts. Hit all you like.'], SWING, PUTT]],
-      daily: ['Closest to the Pin', [['🎯', 'One shot, three tries.'], ['🌎', 'Closest across every club wins the day.'], ['💰', 'Top three paid: $300, $150, $75.']]],
+      daily: ['The Daily Shot', [['⛳', 'Three par 3s, three worlds. One shot each.'], ['📏', 'Lowest total distance wins. Water counts 150 ft.'], ['💰', 'Any ace takes the Ace Pot. Top three paid $300, $150, $75.']]],
       playoff: ['The playoff', [['🎯', 'One shot at the pin.'], ['🏆', 'Closest takes the title.']]],
       ace: ['The Ace Pot', [['⛳', 'Three swings a day at a new par 3.'], ['💰', 'Hole it and the whole pot is yours.'], ['📈', 'Every miss adds $50. It carries over.']]],
       minigolf: ['Hollow Hills', [['👻', 'Six holes. Fewest strokes wins the week.'], PUTT, ['⏱️', 'Things move. Wait for the gap.']]],

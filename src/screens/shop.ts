@@ -124,6 +124,7 @@ function earnedFrom(me: Player) {
       ['Weeks played', b?.weeks ?? 0],
       ['Rounds', b?.rounds ?? 0],
       ['Streaks', b?.streaks ?? 0],
+      ['The Daily Shot', (b?.dailyshot ?? 0)],
       ['Closest to the Pin', b?.ctp ?? 0],
       ['Long drive', b?.drive ?? 0],
       ['Target Range', b?.targets ?? 0],

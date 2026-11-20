@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 // Headless checks for the 3D holes: determinism, slopes, secret routes, a greedy solver, and a novice sim.
 // Run: npm run check-holes
-import { bagFor, CLUBS, type ClubId } from '../src/golf3d/clubs';
+import { bagFor, CLUBS, SCALE as SCALE_FT, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor, tourCourses } from '../src/golf3d/courses';
 import { MIDWAY, MIDWAY_PAR } from '../src/golf3d/midway';
 import { periodClosesAt, periodOf } from '../src/day';
@@ -11,6 +11,9 @@ import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type Meter
 import { bake, gradAt, heightAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
 import { makeRng } from '../src/seed';
+import { dailyHoles, SHOT_FROM } from '../src/dailyholes';
+import { dailyShot } from '../src/daily';
+import { checkHole } from '../src/designer/hole';
 
 const ok = (c: boolean, m: string) => {
   console.log(c ? 'PASS' : 'FAIL', m);
@@ -391,7 +394,11 @@ if (mode === 'calibrate') {
   process.exit(0);
 }
 const only = process.argv[3];
-const holes = course.holes.filter((h) => !only || h.id === only);
+// daily: the Daily Shot's three holes a day, for DAYS days from its first (npm run check-holes -- daily)
+const DAILY_DAYS = Number(process.env.DAYS ?? 30);
+const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+const dailyDays = Array.from({ length: DAILY_DAYS }, (_, i) => addDays(SHOT_FROM, i));
+const holes = mode === 'daily' ? dailyDays.flatMap((d) => dailyHoles(d).holes.map((x) => x.hole)) : course.holes.filter((h) => !only || h.id === only);
 // quick mode plays on a baked copy of the ground: near enough for the sims, and far quicker
 if (QUICK) holes.forEach((h) => bake(h));
 
@@ -539,7 +546,7 @@ if (mode === 'all' || mode === 'solve') {
 // ball should only slow the way friction and slope slow it; a sudden loss of pace (more than a third in a frame, with
 // no wall, post, vent, mover or cup near) means it ran into something hidden in the ground, like the trench a tier's seam once left.
 // It also mustn't sink below the surface.
-if (mode === 'all' || mode === 'greens') {
+if (mode === 'all' || mode === 'greens' || (mode === 'daily' && !process.env.NO_GREENS)) {
   const segD = (p: V2, a: V2, b: V2) => {
     const abx = b.x - a.x;
     const aby = b.y - a.y;
@@ -637,4 +644,81 @@ if (mode === 'all' || mode === 'novice') {
     console.log(`${h.name}: novice ${scores.join(',')} avg ${(avg - h.par).toFixed(1)} vs par`);
   }
   console.log(`novice average ${(over / holes.length).toFixed(2)} over par per hole (target about +2)`);
+}
+
+// The Daily Shot: every day's three holes are fair (the Desk's own check: a dry tee and green, a green that holds a
+// putt; and the greens sweep above), and how hard they play: a member's tee shot (SKILL 1.15, aiming as well as the
+// wind allows, then the swing's own error) simulated many times on each, against the one-shot game it replaced.
+// npm run check-holes -- daily (DAYS=30 SHOTS=200)
+if (mode === 'daily' && !process.env.NO_SIM) {
+  const SHOTS = Number(process.env.SHOTS ?? 200);
+  SKILL_NOW.v = Number(process.env.SKILL ?? 1.15);
+  // the member's aim: the shot that would finish nearest the pin in today's wind, with no mistake in it
+  const aimAt = (h: Hole, from: V2, wind: V2) => {
+    const toCup = Math.atan2(h.cup.x - from.x, h.cup.y - from.y);
+    let best: { shot: Shot; d: number } | null = null;
+    for (const club of bagFor(!!h.tour).filter((c) => c !== 'putter'))
+      for (const power of POWERS[club])
+        for (let a = -12; a <= 12; a += 1.5) {
+          const shot: Shot = { angle: toCup + (a * Math.PI) / 180, power, club, error: 0, clock: 0, wind };
+          const r = simulate(h, from, shot, false);
+          const d = r.holed ? 0 : r.penalty ? Infinity : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y);
+          if (!best || d < best.d) best = { shot, d };
+        }
+    return best!.shot;
+  };
+  const play = (h: Hole, from: V2, wind: { accel: V2; gust?: number }, seed: string) => {
+    const aim = aimAt(h, from, wind.accel);
+    const rng = makeRng(seed);
+    const gauss = () => SKILL_NOW.v * Math.sqrt(-2 * Math.log(rng.next() || 1e-9)) * Math.cos(2 * Math.PI * rng.next());
+    const out: { ft: number | null; holed: boolean }[] = [];
+    for (let k = 0; k < SHOTS; k++) {
+      const sw = swing(aim.club, aim.power, gauss, h.tour ? 'vertical' : 'classic', true);
+      const shot = { ...aim, ...sw, angle: aim.angle + (gauss() * 3.5 * Math.PI) / 180, clock: rng.next() * 30, wind: wind.gust ? gusted(wind as Parameters<typeof gusted>[0], rng.next()).accel : wind.accel };
+      const r = simulate(h, from, shot, false);
+      out.push({ ft: r.holed ? 0 : r.penalty ? null : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y) * SCALE_FT, holed: r.holed });
+    }
+    return out;
+  };
+  const stats = (label: string, xs: { ft: number | null; holed: boolean }[]) => {
+    const dry = xs.filter((x) => !x.holed && x.ft !== null).map((x) => x.ft!).sort((a, b) => a - b);
+    const med = dry[Math.floor(dry.length / 2)] ?? 0;
+    const mean = dry.reduce((a, b) => a + b, 0) / (dry.length || 1);
+    const aces = xs.filter((x) => x.holed).length;
+    const lost = xs.filter((x) => x.ft === null && !x.holed).length;
+    console.log(`  ${label.padEnd(26)} shots ${String(xs.length).padStart(5)}  median ${med.toFixed(1).padStart(5)} ft  mean ${mean.toFixed(1).padStart(5)} ft  holed ${((aces / xs.length) * 100).toFixed(2)}% (1 in ${aces ? Math.round(xs.length / aces) : '∞'})  lost ${((lost / xs.length) * 100).toFixed(1)}%`);
+    return { med, mean, aces: aces / xs.length, lost: lost / xs.length };
+  };
+  // fairness: the Desk's check on every hole
+  let fair = 0;
+  for (const d of dailyDays)
+    for (const x of dailyHoles(d).holes) {
+      const c = checkHole(x.hole, x.spec);
+      if (!c.ok) console.log(`FAIL ${d} hole ${x.n} (${x.world.id}): ${c.problems.join(' ')}`);
+      else fair++;
+    }
+  ok(fair === dailyDays.length * 3, `${fair} of ${dailyDays.length * 3} Daily Shot holes pass the Desk's check (dry tee and green, a green that holds a putt)`);
+  // before: the one-shot game, the last 14 days before the switch
+  console.log('Before: the one-shot Closest to the Pin');
+  const before: { ft: number | null; holed: boolean }[] = [];
+  for (let i = 14; i >= 1; i--) {
+    const d = addDays(SHOT_FROM, -i);
+    const sh = dailyShot(d);
+    before.push(...play(sh.hole, sh.from, sh.wind, `before:${d}`));
+  }
+  const b = stats('one shot, 14 days', before);
+  console.log('After: the three-hole Daily Shot');
+  const after: { ft: number | null; holed: boolean }[] = [];
+  const byHole: { ft: number | null; holed: boolean }[][] = [[], [], []];
+  for (const d of dailyDays)
+    for (const x of dailyHoles(d).holes) {
+      const r = play(x.hole, x.from, x.wind, `after:${d}:${x.n}`);
+      byHole[x.n - 1].push(...r);
+      after.push(...r);
+    }
+  byHole.forEach((r, i) => stats(`hole ${i + 1}`, r));
+  const a = stats(`all three, ${dailyDays.length} days`, after);
+  console.log(`  median ${((a.med / b.med - 1) * 100).toFixed(0)}% farther than before`);
+  ok(a.med > b.med, 'the Daily Shot plays harder than the one-shot game');
+  ok(a.aces > 0 || after.length < 1000, 'an ace is still possible');
 }

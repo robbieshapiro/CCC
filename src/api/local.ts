@@ -20,7 +20,7 @@ import { ACE_ADD, ACE_SEED, ACE_SWINGS } from '../acepot';
 import { BACK_ODDS, backLine, daysLeft, priceField } from '../book';
 import { TARGET_MAX } from '../targets';
 import { UTH_ANTES, UTH_TRIPS, uthSettle, type UthStage, type UthView } from '../uth';
-import { MAX_OVER_PAR, type LiveCourse, type CourseRequest, type AgentNote, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type Snapshot, type TrendDay } from './types';
+import { MAX_OVER_PAR, type LiveCourse, type CourseRequest, type AgentNote, type AdminOverview, type AdminWindow, type AdminKpis, type AdminToday, type CourseRecord, type Season, type SeasonRow, type TrophyProgress, type GolferCard, type GolferWeek, type FieldRow, type AdminTodayEvent, type AdminTodayPerson, type Api, type CardProgress, type HoleReport, type RoundShot, type BarBoard, type ClubRow, type Design, type MembersHole, type DailyCrown, type DailyDay, type DailyRow, type Honors, type DailyState, type DailyTry, type ShotBoard, type ShotTry, type Avatar, type Champion, type Feedback, type Invite, type Notice, type ShoutKind, type MemberActivity, type Payout, type OpenChampion, type OpenRow, type PracticeKind, type PracticeReport, type Round, type Snapshot, type TrendDay } from './types';
 
 type DbPlayer = { id: string; groupId: string; name: string; pin: string; token: string; avatar: Avatar; joined: string; admin?: boolean; host?: boolean };
 type DbRound = Round & { groupId: string; shots?: RoundShot[] };
@@ -28,7 +28,7 @@ type DbInvite = Omit<Invite, 'usedBy'> & { groupId: string; usedBy: string | nul
 type DbFeedback = Omit<Feedback, 'from'> & { groupId: string; playerId: string };
 type DbPractice = { id: number; groupId: string; playerId: string; kind: PracticeKind; startedAt: string; endedAt: string | null; shots: number };
 type DbPower = { id: number; ownerId: string; kind: string; price: number; status: string; targetId?: string; fromId?: string; at?: string; usedAt?: string };
-type Db = { memberCards?: { id: number; playerId: string; design: number; day: string; total: number | null }[]; replays?: { id: number; playerId: string; day: string; kind: import('../replay').ReplayKind; score: number; data: import('../replay').ReplayData; at: string }[]; aceSwings?: { playerId: string; day: string; holed: boolean; ft: number | null; pot: number; payout: number; at: string }[]; schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book' | 'uth'; uth?: { cards: number[]; ante: number; trips: number; play: number; stage: UthStage; result: UthView['result'] }; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
+type Db = { shotTries?: (ShotTry & { playerId: string; day: string; at: string })[]; memberCards?: { id: number; playerId: string; design: number; day: string; total: number | null }[]; replays?: { id: number; playerId: string; day: string; kind: import('../replay').ReplayKind; score: number; data: import('../replay').ReplayData; at: string }[]; aceSwings?: { playerId: string; day: string; holed: boolean; ft: number | null; pot: number; payout: number; at: string }[]; schedule?: Record<string, string>; tweaks?: Tweaks; requests?: CourseRequest[]; agentNotes?: AgentNote[]; free?: { playerId: string; course: string; holes: number[]; total: number; par: number; createdAt: string }[]; groups: Record<string, { id: string; name: string }>; players: DbPlayer[]; rounds: DbRound[]; invites?: DbInvite[]; feedback?: DbFeedback[]; notices?: (Notice & { groupId: string; authorId: string; live: boolean })[]; practice?: DbPractice[]; days?: { playerId: string; day: string; visits: number; lockers: number }[]; seen?: Record<string, string>; daily?: { playerId: string; day: string; t: DailyTry }[]; bar?: { playerId: string; game: string; week: string; score: number; at?: string }[]; designs?: (Design & { playerId: string; reviewedAt?: string })[]; purchases?: { playerId: string; item: string; price: number }[]; powerups?: DbPower[]; designPlays?: { design: number; playerId: string; week: string }[]; cards?: (CardProgress & { id: number; playerId: string; day: string; course: string; done: boolean })[]; shoutouts?: { id: number; groupId: string; fromId: string; toId: string; kind: ShoutKind; body: string; seen: boolean; removed: boolean; createdAt: string }[]; nominations?: DbNomination[]; trophyPay?: Record<string, Record<string, number>>; trophyBase?: string[]; casino?: { id: number; playerId: string; stake: number; payout: number | null; at: string; p: number[]; d: number[]; deck: number[]; doubled: boolean; outcome: BjOutcome | null; game?: 'popashot' | 'billiards' | 'acepot' | 'book' | 'uth'; uth?: { cards: number[]; ante: number; trips: number; play: number; stage: UthStage; result: UthView['result'] }; mo?: number; score?: number; ace?: { holed: boolean; ft: number | null; pot: number }; book?: { kind: 'winner' | 'back'; week: string; pick: string | null; pickName: string | null; line: number | null; odds: number } }[]; barSettings?: Record<string, boolean>; approved?: Record<string, string> };
 type DbNomination = { id: number; groupId: string; by: string; name: string; phone: string | null; status: 'pending' | 'invited' | 'declined'; inviteId: string | null; createdAt: string };
 
 const KEY = 'ccc-local-db';
@@ -955,6 +955,53 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     save(db);
   },
 
+  // the Daily Shot, three holes, as daily_submit and daily_board do it
+  async dailySubmit(session, day, t) {
+    if (day !== todayInGameTz()) throw new Error("That's not today's shot.");
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const mine = (db.shotTries ?? []).filter((x) => x.playerId === me.id && x.day === day);
+    if (mine.length >= 3) throw new Error("That's your three today. Back tomorrow.");
+    if (t.hole !== mine.length + 1) throw new Error('One hole at a time.');
+    const lost = !t.holed && (t.lost || t.ft === null);
+    const ft = t.holed ? 0 : lost ? null : Math.round(Math.min(9999, Math.max(0, t.ft ?? 0)) * 10) / 10;
+    const pot = acePotLocal(db);
+    const at = new Date().toISOString();
+    (db.shotTries ??= []).push({ playerId: me.id, day, hole: t.hole, ft, holed: t.holed, lost, at });
+    (db.aceSwings ??= []).push({ playerId: me.id, day, holed: t.holed, ft, pot, payout: t.holed ? pot : 0, at });
+    save(db);
+    return { holed: t.holed, payout: t.holed ? pot : 0, pot: acePotLocal(db), played: mine.length + 1 };
+  },
+  async dailyBoard(session, day): Promise<ShotBoard> {
+    const db = load();
+    const me = homeOf(db, playerByToken(db, session.token));
+    const tries = (db.shotTries ?? []).filter((x) => x.day === day);
+    const by = new Map<string, typeof tries>();
+    for (const x of tries) by.set(x.playerId, [...(by.get(x.playerId) ?? []), x]);
+    const ft = (x: ShotTry) => (x.holed ? 0 : x.lost || x.ft === null ? 150 : x.ft);
+    const rows = [...by.entries()].map(([id, xs]) => {
+      const p = db.players.find((y) => y.id === id)!;
+      return { id, p, xs, total: Math.round(xs.reduce((a, x) => a + ft(x), 0) * 10) / 10, aces: xs.filter((x) => x.holed).length, lost: xs.filter((x) => x.lost && !x.holed).length, last: xs.map((x) => x.at).sort().pop()! };
+    });
+    const done = rows.filter((r) => r.xs.length === 3).sort((a, b) => a.total - b.total || a.lost - b.lost || b.aces - a.aces || a.last.localeCompare(b.last));
+    const mineRow = rows.find((r) => r.id === me.id);
+    const place = done.findIndex((r) => r.id === me.id) + 1 || null;
+    const last = [...(db.aceSwings ?? [])].reverse().find((x) => x.holed);
+    return {
+      tries: (mineRow?.xs ?? []).sort((a, b) => a.hole - b.hole).map((x) => ({ hole: x.hole, ft: x.ft, holed: x.holed, lost: x.lost })),
+      total: mineRow ? mineRow.total : null,
+      place,
+      players: done.length,
+      playing: rows.length - done.length,
+      beat: place ? done.length - place : 0,
+      others: place ? done.length - 1 : 0,
+      clubPlace: place ?? 0,
+      clubPlayers: done.length,
+      board: done.map((r) => ({ playerId: r.p.id, avatar: r.p.avatar, name: r.p.name, club: '', total: r.total, aces: r.aces, lost: r.lost, here: true, mine: r.id === me.id })),
+      pot: acePotLocal(db),
+      lastAce: last ? { name: db.players.find((y) => y.id === last.playerId)?.name ?? '?', pot: last.payout, at: last.at } : null,
+    };
+  },
   async dailyCrown(session): Promise<DailyCrown | null> {
     const d = new Date(`${todayInGameTz()}T12:00:00Z`);
     d.setUTCDate(d.getUTCDate() - 1);

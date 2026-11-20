@@ -7,33 +7,29 @@ import { tidyCourse } from '../designer/course';
 import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
-import { ACE_SEED, ACE_SWINGS } from '../acepot';
+import { ACE_SEED } from '../acepot';
 import { todayInGameTz } from '../day';
 import { scoreLabel } from '../bar';
-import { resultLabel } from '../daily';
 import { money } from '../purse';
 import { requireSession } from '../state';
 import { esc } from '../ui';
 
-// today's contests, as at the bar (the club puts up the prizes): the Ace Pot first, a gold bar across the top, then the
-// other four two to a row on a phone, nothing to scroll sideways.
+// today's contests, as at the bar (the club puts up the prizes). The Daily Shot (Closest to the Pin and the Ace Pot,
+// one game from Nov 20) is at the top of home, so it isn't here again.
 type Card = [game: string, href: string, icon: string, name: string, wait: string];
 const CONTESTS: Card[] = [
-  ['daily', '#/daily', '🎯', 'Closest to the Pin', `1st pays $${DAILY_PRIZES[0]} today`],
   ['drive', '#/bar/drive', '🚀', 'Long drive', `1st pays $${DAILY_PRIZES[0]} today`],
   ['targets', '#/bar/targets', '🏹', 'Target Range', `1st pays $${DAILY_PRIZES[0]} today`],
   ['midway', '#/bar/midway', '🎡', 'The Midway', 'Three carnival holes'],
 ];
-const ACE: Card = ['acepot', '#/bar/ace', '💰', 'The Ace Pot', 'An ace takes the pot'];
 const card = ([game, href, icon, name, wait]: Card, stake = '') =>
   `<a class="bs-card${stake ? ` ${stake}` : ''}" href="${href}" data-bs="${game}"><i>${icon}</i><small>${esc(name)}</small><b data-bs-big>${esc(wait)}</b><span data-bs-sub>${esc(stake)}</span></a>`;
 
 export function barStrip() {
   return `<section class="bar-strip" aria-label="The Nineteenth Hole">
     <div class="bs-head"><h2>The Nineteenth Hole</h2><a href="#/bar">The bar ›</a></div>
-    <a class="bs-news" href="#/bar/ace" data-bs-news hidden></a>
+    <a class="bs-news" href="#/daily" data-bs-news hidden></a>
     <p class="bs-group">Today's contests</p>
-    ${card(ACE, 'ace')}
     <div class="bs-row">${CONTESTS.map((c) => card(c)).join('')}</div>
     <a class="bs-featured" href="#/bar/members" data-bs="members" data-bs-featured hidden></a>
     <a class="bs-design" href="#/design" data-bs-design>
@@ -102,7 +98,6 @@ export async function bindBarStrip(snap: Snapshot) {
   void api
     .aceState(s)
     .then((a) => {
-      const left = ACE_SWINGS - a.swingsToday;
       // an ace today: the news across the top for the rest of the day
       const news = document.querySelector<HTMLAnchorElement>('[data-bs-news]');
       if (news && a.lastAce && todayInGameTz(new Date(a.lastAce.at)) === snap.today) {
@@ -111,14 +106,6 @@ export async function bindBarStrip(snap: Snapshot) {
         news.innerHTML = `${face(a.lastAce, 40) || '<i>🏆</i>'}<div><b>${you ? 'You' : esc(a.lastAce.name)} won the Ace Pot today</b><span>${money(a.lastAce.pot)}${you ? ' is yours' : ''} · the pot started again at ${money(ACE_SEED)}</span></div>`;
         news.hidden = false;
       }
-      fill('acepot', `${money(a.pot)} pot`, `Carries over · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left` : 'back tomorrow'}`);
-    })
-    .catch(() => {});
-  void api
-    .dailyState(s, snap.today)
-    .then((d) => {
-      const top = d.board[0];
-      if (top) fill('daily', `${top.name} · ${top.holed ? 'holed it' : resultLabel({ ft: top.ft, holed: false, lost: top.ft === null })}`, `${top.mine ? "You're leading" : `${d.players} in`} · 1st pays $${DAILY_PRIZES[0]}`, top);
     })
     .catch(() => {});
   void api
@@ -144,15 +131,17 @@ export async function bindBarStrip(snap: Snapshot) {
     .catch(() => {});
 }
 
-// The Play card once today's cards are in: its button goes to the bar, naming the Ace Pot while you've swings left
+// The Play card once today's cards are in: its button goes to the bar, or to the Daily Shot while it's still to finish
 export function bindBarCta() {
   const cta = document.querySelector<HTMLAnchorElement>('[data-bar-cta]');
   if (!cta) return;
   const s = requireSession();
-  void Promise.all([api.aceState(s).catch(() => null), api.barGames(s).catch(() => null)]).then(([a, g]) => {
-    const open = !g || g.settings.acepot !== false || g.committee;
-    if (!a || !open || a.swingsToday >= ACE_SWINGS) return;
-    cta.href = '#/bar/ace';
-    cta.textContent = `Try the Ace Pot · ${money(a.pot)} ›`;
-  });
+  void api
+    .dailyBoard(s, todayInGameTz())
+    .then((b) => {
+      if (b.tries.length >= 3) return;
+      cta.href = '#/daily';
+      cta.textContent = `${b.tries.length ? 'Finish' : 'Play'} the Daily Shot · Ace Pot ${money(b.pot)} ›`;
+    })
+    .catch(() => {});
 }

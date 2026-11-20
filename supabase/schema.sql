@@ -1971,6 +1971,19 @@ create or replace function daily_crown(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token); d date := (now() at time zone 'America/New_York')::date - 1;
 begin
+  -- from Nov 20, the three-hole Daily Shot's winner (ft: their total)
+  if d >= date '2026-11-20' then
+    return (
+      with people as (
+        select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.group_id
+        from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+      )
+      select json_build_object('day', d, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.group_id), 'ft', t.total, 'holed', false, 'total', true,
+        'ids', coalesce((select json_agg(p.id) from players p where p.group_id = me.group_id and lower(p.name) = t.k and p.pin_hash = t.h), '[]'))
+      from shot_totals(d) t join people pe on pe.k = t.k and pe.h = t.h
+      where t.played = 3 order by t.total, t.lost, t.aces desc, t.last_at limit 1
+    );
+  end if;
   return (
     with people as (
       select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.group_id
@@ -2588,6 +2601,51 @@ language sql stable security definer set search_path = public, extensions as $$
 $$;
 revoke all on function ctp_places() from public, anon, authenticated;
 
+-- The Daily Shot, three holes (from Nov 20, src/dailyholes.ts): three par 3s a day in three worlds, the same for
+-- every club, one try on each, in order. A try is its distance from the pin; holed is 0, a ball lost or in the water
+-- counts 150 ft. The lowest total of the three wins the day (all three played to rank), and the day's top three are
+-- paid as Closest to the Pin was (daily_prize). Every try is also a swing at the Ace Pot: daily_submit writes it to
+-- ace_swings too, so a hole in one takes the pot and a miss grows it, exactly as the Ace Pot did. The one-shot
+-- Closest to the Pin (daily_shots, ctp_places) is kept as it was; its days stay paid as they were.
+create table if not exists daily_tries (
+  id bigserial primary key,
+  player_id uuid not null references players on delete cascade, -- the person's home seat
+  day date not null,
+  hole int not null check (hole between 1 and 3),
+  ft numeric(7, 1) check (ft is null or ft between 0 and 9999),
+  holed boolean not null default false,
+  lost boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (player_id, day, hole)
+);
+alter table daily_tries enable row level security;
+create index if not exists daily_tries_day on daily_tries (day);
+
+-- what a try adds to the day's total
+create or replace function shot_ft(p_holed boolean, p_lost boolean, p_ft numeric) returns numeric
+language sql immutable as $$ select case when p_holed then 0 when p_lost or p_ft is null then 150 else p_ft end $$;
+
+-- each person's day: their total, holes played, lost balls, holes in one, and when they finished. A person is the
+-- same name and PIN across clubs.
+create or replace function shot_totals(p_day date) returns table (k text, h text, total numeric, played int, lost int, aces int, last_at timestamptz)
+language sql stable security definer set search_path = public, extensions as $$
+  select lower(p.name), p.pin_hash, sum(shot_ft(t.holed, t.lost, t.ft)), count(*)::int,
+    count(*) filter (where t.lost and not t.holed)::int, count(*) filter (where t.holed)::int, max(t.created_at)
+  from daily_tries t join players p on p.id = t.player_id where t.day = p_day
+  group by lower(p.name), p.pin_hash
+$$;
+revoke all on function shot_totals(date) from public, anon, authenticated;
+
+-- each closed day's top three: all three holes played, lowest total; then fewer lost balls, more holes in one, and
+-- whoever finished first
+create or replace function shot_places() returns table (day date, k text, h text, place int)
+language sql stable security definer set search_path = public, extensions as $$
+  select d.day, t.k, t.h, row_number() over (partition by d.day order by t.total, t.lost, t.aces desc, t.last_at)::int as place
+  from (select distinct day from daily_tries where day < game_today()) d cross join lateral shot_totals(d.day) t
+  where t.played = 3
+$$;
+revoke all on function shot_places() from public, anon, authenticated;
+
 -- each closed day's top three at the long drive (a daily board from Nov 17): the day's longest ball per person,
 -- the earlier one first on a tie
 create or replace function drive_places() returns table (day date, k text, h text, place int)
@@ -2697,6 +2755,8 @@ language sql stable security definer set search_path = public, extensions as $$
       (select coalesce(sum(case when n >= 3 then 100 else 0 end + (n / 7) * 250), 0) from runs)::int as streaks,
       -- Closest to the Pin and the long drive: the day's top three (daily_prize)
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from ctp_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
+      -- the Daily Shot (three holes, from Nov 20): the day's top three, as Closest to the Pin
+      (select coalesce(sum(daily_prize(w.day, w.place)), 0) from shot_places() w where w.place <= 3 and w.k = lower(p.name) and w.h = p.pin_hash)::int as dailyshot,
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from drive_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as drive,
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from targets_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as targets,
       -- the Ace Pot, when you ace it (the club puts up the pot)
@@ -2728,8 +2788,8 @@ language sql stable security definer set search_path = public, extensions as $$
       250 * (select count(distinct x.month) from rounds x where x.player_id in (select id from seats) and x.card and x.month >= '2026-11-08')::int as weeks
   )
   select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'drive', b.drive, 'targets', b.targets, 'acepot', b.acepot, 'shots', b.shots,
-    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'duels', b.duels, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks,
-    'total', b.rounds + b.streaks + b.ctp + b.drive + b.targets + b.acepot + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.duels + b.grants + b.trophies + b.weeks) from b
+    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'duels', b.duels, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks, 'dailyshot', b.dailyshot,
+    'total', b.rounds + b.streaks + b.ctp + b.dailyshot + b.drive + b.targets + b.acepot + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.duels + b.grants + b.trophies + b.weeks) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 
@@ -3700,6 +3760,8 @@ create or replace function ace_swing(p_token uuid, p_day date, p_holed boolean, 
 language plpgsql security definer set search_path = public, extensions as $$
 declare me players := home_of(player_for(p_token)); pot int; n int; last timestamptz;
 begin
+  -- from Nov 20 the Ace Pot is played on the Daily Shot (daily_submit); this stays for old phones, and says so
+  raise exception 'The Ace Pot is part of the Daily Shot now.';
   perform bar_gate(me, 'acepot');
   if p_day <> game_today() then raise exception 'That''s not today''s hole.'; end if;
   -- one pot for everyone: settle one swing at a time
@@ -3717,6 +3779,70 @@ end $$;
 revoke all on function ace_pot() from public, anon, authenticated;
 grant execute on function ace_state(uuid) to anon;
 grant execute on function ace_swing(uuid, date, boolean, numeric) to anon;
+
+-- A try on the Daily Shot (three holes, from Nov 20). Today only, the holes in order, one try on each. The try is also
+-- a swing at the Ace Pot, settled under the pot's lock: a hole in one takes ace_pot() as its payout (paid through
+-- person_bonus, as every ace has been) and the pot starts again; a miss adds the club's $50.
+create or replace function daily_submit(p_token uuid, p_day date, p_hole int, p_ft numeric, p_holed boolean, p_lost boolean) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := home_of(player_for(p_token)); n int; last timestamptz; pot int; v_ft numeric; v_lost boolean;
+begin
+  if p_day <> game_today() or p_day < date '2026-11-20' then raise exception 'That''s not today''s shot.'; end if;
+  perform pg_advisory_xact_lock(hashtext('acepot'));
+  select count(*), max(t.created_at) into n, last from daily_tries t join players p on p.id = t.player_id
+    where t.day = p_day and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash;
+  if n >= 3 then raise exception 'That''s your three today. Back tomorrow.'; end if;
+  if p_hole is distinct from n + 1 then raise exception 'One hole at a time.'; end if;
+  if last is not null and now() - last < interval '3 seconds' then raise exception 'Easy. One shot at a time.'; end if;
+  v_lost := coalesce(p_lost, false) and not coalesce(p_holed, false);
+  v_ft := case when p_holed then 0 when v_lost or p_ft is null then null else round(least(greatest(p_ft, 0), 9999), 1) end;
+  v_lost := v_lost or (v_ft is null and not coalesce(p_holed, false));
+  pot := ace_pot();
+  insert into daily_tries (player_id, day, hole, ft, holed, lost) values (me.id, p_day, p_hole, v_ft, coalesce(p_holed, false), v_lost);
+  insert into ace_swings (player_id, day, holed, ft, pot, payout)
+    values (me.id, p_day, coalesce(p_holed, false), v_ft, pot, case when p_holed then pot else 0 end);
+  return json_build_object('holed', coalesce(p_holed, false), 'payout', case when p_holed then pot else 0 end, 'pot', ace_pot(), 'played', n + 1);
+end $$;
+
+-- The Daily Shot's day: my tries and total, the board (all three played, lowest total first), where I stand ("closer
+-- than": how many finished players I beat, of how many others), my place in my own club, and the Ace Pot.
+create or replace function daily_board(p_token uuid, p_day date) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token);
+begin
+  return (
+    with people as (
+      select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.group_id, p.id as home_id
+      from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
+    ), t as (select * from shot_totals(p_day)),
+    done as (
+      select t.*, pe.name, pe.home_id, pe.group_id,
+        row_number() over (order by t.total, t.lost, t.aces desc, t.last_at)::int as place,
+        exists (select 1 from players s where s.group_id = me.group_id and lower(s.name) = t.k and s.pin_hash = t.h) as here
+      from t join people pe on pe.k = t.k and pe.h = t.h where t.played = 3
+    ), mine as (select * from done where k = lower(me.name) and h = me.pin_hash)
+    select json_build_object(
+      'tries', coalesce((select json_agg(json_build_object('hole', x.hole, 'ft', x.ft, 'holed', x.holed, 'lost', x.lost) order by x.hole)
+        from daily_tries x join players p on p.id = x.player_id where x.day = p_day and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash), '[]'),
+      'total', (select total from t where k = lower(me.name) and h = me.pin_hash),
+      'place', (select place from mine),
+      'players', (select count(*) from done),
+      'playing', (select count(*) from t where played < 3),
+      'beat', (select count(*) from done d, mine m where d.place > m.place),
+      'others', (select count(*) - 1 from done where exists (select 1 from mine)),
+      'clubPlace', (select count(*) from done d, mine m where d.here and d.place <= m.place),
+      'clubPlayers', (select count(*) from done where here),
+      'board', coalesce((select json_agg(json_build_object('playerId', d.home_id, 'avatar', (select pl.avatar from players pl where pl.id = d.home_id), 'name', d.name,
+          'club', club_label(d.k, d.h, d.group_id), 'total', d.total, 'aces', d.aces, 'lost', d.lost, 'here', d.here,
+          'mine', d.k = lower(me.name) and d.h = me.pin_hash) order by d.place) from done d), '[]'),
+      'pot', ace_pot(),
+      'lastAce', (select json_build_object('name', p.name, 'pot', a.payout, 'at', a.created_at) from ace_swings a join players p on p.id = a.player_id where a.holed order by a.created_at desc limit 1)
+    )
+  );
+end $$;
+
+grant execute on function daily_submit(uuid, date, int, numeric, boolean, boolean) to anon;
+grant execute on function daily_board(uuid, date) to anon;
 
 -- Mo's Book (from Nov 17, src/book.ts): bets on the week's Open, for club money. Who wins (anyone who's played the
 -- Open in the last three weeks, priced from this week's best card or recent form, Mo keeping 12%; the price is locked

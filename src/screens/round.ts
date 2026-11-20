@@ -48,7 +48,8 @@ import type { Hole } from '../golf3d/types';
 import { barSummary } from './bar';
 import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
-import { canShare, dailySummary, share } from './daily';
+import { canShare, dailySummary, share, shotSummary } from './daily';
+import { dailyHoles, isShotDay, SHOT_HOLES, ftLabel, totalFt } from '../dailyholes';
 import { aceWin, bigMoment } from './acewin';
 import { scorePop } from './moments';
 import { KIND_NAME, packShot, unpackShot, withHoleNo, type ReplayData, type ReplayHole, type ReplayKind } from '../replay';
@@ -693,6 +694,7 @@ export function practiceArea(snap: Snapshot, kind: 'range' | 'shortgame') {
 export async function dailyRound(snap: Snapshot) {
   closeRound();
   const day = snap.today;
+  if (isShotDay(day)) return shotRound(snap);
   const state = await api.dailyState(requireSession(), day).catch(() => null);
   if (!state) {
     navigate('#/');
@@ -747,6 +749,89 @@ export async function dailyRound(snap: Snapshot) {
       return false;
     },
   });
+}
+
+// The Daily Shot, three holes (from Nov 20, src/dailyholes.ts): today's three par 3s in three worlds, one try on each,
+// in order. Each try posts as it lands, and is a swing at the Ace Pot too: a hole in one gets the whole screen and the
+// pot. The pot rides along at the top of the screen, live, with your running total. After the third: the summary.
+async function shotRound(snap: Snapshot) {
+  const day = snap.today;
+  const s = requireSession();
+  const back = () => {
+    closeRound();
+    navigate('#/');
+  };
+  const board = await api.dailyBoard(s, day).catch(() => null);
+  if (!board) return back();
+  if (board.tries.length >= SHOT_HOLES) return void shotSummary(day, snap.groupName, back);
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const set = dailyHoles(day);
+  const done = [...board.tries];
+  let pot = board.pot;
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  try {
+    game = new Course3D(el, me.avatar, back);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/">Back to the club</a></main>`);
+    return;
+  }
+  game.leaveText = 'Leave';
+  game.howTo = 'daily';
+  // the pot to chase and your running total, always on screen; the pot refreshes as others play
+  const hud = document.createElement('div');
+  hud.className = 'shot-hud';
+  el.appendChild(hud);
+  const drawHud = () => {
+    hud.innerHTML = `<span class="sh-pot"><small>Ace Pot</small><b>${money(pot)}</b></span><span class="sh-total"><small>Your total</small><b>${done.length ? ftLabel(totalFt(done)) : '–'}</b></span><span class="sh-dots">${set.holes.map((_, i) => `<i class="${i < done.length ? 'on' : i === done.length ? 'now' : ''}"></i>`).join('')}</span>`;
+  };
+  drawHud();
+  const tick = window.setInterval(() => {
+    if (!document.body.contains(hud)) return window.clearInterval(tick);
+    void api.dailyBoard(s, day).then((b) => {
+      pot = b.pot;
+      drawHud();
+    }).catch(() => {});
+  }, 20_000);
+  const g = game;
+  const playHole = (i: number) => {
+    const x = set.holes[i];
+    const cup = x.hole.cup;
+    g.practiceArea(x.hole, {
+      ticker: (_from, at) => `${Math.round(Math.hypot(at.x - cup.x, at.y - cup.y) * SCALE)} ft`,
+      title: `The Daily Shot · Hole ${i + 1} of ${SHOT_HOLES}`,
+      stations: [{ name: x.label, at: x.from }],
+      wind: x.wind,
+      eyebrow: `${x.world.icon} ${x.world.world.name}`,
+      tag: () => `Hole ${i + 1} of ${SHOT_HOLES}`,
+      onResult: (r) => {
+        const t = { hole: i + 1, ft: r.ft, holed: r.holed, lost: r.lost };
+        done.push(t);
+        drawHud();
+        if (r.holed) keepShot(g, 'ace', 1000, { kind: 'ace', day }, `Ace for ${money(pot)}`);
+        // an ace: the whole screen goes to it straight away, with the pot as it stood; the server's figure follows
+        const win = r.holed ? aceWin(pot, x.hole.name) : null;
+        api
+          .dailySubmit(s, day, t)
+          .then((res) => {
+            pot = res.pot;
+            drawHud();
+            if (res.holed) {
+              win?.setPot(res.payout);
+              void refresh().catch(() => {});
+            }
+          })
+          .catch((e) => void tell("That shot didn't count", `<p>${esc((e as Error).message)}</p>`).then(back));
+        const next = () =>
+          done.length < SHOT_HOLES ? playHole(done.length) : (window.clearInterval(tick), void shotSummary(day, snap.groupName, back));
+        void (win ? win.closed : Promise.resolve()).then(() => window.setTimeout(next, win ? 300 : 2200));
+        return false;
+      },
+    });
+  };
+  playHole(done.length);
 }
 
 // The Ace Pot (src/acepot.ts): today's par 3, $50 a swing, three a day. Each swing is settled as it lands; an ace takes
