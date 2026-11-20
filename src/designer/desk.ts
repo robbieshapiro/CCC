@@ -7,11 +7,12 @@ import { buildHole, checkHole, type Check, type HoleSpec } from './hole';
 
 export type DesignReply = { id: number; spec: HoleSpec } | { error: string };
 
-export async function askArchitect(args: { prompt: string } | { id: number; change: string }): Promise<DesignReply> {
+// kind 'course' (Nov 20): three holes from one prompt, kept as one design (designer/course.ts)
+export async function askArchitect(args: { prompt: string; kind?: 'hole' | 'course' } | { id: number; change: string }): Promise<DesignReply> {
   const s = requireSession();
   if (!useSupabase) {
     await new Promise((r) => setTimeout(r, 900));
-    return 'prompt' in args ? localApi.localDesign(s, args.prompt) : localApi.localDesign(s, '', args.id, args.change);
+    return 'prompt' in args ? localApi.localDesign(s, args.prompt, undefined, undefined, args.kind) : localApi.localDesign(s, '', args.id, args.change);
   }
   try {
     const res = await fetch('/api/design', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: s.token, ...args }) });

@@ -6,6 +6,7 @@
 //   Members: feedback, friends put up, members' holes, the members table, invitations out.
 //   Tools: post a notice, text the group, bring someone in, the bar's switches.
 // Every member name opens their card.
+import { courseHoles, coursePar, isCourse, tidyCourse, type CourseSpec } from '../designer/course';
 import { api, getSession, listSessions } from '../api';
 import type { AdminOverview, AdminWindow, Design, Notice, Session, Snapshot, TrendDay } from '../api/types';
 import { GAME_TZ } from '../day';
@@ -130,31 +131,47 @@ export function admin(snap: Snapshot, arg?: string, extra?: string) {
   void loadKpis();
 }
 
-// Members' golf holes from the Design Desk: the ones waiting for a decision (play it, approve, or not), and the ones
-// already on the Members' Course (which can come off)
+// Members' courses from the Design Desk (Nov 20): the ones waiting for a decision (each hole to try, the designer's
+// mark), and the approved ones (the newest is the Members' Course; any can come off). Older single holes still show.
 async function loadHoles(snap: Snapshot) {
   const el = document.getElementById('adm-holes');
   if (!el) return;
-  const list = (await api.designQueue(requireSession()).catch(() => [] as Design[])).filter(isHole);
+  const list = (await api.designQueue(requireSession()).catch(() => [] as Design[])).filter((d) => isCourse(d) || isHole(d));
   el.hidden = !list.length;
   const waiting = list.filter((d) => d.status === 'submitted');
   setNeeds('holes', waiting.length);
   if (!list.length) return;
-  const live = list.filter((d) => d.status === 'approved');
+  const courses = list.filter((d) => isCourse(d) && d.status === 'approved');
+  const live = courses[0]?.id;
   const row = (d: Design) => {
+    if (isCourse(d)) {
+      const c = tidyCourse(d.spec as unknown as CourseSpec);
+      return `<li data-design="${d.id}" class="adm-course"><div><b>${esc(c.name)}</b> <small>by ${esc(d.by ?? '?')}${d.club ? ` · ${esc(d.club)}` : ''} · 3 holes, par ${coursePar(c)}${d.mark ? ` · their mark <b>${d.mark.total}</b>` : ''}${d.id === live ? ' · <i class="ok">On now</i>' : ''}</small>
+        <p>${esc(d.prompt)}</p>
+        <div class="adm-course-holes">${c.holes.map((h, i) => `<div><div class="adm-hole-plan" data-plan="${i}"></div><small>${i + 1}. ${esc(h.name)} · par ${h.par}</small><button data-hole-try="${i}">Play</button></div>`).join('')}</div>
+        <div class="adm-chips">${d.status === 'submitted' ? '<button data-hole-ok class="on">Approve: it goes on now</button><button data-hole-no>Not this one</button>' : '<button data-hole-no>Take it off</button>'}</div></div></li>`;
+    }
     const spec = tidy(d.spec);
-    return `<li data-design="${d.id}"><div class="adm-hole-plan"></div><div><b>${esc(spec.name)}</b> <small>by ${esc(d.by ?? '?')}${d.club ? ` · ${esc(d.club)}` : ''} · par ${spec.par}, ${spec.yards} yd · ${esc(spec.look)}</small>
-      <p>${esc(d.prompt)}</p>
-      <div class="adm-chips"><button data-hole-play>Play it</button>${d.status === 'submitted' ? '<button data-hole-ok class="on">Approve</button><button data-hole-no>Not this one</button>' : '<button data-hole-no>Take it off</button>'}</div></div></li>`;
+    return `<li data-design="${d.id}"><div class="adm-hole-plan"></div><div><b>${esc(spec.name)}</b> <small>by ${esc(d.by ?? '?')}${d.club ? ` · ${esc(d.club)}` : ''} · a single hole, par ${spec.par}, ${spec.yards} yd</small>
+      <div class="adm-chips"><button data-hole-play>Play it</button>${d.status === 'submitted' ? '<button data-hole-ok class="on">Approve</button>' : ''}<button data-hole-no>${d.status === 'submitted' ? 'Not this one' : 'Take it off'}</button></div></div></li>`;
   };
-  el.innerHTML = `<div class="adm-head"><h2>Members' holes ${waiting.length ? `<span class="adm-count">${waiting.length}</span>` : ''}</h2></div>
+  el.innerHTML = `<div class="adm-head"><h2>Members' courses ${waiting.length ? `<span class="adm-count">${waiting.length}</span>` : ''}</h2></div>
     ${waiting.length ? `<ul class="adm-list adm-holes">${waiting.map(row).join('')}</ul>` : '<p class="muted">Nothing waiting.</p>'}
-    ${live.length ? `<p class="adm-sub">On the Members' Course</p><ul class="adm-list adm-holes">${live.map(row).join('')}</ul>` : ''}`;
-  for (const d of list) {
-    const li = el.querySelector<HTMLElement>(`[data-design="${d.id}"]`)!;
-    const { hole } = buildHole(d.spec, `review-${d.id}`);
-    li.querySelector('.adm-hole-plan')!.appendChild(planCanvas(hole, 96));
-    li.querySelector<HTMLButtonElement>('[data-hole-play]')!.onclick = () => testHole(snap, hole, () => navigate('#/admin'));
+    ${courses.length ? `<p class="adm-sub">Approved (the newest is the Members' Course)</p><ul class="adm-list adm-holes">${courses.map(row).join('')}</ul>` : ''}`;
+  for (const d of [...waiting, ...courses]) {
+    const li = el.querySelector<HTMLElement>(`[data-design="${d.id}"]`);
+    if (!li) continue;
+    if (isCourse(d)) {
+      const holes = courseHoles(d.spec as unknown as CourseSpec, `review-${d.id}`);
+      holes.forEach((h, i) => {
+        li.querySelector(`[data-plan="${i}"]`)!.appendChild(planCanvas(h, 80));
+        li.querySelector<HTMLButtonElement>(`[data-hole-try="${i}"]`)!.onclick = () => testHole(snap, h, () => navigate('#/admin'));
+      });
+    } else {
+      const { hole } = buildHole(d.spec, `review-${d.id}`);
+      li.querySelector('.adm-hole-plan')!.appendChild(planCanvas(hole, 96));
+      li.querySelector<HTMLButtonElement>('[data-hole-play]')!.onclick = () => testHole(snap, hole, () => navigate('#/admin'));
+    }
     li.querySelector<HTMLButtonElement>('[data-hole-ok]')?.addEventListener('click', async () => {
       await api.reviewDesign(requireSession(), d.id, true);
       void loadHoles(snap);
