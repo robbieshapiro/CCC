@@ -47,6 +47,9 @@ export function memberKit(w: World): Kit {
   const L = LIGHT[w.light];
   const [top, mid, low] = w.sky;
   const night = w.light === 'night';
+  // a very pale horizon (cherry blossom, a snowfield) lit at full strength washes the course out: light it less
+  const lum = (c: string) => { const n = parseInt(c.slice(1), 16); return 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255); };
+  const pale = !night && lum(low) > 215;
   return {
     surface: { fairway: w.ground.fairway, green: w.ground.green, fringe: mix(w.ground.fairway, w.ground.green, 0.5), rough: w.ground.rough, sand: w.ground.sand },
     floor: w.ground.beyond,
@@ -55,11 +58,11 @@ export function memberKit(w: World): Kit {
     drift: w.drift === 'none' ? undefined : DRIFT[w.drift],
     light: {
       // night is moonlight, bright enough to read the course: the sky's horizon colour tints the light and the haze
-      sky: night ? mix(mid, '#c4d2ee', 0.6) : mix(low, '#ffffff', 0.4),
-      ground: night ? '#2c3040' : mix(w.ground.rough, '#000000', 0.2),
-      hemi: L.hemi,
+      sky: night ? mix(mid, '#c4d2ee', 0.7) : pale ? mix(mid, '#ffffff', 0.2) : mix(low, '#ffffff', 0.4),
+      ground: night ? '#4a5068' : mix(w.ground.rough, '#000000', 0.2),
+      hemi: night ? 1.7 : pale ? 1.05 : L.hemi,
       sunColor: night ? '#c4d2ee' : w.light === 'golden' || w.light === 'dusk' ? mix(low, '#ffd59a', 0.5) : '#fff1d6',
-      sun: L.sun,
+      sun: night ? 1.4 : L.sun,
       fog: night ? mix(low, '#24304a', 0.5) : low,
       near: L.near,
       far: L.far,
@@ -78,7 +81,23 @@ export function memberKit(w: World): Kit {
       return k?.decor?.(h, d, anim) ?? null;
     },
     frame(h, root, anim, floor) {
+      // the backdrops were made for full-length holes: on a short one (a Daily Shot par 3) their peaks and towers stood
+      // right behind the green. Whatever they put out past the grounds goes further back, so it reads as a skyline on any hole.
+      const before = root.children.length;
       BEYOND[w.backdrop]?.frame?.(h, root, anim, floor);
+      const cx = (h.bounds.x0 + h.bounds.x1) / 2;
+      const cz = -(h.bounds.y0 + h.bounds.y1) / 2;
+      const span = Math.max(h.bounds.x1 - h.bounds.x0, h.bounds.y1 - h.bounds.y0);
+      const push = span < 700 ? 450 : span < 1100 ? 250 : 0; // ft further out
+      if (push)
+        for (const o of root.children.slice(before)) {
+          const dx = o.position.x - cx;
+          const dz = o.position.z - cz;
+          const d = Math.hypot(dx, dz);
+          if (d < 140) continue;
+          o.position.x = cx + (dx / d) * (d + push);
+          o.position.z = cz + (dz / d) * (d + push);
+        }
     },
   };
 }

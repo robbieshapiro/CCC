@@ -50,11 +50,11 @@ export function tidyWorld(raw: Partial<World> | null | undefined): World | undef
     ground: {
       fairway: readable(hex(g.fairway, '#62ae52')),
       green: readable(hex(g.green, '#6fc062')),
-      rough: hex(g.rough, '#3e6a31'),
+      rough: lift(hex(g.rough, '#3e6a31'), 55),
       sand: hex(g.sand, '#ead9a6'),
       beyond: hex(g.beyond, '#2c4a26'),
     },
-    water: { kind: pick(raw.water?.kind, WATERS, 'water'), color: hex(raw.water?.color, '#3a6f80') },
+    water: { kind: pick(raw.water?.kind, WATERS, 'water'), color: apart(hex(raw.water?.color, '#3a6f80'), [hex(g.fairway, '#62ae52'), hex(g.green, '#6fc062')]) },
     coast: !!raw.coast,
     drift: pick(raw.drift, DRIFTS, 'none'),
     trees: trees.length ? trees : ['pine', 'oak'],
@@ -64,6 +64,23 @@ export function tidyWorld(raw: Partial<World> | null | undefined): World | undef
       .map((l) => ({ kind: l.kind, hole: Math.round(clamp(l.hole, 1, 3)), along: clamp(l.along, 0, 1.1), across: clamp(l.across, -3.5, 3.5) })),
     backdrop: pick(raw.backdrop, BACKDROPS, 'none'),
   };
+}
+
+const rgb = (c: string) => { const n = parseInt(c.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const toHex = (v: number[]) => `#${v.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0')).join('')}`;
+// a colour at least this bright (lifted toward it, keeping its hue)
+function lift(c: string, min: number) {
+  const [r, g, b] = rgb(c);
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  if (lum >= min) return c;
+  const k = min / Math.max(1, lum);
+  return toHex([r * k + 12, g * k + 12, b * k + 12]);
+}
+// water that can't be mistaken for the fairway or the green: too close a colour, and it's taken deeper and darker
+function apart(water: string, turf: string[]) {
+  const w = rgb(water);
+  const close = turf.some((t) => { const c = rgb(t); return Math.hypot(w[0] - c[0], w[1] - c[1], w[2] - c[2]) < 110; });
+  return close ? toHex(w.map((x) => x * 0.45)) : water;
 }
 
 // a colour light enough to read as turf (anything darker is lifted toward it)
