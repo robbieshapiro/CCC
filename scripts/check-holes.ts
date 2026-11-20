@@ -647,12 +647,14 @@ if (mode === 'all' || mode === 'novice') {
 }
 
 // The Daily Shot: every day's three holes are fair (the Desk's own check: a dry tee and green, a green that holds a
-// putt; and the greens sweep above), and how hard they play: a member's tee shot (SKILL 1.15, aiming as well as the
+// putt; and the greens sweep above), and how hard they play: a member's tee shot (SKILL 0.75, aiming as well as the
 // wind allows, then the swing's own error) simulated many times on each, against the one-shot game it replaced.
 // npm run check-holes -- daily (DAYS=30 SHOTS=200)
 if (mode === 'daily' && !process.env.NO_SIM) {
   const SHOTS = Number(process.env.SHOTS ?? 200);
-  SKILL_NOW.v = Number(process.env.SKILL ?? 1.15);
+  // 0.75: the skill at which the bot's misses on the one-shot game match members' real ones (median 42 ft simulated,
+  // 39 ft in the club's shots to Nov 20)
+  SKILL_NOW.v = Number(process.env.SKILL ?? 0.75);
   // the member's aim: the shot that would finish nearest the pin in today's wind, with no mistake in it
   const aimAt = (h: Hole, from: V2, wind: V2) => {
     const toCup = Math.atan2(h.cup.x - from.x, h.cup.y - from.y);

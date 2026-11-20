@@ -25,9 +25,9 @@ const dayNumber = (day: string) => Math.round((Date.parse(`${day}T12:00:00Z`) - 
 // (npm run check-holes -- daily) so the day's median miss lands 20 to 30% farther than the one-shot game's.
 const STEPS = [
   // (the bag has a gap between the iron, 132 yd, and the wood, 220: each hole sits where a club plays it)
-  { yards: [105, 118], green: 'medium', bunkers: 1, carry: false, sideWater: false },
-  { yards: [165, 180], green: 'medium', bunkers: 2, carry: false, sideWater: true },
-  { yards: [195, 215], green: 'small', bunkers: 2, carry: true, sideWater: false },
+  { yards: [120, 130], green: 'medium', bunkers: 1, carry: false, sideWater: false },
+  { yards: [140, 152], green: 'medium', bunkers: 2, carry: false, sideWater: true },
+  { yards: [180, 196], green: 'small', bunkers: 2, carry: true, sideWater: false },
 ] as const;
 
 const NAMES = ['The Leap', 'Long Shadow', 'The Lantern', 'Last Light', 'The Steps', 'The Spire', 'Far Flag', 'The Gate', 'Hollow Point', 'The Edge', 'Skyfall', 'The Basin', 'Whisper', 'The Drop', 'High Wire', 'The Crown'];
