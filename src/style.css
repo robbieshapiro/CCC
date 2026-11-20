@@ -2614,3 +2614,9 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 @keyframes shotShine { 0%, 60% { background-position: 100% 0; } 100% { background-position: -50% 0; } }
 @keyframes btnShine { 0%, 55% { background-position: -150% 0; } 100% { background-position: 250% 0; } }
 @media (prefers-reduced-motion: reduce) { .shot-pot-big b, .btn.shine::after { animation: none; } }
+/* the Daily Shot's pot and total (Nov 20, later): out of the way of the swing, top left under Leave, as a small
+   scoreboard card rather than a button (square corners, a gold edge, small caps, nothing to tap) */
+.shot-hud { top: calc(66px + env(safe-area-inset-top)); bottom: auto; left: 14px; transform: none; flex-direction: column; align-items: flex-start; gap: 4px; padding: 6px 10px 6px 9px; border-radius: 4px; border: 0; border-left: 3px solid #e6c35c; background: rgba(8, 18, 13, 0.55); backdrop-filter: blur(3px); box-shadow: none; }
+.shot-hud > span { display: flex; align-items: baseline; gap: 6px; }
+.shot-hud small { font-size: 9px; letter-spacing: 0.14em; color: rgba(205, 238, 221, 0.8); min-width: 32px; }
+.shot-hud b { font: 700 14px var(--serif); }
