@@ -49,7 +49,7 @@ import { barSummary } from './bar';
 import { board } from '../standings';
 import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '../purse';
 import { canShare, dailySummary, share, shotSummary } from './daily';
-import { dailyHoles, isShotDay, SHOT_HOLES, ftLabel, totalFt } from '../dailyholes';
+import { dailyHoles, isShotDay, SHOT_ALL, SHOT_HOLES, SHOT_TRIES, ftLabel, totalFt } from '../dailyholes';
 import { aceWin, bigMoment } from './acewin';
 import { scorePop } from './moments';
 import { KIND_NAME, packShot, unpackShot, withHoleNo, type ReplayData, type ReplayHole, type ReplayKind } from '../replay';
@@ -765,7 +765,7 @@ async function shotRound(snap: Snapshot) {
   const board = await api.dailyBoard(s, day).catch((e) => ((failed = (e as Error).message), null));
   // say why rather than bounce home without a word
   if (!board) return void tell("The Daily Shot didn't load", `<p>${esc(failed || 'Try again in a minute.')}</p>`).then(back);
-  if (board.tries.length >= SHOT_HOLES) return void shotSummary(day, snap.groupName, back);
+  if (board.tries.length >= SHOT_ALL) return void shotSummary(day, snap.groupName, back);
   const me = snap.players.find((p) => p.id === snap.me)!;
   const set = dailyHoles(day);
   const done = [...board.tries];
@@ -807,10 +807,10 @@ async function shotRound(snap: Snapshot) {
       eyebrow: 'The Daily Shot',
       stations: [{ name: `${x.yards} yd`, at: x.from }],
       wind: x.wind,
-      tag: () => '',
+      tag: () => `Shot ${(done.length % SHOT_TRIES) + 1} of ${SHOT_TRIES}`,
       report: (r) => (r.holed ? 'In the hole!' : r.lost ? 'Wet' : ftLabel(Math.hypot(r.end.x - cup.x, r.end.y - cup.y) * SCALE)),
       onResult: (r) => {
-        const t = { hole: i + 1, ft: r.ft, holed: r.holed, lost: r.lost };
+        const t = { hole: i + 1, try: (done.length % SHOT_TRIES) + 1, ft: r.ft, holed: r.holed, lost: r.lost };
         done.push(t);
         drawHud();
         if (r.holed) keepShot(g, 'ace', 1000, { kind: 'ace', day }, `Ace for ${money(pot)}`);
@@ -827,14 +827,21 @@ async function shotRound(snap: Snapshot) {
             }
           })
           .catch((e) => void tell("That shot didn't count", `<p>${esc((e as Error).message)}</p>`).then(back));
+        // three shots on each hole: the first two stay on the tee; after the third, the next hole (or the summary)
+        const holeDone = done.length % SHOT_TRIES === 0;
+        if (!holeDone && !win) return true;
         const next = () =>
-          done.length < SHOT_HOLES ? playHole(done.length) : (window.clearInterval(tick), void shotSummary(day, snap.groupName, back));
+          done.length >= SHOT_ALL
+            ? (window.clearInterval(tick), void shotSummary(day, snap.groupName, back))
+            : holeDone
+              ? playHole(Math.floor(done.length / SHOT_TRIES))
+              : playHole(i);
         void (win ? win.closed : Promise.resolve()).then(() => window.setTimeout(next, win ? 300 : 2200));
         return false;
       },
     });
   };
-  playHole(done.length);
+  playHole(Math.floor(done.length / SHOT_TRIES));
 }
 
 // The Ace Pot (src/acepot.ts): today's par 3, $50 a swing, three a day. Each swing is settled as it lands; an ace takes

@@ -961,13 +961,13 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const db = load();
     const me = homeOf(db, playerByToken(db, session.token));
     const mine = (db.shotTries ?? []).filter((x) => x.playerId === me.id && x.day === day);
-    if (mine.length >= 3) throw new Error("That's your three today. Back tomorrow.");
-    if (t.hole !== mine.length + 1) throw new Error('One hole at a time.');
+    if (mine.length >= 9) throw new Error("That's your nine today. Back tomorrow.");
+    if (t.hole !== Math.floor(mine.length / 3) + 1) throw new Error('One hole at a time.');
     const lost = !t.holed && (t.lost || t.ft === null);
     const ft = t.holed ? 0 : lost ? null : Math.round(Math.min(9999, Math.max(0, t.ft ?? 0)) * 10) / 10;
     const pot = acePotLocal(db);
     const at = new Date().toISOString();
-    (db.shotTries ??= []).push({ playerId: me.id, day, hole: t.hole, ft, holed: t.holed, lost, at });
+    (db.shotTries ??= []).push({ playerId: me.id, day, hole: t.hole, try: (mine.length % 3) + 1, ft, holed: t.holed, lost, at });
     (db.aceSwings ??= []).push({ playerId: me.id, day, holed: t.holed, ft, pot, payout: t.holed ? pot : 0, at });
     save(db);
     return { holed: t.holed, payout: t.holed ? pot : 0, pot: acePotLocal(db), played: mine.length + 1 };
@@ -981,14 +981,17 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const ft = (x: ShotTry) => (x.holed ? 0 : x.lost || x.ft === null ? 150 : x.ft);
     const rows = [...by.entries()].map(([id, xs]) => {
       const p = db.players.find((y) => y.id === id)!;
-      return { id, p, xs, total: Math.round(xs.reduce((a, x) => a + ft(x), 0) * 10) / 10, aces: xs.filter((x) => x.holed).length, lost: xs.filter((x) => x.lost && !x.holed).length, last: xs.map((x) => x.at).sort().pop()! };
+      // the best on each hole, added; a hole lost only when every shot on it was wet
+      const holes = [1, 2, 3].map((h) => xs.filter((x) => x.hole === h)).filter((g) => g.length);
+      const total = Math.round(holes.reduce((a, g) => a + Math.min(...g.map(ft)), 0) * 10) / 10;
+      return { id, p, xs, total, aces: xs.filter((x) => x.holed).length, lost: holes.filter((g) => g.every((x) => x.lost && !x.holed)).length, last: xs.map((x) => x.at).sort().pop()! };
     });
-    const done = rows.filter((r) => r.xs.length === 3).sort((a, b) => a.total - b.total || a.lost - b.lost || b.aces - a.aces || a.last.localeCompare(b.last));
+    const done = rows.filter((r) => r.xs.length === 9).sort((a, b) => a.total - b.total || a.lost - b.lost || b.aces - a.aces || a.last.localeCompare(b.last));
     const mineRow = rows.find((r) => r.id === me.id);
     const place = done.findIndex((r) => r.id === me.id) + 1 || null;
     const last = [...(db.aceSwings ?? [])].reverse().find((x) => x.holed);
     return {
-      tries: (mineRow?.xs ?? []).sort((a, b) => a.hole - b.hole).map((x) => ({ hole: x.hole, ft: x.ft, holed: x.holed, lost: x.lost })),
+      tries: (mineRow?.xs ?? []).sort((a, b) => a.hole - b.hole || (a.try ?? 1) - (b.try ?? 1)).map((x) => ({ hole: x.hole, try: x.try, ft: x.ft, holed: x.holed, lost: x.lost })),
       total: mineRow ? mineRow.total : null,
       place,
       players: done.length,

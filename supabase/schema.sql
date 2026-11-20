@@ -1981,7 +1981,7 @@ begin
       select json_build_object('day', d, 'name', pe.name, 'club', club_label(pe.k, pe.h, pe.group_id), 'ft', t.total, 'holed', false, 'total', true,
         'ids', coalesce((select json_agg(p.id) from players p where p.group_id = me.group_id and lower(p.name) = t.k and p.pin_hash = t.h), '[]'))
       from shot_totals(d) t join people pe on pe.k = t.k and pe.h = t.h
-      where t.played = 3 order by t.total, t.lost, t.aces desc, t.last_at limit 1
+      where t.played = 9 order by t.total, t.lost, t.aces desc, t.last_at limit 1
     );
   end if;
   return (
@@ -2620,19 +2620,33 @@ create table if not exists daily_tries (
 );
 alter table daily_tries enable row level security;
 create index if not exists daily_tries_day on daily_tries (day);
+-- three shots on each hole (Nov 20, later): which of the three this was; the key is the hole and the shot
+alter table daily_tries add column if not exists try int not null default 1 check (try between 1 and 3);
+do $$ begin
+  if exists (select 1 from pg_constraint where conname = 'daily_tries_player_id_day_hole_key') then
+    alter table daily_tries drop constraint daily_tries_player_id_day_hole_key;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'daily_tries_player_day_hole_try_key') then
+    alter table daily_tries add constraint daily_tries_player_day_hole_try_key unique (player_id, day, hole, try);
+  end if;
+end $$;
 
 -- what a try adds to the day's total
 create or replace function shot_ft(p_holed boolean, p_lost boolean, p_ft numeric) returns numeric
 language sql immutable as $$ select case when p_holed then 0 when p_lost or p_ft is null then 150 else p_ft end $$;
 
--- each person's day: their total, holes played, lost balls, holes in one, and when they finished. A person is the
--- same name and PIN across clubs.
+-- each person's day: three shots on each hole, the best on each counts and the three bests add up to the total (a
+-- hole where every shot went wet counts 150 ft). played: shots taken, of nine; lost: holes with every shot wet; aces:
+-- holes in one; last_at: their last shot. A person is the same name and PIN across clubs.
 create or replace function shot_totals(p_day date) returns table (k text, h text, total numeric, played int, lost int, aces int, last_at timestamptz)
 language sql stable security definer set search_path = public, extensions as $$
-  select lower(p.name), p.pin_hash, sum(shot_ft(t.holed, t.lost, t.ft)), count(*)::int,
-    count(*) filter (where t.lost and not t.holed)::int, count(*) filter (where t.holed)::int, max(t.created_at)
-  from daily_tries t join players p on p.id = t.player_id where t.day = p_day
-  group by lower(p.name), p.pin_hash
+  with x as (
+    select lower(p.name) as k, p.pin_hash as h, t.hole, min(shot_ft(t.holed, t.lost, t.ft)) as best, count(*) as n,
+      bool_and(t.lost and not t.holed) as wet, count(*) filter (where t.holed) as aces, max(t.created_at) as last_at
+    from daily_tries t join players p on p.id = t.player_id where t.day = p_day
+    group by lower(p.name), p.pin_hash, t.hole
+  )
+  select k, h, sum(best), sum(n)::int, count(*) filter (where wet)::int, sum(aces)::int, max(last_at) from x group by k, h
 $$;
 revoke all on function shot_totals(date) from public, anon, authenticated;
 
@@ -2642,7 +2656,7 @@ create or replace function shot_places() returns table (day date, k text, h text
 language sql stable security definer set search_path = public, extensions as $$
   select d.day, t.k, t.h, row_number() over (partition by d.day order by t.total, t.lost, t.aces desc, t.last_at)::int as place
   from (select distinct day from daily_tries where day < game_today()) d cross join lateral shot_totals(d.day) t
-  where t.played = 3
+  where t.played = 9
 $$;
 revoke all on function shot_places() from public, anon, authenticated;
 
@@ -3791,14 +3805,15 @@ begin
   perform pg_advisory_xact_lock(hashtext('acepot'));
   select count(*), max(t.created_at) into n, last from daily_tries t join players p on p.id = t.player_id
     where t.day = p_day and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash;
-  if n >= 3 then raise exception 'That''s your three today. Back tomorrow.'; end if;
-  if p_hole is distinct from n + 1 then raise exception 'One hole at a time.'; end if;
+  -- nine shots: three on hole 1, then three on hole 2, then three on hole 3
+  if n >= 9 then raise exception 'That''s your nine today. Back tomorrow.'; end if;
+  if p_hole is distinct from n / 3 + 1 then raise exception 'One hole at a time.'; end if;
   if last is not null and now() - last < interval '3 seconds' then raise exception 'Easy. One shot at a time.'; end if;
   v_lost := coalesce(p_lost, false) and not coalesce(p_holed, false);
   v_ft := case when p_holed then 0 when v_lost or p_ft is null then null else round(least(greatest(p_ft, 0), 9999), 1) end;
   v_lost := v_lost or (v_ft is null and not coalesce(p_holed, false));
   pot := ace_pot();
-  insert into daily_tries (player_id, day, hole, ft, holed, lost) values (me.id, p_day, p_hole, v_ft, coalesce(p_holed, false), v_lost);
+  insert into daily_tries (player_id, day, hole, try, ft, holed, lost) values (me.id, p_day, p_hole, n % 3 + 1, v_ft, coalesce(p_holed, false), v_lost);
   insert into ace_swings (player_id, day, holed, ft, pot, payout)
     values (me.id, p_day, coalesce(p_holed, false), v_ft, pot, case when p_holed then pot else 0 end);
   return json_build_object('holed', coalesce(p_holed, false), 'payout', case when p_holed then pot else 0 end, 'pot', ace_pot(), 'played', n + 1);
@@ -3819,15 +3834,15 @@ begin
       select t.*, pe.name, pe.home_id, pe.group_id,
         row_number() over (order by t.total, t.lost, t.aces desc, t.last_at)::int as place,
         exists (select 1 from players s where s.group_id = me.group_id and lower(s.name) = t.k and s.pin_hash = t.h) as here
-      from t join people pe on pe.k = t.k and pe.h = t.h where t.played = 3
+      from t join people pe on pe.k = t.k and pe.h = t.h where t.played = 9
     ), mine as (select * from done where k = lower(me.name) and h = me.pin_hash)
     select json_build_object(
-      'tries', coalesce((select json_agg(json_build_object('hole', x.hole, 'ft', x.ft, 'holed', x.holed, 'lost', x.lost) order by x.hole)
+      'tries', coalesce((select json_agg(json_build_object('hole', x.hole, 'try', x.try, 'ft', x.ft, 'holed', x.holed, 'lost', x.lost) order by x.hole, x.try)
         from daily_tries x join players p on p.id = x.player_id where x.day = p_day and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash), '[]'),
       'total', (select total from t where k = lower(me.name) and h = me.pin_hash),
       'place', (select place from mine),
       'players', (select count(*) from done),
-      'playing', (select count(*) from t where played < 3),
+      'playing', (select count(*) from t where played < 9),
       'beat', (select count(*) from done d, mine m where d.place > m.place),
       'others', (select count(*) - 1 from done where exists (select 1 from mine)),
       'clubPlace', (select count(*) from done d, mine m where d.here and d.place <= m.place),

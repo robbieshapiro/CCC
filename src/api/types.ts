@@ -195,7 +195,7 @@ export type DailyRow = { playerId?: string; avatar?: Avatar; name: string; club:
 export type DailyState = { mine: DailyTry[]; board: DailyRow[]; players: number; streak: number };
 export type DailyDay = { day: string; players: number; tries: number };
 // The Daily Shot, three holes (from Nov 20, src/dailyholes.ts; daily_board in supabase/schema.sql)
-export type ShotTry = { hole: number; ft: number | null; holed: boolean; lost: boolean };
+export type ShotTry = { hole: number; try?: number; ft: number | null; holed: boolean; lost: boolean };
 export type ShotRow = { playerId?: string; avatar?: Avatar; name: string; club: string; total: number; aces: number; lost: number; here: boolean; mine: boolean };
 export type ShotBoard = {
   tries: ShotTry[];

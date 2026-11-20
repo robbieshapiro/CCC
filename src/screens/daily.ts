@@ -4,7 +4,7 @@ import { face } from '../faces';
 import { prizesLine } from '../bonus';
 import { api } from '../api';
 import type { DailyCrown, DailyState, DailyTry, ShotBoard, ShotTry } from '../api/types';
-import { dailyHoles, ftLabel, SHOT_HOLES, totalFt } from '../dailyholes';
+import { bestOn, dailyHoles, ftLabel, SHOT_ALL, SHOT_HOLES, SHOT_TRIES, totalFt } from '../dailyholes';
 import { money } from '../purse';
 import { bestTry, DAILY_TRIES, dailyShot, resultLabel, tryMark } from '../daily';
 import { requireSession } from '../state';
@@ -121,8 +121,8 @@ export const ordinalOf = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 
 export function shotShareText(day: string, b: ShotBoard) {
   const set = dailyHoles(day);
   const holes = set.holes.map((x) => {
-    const t = b.tries.find((y) => y.hole === x.n);
-    return t ? shotMark(t) : '–';
+    const best = bestOn(b.tries, x.n);
+    return best === null ? '–' : best === 0 ? '⛳' : best >= 150 ? '💧' : ftLabel(best);
   });
   const closer = closerLine(b);
   return `CCC Daily Shot #${set.number}\n${holes.join(' · ')}\n${ftLabel(totalFt(b.tries))} total${closer ? ` · ${closer.replace(/^Closer/, 'closer').replace(/ today$/, '')}` : ''}\n${location.origin}`;
@@ -156,8 +156,8 @@ export async function shotSummary(day: string, clubName: string, onClose: () => 
         <h2>${b ? ftLabel(totalFt(b.tries)) : '–'} <small>total</small></h2>
         <ul class="shot-holes">${set.holes
           .map((x) => {
-            const t = b?.tries.find((y) => y.hole === x.n);
-            return `<li><b>Hole ${x.n}</b><em>${t ? shotMark(t) : '–'}</em></li>`;
+            const best = b ? bestOn(b.tries, x.n) : null;
+            return `<li><b>Hole ${x.n}</b><em>${best === null ? '–' : best === 0 ? '⛳ Ace' : best >= 150 ? '💧' : ftLabel(best)}</em></li>`;
           })
           .join('')}</ul>
         ${closer ? `<p class="shot-closer">${esc(closer)}</p>` : ''}
@@ -179,16 +179,37 @@ export async function shotSummary(day: string, clubName: string, onClose: () => 
 
 export { SHOT_HOLES };
 
-// The Daily Shot on home (from Nov 20): the first thing on the page. Before you've played, today's three worlds, the
-// Ace Pot and one tap to start; partway, where you are and Continue; done, your total and where it stands, collapsed.
-// The last line points at whatever's left today: your daily cards, or tomorrow.
+// The Daily Shot on home (from Nov 20): the first thing on the page. The title and number, the Ace Pot as a big gold
+// figure that counts up from what you last saw, today's leader, and one button. Partway: Continue; done: your total
+// and where it stands, then whatever's left today (your daily card, or tomorrow).
 export function dailyShotCard(day: string) {
   const set = dailyHoles(day);
   return `<section class="shot-card" id="shot-card" data-state="fresh">
-    <div class="shot-top"><h2>The Daily Shot <span>#${set.number}</span></h2><span class="shot-potline">Ace Pot <b data-shot-pot>…</b></span></div>
-    <div data-shot-body><a class="btn big gold" href="#/daily">Play</a></div>
+    <div class="shot-top"><h2>The Daily Shot <span>#${set.number}</span></h2><span class="shot-lead" data-shot-lead></span></div>
+    <div class="shot-pot-big"><small>Ace Pot</small><b data-shot-pot>…</b><em>+$50 every miss</em></div>
+    <div data-shot-body><a class="btn big gold shine" href="#/daily">Play</a></div>
     <p class="shot-next" data-shot-next hidden></p>
   </section>`;
+}
+
+// the pot counts up from the last figure this phone showed (a quick ticker, so a pot that grew overnight shows it)
+function tickPot(el: HTMLElement, to: number) {
+  const key = 'ccc-shot-pot';
+  let from = to;
+  try {
+    from = Number(localStorage.getItem(key)) || to;
+    localStorage.setItem(key, String(to));
+  } catch {
+    /* private mode: no ticker */
+  }
+  if (from >= to || matchMedia('(prefers-reduced-motion: reduce)').matches) return void (el.textContent = money(to));
+  const t0 = performance.now();
+  const step = (t: number) => {
+    const k = Math.min(1, (t - t0) / 1400);
+    el.textContent = money(Math.round(from + (to - from) * (1 - (1 - k) ** 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 export async function bindDailyShot(day: string, cardsLeft: number | null) {
@@ -196,18 +217,20 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
   if (!el) return;
   const b = await api.dailyBoard(requireSession(), day).catch(() => null);
   if (!b || !document.getElementById('shot-card')) return;
-  const set = dailyHoles(day);
-  el.querySelector('[data-shot-pot]')!.textContent = money(b.pot);
+  tickPot(el.querySelector<HTMLElement>('[data-shot-pot]')!, b.pot);
+  const top = b.board[0];
+  el.querySelector<HTMLElement>('[data-shot-lead]')!.innerHTML = top
+    ? `${face(top, 22)}<span>${top.mine ? 'You lead' : `${esc(top.name.split(' ')[0])} leads`} · ${ftLabel(top.total)}</span>`
+    : '<span>Be first today</span>';
   const played = b.tries.length;
   const body = el.querySelector<HTMLElement>('[data-shot-body]')!;
   const next = el.querySelector<HTMLElement>('[data-shot-next]')!;
   const cardsLine = cardsLeft ? `<a href="#/round">Now your daily card ›</a>` : '';
-  void set;
   if (!played) return;
   next.hidden = false;
-  if (played < SHOT_HOLES) {
+  if (played < SHOT_ALL) {
     el.dataset.state = 'going';
-    body.innerHTML = `<a class="btn big gold" href="#/daily">Continue · hole ${played + 1} of ${SHOT_HOLES}</a>`;
+    body.innerHTML = `<a class="btn big gold shine" href="#/daily">Continue · hole ${Math.floor(played / SHOT_TRIES) + 1}, shot ${(played % SHOT_TRIES) + 1}</a>`;
     next.textContent = `${ftLabel(totalFt(b.tries))} so far`;
     return;
   }
@@ -215,5 +238,4 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
   const closer = closerLine(b);
   body.innerHTML = `<a class="shot-done" href="#/daily"><b>${ftLabel(totalFt(b.tries))}</b>${closer ? `<em>${esc(closer)}</em>` : ''}</a>`;
   next.innerHTML = cardsLine || 'Back tomorrow.';
-  if (!cardsLine) next.classList.add('quiet');
 }

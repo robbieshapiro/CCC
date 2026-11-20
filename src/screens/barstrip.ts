@@ -139,7 +139,7 @@ export function bindBarCta() {
   void api
     .dailyBoard(s, todayInGameTz())
     .then((b) => {
-      if (b.tries.length >= 3) return;
+      if (b.tries.length >= 9) return;
       cta.href = '#/daily';
       cta.textContent = `${b.tries.length ? 'Finish' : 'Play'} the Daily Shot · Ace Pot ${money(b.pot)} ›`;
     })

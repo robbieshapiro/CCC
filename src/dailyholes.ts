@@ -13,6 +13,8 @@ import { makeRng } from './seed';
 
 export const SHOT_FROM = '2026-11-20'; // the first day of the three-hole Daily Shot (before it: one shot, src/daily.ts)
 export const SHOT_HOLES = 3;
+export const SHOT_TRIES = 3; // shots on each hole; the best on each counts
+export const SHOT_ALL = SHOT_HOLES * SHOT_TRIES;
 export const LOST_FT = 150; // a ball in the water or lost: what it adds to the day's total
 const FIRST = '2026-10-28'; // Daily Shot #1, as before
 
@@ -131,5 +133,12 @@ export function dailyHoles(day: string): DailyHoles {
 
 // a try's feet toward the day's total: holed 0, lost 150, else its distance
 export const tryFt = (t: { ft: number | null; holed: boolean; lost: boolean }) => (t.holed ? 0 : t.lost || t.ft === null ? LOST_FT : t.ft);
-export const totalFt = (tries: { ft: number | null; holed: boolean; lost: boolean }[]) => Math.round(tries.reduce((a, t) => a + tryFt(t), 0) * 10) / 10;
+type Try = { hole?: number; ft: number | null; holed: boolean; lost: boolean };
+// the best shot on a hole (null: not played yet)
+export const bestOn = (tries: Try[], hole: number) => {
+  const xs = tries.filter((t) => (t.hole ?? 1) === hole).map(tryFt);
+  return xs.length ? Math.min(...xs) : null;
+};
+// the day's total so far: the best on each hole played, added
+export const totalFt = (tries: Try[]) => Math.round([1, 2, 3].reduce((a, h) => a + (bestOn(tries, h) ?? 0), 0) * 10) / 10;
 export const ftLabel = (ft: number) => `${ft < 10 ? ft.toFixed(1) : Math.round(ft)} ft`;

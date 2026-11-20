@@ -79,7 +79,7 @@ export function barPane(snap: Snapshot) {
       <h2 class="bar-wall">Today's contests</h2>
       <p class="bar-wall-sub">The club puts up the prizes. The Daily Shot, the long drive and the Target Range pay the day's top three; an ace on the Daily Shot takes the pot.</p>
       <div class="bar-games">
-        <a class="bar-game ace" href="#/daily" data-game="daily"><i>🎯</i><div><b>The Daily Shot</b><span>Three par 3s in three worlds · lowest total wins · top 3 paid ${prizesLine()} · an ace on any takes the pot</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
+        <a class="bar-game ace" href="#/daily" data-game="daily"><i>🎯</i><div><b>The Daily Shot</b><span>Three holes, three shots each · best on each hole counts, lowest total wins · top 3 paid ${prizesLine()} · an ace on any takes the pot</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
         <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 Fireballs · top 3 paid ${prizesLine()} today</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game" href="#/bar/targets" data-game="targets"><i>🏹</i><div><b>The Target Range</b><span>10 balls from the top deck · land it in a ring on the fly, or drive it through the back net's window · streaks multiply · one game counts a day · top 3 paid ${prizesLine()} today</span></div><p data-mine="targets"></p><div data-board="targets"></div></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
@@ -152,7 +152,7 @@ export async function fillBar(snap: Snapshot) {
     const played = daily.tries.length;
     put(
       'daily',
-      `Ace Pot ${money(daily.pot)} · ${played >= 3 ? `you: ${ftLabel(daily.total ?? 0)}` : played ? `hole ${played + 1} of 3 next` : 'not played today'}`,
+      `Ace Pot ${money(daily.pot)} · ${played >= 9 ? `you: ${ftLabel(daily.total ?? 0)}` : played ? `${played} of 9 shots in` : 'not played today'}`,
       top3(daily.board.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: ftLabel(r.total), mine: r.mine }))),
     );
   }
