@@ -2097,7 +2097,7 @@ const SAMPLE_WORLDS: Record<string, unknown> = {
     name: 'The Sea of Tranquility', light: 'night', sky: ['#000000', '#05060c', '#1a1d2b'],
     ground: { fairway: '#a7a8ad', green: '#c9cbd2', rough: '#7c7d82', sand: '#5b5c61', beyond: '#4a4b50' },
     water: { kind: 'slime', color: '#6fdc3a' }, coast: false, drift: 'none', trees: ['rock'],
-    landmarks: [{ kind: 'flagpole', hole: 1, along: 0.5, across: -2.8 }], backdrop: 'mountains',
+    landmarks: [{ kind: 'flagpole', hole: 1, along: 0.5, across: -2.8 }], backdrop: 'none',
   },
   candy: {
     name: 'Sugarloaf Hollow', light: 'golden', sky: ['#7fd3ff', '#ffc6e8', '#fff1b8'],
@@ -2109,7 +2109,7 @@ const SAMPLE_WORLDS: Record<string, unknown> = {
     name: 'Hollow Hills', light: 'night', sky: ['#05030a', '#1c1030', '#4a2a50'],
     ground: { fairway: '#5f7a4a', green: '#7aa060', rough: '#2f3a28', sand: '#8a7a68', beyond: '#1e1a22' },
     water: { kind: 'slime', color: '#5fd03a' }, coast: false, drift: 'fireflies', trees: ['deadtree', 'tomb'],
-    landmarks: [{ kind: 'mausoleum', hole: 1, along: 0.5, across: -2.8 }, { kind: 'bigpumpkin', hole: 2, along: 0.7, across: 3 }, { kind: 'lantern', hole: 3, along: 0.3, across: 2.6 }, { kind: 'crow', hole: 3, along: 0.6, across: -2.6 }], backdrop: 'swamp',
+    landmarks: [{ kind: 'mausoleum', hole: 1, along: 0.5, across: -2.8 }, { kind: 'bigpumpkin', hole: 2, along: 0.7, across: 3 }, { kind: 'lantern', hole: 3, along: 0.3, across: 2.6 }, { kind: 'crow', hole: 3, along: 0.6, across: -2.6 }], backdrop: 'none',
   },
 };
 function sampleSpec(prompt: string, change?: string): Design['spec'] {
