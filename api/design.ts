@@ -198,7 +198,9 @@ export async function POST(request: Request) {
   await db.from('design_calls').insert({ player_id: me.id });
   const claude = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   try {
-    const res = await claude.beta.messages.create({
+    // streamed: a three-hole course with its world can take minutes, and the SDK won't wait that long on a plain request
+    const res = await claude.beta.messages
+      .stream({
       model: MODEL,
       max_tokens: course ? 32000 : 16000,
       output_config: { effort: 'medium', format: { type: 'json_schema', schema: course ? COURSE : SCHEMA } },
@@ -206,7 +208,8 @@ export async function POST(request: Request) {
       fallbacks: 'default',
       system: SYSTEM,
       messages: [{ role: 'user', content }],
-    });
+      })
+      .finalMessage();
     if (res.stop_reason === 'refusal') return json({ error: "The architect won't build that one. Try another idea." }, 422);
     if (res.stop_reason !== 'end_turn') return json({ error: 'The architect ran out of paper. Try a simpler idea.' }, 502);
     const out = JSON.parse(res.content.map((b) => (b.type === 'text' ? b.text : '')).join('')) as Record<string, unknown>;
