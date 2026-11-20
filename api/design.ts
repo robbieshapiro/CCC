@@ -153,6 +153,19 @@ const COURSE = {
   additionalProperties: false,
 };
 
+// the JSON in a reply: from the first brace to the last (in case a word or a code fence comes with it)
+function readJson(text: string): Record<string, unknown> | null {
+  const a = text.indexOf('{');
+  const b = text.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  try {
+    const o = JSON.parse(text.slice(a, b + 1));
+    return o && typeof o === 'object' && !Array.isArray(o) ? (o as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 export async function POST(request: Request) {
@@ -195,6 +208,9 @@ export async function POST(request: Request) {
     : course
       ? `${me.name} describes the three-hole course they'd like:\n"${prompt}"`
       : `${me.name} describes the hole they'd like:\n"${prompt}"`;
+  // a course is too big for a strict answer form (the API refuses its grammar), so the architect writes the JSON itself
+  // against the schema, and the app tidies every value (src/designer/course.ts, hole.ts, world.ts)
+  const ask = course ? `${content}\n\nReply with only the JSON for the course, nothing else, in exactly this shape (a JSON Schema):\n${JSON.stringify(COURSE)}` : content;
 
   await db.from('design_calls').insert({ player_id: me.id });
   const claude = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
@@ -204,16 +220,18 @@ export async function POST(request: Request) {
       .stream({
       model: MODEL,
       max_tokens: course ? 32000 : 16000,
-      output_config: { effort: 'medium', format: { type: 'json_schema', schema: course ? COURSE : SCHEMA } },
+      output_config: course ? { effort: 'medium' } : { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       system: SYSTEM,
-      messages: [{ role: 'user', content }],
+      messages: [{ role: 'user', content: ask }],
       })
       .finalMessage();
+    console.log('design', course ? 'course' : 'hole', res.stop_reason, `${res.usage.output_tokens} out`, `${res.usage.input_tokens} in`);
     if (res.stop_reason === 'refusal') return json({ error: "The architect won't build that one. Try another idea." }, 422);
     if (res.stop_reason !== 'end_turn') return json({ error: 'The architect ran out of paper. Try a simpler idea.' }, 502);
-    const out = JSON.parse(res.content.map((b) => (b.type === 'text' ? b.text : '')).join('')) as Record<string, unknown>;
+    const out = readJson(res.content.map((b) => (b.type === 'text' ? b.text : '')).join(''));
+    if (!out) return json({ error: 'The architect smudged the drawing. Try again.' }, 502);
     const clean = (o: Record<string, unknown>) => {
       for (const k of ['review', 'hint', 'name']) if (typeof o[k] === 'string') o[k] = (o[k] as string).replace(/\s*[—–]\s*/g, ', ');
       return o;
