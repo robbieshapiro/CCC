@@ -2520,3 +2520,14 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .bs-design b { font: 700 19px/1.15 var(--serif); }
 .bs-design div > span { font-size: 12.5px; color: #5a4618; }
 .bs-design .bsf-go { background: #1f5a3e; color: #fff; }
+/* Around the club's Pro Shop tile (Nov 20): your bank and three featured pieces */
+.pm-grid .pm-shop { grid-column: 1 / -1; min-height: 0; color: #3a2a08; background: linear-gradient(135deg, #fff4d6, #f3d892); border-color: #e6c35c; }
+.pm-shop-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pm-shop-top b { flex: 1; }
+.pm-bank { font-size: 13px; color: #5a4618; }
+.pm-bank b { font-size: 15px; color: #1f5a3e; }
+.pm-picks { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.pm-picks li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.55); }
+.pm-picks em { font-style: normal; font-weight: 800; color: #8a6514; white-space: nowrap; }
+.pm-shop-go { justify-self: start; margin-top: 6px; padding: 6px 12px; border-radius: 999px; background: #1f5a3e; color: #fff; font-weight: 800; font-size: 13px; }
+.pm-grid .pm-shop .pm-shop-go { color: #fff; }

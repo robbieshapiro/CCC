@@ -293,6 +293,7 @@ export class Course3D {
   private strokes = 0;
   private zones = new Set<string>();
   private drink: { kind: Drink; shots: number } | null = null;
+  private cooler: THREE.Group | null = null;
   // the Midway's power-ups and curses for the hole being played (set by the round before each hole): the Magnet drops
   // a ball that stops on the green within MAGNET_FT; the Express Lane sends a tee shot that finishes in its circle to the
   // green; the Short Pour caps the power; Irons Only takes the driver and wood out of the bag
@@ -678,7 +679,7 @@ export class Course3D {
 
   // Plays one hole to completion. The beverage cart may stop by on the tee.
   // opts.strokes: a card picked up mid-hole starts again from the tee, keeping the strokes already played on it
-  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: Visit; of?: number; strokes?: number } = {}): Promise<HoleResult> {
+  play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: Visit; of?: number; strokes?: number; cooler?: boolean } = {}): Promise<HoleResult> {
     this.clearGhostBall();
     this.showcaseAnim = [];
     this.holesInRound = opts.of ?? this.holesInRound;
@@ -750,6 +751,9 @@ export class Course3D {
     this.placeGhosts();
     if (opts.cart && !hole.noCart && !hole.putterOnly)
       this.cart = opts.cart === 'reginald' ? new ReginaldTray(this.scene, hole, (k) => this.order(k)) : new CartGirl(this.scene, hole, (k) => this.order(k), opts.cart === 'shots');
+    // the 1st tee's cooler (Nov 20): there for whoever finds it, never offered
+    this.cooler = null;
+    if (opts.cooler && !opts.cart && !hole.noCart && !hole.putterOnly && this.world) this.placeCooler();
     this.startFlyover();
     // the practice areas skip the flyover and get straight to it
     if (this.drill) this.endFlyover();
@@ -1635,6 +1639,11 @@ export class Course3D {
       const d = this.drag;
       this.drag = null;
       if (!d || this.mode !== 'aim') return;
+      // a tap on the 1st tee's cooler: Reginald and the tray, not a swing
+      if (!d.kind && this.coolerAt(e.clientX, e.clientY)) {
+        if (this.club === 'putter') this.golfer.setPose('address');
+        return this.openCooler();
+      }
       // a tap on another member: their card, not a swing
       if (!d.kind && this.onGhostTap) {
         const g = this.ghostAt(e.clientX, e.clientY);
@@ -2591,6 +2600,54 @@ export class Course3D {
       this.scene.add(ball, golfer.group, tag);
       this.onCourse.push({ golfer, objs: [ball, golfer.group, tag], at: golfer.group.position.clone(), ghost: g });
     }
+  }
+
+  // A drinks cooler on the 1st tee, a few steps to the golfer's left: tap it before the first swing and Reginald brings
+  // the tray (the drink lasts the hole, as the cart's does). Nothing says it's there.
+  private placeCooler() {
+    const g = new THREE.Group();
+    const box = props.mesh(new THREE.BoxGeometry(2.4, 1.5, 1.5), props.mat('#2f6fb5', { rough: 0.5 }));
+    box.position.y = 0.75;
+    const lid = props.mesh(new THREE.BoxGeometry(2.5, 0.3, 1.6), props.mat('#f4f1ea', { rough: 0.5 }));
+    lid.position.y = 1.62;
+    g.add(box, lid);
+    // bottles in the ice, necks up
+    const glass = ['#7a3f1c', '#e8c86a', '#2f6b3a'];
+    for (let i = 0; i < 3; i++) {
+      const b = props.mesh(new THREE.CylinderGeometry(0.12, 0.2, 0.9, 8), props.mat(glass[i], { rough: 0.2 }));
+      b.position.set(-0.6 + i * 0.6, 2.1, 0.15 - (i % 2) * 0.3);
+      b.rotation.z = (i - 1) * 0.15;
+      g.add(b);
+    }
+    // a bigger, unseen target round it, so a thumb finds it
+    const hit = new THREE.Mesh(new THREE.SphereGeometry(2.6, 8, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+    hit.position.y = 1.2;
+    hit.name = 'cooler-hit';
+    g.add(hit);
+    const side = { x: Math.cos(this.aim), y: -Math.sin(this.aim) };
+    const fwd = { x: Math.sin(this.aim), y: Math.cos(this.aim) };
+    const at = { x: this.pos.x - side.x * 6 + fwd.x * 3, y: this.pos.y - side.y * 6 + fwd.y * 3 };
+    g.position.copy(w3(at.x, at.y, heightAt(this.hole, at.x, at.y)));
+    g.rotation.y = -this.aim + 0.5;
+    this.world!.root.add(g);
+    this.cooler = g;
+  }
+
+  private coolerAt(cx: number, cy: number) {
+    if (!this.cooler || this.strokes > 0 || this.cart) return false;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), this.camera);
+    return ray.intersectObject(this.cooler, true).length > 0;
+  }
+
+  private openCooler() {
+    this.cooler?.parent?.remove(this.cooler);
+    this.cooler = null;
+    this.cart = new ReginaldTray(this.scene, this.hole, (k) => this.order(k));
+    this.mode = 'cart';
+    this.overlay.classList.add('carting');
+    this.cart.arrive(this.pos, this.aim, this.overlay.querySelector('[data-cart]') as HTMLElement);
   }
 
   // Which member (if any) is under a tap: their figure or the name card over them
