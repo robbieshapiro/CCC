@@ -194,6 +194,24 @@ export type DailyTry = { try: number; ft: number | null; holed: boolean; lost: b
 export type DailyRow = { playerId?: string; avatar?: Avatar; name: string; club: string; ft: number | null; holed: boolean; holedTry?: number | null; tries: number; mine: boolean };
 export type DailyState = { mine: DailyTry[]; board: DailyRow[]; players: number; streak: number };
 export type DailyDay = { day: string; players: number; tries: number };
+// The Daily Shot, three holes (from Nov 20, src/dailyholes.ts; daily_board in supabase/schema.sql)
+export type ShotTry = { hole: number; try?: number; ft: number | null; holed: boolean; lost: boolean };
+export type ShotRow = { playerId?: string; avatar?: Avatar; name: string; club: string; total: number; aces: number; lost: number; here: boolean; mine: boolean };
+export type ShotBoard = {
+  tries: ShotTry[];
+  total: number | null; // mine so far (lost = 150 ft)
+  place: number | null; // mine, once all three are played
+  players: number; // finished today, across every club
+  playing: number; // partway
+  beat: number; // finished players I'm closer than
+  others: number; // finished players besides me
+  clubPlace: number; // my place among my club's finished players
+  clubPlayers: number;
+  board: ShotRow[];
+  pot: number;
+  lastAce: { name: string; pot: number; at: string } | null;
+};
+export type ShotResult = { holed: boolean; payout: number; pot: number; played: number };
 // The Nineteenth Hole's weekly contests (see bar.ts): best score of the week, higher is better
 export type BarBoard = { week: string; board: { playerId?: string; avatar?: Avatar; name: string; score: number; mine: boolean }[]; mine: number | null; players: number; playedToday?: boolean };
 export type ClubRow = { id: string; name: string; mine: boolean; members: number; played: number; best: number | null; leaders: string[] | null };
@@ -304,6 +322,8 @@ export interface Api {
   adminOverview(session: Session, window: AdminWindow): Promise<AdminOverview>;
   adminFeedbackDone(session: Session, id: number, done: boolean): Promise<void>;
   dailyState(session: Session, day: string): Promise<DailyState>;
+  dailyBoard(session: Session, day: string): Promise<ShotBoard>;
+  dailySubmit(session: Session, day: string, t: ShotTry): Promise<ShotResult>;
   submitDaily(session: Session, day: string, t: DailyTry): Promise<void>;
   dailyAdmin(session: Session): Promise<DailyDay[]>;
   submitBar(session: Session, game: import('../bar').BarGame, score: number): Promise<void>;

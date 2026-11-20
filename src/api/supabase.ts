@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { LiveCourse, DuelResult, AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, CourseRequest, AgentNote } from './types';
+import type { LiveCourse, DuelResult, AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, ShotBoard, ShotResult, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, CourseRequest, AgentNote } from './types';
 import type { Tweaks } from '../golf3d/tweaks';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
@@ -113,6 +113,8 @@ export const supabaseApi: Api = {
   activityReport: (s) => rpc<MemberActivity[]>('activity_report', { p_token: s.token }),
   adminOverview: (s, window) => rpc<AdminOverview>('admin_overview', { p_token: s.token, p_window: window }),
   dailyState: (s, day) => rpc<DailyState>('daily_state', { p_token: s.token, p_day: day }),
+  dailyBoard: (s, day) => rpc<ShotBoard>('daily_board', { p_token: s.token, p_day: day }),
+  dailySubmit: (s, day, t) => rpc<ShotResult>('daily_submit', { p_token: s.token, p_day: day, p_hole: t.hole, p_ft: t.ft, p_holed: t.holed, p_lost: t.lost }),
   submitDaily: async (s, day, t) => {
     await rpc('submit_daily', { p_token: s.token, p_day: day, p_try: t.try, p_ft: t.ft, p_holed: t.holed, p_lost: t.lost });
   },

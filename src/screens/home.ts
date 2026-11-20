@@ -9,6 +9,7 @@ import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodNam
 import { bindOpen } from './open';
 import { bindLive, liveCards, liveNow } from './live';
 import { bindPlayTiles, playTiles } from './playtiles';
+import { bindDailyShot, dailyShotCard } from './daily';
 import { barStrip, bindBarCta, bindBarStrip } from './barstrip';
 import { openName } from '../season';
 import { openFeedback } from './feedback';
@@ -155,6 +156,7 @@ export function home(snap: Snapshot) {
   render(`
     ${header(snap.groupName, 'play')}
     <main>
+      ${dailyShotCard(snap.today)}
       ${homeScreenTip()}
       ${playoffCard()}
       ${noticesStrip()}
@@ -252,6 +254,7 @@ export function home(snap: Snapshot) {
         bindBarCta();
       }
     });
+  void bindDailyShot(snap.today, cards ? Math.max(0, CARDS_A_DAY - todays.length) : null);
   void bindNotices();
   void bindShoutouts();
   void bindHonours(snap);

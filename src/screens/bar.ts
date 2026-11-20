@@ -3,13 +3,12 @@
 // It's the first tab of the Clubhouse.
 import { face } from '../faces';
 import { api } from '../api';
-import type { BarBoard, DailyState, LiveCourse, Snapshot } from '../api/types';
+import type { BarBoard, LiveCourse, ShotBoard, Snapshot } from '../api/types';
 import { tidyCourse } from '../designer/course';
-import { ACE_ADD, ACE_SWINGS, aceShot, type AceState } from '../acepot';
 import { money } from '../purse';
 import { prizesLine } from '../bonus';
 import { DAILY_BOARD, gameName, scoreLabel, type BarGame } from '../bar';
-import { bestTry, dailyShot, resultLabel } from '../daily';
+import { ftLabel } from '../dailyholes';
 import { MO, staffFace } from '../staff';
 import { requireSession } from '../state';
 import { esc, golferHref } from '../ui';
@@ -61,7 +60,6 @@ function bottles() {
 
 export function barPane(snap: Snapshot) {
   const me = snap.players.find((p) => p.id === snap.me)!;
-  const shot = dailyShot(snap.today);
   return `
     <div class="bar-page bar-room">
       <section class="bar-back">
@@ -79,12 +77,11 @@ export function barPane(snap: Snapshot) {
         <div class="bar-counter" aria-hidden="true"></div>
       </section>
       <h2 class="bar-wall">Today's contests</h2>
-      <p class="bar-wall-sub">The club puts up the prizes. Closest to the Pin, the long drive and the Target Range pay the day's top three; an ace takes the pot.</p>
+      <p class="bar-wall-sub">The club puts up the prizes. The Daily Shot, the long drive and the Target Range pay the day's top three; an ace on the Daily Shot takes the pot.</p>
       <div class="bar-games">
-        <a class="bar-game" href="#/daily" data-game="daily"><i>🎯</i><div><b>Closest to the Pin</b><span>${esc(shot.label)} · top 3 paid ${prizesLine()} today</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
+        <a class="bar-game ace" href="#/daily" data-game="daily"><i>🎯</i><div><b>The Daily Shot</b><span>Three holes, three shots each · best on each hole counts, lowest total wins · top 3 paid ${prizesLine()} · an ace on any takes the pot</span></div><p data-mine="daily"></p><div data-board="daily"></div></a>
         <a class="bar-game" href="#/bar/drive" data-game="drive"><i>🚀</i><div><b>Long drive</b><span>3 swings off the week's longest tee · 2 Fireballs · top 3 paid ${prizesLine()} today</span></div><p data-mine="drive"></p><div data-board="drive"></div></a>
         <a class="bar-game" href="#/bar/targets" data-game="targets"><i>🏹</i><div><b>The Target Range</b><span>10 balls from the top deck · land it in a ring on the fly, or drive it through the back net's window · streaks multiply · one game counts a day · top 3 paid ${prizesLine()} today</span></div><p data-mine="targets"></p><div data-board="targets"></div></a>
-        <a class="bar-game ace" href="#/bar/ace" data-game="acepot"><i>💰</i><div><b>The Ace Pot</b><span>Three swings a day at ${esc(aceShot(snap.today).label)} · the club adds ${money(ACE_ADD)} for every miss, and it carries over until someone aces it</span></div><p data-mine="acepot"></p><div data-board="acepot"></div></a>
         <a class="bar-game midway" href="#/bar/midway" data-game="midway"><i>🎡</i><div><b>The Midway</b><span>Eli's game · three carnival holes · one round a day counts</span></div><p data-mine="midway"></p><div data-board="midway"></div></a>
         <a class="bar-game members" href="#/bar/members" data-game="members" data-members><i>🏗️</i><div><b>Members' Course</b><span data-members-count>A course a member built. Beat their score: $300</span></div><p data-mine="members"></p><div data-board="members"></div></a>
       </div>
@@ -96,7 +93,7 @@ export function barPane(snap: Snapshot) {
       <h2 class="bar-wall">Through the back</h2>
       <div class="bar-doors">
         <button class="desk-cta prize-cta" data-prize><i>🎟️</i><div><b>The Prize Counter</b><span>Power-ups for the Midway, bought with your club money</span></div><em>›</em></button>
-        <a class="desk-cta" href="#/design"><i>✏️</i><div><b>Design a hole</b><span>Describe a golf hole. The architect builds it, you play it</span></div><em>›</em></a>
+        <a class="desk-cta" href="#/design"><i>✏️</i><div><b>Design a course</b><span>One signature hole, any world. The architect builds it, you play it</span></div><em>›</em></a>
       </div>
     </div>`;
 }
@@ -106,12 +103,11 @@ export async function fillBar(snap: Snapshot) {
   const prize = document.querySelector<HTMLButtonElement>('[data-prize]');
   if (prize) prize.onclick = () => void openPrizeCounter();
   // (Hollow Hills mini golf is closed for now: its course and code stay, ready to come back)
-  const [daily, drive, course, midway, ace, targets] = await Promise.all([
-    api.dailyState(s, snap.today).catch(() => null as DailyState | null),
+  const [daily, drive, course, midway, targets] = await Promise.all([
+    api.dailyBoard(s, snap.today).catch(() => null as ShotBoard | null),
     api.barBoard(s, 'drive').catch(() => null as BarBoard | null),
     api.liveMemberCourse(s).catch(() => null as LiveCourse | null),
     api.barBoard(s, 'midway').catch(() => null as BarBoard | null),
-    api.aceState(s).catch(() => null as AceState | null),
     api.barBoard(s, 'targets').catch(() => null as BarBoard | null),
   ]);
   // curses waiting for your next Midway round: the count, not who or what
@@ -153,8 +149,12 @@ export async function fillBar(snap: Snapshot) {
     if (b) b.innerHTML = board;
   };
   if (daily) {
-    const best = bestTry(daily.mine);
-    put('daily', daily.mine.length ? `You: ${resultLabel(best)}` : 'Not played today', top3(daily.board.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: r.holed ? 'Holed' : resultLabel({ ft: r.ft, holed: false, lost: r.ft === null }), mine: r.mine }))));
+    const played = daily.tries.length;
+    put(
+      'daily',
+      `Ace Pot ${money(daily.pot)} · ${played >= 9 ? `you: ${ftLabel(daily.total ?? 0)}` : played ? `${played} of 9 shots in` : 'not played today'}`,
+      top3(daily.board.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: ftLabel(r.total), mine: r.mine }))),
+    );
   }
   // Mo's Book: the favourite's price and your open bets
   void api
@@ -165,15 +165,6 @@ export async function fillBar(snap: Snapshot) {
       put('book', `${b.open ? (fav ? `Favourite: ${fav.name} at ${fav.odds.toFixed(1)}x` : "Mo's taking bets") : 'Closed till Sunday'}${open ? ` · ${open} ${open === 1 ? 'bet' : 'bets'} open` : ''}`, '');
     })
     .catch(() => {});
-  if (ace) {
-    const left = ACE_SWINGS - ace.swingsToday;
-    put(
-      'acepot',
-      `Pot: ${money(ace.pot)} · ${left ? `${left} ${left === 1 ? 'swing' : 'swings'} left today` : 'your swings are in today'}`,
-      (ace.today.length ? top3(ace.today.map((r) => ({ playerId: r.playerId, avatar: r.avatar, name: r.name, label: r.holed ? 'Ace!' : r.ft === null ? 'No ball' : `${r.ft} ft`, mine: r.mine }))) : '<p class="bar-empty">No swings yet today.</p>') +
-        (ace.lastAce ? `<p class="bar-empty">${face(ace.lastAce, 22)}Last won by ${esc(ace.lastAce.name)}, for ${money(ace.lastAce.pot)}</p>` : ''),
-    );
-  }
   if (course) {
     const left = 3 - course.cardsToday;
     put(

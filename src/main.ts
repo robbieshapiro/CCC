@@ -11,7 +11,7 @@ import { join, landing } from './screens/join';
 import { closeWelcome, welcome } from './intro/welcome';
 import { card, leaveCard } from './screens/card';
 import { leaveShop } from './screens/shop';
-import { membersDuel, aceRound, barRound, targetRound, watchReplay, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
+import { membersDuel, barRound, targetRound, watchReplay, closeRound, dailyRound, practice, practiceArea, round } from './screens/round';
 import { playoff } from './screens/playoff';
 import { book } from './screens/book';
 import { clubhouse, isAboutPart, isClubhouseTab } from './screens/clubhouse';
@@ -116,7 +116,8 @@ async function routeTo() {
     if (page === 'playoff') return playoff(s);
     // blackjack, Pop-a-Shot, 8-ball and Ultimate Texas Hold'em are off for now (Nov 17): their screens stay in
     // src/screens, unrouted, and an old link lands on the bar
-    if (page === 'bar' && arg === 'ace') return aceRound(s);
+    // the Ace Pot is played on the Daily Shot now (Nov 20)
+    if (page === 'bar' && arg === 'ace') return void location.replace('#/daily');
     if (page === 'bar' && arg === 'book') return book(s);
     if (page === 'bar' && arg === 'targets') return targetRound(s);
     if (page === 'replay') return watchReplay(s, Number(arg));

@@ -183,7 +183,11 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string, world?: Worl
     if (e === 'climb') return lerp(0, 16, (f - 0.15) / 0.85);
     return 0;
   };
-  const end = at(1.12).p; // a little past the green
+  // a little past the green: 12% of the hole, and never less than 75 ft (on a short par 3, 12% ended at the back of
+  // the green, and a ball a touch long was out of bounds)
+  const fin1 = at(1);
+  const past = Math.max(0.12 * L, 75);
+  const end = { x: fin1.p.x + fin1.dir.x * past, y: fin1.p.y + fin1.dir.y * past };
   const spine: V2[] = [];
   const heights: number[] = [];
   for (let f = -0.04; f <= 1.12 + 1e-6; f += 0.02) {

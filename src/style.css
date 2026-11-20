@@ -2558,3 +2558,65 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .desk-holes.one li b { font-size: 22px; }
 .desk-holes.one .desk-hint { display: block; }
 .desk-holes.one .btn { justify-self: start; }
+
+/* The Daily Shot (Nov 20): first on home. Big and gold before you've played, a slim result once you have */
+.shot-card { margin: 4px 0 16px; padding: 16px; border-radius: 18px; color: #fff; background: radial-gradient(120% 140% at 100% 0%, rgba(255, 224, 138, 0.28), transparent 55%), linear-gradient(140deg, #163b2c, #1f5a3e 60%, #2f7a52); border: 1px solid #e6c35c; box-shadow: 0 14px 30px -18px #163b2c; display: grid; gap: 10px; }
+.shot-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.shot-card .eyebrow { margin: 0; color: #ffe08a; }
+.shot-potline { font-size: 13px; color: #e4f5ec; }
+.shot-potline b { font: 700 22px var(--serif); color: #ffe08a; margin-left: 4px; }
+.shot-card h2 { margin: 0; font: 700 24px/1.15 var(--serif); color: #fff; }
+.shot-worlds { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.shot-worlds li { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); font-size: 12px; font-weight: 700; text-align: center; line-height: 1.2; }
+.shot-worlds li span { font-size: 24px; }
+.shot-worlds li small { font-weight: 500; opacity: 0.75; }
+.shot-card .btn.gold { justify-self: stretch; text-align: center; }
+.shot-card .muted { color: #cdeedd; margin: 0; }
+.shot-next { margin: 0; font-size: 13px; color: #cdeedd; }
+.shot-next a { color: #ffe08a; font-weight: 800; text-decoration: none; }
+.shot-card[data-state='done'] { padding: 12px 14px; gap: 6px; }
+.shot-done { display: grid; gap: 2px; color: #fff; text-decoration: none; }
+.shot-done b { font: 700 26px var(--serif); color: #ffe08a; }
+.shot-done span { font-size: 13px; }
+.shot-done em { font-style: normal; font-size: 13px; color: #cdeedd; }
+
+/* while you play: the pot to chase, your running total, and the three holes */
+.shot-hud { position: absolute; bottom: calc(190px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 12px; padding: 6px 14px; border-radius: 999px; background: rgba(20, 35, 28, 0.82); border: 1px solid #e6c35c; color: #fff; pointer-events: none; white-space: nowrap; }
+.shot-hud small { display: block; font-size: 9px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #cdeedd; }
+.shot-hud b { font: 700 16px var(--serif); color: #ffe08a; }
+.shot-hud .sh-total b { color: #fff; }
+.sh-dots { display: flex; gap: 4px; }
+.sh-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.25); }
+.sh-dots i.on { background: #ffe08a; }
+.sh-dots i.now { background: #fff; box-shadow: 0 0 0 2px rgba(255, 224, 138, 0.6); }
+
+/* the summary: each hole in its world, the "closer than", the pot */
+.shot-holes { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.shot-holes li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 10px; background: rgba(31, 90, 62, 0.06); }
+.shot-holes li span { font-size: 20px; }
+.shot-holes li small { color: var(--muted); }
+.shot-holes li em { font-style: normal; font-weight: 800; }
+.shot-closer { font: 700 18px var(--serif); color: var(--green); margin: 6px 0; }
+.shot-pot b { color: #8a6514; }
+.daily-summary h2 small { font: 600 14px var(--font); color: var(--muted); }
+.shot-top h2 span { color: #ffe08a; font-size: 0.8em; margin-left: 4px; }
+.shot-top { align-items: center; }
+.shot-holes li { grid-template-columns: 1fr auto; }
+/* the Daily Shot tile, livelier (Nov 20): the pot big and gold, the leader, a slow shine */
+.shot-lead { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-size: 12px; font-weight: 700; color: #fff; }
+.shot-lead:not(:has(.face)) { padding-left: 10px; }
+.shot-pot-big { display: grid; justify-items: center; gap: 0; text-align: center; }
+.shot-pot-big small { font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #cdeedd; }
+.shot-pot-big b { font: 700 46px/1.05 var(--serif); color: #ffe08a; background: linear-gradient(100deg, #e6c35c 20%, #fff6cf 40%, #e6c35c 60%) 0 0 / 250% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: shotShine 4.5s ease-in-out infinite; }
+.shot-pot-big em { font-style: normal; font-size: 12px; color: #cdeedd; }
+.btn.shine { position: relative; overflow: hidden; }
+.btn.shine::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%) -150% 0 / 60% 100% no-repeat; animation: btnShine 4.5s ease-in-out infinite; pointer-events: none; }
+@keyframes shotShine { 0%, 60% { background-position: 100% 0; } 100% { background-position: -50% 0; } }
+@keyframes btnShine { 0%, 55% { background-position: -150% 0; } 100% { background-position: 250% 0; } }
+@media (prefers-reduced-motion: reduce) { .shot-pot-big b, .btn.shine::after { animation: none; } }
+/* the Daily Shot's pot and total (Nov 20, later): out of the way of the swing, top left under Leave, as a small
+   scoreboard card rather than a button (square corners, a gold edge, small caps, nothing to tap) */
+.shot-hud { top: calc(66px + env(safe-area-inset-top)); bottom: auto; left: 14px; transform: none; flex-direction: column; align-items: flex-start; gap: 4px; padding: 6px 10px 6px 9px; border-radius: 4px; border: 0; border-left: 3px solid #e6c35c; background: rgba(8, 18, 13, 0.55); backdrop-filter: blur(3px); box-shadow: none; }
+.shot-hud > span { display: flex; align-items: baseline; gap: 6px; }
+.shot-hud small { font-size: 9px; letter-spacing: 0.14em; color: rgba(205, 238, 221, 0.8); min-width: 32px; }
+.shot-hud b { font: 700 14px var(--serif); }
