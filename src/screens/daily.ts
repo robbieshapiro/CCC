@@ -225,7 +225,7 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
   const played = b.tries.length;
   const body = el.querySelector<HTMLElement>('[data-shot-body]')!;
   const next = el.querySelector<HTMLElement>('[data-shot-next]')!;
-  const cardsLine = cardsLeft ? `<a href="#/round">Now your daily card ›</a>` : '';
+  const cardsLine = cardsLeft ? `<a href="#/" data-to-card>Now your daily card ›</a>` : '';
   if (!played) return;
   next.hidden = false;
   if (played < SHOT_ALL) {
@@ -236,6 +236,20 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
   }
   el.dataset.state = 'done';
   const closer = closerLine(b);
-  body.innerHTML = `<a class="shot-done" href="#/daily"><b>${ftLabel(totalFt(b.tries))}</b>${closer ? `<em>${esc(closer)}</em>` : ''}</a>`;
+  // done: your result is the star, the pot a smaller figure beside it
+  body.innerHTML = `<a class="shot-done" href="#/daily">
+      <span class="sd-me"><b>${ftLabel(totalFt(b.tries))}</b>${closer ? `<em>${esc(closer)}</em>` : ''}</span>
+      <span class="sd-pot"><small>Ace Pot</small><b>${money(b.pot)}</b></span>
+    </a>`;
   next.innerHTML = cardsLine || 'Back tomorrow.';
+  // the daily card: to its tile below (play or practise first), not straight to the tee
+  next.querySelector<HTMLAnchorElement>('[data-to-card]')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const card = document.getElementById('card-tile')?.closest('section') ?? document.getElementById('card-tile');
+    if (!card) return void (location.hash = '#/round');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.remove('card-glow');
+    void (card as HTMLElement).offsetWidth;
+    card.classList.add('card-glow');
+  });
 }

@@ -2620,3 +2620,16 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .shot-hud > span { display: flex; align-items: baseline; gap: 6px; }
 .shot-hud small { font-size: 9px; letter-spacing: 0.14em; color: rgba(205, 238, 221, 0.8); min-width: 32px; }
 .shot-hud b { font: 700 14px var(--serif); }
+/* the Daily Shot once played (Nov 20): your result and the pot side by side, balanced */
+.shot-card[data-state='done'] .shot-pot-big { display: none; }
+.shot-card[data-state='done'] .shot-done { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 4px 0 2px; }
+.sd-me { display: grid; gap: 2px; min-width: 0; }
+.sd-me b { font: 700 40px/1 var(--serif); color: #ffe08a; }
+.sd-me em { font-style: normal; font-size: 13px; color: #cdeedd; }
+.sd-pot { display: grid; justify-items: end; gap: 0; padding: 8px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.18); }
+.sd-pot small { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #cdeedd; }
+.sd-pot b { font: 700 24px/1.1 var(--serif); color: #ffe08a; }
+.shot-card[data-state='done'] .shot-next { margin-top: 2px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.14); }
+/* the card tile, pointed at from the Daily Shot: a gold ring that pulses twice */
+.card-glow { animation: cardGlow 1.6s ease-out 2; border-radius: 18px; }
+@keyframes cardGlow { 0% { box-shadow: 0 0 0 0 rgba(230, 195, 92, 0.85); } 100% { box-shadow: 0 0 0 16px rgba(230, 195, 92, 0); } }
