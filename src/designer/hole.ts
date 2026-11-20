@@ -339,10 +339,12 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string, world?: Worl
     { kind: 'sign', x: -22, y: -10, rot: 0 },
     { kind: 'bench', x: 24, y: -14, rot: 0 },
   ];
-  // the world's landmarks on this hole: scenery only, kept off the tee, the green and the water
+  // the world's landmarks on this hole: scenery only, out past the rough (a lighthouse inside a short hole's property
+  // towered over the tee), kept off the tee, the green and the water
   for (const m of landmarks) {
-    const p = place(m.along, m.across);
-    if (near(p, tee, 40) || near(p, gc, R + 24) || wet(p) || !inPoly(p, border)) continue;
+    const out = Math.max(Math.abs(m.across) * wf, corridor + 45);
+    const p = place(m.along, (Math.sign(m.across) || 1) * (out / wf));
+    if (near(p, tee, 60) || near(p, gc, R + 40) || wet(p)) continue;
     decor.push({ kind: m.kind, x: p.x, y: p.y, rot: Math.atan2(-p.x, -p.y) });
   }
   const xs = border.map((p) => p.x);
