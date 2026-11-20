@@ -3,7 +3,7 @@
 // long drive and Target Range leaders, the Ace Pot, the Midway's leader). Mo's tables (your money) are at the bar,
 // not here (Nov 17: with poker off it was one card). A game the Committee has closed drops out for members. And once today's cards are in, the Play card's button points here (barCta).
 import { face } from '../faces';
-import { isHole } from '../designer/desk';
+import { tidyCourse } from '../designer/course';
 import { DAILY_PRIZES } from '../bonus';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
@@ -73,16 +73,17 @@ export async function bindBarStrip(snap: Snapshot) {
       if (ace && news) news.href = `#/replay/${ace.id}`;
     })
     .catch(() => {});
-  // the Members' Course's featured hole: the newest one approved, with its designer
+  // the Members' Course: the live course, its designer and their mark to beat, and today's best challenger
   const gamesOpen = api.barGames(s).catch(() => null);
-  void Promise.all([api.membersCourse(s).then((l) => l.filter(isHole)).catch(() => []), gamesOpen]).then(([holes, games]) => {
+  void Promise.all([api.liveMemberCourse(s).catch(() => null), gamesOpen]).then(([live, games]) => {
     const el = document.querySelector<HTMLElement>('[data-bs-featured]');
-    if (!el || !holes.length) return;
+    if (!el || !live) return;
     if (games && games.settings.members === false && !games.committee) return;
-    const h = [...holes].sort((a, b) => (b.approvedAt ?? '').localeCompare(a.approvedAt ?? '') || b.id - a.id)[0];
-    const who = { avatar: h.avatar, playerId: h.byId, name: h.by };
-    el.innerHTML = `<div class="bsf-main"><small>Featured · Members' Course</small><b>${esc(h.spec.name)}</b><span>Par ${h.par} · ${h.spec.yards} yd${holes.length > 1 ? ` · ${holes.length} holes this week` : ''}</span>
-      <span class="bsf-by">${face(who, 30)}Designed by <em>${esc(h.by)}</em></span></div><span class="bsf-go">Play it ›</span>`;
+    const c = tidyCourse(live.spec);
+    const who = { avatar: live.avatar, playerId: live.byId, name: live.by };
+    const top = live.board.find((r) => r.playerId !== live.byId);
+    el.innerHTML = `<div class="bsf-main"><small>The duel · Members' Course</small><b>${esc(c.name)}</b><span>${live.mine ? `Your course is on. Everyone is playing your ${live.mark.total}.` : `Beat ${esc(live.by)}’s ${live.mark.total}: $300 · tie it: $100`}</span>
+      <span class="bsf-by">${face(who, 30)}Designed by <em>${esc(live.by)}</em>${top ? ` · today's best ${esc(top.name)} ${top.total}` : ''}</span></div><span class="bsf-go">${live.mine ? 'Watch' : 'Take them on ›'}</span>`;
     el.hidden = false;
   });
   void gamesOpen.then((g) => {

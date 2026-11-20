@@ -77,7 +77,7 @@ export function shopPane(snap: Snapshot) {
         <p><b>The weekly purse:</b> at least ${money(OPEN_FLOOR)} a week, and ${money(OPEN_PER_PLAYER)} a player once more than ${OPEN_FLOOR / OPEN_PER_PLAYER} play. The top 10 on the Open split it like a tour event. And ${money(BONUS.week)} to everyone who plays a card that week, wherever they finish.</p>
         <p><b>Every day you play your card:</b> ${money(BONUS.round)}, plus ${money(BONUS.birdie)} a birdie, ${money(BONUS.eagle)} an eagle, ${money(BONUS.albatross)} an albatross and ${money(BONUS.ace)} a hole in one. ${money(BONUS.streak3)} for three days running at the club, ${money(BONUS.streak7)} for every full week.</p>
         <p><b>The moments:</b> hole a putt from ${LONG_PUTT_FT} ft for ${money(BONUS.longPutt)}, from ${MONSTER_PUTT_FT} ft for ${money(BONUS.monsterPutt)}. Chip in from off the green for ${money(BONUS.chipin)}. Find a hole's secret route for the first time for ${money(BONUS.secret)}.</p>
-        <p><b>Around the club:</b> Closest to the Pin, the long drive and the Target Range each pay the day's top three ${DAILY_PRIZES.map(money).join(', ')}. Make an ace at the Ace Pot and the whole pot is yours. ${money(BONUS.designPlay)} each time another member finishes a hole you designed on the Members' Course (once each a week, up to ${money(BONUS.designWeek)} a week).</p>
+        <p><b>Around the club:</b> Closest to the Pin, the long drive and the Target Range each pay the day's top three ${DAILY_PRIZES.map(money).join(', ')}. Make an ace at the Ace Pot and the whole pot is yours. On the Members' Course, beat the designer's score for $300 or tie it for $100 (your best card of the day); design a course yourself and earn $50 every time a challenger fails to beat you, up to $500 a day.</p>
         <p class="muted">Only your daily card counts; practice is free and earns nothing. Spending never touches your career earnings. The Club Legend rack and those above it also need a weekly title.</p>
       </details>
     </div>`;
@@ -132,7 +132,8 @@ function earnedFrom(me: Player) {
       ['Long putts', b?.putts ?? 0],
       ['Chip-ins', b?.chipins ?? 0],
       ['Secrets found', b?.secrets ?? 0],
-      ['Your holes played', b?.designs ?? 0],
+      ['Your course', b?.designs ?? 0],
+      ['Duels won', b?.duels ?? 0],
       ['Trophies', b?.trophies ?? 0],
       ['Committee credits', b?.grants ?? 0],
     ] as [string, number][]

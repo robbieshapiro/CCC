@@ -22,6 +22,7 @@ import { gradAt, heightAt, inPoly, surfaceAt, wetIn } from './terrain';
 import { accuracyError, fromMeter, goldHalf, meterPos, OVERSWING, PURE, powerSpeed, returnSpeed, stretched, stretchRate, type MeterStyle } from './swing';
 import type { Hole, Shot, V2 } from './types';
 import { KITS, nightFor } from './kits';
+import { gallery } from './looks/chicago';
 
 export const MAX_OVER = 3; // pick up at par + 3
 const TRAIL = 60;
@@ -678,6 +679,8 @@ export class Course3D {
   // Plays one hole to completion. The beverage cart may stop by on the tee.
   // opts.strokes: a card picked up mid-hole starts again from the tee, keeping the strokes already played on it
   play(hole: Hole, number: number, total: { strokes: number; par: number }, opts: { cart?: Visit; of?: number; strokes?: number } = {}): Promise<HoleResult> {
+    this.clearGhostBall();
+    this.showcaseAnim = [];
     this.holesInRound = opts.of ?? this.holesInRound;
     // a drink lasts the hole it was poured on
     if (this.drink && this.drink.shots >= HOLE_LONG) this.drink = null;
@@ -1285,7 +1288,7 @@ export class Course3D {
       ace: ['The Ace Pot', [['⛳', 'Three swings a day at a new par 3.'], ['💰', 'Hole it and the whole pot is yours.'], ['📈', 'Every miss adds $50. It carries over.']]],
       minigolf: ['Hollow Hills', [['👻', 'Six holes. Fewest strokes wins the week.'], PUTT, ['⏱️', 'Things move. Wait for the gap.']]],
       midway: ['The Midway', [['🎪', 'Three carnival holes. Fewest strokes wins.'], ['📅', 'One counted round a day. Best of the week takes it.'], ['⏱️', 'Things move. Wait for the gap.']]],
-      members: ["The Members' Course", [['🏗️', 'Holes built by members. Fewest strokes wins.'], ['💵', 'Finish one and its designer earns $100.']]],
+      members: ["The duel", [['👻', 'The designer’s ghost plays alongside you, stroke for stroke.'], ['💰', 'Beat their score: $300. Tie it: $100.'], ['🃏', 'Three cards a day. Each counts from its first swing.']]],
       drive: ['Long drive', [['💨', 'Three swings, wind at your back.'], ['🔥', 'The last two come with a Fireball.'], ['📏', 'Longest ball in play wins. Top three paid.']]],
       targets: ['The Target Range', [['🎯', 'Ten balls, six netted targets.'], ['🪂', 'Land in a ring on the fly. A roll-in only gets the outer ring.'], ['✖️', 'Score again next ball: double, then triple.'], ['🥅', 'Drive through the back net’s window for 40.']]],
     };
@@ -1546,6 +1549,7 @@ export class Course3D {
     if (practice) practice.hidden = !!this.drill || !(this.number === 1 && this.strokes === 0);
     this.mode = 'aim';
     this.power = 0;
+    this.onAimStart?.(this.strokes);
     // a gusting day: the wind picks up or drops off between shots, and the flag shows it
     if (this.dayWind?.gust) {
       this.wind = gusted(this.dayWind, Math.random());
@@ -2185,6 +2189,163 @@ export class Course3D {
     }
   }
 
+  // ---------- the Members' Course duel (Nov 20): the designer's ghost ball, shot for shot, and their showcase ----------
+  // called each time the golfer comes to address a ball, with the strokes taken on the hole so far
+  onAimStart: ((stroke: number) => void) | null = null;
+  private ghostBall: { ball: THREE.Mesh; tag: THREE.Sprite; line: THREE.Line; pts: THREE.Vector3[]; frames: Frame[]; holed: boolean; t: number } | null = null;
+  private showcaseAnim: ((clock: number, dt: number) => void)[] = [];
+  // the designer's stroke flies as a pale gold ghost ball with its own tracer and their name over it, then rests there
+  ghostShot(r: Result, name: string, label: string) {
+    if (!this.world) return;
+    if (!this.ghostBall) {
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(BALL_R * 1.15, 14, 10), new THREE.MeshBasicMaterial({ color: '#ffe08a', transparent: true, opacity: 0.8, fog: false }));
+      const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: '#ffd24a', transparent: true, opacity: 0.7, fog: false, toneMapped: false }));
+      line.frustumCulled = false;
+      const tag = nameTag(name, label);
+      this.scene.add(ball, line, tag);
+      this.ghostBall = { ball, tag, line, pts: [], frames: [], holed: false, t: 0 };
+    }
+    const gb = this.ghostBall;
+    gb.frames = r.frames;
+    gb.holed = r.holed;
+    gb.t = 0;
+    gb.pts = [];
+    gb.ball.visible = true;
+    gb.tag.visible = true;
+    const old = gb.tag.material.map;
+    gb.tag.material.map = (nameTag(name, label).material as THREE.SpriteMaterial).map;
+    old?.dispose();
+  }
+  clearGhostBall() {
+    const gb = this.ghostBall;
+    if (!gb) return;
+    this.scene.remove(gb.ball, gb.tag, gb.line);
+    gb.ball.geometry.dispose();
+    gb.line.geometry.dispose();
+    this.ghostBall = null;
+  }
+  private stepGhost(dt: number) {
+    const gb = this.ghostBall;
+    if (!gb || !gb.frames.length) return;
+    const end = gb.frames[gb.frames.length - 1];
+    gb.t = Math.min(gb.t + dt, end.t);
+    let i = 0;
+    while (i < gb.frames.length - 1 && gb.frames[i + 1].t <= gb.t) i++;
+    const a = gb.frames[i];
+    const b = gb.frames[Math.min(i + 1, gb.frames.length - 1)];
+    const k = b.t > a.t ? (gb.t - a.t) / (b.t - a.t) : 1;
+    const p = w3(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, a.z + (b.z - a.z) * k + BALL_R);
+    gb.ball.position.copy(p);
+    if (!gb.pts.length || gb.pts[gb.pts.length - 1].distanceTo(p) > 0.4) {
+      gb.pts.push(p.clone());
+      gb.line.geometry.dispose();
+      gb.line.geometry = new THREE.BufferGeometry().setFromPoints(gb.pts.slice(-80));
+    }
+    gb.tag.position.copy(p).add(new THREE.Vector3(0, 3.2, 0));
+    // in the hole: the ball goes, the tag stays at the cup
+    if (gb.t >= end.t && gb.holed) gb.ball.visible = false;
+  }
+  // the designer's showcase on this hole: a banner over the tee with their course's name, and by the green a scoreboard
+  // with their face and their score here, and a small crowd of members watching
+  showcase(o: { course: string; name: string; face: string | null; score: number; par: number }) {
+    if (!this.world) return;
+    const h = this.hole;
+    const root = this.world.root;
+    const board = (w: number, ht: number, draw: (x: CanvasRenderingContext2D, c: HTMLCanvasElement) => void) => {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = Math.round((512 * ht) / w);
+      const x = c.getContext('2d')!;
+      draw(x, c);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, ht), new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, fog: false }));
+      return { m, t, x, c };
+    };
+    const poles = (g: THREE.Group, w: number, ht: number) => {
+      for (const side of [-1, 1]) {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, ht, 8), new THREE.MeshStandardMaterial({ color: '#2b2b2b', metalness: 0.6, roughness: 0.4 }));
+        pole.position.set((side * w) / 2, ht / 2, -0.1);
+        g.add(pole);
+      }
+    };
+    // the banner: behind the tee, facing down the hole, high enough to frame the drive
+    const back = { x: h.tee.x - Math.sin(h.aim) * 16, y: h.tee.y - Math.cos(h.aim) * 16 };
+    const banner = new THREE.Group();
+    const bn = board(26, 5, (x, c) => {
+      const grd = x.createLinearGradient(0, 0, c.width, 0);
+      grd.addColorStop(0, '#163b2c');
+      grd.addColorStop(1, '#1f5a3e');
+      x.fillStyle = grd;
+      x.fillRect(0, 0, c.width, c.height);
+      x.strokeStyle = '#e6c35c';
+      x.lineWidth = 8;
+      x.strokeRect(6, 6, c.width - 12, c.height - 12);
+      x.fillStyle = '#ffe08a';
+      x.textAlign = 'center';
+      x.font = '700 46px Georgia, serif';
+      x.fillText(o.course, c.width / 2, c.height * 0.56, c.width - 40);
+      x.font = '800 20px system-ui, sans-serif';
+      x.fillStyle = '#cdeedd';
+      x.fillText(`DESIGNED BY ${o.name.toUpperCase()}`, c.width / 2, c.height * 0.86, c.width - 40);
+    });
+    bn.m.position.y = 12;
+    banner.add(bn.m);
+    poles(banner, 26, 14.5);
+    banner.position.copy(w3(back.x, back.y, heightAt(h, back.x, back.y)));
+    banner.rotation.y = -h.aim + Math.PI;
+    banner.lookAt(w3(h.cup.x, h.cup.y, banner.position.y));
+    root.add(banner);
+    // the scoreboard: off the right of the green, facing back toward the tee
+    const right = { x: Math.cos(h.aim), y: -Math.sin(h.aim) };
+    const at = { x: h.cup.x + right.x * 34, y: h.cup.y + right.y * 34 };
+    const sb = new THREE.Group();
+    const score = board(12, 8, (x, c) => {
+      x.fillStyle = '#14231c';
+      x.fillRect(0, 0, c.width, c.height);
+      x.strokeStyle = '#e6c35c';
+      x.lineWidth = 10;
+      x.strokeRect(5, 5, c.width - 10, c.height - 10);
+      x.fillStyle = '#e6c35c';
+      x.font = '800 30px system-ui, sans-serif';
+      x.textAlign = 'center';
+      x.fillText('THE DESIGNER', c.width / 2, 58);
+      x.fillStyle = '#fff';
+      x.font = '700 52px Georgia, serif';
+      x.fillText(o.name, c.width * 0.62, 190, c.width * 0.6);
+      x.font = '800 40px system-ui, sans-serif';
+      x.fillStyle = '#ffe08a';
+      x.fillText(`${o.score} here · par ${o.par}`, c.width * 0.62, 260, c.width * 0.6);
+    });
+    if (o.face) {
+      const img = new Image();
+      img.onload = () => {
+        const x = score.x;
+        x.save();
+        x.beginPath();
+        x.arc(100, 205, 76, 0, Math.PI * 2);
+        x.clip();
+        x.fillStyle = '#e8e1cf';
+        x.fillRect(24, 129, 152, 152);
+        x.drawImage(img, 24, 129, 152, 152);
+        x.restore();
+        score.t.needsUpdate = true;
+      };
+      img.src = o.face;
+    }
+    score.m.position.y = 9;
+    sb.add(score.m);
+    poles(sb, 12, 13);
+    sb.position.copy(w3(at.x, at.y, heightAt(h, at.x, at.y)));
+    sb.lookAt(w3(h.tee.x, h.tee.y, sb.position.y));
+    root.add(sb);
+    // a few members by the scoreboard, watching
+    const g = gallery(16, 12, 2, Math.round(at.x + at.y), this.showcaseAnim);
+    g.position.copy(w3(at.x + right.x * 10, at.y + right.y * 10, heightAt(h, at.x + right.x * 10, at.y + right.y * 10)));
+    g.lookAt(w3(h.cup.x, h.cup.y, g.position.y));
+    root.add(g);
+  }
+
   // ---------- the Pro Shop on the course: the ball, the tracer and the celebrations (Nov 19) ----------
   private gear: GolferSpec;
   private glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }));
@@ -2794,6 +2955,8 @@ export class Course3D {
     this.clock += dt;
     this.world?.update(this.clock, dt);
     this.stepBursts(now);
+    this.stepGhost(dt);
+    for (const a of this.showcaseAnim) a(this.clock, dt);
     this.stepSparks(dt);
     this.shimmer(now / 1000);
     if (this.replay) this.stepReplay(dt);

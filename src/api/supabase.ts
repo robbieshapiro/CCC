@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, CourseRequest, AgentNote } from './types';
+import type { LiveCourse, DuelResult, AdminKpis, AdminToday, CourseRecord, Season, TrophyProgress, GolferCard, FieldRow, AdminOverview, AdminShoutout, Shoutout, Api, HoleReport, CardToday, BarBoard, Chronicle, ClubRow, Design, MembersHole, DailyCrown, DailyDay, DailyState, Honors, Feedback, Invite, InvitePeek, MemberActivity, Notice, OpenChampion, OpenRow, PlayoffState, PracticeReport, Session, TrendDay, Snapshot, PowerupState, LandedCurse, MyNomination, AdminNominations, Nominated, CoursePlanner, CourseRequest, AgentNote } from './types';
 import type { Tweaks } from '../golf3d/tweaks';
 
 // Forgive common paste slips in the env vars: quotes, spaces, a missing https://,
@@ -138,6 +138,9 @@ export const supabaseApi: Api = {
   chronicles: (s) => rpc<Chronicle[]>('chronicles', { p_token: s.token }),
   myDesigns: (s) => rpc<Design[]>('my_designs', { p_token: s.token }),
   submitDesign: (s, id, par) => rpc<void>('submit_design', { p_token: s.token, p_id: id, p_par: par }),
+  liveMemberCourse: (s) => rpc<LiveCourse | null>('live_member_course', { p_token: s.token }),
+  startMemberCard: (s, design) => rpc<number>('start_member_card', { p_token: s.token, p_design: design }),
+  finishMemberCard: (s, card, holes) => rpc<DuelResult>('finish_member_card', { p_token: s.token, p_card: card, p_holes: holes }),
   postDesignerRound: async (s, id, mark) => {
     await rpc('post_designer_round', { p_token: s.token, p_id: id, p_mark: mark });
   },

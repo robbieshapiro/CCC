@@ -204,6 +204,21 @@ export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 export type Design = { id: number; prompt: string; spec: import('../designer/hole').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string; mark?: import('../designer/course').DesignerMark | null };
 // a change too big for a dial, asked of the Architect (course_requests)
 export type CourseRequest = { id: number; course: string; hole: number | null; body: string; done: boolean; createdAt: string };
+// The Members' Course duel (Nov 20): the live course, the designer's mark (and ghost), and today's board
+export type LiveCourse = {
+  id: number;
+  spec: import('../designer/course').CourseSpec;
+  mark: import('../designer/course').DesignerMark;
+  approvedAt: string;
+  by: string;
+  byId: string;
+  avatar: Avatar;
+  mine: boolean;
+  cardsToday: number;
+  bestToday: number | null;
+  board: { playerId: string; name: string; avatar: Avatar; total: number; mine: boolean }[];
+};
+export type DuelResult = { total: number; mark: number; beat: boolean; tie: boolean; designer: boolean };
 export type MembersHole = { id: number; spec: import('../designer/hole').HoleSpec; par: number; by: string; byId?: string; avatar?: Avatar; approvedAt?: string };
 // One counted stroke of a round (h: the hole's index); see ShotLog in golf3d/engine.ts
 export type RoundShot = { h: number; c: string; p: number; e: number; f: [number, number]; t: [number, number]; l: string; x: 0 | 1; i: 0 | 1 };
@@ -298,7 +313,10 @@ export interface Api {
   chronicles(session: Session): Promise<Chronicle[]>;
   myDesigns(session: Session): Promise<Design[]>;
   submitDesign(session: Session, id: number, par: number): Promise<void>;
-  postDesignerRound(session: Session, id: number, mark: import('../designer/course').DesignerMark): Promise<void>; // a course's designer played it: their mark, and it goes to the Committee
+  postDesignerRound(session: Session, id: number, mark: import('../designer/course').DesignerMark): Promise<void>;
+  liveMemberCourse(session: Session): Promise<LiveCourse | null>; // the newest approved course, today's board
+  startMemberCard(session: Session, design: number): Promise<number>; // takes one of today's three cards
+  finishMemberCard(session: Session, card: number, holes: number[]): Promise<DuelResult>; // a course's designer played it: their mark, and it goes to the Committee
   designQueue(session: Session): Promise<Design[]>; // the admin's: waiting, and on the course
   reviewDesign(session: Session, id: number, ok: boolean): Promise<void>;
   membersCourse(session: Session): Promise<MembersHole[]>; // Reginald's weekly letters to your club, newest first // every club this month: members, leader, best

@@ -52,7 +52,10 @@ import { canShare, dailySummary, share } from './daily';
 import { aceWin, bigMoment } from './acewin';
 import { scorePop } from './moments';
 import { KIND_NAME, packShot, unpackShot, withHoleNo, type ReplayData, type ReplayHole, type ReplayKind } from '../replay';
-import type { DesignerMark } from '../designer/course';
+import { courseHoles, tidyCourse, type DesignerMark } from '../designer/course';
+import type { DuelResult, LiveCourse } from '../api/types';
+import { golferThumb } from '../golf3d/golfer';
+import { portrait, specOf } from '../avatar';
 import { courseById } from '../golf3d/courses';
 import { periodOf } from '../day';
 
@@ -848,6 +851,136 @@ export function coinPop(host: HTMLElement, amount: number, title: string, sub = 
 async function membersHoles(): Promise<Hole[]> {
   const list = (await api.membersCourse(requireSession()).catch(() => [])).filter(isHole);
   return list.map((m) => buildHole(m.spec, `members-${m.id}`, m.by.slice(0, 9)).hole);
+}
+
+// The Members' Course duel (Nov 20): the newest approved course, against its designer. Each card is three holes; the
+// designer's ghost plays their publishing round alongside you, stroke for stroke, and the match stands after every
+// hole ("1 up after 2"). Beat their mark: $300; tie it: $100 (your best card of the day). Three cards a day, each taken
+// at the first swing. The designer's banner over each tee, their face on the scoreboard by each green.
+export async function membersDuel(snap: Snapshot) {
+  closeRound();
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const s = requireSession();
+  const back = () => {
+    closeRound();
+    navigate('#/bar');
+  };
+  const live = await api.liveMemberCourse(s).catch(() => null);
+  if (!live) {
+    void tell("No member's course on yet", '<p>Design one at the Desk. Play it to publish, and once the Committee approves it, everyone plays you.</p>').then(back);
+    return;
+  }
+  const course = tidyCourse(live.spec);
+  const holes = courseHoles(course, `duel-${live.id}`, live.by);
+  const mark = live.mark;
+  if (live.cardsToday >= 3) return void duelSummary(live, null, back);
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  let g: Course3D;
+  try {
+    g = new Course3D(el, me.avatar, back);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p><a class="btn" href="#/bar">Back to the bar</a></main>`);
+    return;
+  }
+  game = g;
+  g.leaveText = 'Leave';
+  g.howTo = 'members';
+  g.starter = live.mine ? `Your own course, ${me.name}. Can you beat your ${mark.total}?` : `${course.name}. ${live.by} went round in ${mark.total}. Beat it and it's $300.`;
+  const faceUrl = golferThumb(specOf(live.avatar), 128);
+  // the match, shown all the way round
+  const hud = document.createElement('div');
+  hud.className = 'duel-hud';
+  el.appendChild(hud);
+  const scores: number[] = [];
+  const standing = () => {
+    let up = 0;
+    scores.forEach((x, i) => (up += Math.sign(mark.holes[i] - x)));
+    const left = 3 - scores.length;
+    const who = live.mine ? 'your mark' : live.by;
+    return up === 0 ? 'All square' : Math.abs(up) > left && left > 0 ? (up > 0 ? `You're ${up} up: it's yours` : `${who} is ${-up} up: it's theirs`) : up > 0 ? `You're ${up} up` : `${who} ${-up} up`;
+  };
+  const drawHud = () => {
+    const sum = scores.reduce((a, b) => a + b, 0);
+    const theirs = mark.holes.slice(0, scores.length).reduce((a, b) => a + b, 0);
+    hud.innerHTML = `<span class="dh-face">${portrait(live.avatar, 26)}</span><b>${scores.length ? standing() : `vs ${live.mine ? 'your mark' : esc(live.by)}`}</b><small>You ${sum || '–'} · ${live.mine ? 'Mark' : esc(live.by)} ${scores.length ? theirs : '–'} · mark ${mark.total}</small>`;
+  };
+  drawHud();
+  let card: number;
+  try {
+    card = await api.startMemberCard(s, live.id);
+  } catch (e) {
+    closeRound();
+    void tell('Not just now', `<p>${esc((e as Error).message)}</p>`).then(back);
+    return;
+  }
+  void (async () => {
+    for (let i = 0; i < holes.length; i++) {
+      const shots = (mark.shots[i] ?? []).map(unpackShot);
+      let shown = 0;
+      // the designer's stroke flies as you come to each of yours
+      g.onAimStart = (k) => {
+        if (k !== shown || k >= shots.length) return;
+        g.ghostShot(shots[k], live.mine ? 'Your mark' : live.by, `Stroke ${k + 1}${k === shots.length - 1 ? ` · ${mark.holes[i]}` : ''}`);
+        shown++;
+      };
+      const par = holes.slice(0, i).reduce((a, h) => a + h.par, 0);
+      const play = g.play(holes[i], i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { of: holes.length });
+      g.showcase({ course: course.name, name: live.by, face: faceUrl, score: mark.holes[i], par: holes[i].par });
+      const r = await play;
+      if (game !== g) return;
+      scores.push(r.strokes);
+      drawHud();
+      const diff = mark.holes[i] - r.strokes;
+      g.callout(diff > 0 ? 'Hole won' : diff < 0 ? 'Hole lost' : 'Halved', standing(), 2200);
+    }
+    g.onAimStart = null;
+    const res = await api.finishMemberCard(s, card, scores).catch(() => null);
+    if (game !== g) return;
+    window.setTimeout(() => {
+      closeRound();
+      void duelSummary(live, res, back);
+    }, 1400);
+  })();
+}
+
+// after a duel card (or with today's three used): the result, the money, and today's board on the course
+async function duelSummary(live: LiveCourse, res: DuelResult | null, back: () => void) {
+  const fresh = (await api.liveMemberCourse(requireSession()).catch(() => null)) ?? live;
+  const left = 3 - fresh.cardsToday;
+  const head = !res
+    ? `That's your three cards today`
+    : res.designer
+      ? `${res.total} on your own course`
+      : res.beat
+        ? `You beat ${live.by}! +${money(300)}`
+        : res.tie
+          ? `Tied with ${live.by}. +${money(100)}`
+          : `${live.by} holds`;
+  const line = !res
+    ? 'New cards at midnight. The course stays until the next member’s course is approved.'
+    : res.designer
+      ? 'Your own cards don’t pay, but the club sees them.'
+      : res.beat || res.tie
+        ? `You went round in ${res.total} to ${live.by}’s ${res.mark}. Paid on your best card of the day.`
+        : `${res.total} to ${live.by}’s ${res.mark}. ${live.by} earns ${money(50)} for holding.`;
+  render(`<main class="narrow duel-sum">
+    <section class="panel duel-card">
+      <p class="eyebrow">${esc(tidyCourse(live.spec).name)} · the Members' Course</p>
+      <div class="duel-vs">${portrait(live.avatar, 64)}<div><h1>${esc(head)}</h1><p>${esc(line)}</p></div></div>
+      <h3>Today on ${esc(live.by)}’s course <small>mark ${live.mark.total}</small></h3>
+      ${
+        fresh.board.length
+          ? `<ol class="daily-board">${fresh.board
+              .map((r, i) => `<li class="${r.mine ? 'me' : ''}"><span>${i + 1}</span>${face(r, 24)}<b>${esc(r.name)}</b><small>${r.total < live.mark.total ? 'beat it' : r.total === live.mark.total ? 'tied' : ''}</small><em>${r.total}</em></li>`)
+              .join('')}</ol>`
+          : '<p class="muted">Nobody yet today.</p>'
+      }
+      <div class="duel-acts">${left > 0 ? `<a class="btn" href="#/bar/members">Play again · ${left} ${left === 1 ? 'card' : 'cards'} left</a>` : ''}<button class="btn ghost" data-back>Back to the bar</button></div>
+    </section></main>`);
+  document.querySelector<HTMLButtonElement>('[data-back]')!.onclick = back;
 }
 
 // The designer plays their own course to publish it (Nov 20): three holes, played as a card is, every stroke kept as
