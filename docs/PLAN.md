@@ -278,7 +278,7 @@ Last updated Nov 20, 2026 (design a three-hole course, play it to publish; membe
 
 ## Setup status
 
-- [ ] #361: apply `pr_361_member_courses` (`designs.mark`, `post_designer_round`, `my_designs`, `design_queue`) after merge.
+- [x] #361: applied `pr_361_member_courses` on Nov 20; designs.mark and post_designer_round are live.
 - [x] #359: applied `pr_359_featured_hole` on Nov 19; members_course returns Tyler's Lost in Orbit with his avatar.
 - [x] #358: applied `pr_358_winged_ball` on Nov 19; the winged golden ball is in shop_items at $3,500.
 - [x] #357: applied `pr_357_season_faces` on Nov 19; season_standings returns the avatar live.
