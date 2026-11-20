@@ -116,20 +116,85 @@ function drawList(list: Design[]) {
     (holes.length ? `<details class="desk-old"><summary>Your earlier single holes</summary><ul class="desk-list">${holes.map(holeRow).join('')}</ul></details>` : '');
 }
 
-const WORK = ['The architect is sharpening a pencil…', 'Walking the land…', 'Laying out the first hole…', 'Moving a bunker. Moving it back…', 'Arguing with the greenkeeper…', 'Measuring the yardage…', 'Now the third hole…'];
+const WORK = [
+  'The architect is sharpening a pencil…',
+  'Walking the land…',
+  'Building your world: the sky, the ground, what’s beyond…',
+  'Laying out the first hole…',
+  'Moving a bunker. Moving it back…',
+  'Arguing with the greenkeeper…',
+  'Now the second hole…',
+  'Measuring the yardage…',
+  'Now the third hole…',
+  'Planting the trees…',
+  'Cutting the cups…',
+  'Reginald is reading it over…',
+];
 
+// three holes on a blueprint, drawing themselves tee to green, a flag popping on each, over and over
+const BLUEPRINT = `<svg class="bp" viewBox="0 0 300 130" aria-hidden="true">
+  <defs><pattern id="bpg" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"/></pattern></defs>
+  <rect width="300" height="130" rx="10" fill="#1d4f7a"/><rect width="300" height="130" rx="10" fill="url(#bpg)"/>
+  ${[
+    ['M50 112 C 46 86, 64 64, 58 30', 58, 30],
+    ['M150 112 C 150 92, 132 80, 140 56 S 170 34, 160 22', 160, 22],
+    ['M250 112 C 262 90, 238 70, 246 40', 246, 40],
+  ]
+    .map(
+      ([d, x, y], i) => `<g class="bp-hole" style="--d:${i * 1.7}s">
+      <path class="bp-fw" d="${d}" pathLength="100"/>
+      <path class="bp-line" d="${d}" pathLength="100"/>
+      <circle class="bp-tee" cx="${d.toString().split(' ')[0].slice(1)}" cy="112" r="3"/>
+      <circle class="bp-green" cx="${x}" cy="${y}" r="9"/>
+      <g class="bp-flag" transform="translate(${x} ${y})"><path d="M0 0V-14" stroke="#fff" stroke-width="1.4"/><path d="M0 -14L8 -11L0 -8Z" fill="#e6c35c"/></g>
+      <text class="bp-n" x="${Number(x) - 4}" y="126">${i + 1}</text>
+    </g>`,
+    )
+    .join('')}
+</svg>`;
+
+let started = 0;
+let clock = 0;
 function working(on: boolean, text = WORK[0]) {
   const el = document.getElementById('desk-work')!;
-  el.hidden = !on;
-  el.innerHTML = on ? hostChip(`<span class="reg-thinking">${esc(text)}</span>`) : '';
   document.querySelectorAll<HTMLButtonElement>('#desk-draw, [data-change], [data-publish]').forEach((b) => (b.disabled = on));
+  if (!on) {
+    window.clearInterval(clock);
+    el.hidden = true;
+    el.innerHTML = '';
+    started = 0;
+    return;
+  }
+  if (!started) {
+    started = Date.now();
+    el.hidden = false;
+    el.innerHTML = `${BLUEPRINT}
+      <p class="bp-text" data-bp-text></p>
+      <div class="bp-bar"><i data-bp-bar></i></div>
+      <p class="bp-time"><span data-bp-time>0:00</span> · a course takes a minute or two</p>`;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // the bar creeps toward the end over about two minutes, and finishes when the drawing comes back
+    requestAnimationFrame(() => el.querySelector<HTMLElement>('[data-bp-bar]')?.classList.add('go'));
+    clock = window.setInterval(() => {
+      const t = Math.floor((Date.now() - started) / 1000);
+      const out = el.querySelector('[data-bp-time]');
+      if (out) out.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    }, 1000);
+  }
+  const line = el.querySelector<HTMLElement>('[data-bp-text]');
+  if (line) {
+    line.classList.remove('fresh');
+    void line.offsetWidth;
+    line.textContent = text;
+    line.classList.add('fresh');
+  }
 }
 
 // Ask the architect, run the quick check on every hole, and if it finds a problem, send it back once with the reasons
 async function draw(snap: Snapshot, ask: () => ReturnType<typeof askArchitect>) {
   let i = 0;
   working(true);
-  const tick = window.setInterval(() => working(true, WORK[++i % WORK.length]), 2800);
+  const tick = window.setInterval(() => working(true, WORK[++i % WORK.length]), 4500);
   try {
     let reply = await ask();
     if ('error' in reply) return void ((document.getElementById('desk-card-err') ?? document.getElementById('desk-err'))!.textContent = reply.error);
