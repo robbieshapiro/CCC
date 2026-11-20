@@ -146,7 +146,7 @@ async function loadHoles(snap: Snapshot) {
   const row = (d: Design) => {
     if (isCourse(d)) {
       const c = tidyCourse(d.spec as unknown as CourseSpec);
-      return `<li data-design="${d.id}" class="adm-course"><div><b>${esc(c.name)}</b> <small>by ${esc(d.by ?? '?')}${d.club ? ` · ${esc(d.club)}` : ''} · 3 holes, par ${coursePar(c)}${d.mark ? ` · their mark <b>${d.mark.total}</b>` : ''}${d.id === live ? ' · <i class="ok">On now</i>' : ''}</small>
+      return `<li data-design="${d.id}" class="adm-course"><div><b>${esc(c.name)}</b> <small>by ${esc(d.by ?? '?')}${d.club ? ` · ${esc(d.club)}` : ''} · ${c.holes.length === 1 ? 'one hole' : `${c.holes.length} holes`}, par ${coursePar(c)}${d.mark ? ` · their mark <b>${d.mark.total}</b>` : ''}${d.id === live ? ' · <i class="ok">On now</i>' : ''}</small>
         <p>${esc(d.prompt)}</p>
         <div class="adm-course-holes">${c.holes.map((h, i) => `<div><div class="adm-hole-plan" data-plan="${i}"></div><small>${i + 1}. ${esc(h.name)} · par ${h.par}</small><button data-hole-try="${i}">Play</button></div>`).join('')}</div>
         <div class="adm-chips">${d.status === 'submitted' ? '<button data-hole-ok class="on">Approve: it goes on now</button><button data-hole-no>Not this one</button>' : '<button data-hole-no>Take it off</button>'}</div></div></li>`;

@@ -143,7 +143,7 @@ export async function fillBar(snap: Snapshot) {
   if (card && count) {
     count.textContent = course
       ? `${tidyCourse(course.spec).name} · by ${course.by} · their mark ${course.mark.total} · beat it: $300, tie it: $100 · three cards a day`
-      : "No member's course yet. Design the first: three holes, and everyone plays you.";
+      : "No member's course yet. Design the first: one signature hole, and everyone plays you.";
     if (!course) card.href = '#/design';
   }
   const put = (game: string, mine: string, board: string) => {

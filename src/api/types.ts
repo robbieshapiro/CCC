@@ -312,6 +312,7 @@ export interface Api {
   clubList(session: Session): Promise<ClubRow[]>;
   chronicles(session: Session): Promise<Chronicle[]>;
   myDesigns(session: Session): Promise<Design[]>;
+  discardDesign(session: Session, id: number): Promise<void>; // back to the drawing board: your own draft only
   submitDesign(session: Session, id: number, par: number): Promise<void>;
   postDesignerRound(session: Session, id: number, mark: import('../designer/course').DesignerMark): Promise<void>;
   liveMemberCourse(session: Session): Promise<LiveCourse | null>; // the newest approved course, today's board
