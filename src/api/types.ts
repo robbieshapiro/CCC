@@ -200,7 +200,8 @@ export type ClubRow = { id: string; name: string; mine: boolean; members: number
 export type Chronicle = { week: string; body: { headline: string; dek: string; items: { title: string; body: string }[]; signoff: string } };
 export type DesignStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 // a member's golf hole from the Design Desk (spec: src/designer/hole.ts HoleSpec)
-export type Design = { id: number; prompt: string; spec: import('../designer/hole').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string };
+// spec: a hole, or (Nov 20) a three-hole course (spec.kind 'course', see designer/course.ts) with the designer's mark once played
+export type Design = { id: number; prompt: string; spec: import('../designer/hole').HoleSpec; par: number | null; status: DesignStatus; createdAt: string; by?: string; club?: string; mark?: import('../designer/course').DesignerMark | null };
 // a change too big for a dial, asked of the Architect (course_requests)
 export type CourseRequest = { id: number; course: string; hole: number | null; body: string; done: boolean; createdAt: string };
 export type MembersHole = { id: number; spec: import('../designer/hole').HoleSpec; par: number; by: string; byId?: string; avatar?: Avatar; approvedAt?: string };
@@ -297,6 +298,7 @@ export interface Api {
   chronicles(session: Session): Promise<Chronicle[]>;
   myDesigns(session: Session): Promise<Design[]>;
   submitDesign(session: Session, id: number, par: number): Promise<void>;
+  postDesignerRound(session: Session, id: number, mark: import('../designer/course').DesignerMark): Promise<void>; // a course's designer played it: their mark, and it goes to the Committee
   designQueue(session: Session): Promise<Design[]>; // the admin's: waiting, and on the course
   reviewDesign(session: Session, id: number, ok: boolean): Promise<void>;
   membersCourse(session: Session): Promise<MembersHole[]>; // Reginald's weekly letters to your club, newest first // every club this month: members, leader, best

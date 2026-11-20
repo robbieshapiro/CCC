@@ -200,7 +200,7 @@ function homeOf(db: Db, me: DbPlayer): DbPlayer {
   return db.players.find((p) => !p.host && p.name.toLowerCase() === me.name.toLowerCase() && p.pin === me.pin) ?? me;
 }
 
-export const localApi: Api & { seedDemo(session: { token: string }): void; localDesign(session: { token: string }, prompt: string, id?: number, change?: string): { id: number; spec: Design['spec'] } } = {
+export const localApi: Api & { seedDemo(session: { token: string }): void; localDesign(session: { token: string }, prompt: string, id?: number, change?: string, kind?: 'hole' | 'course'): { id: number; spec: Design['spec'] } } = {
   mode: 'local',
 
   async join(invite, name, pin) {
@@ -829,6 +829,15 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     d.par = par;
     save(db);
   },
+  async postDesignerRound(session, id, mark) {
+    const db = load();
+    const me = playerByToken(db, session.token);
+    const d = (db.designs ?? []).find((x) => x.id === id && x.playerId === me.id && x.status === 'draft' && (x.spec as { kind?: string }).kind === 'course');
+    if (!d) throw new Error("That course can't be published.");
+    d.mark = { ...mark, total: mark.holes.reduce((a, b) => a + b, 0) };
+    d.status = 'submitted';
+    save(db);
+  },
   async designQueue(session): Promise<Design[]> {
     const db = load();
     if (!playerByToken(db, session.token).admin) throw new Error('Only the committee can see this.');
@@ -855,10 +864,12 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
       });
   },
   // local mode's architect: a stock hole, so the Desk can be tried without the server
-  localDesign(session, prompt, id, change) {
+  localDesign(session, prompt, id, change, kind) {
     const db = load();
     const me = playerByToken(db, session.token);
-    const spec = sampleSpec(prompt, change);
+    const course = kind === 'course' || (!!id && ((db.designs ?? []).find((x) => x.id === id)?.spec as { kind?: string } | undefined)?.kind === 'course');
+    // a course: three stock holes in the looks the words suggest, par 3, 4 and 5
+    const spec = (course ? sampleCourse(prompt, change) : sampleSpec(prompt, change)) as Design['spec'];
     db.designs ??= [];
     if (id) {
       const d = db.designs.find((x) => x.id === id && x.playerId === me.id);
@@ -2032,6 +2043,12 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
 };
 
 // the stand-in architect's hole: one of the samples, in the look the description mentions
+function sampleCourse(prompt: string, change?: string) {
+  const first = sampleSpec(prompt, change);
+  const others = (['highlands', 'links', 'desert', 'caldera'] as const).filter((l) => l !== first.look);
+  const holes = [first, { ...SAMPLES[others[0]] }, { ...SAMPLES[others[1]] }].map((h, i) => ({ ...h, name: `${h.name}${i ? '' : ''}` }));
+  return { kind: 'course' as const, name: 'The Practice Course', review: 'Three holes, each a little harder than it looks. The local architect is on holiday.', holes };
+}
 function sampleSpec(prompt: string, change?: string): Design['spec'] {
   const text = `${prompt} ${change ?? ''}`.toLowerCase();
   const look = /desert|cact|canyon|mesa/.test(text) ? 'desert' : /links|sea|dune|scotland|wind/.test(text) ? 'links' : /lava|volcan|caldera|island/.test(text) ? 'caldera' : 'highlands';

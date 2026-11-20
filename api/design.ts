@@ -3,6 +3,8 @@
 // when its quick check finds a problem.
 // POST /api/design { token, prompt }                     a new hole
 // POST /api/design { token, id, change }                 the same hole, changed
+// POST /api/design { token, prompt, kind: 'course' }     a three-hole course (Nov 20): one call, three holes
+//   (a change to a course comes back as the whole course; it can name one hole)
 // -> { id, spec } or { error }
 // The spec is checked and clamped again in the app (src/designer/hole.ts tidy) before anything is built.
 // Caps: 8 designs a day per member, 80 a day across the club. Needs ANTHROPIC_API_KEY, SUPABASE_URL and
@@ -42,7 +44,10 @@ GOOD HOLES
 - review: Reginald's one-line review, dry and understated, under 25 words. No exclamation marks, no emojis, no em dashes.
 - hint: one sentence, plain words, on how to play it.
 
-When you're given an existing design and a change, return the whole design with the change made and everything else kept as it was.`;
+When you're given an existing design and a change, return the whole design with the change made and everything else kept as it was.
+
+A COURSE
+When asked for a course, design three holes that play as a little course of their own: a name for the course (2 to 4 words), Reginald's one-line review of the course, and the three holes (hole1, hole2, hole3), each a complete hole as above. Give it variety: unless the member asks otherwise, one par 3, one par 4 and one par 5, in an order that flows, about 1,000 to 1,300 yards in all. The holes can share a look or move between looks, as the member's idea suggests. A change to a course may name one hole ("hole 2: longer"): change only that hole and keep the others exactly as they were; a change that names no hole may touch any of them.`;
 
 const spot = (extra: Record<string, unknown>, req: string[]) => ({
   type: 'object',
@@ -92,12 +97,20 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
+// a course: its name, Reginald's review, and three holes
+const COURSE = {
+  type: 'object',
+  properties: { kind: { type: 'string', enum: ['course'] }, name: { type: 'string' }, review: { type: 'string' }, hole1: SCHEMA, hole2: SCHEMA, hole3: SCHEMA },
+  required: ['kind', 'name', 'review', 'hole1', 'hole2', 'hole3'],
+  additionalProperties: false,
+};
+
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 export async function POST(request: Request) {
   const { ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
   if (!ANTHROPIC_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return json({ error: 'The Design Desk opens once the club has its Claude key.' }, 503);
-  const body = (await request.json().catch(() => null)) as { token?: string; prompt?: string; id?: number; change?: string } | null;
+  const body = (await request.json().catch(() => null)) as { token?: string; prompt?: string; id?: number; change?: string; kind?: string } | null;
   const prompt = String(body?.prompt ?? '').trim().slice(0, 600);
   const change = String(body?.change ?? '').trim().slice(0, 400);
   if (!body?.token || (!prompt && !(body.id && change))) return json({ error: 'Describe your hole first.' }, 400);
@@ -122,17 +135,26 @@ export async function POST(request: Request) {
     if (data.status !== 'draft') return json({ error: "It's with the Committee now. Start a new one." }, 409);
     previous = data;
   }
+  // a course, new or being changed
+  const course = previous ? (previous.spec as { kind?: string })?.kind === 'course' : body.kind === 'course';
+  const current = (spec: unknown) => {
+    if (!course) return JSON.stringify(spec);
+    const c = spec as { name: string; review: string; holes: unknown[] };
+    return JSON.stringify({ kind: 'course', name: c.name, review: c.review, hole1: c.holes[0], hole2: c.holes[1], hole3: c.holes[2] });
+  };
   const content = previous
-    ? `${me.name} described this hole: "${previous.prompt}"\n\nThe current design:\n${JSON.stringify(previous.spec)}\n\nChange it: ${change}`
-    : `${me.name} describes the hole they'd like:\n"${prompt}"`;
+    ? `${me.name} described this ${course ? 'course' : 'hole'}: "${previous.prompt}"\n\nThe current design:\n${current(previous.spec)}\n\nChange it: ${change}`
+    : course
+      ? `${me.name} describes the three-hole course they'd like:\n"${prompt}"`
+      : `${me.name} describes the hole they'd like:\n"${prompt}"`;
 
   await db.from('design_calls').insert({ player_id: me.id });
   const claude = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   try {
     const res = await claude.beta.messages.create({
       model: MODEL,
-      max_tokens: 16000,
-      output_config: { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
+      max_tokens: course ? 32000 : 16000,
+      output_config: { effort: 'medium', format: { type: 'json_schema', schema: course ? COURSE : SCHEMA } },
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       system: SYSTEM,
@@ -140,8 +162,15 @@ export async function POST(request: Request) {
     });
     if (res.stop_reason === 'refusal') return json({ error: "The architect won't build that one. Try another idea." }, 422);
     if (res.stop_reason !== 'end_turn') return json({ error: 'The architect ran out of paper. Try a simpler idea.' }, 502);
-    const spec = JSON.parse(res.content.map((b) => (b.type === 'text' ? b.text : '')).join('')) as Record<string, unknown>;
-    for (const k of ['review', 'hint', 'name']) if (typeof spec[k] === 'string') spec[k] = (spec[k] as string).replace(/\s*[—–]\s*/g, ', ');
+    const out = JSON.parse(res.content.map((b) => (b.type === 'text' ? b.text : '')).join('')) as Record<string, unknown>;
+    const clean = (o: Record<string, unknown>) => {
+      for (const k of ['review', 'hint', 'name']) if (typeof o[k] === 'string') o[k] = (o[k] as string).replace(/\s*[—–]\s*/g, ', ');
+      return o;
+    };
+    // a course is kept as { kind, name, review, holes: [three holes] }
+    const spec = course
+      ? clean({ kind: 'course', name: out.name, review: out.review, holes: [out.hole1, out.hole2, out.hole3].map((h) => clean(h as Record<string, unknown>)) })
+      : clean(out);
     if (previous) {
       await db.from('designs').update({ spec, par: null }).eq('id', previous.id);
       return json({ id: previous.id, spec });

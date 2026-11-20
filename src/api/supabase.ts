@@ -138,6 +138,9 @@ export const supabaseApi: Api = {
   chronicles: (s) => rpc<Chronicle[]>('chronicles', { p_token: s.token }),
   myDesigns: (s) => rpc<Design[]>('my_designs', { p_token: s.token }),
   submitDesign: (s, id, par) => rpc<void>('submit_design', { p_token: s.token, p_id: id, p_par: par }),
+  postDesignerRound: async (s, id, mark) => {
+    await rpc('post_designer_round', { p_token: s.token, p_id: id, p_mark: mark });
+  },
   designQueue: (s) => rpc<Design[]>('design_queue', { p_token: s.token }),
   reviewDesign: (s, id, ok) => rpc<void>('review_design', { p_token: s.token, p_id: id, p_ok: ok }),
   membersCourse: (s) => rpc<MembersHole[]>('members_course', { p_token: s.token }),

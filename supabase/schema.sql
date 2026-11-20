@@ -2199,7 +2199,7 @@ create or replace function my_designs(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare me players := player_for(p_token);
 begin
-  return coalesce((select json_agg(json_build_object('id', d.id, 'prompt', d.prompt, 'spec', d.spec, 'par', d.par, 'status', d.status, 'createdAt', d.created_at) order by d.created_at desc)
+  return coalesce((select json_agg(json_build_object('id', d.id, 'prompt', d.prompt, 'spec', d.spec, 'par', d.par, 'status', d.status, 'createdAt', d.created_at, 'mark', d.mark) order by d.created_at desc)
     from (select d.* from designs d join players p on p.id = d.player_id
       where lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash order by d.created_at desc limit 30) d), '[]');
 end $$;
@@ -2215,6 +2215,31 @@ begin
   if not found then raise exception 'That hole can''t be submitted.'; end if;
 end $$;
 
+-- A member's course (Nov 20, src/designer/course.ts): three holes in one design (spec.kind 'course'). The designer plays
+-- it first; that round (strokes on each hole, and each stroke as it flew, for the challengers' ghost) is their mark, and
+-- posting it sends the course to the Committee.
+alter table designs add column if not exists mark jsonb;
+
+create or replace function post_designer_round(p_token uuid, p_id bigint, p_mark jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me players := player_for(p_token); n int; t int := 0; s int;
+begin
+  if jsonb_typeof(p_mark->'holes') is distinct from 'array' or jsonb_array_length(p_mark->'holes') <> 3 then raise exception 'A course is three holes.'; end if;
+  for i in 0..2 loop
+    s := (p_mark->'holes'->>i)::int;
+    if s is null or s < 1 or s > 12 then raise exception 'That score doesn''t look right.'; end if;
+    t := t + s;
+  end loop;
+  if pg_column_size(p_mark) > 200000 then raise exception 'That round is too big to keep.'; end if;
+  update designs d set mark = jsonb_set(p_mark, '{total}', to_jsonb(t)), status = 'submitted', submitted_at = now()
+  from players p
+  where d.id = p_id and d.status = 'draft' and d.spec->>'kind' = 'course'
+    and p.id = d.player_id and lower(p.name) = lower(me.name) and p.pin_hash = me.pin_hash;
+  get diagnostics n = row_count;
+  if n = 0 then raise exception 'That course can''t be published.'; end if;
+end $$;
+grant execute on function post_designer_round(uuid, bigint, jsonb) to anon;
+
 -- the admin's queue: holes waiting, and the ones already on the course
 create or replace function design_queue(p_token uuid) returns json
 language plpgsql stable security definer set search_path = public, extensions as $$
@@ -2222,7 +2247,7 @@ declare me players := player_for(p_token);
 begin
   if me.role <> 'admin' then raise exception 'Only the committee can see this.'; end if;
   return coalesce((select json_agg(json_build_object('id', d.id, 'prompt', d.prompt, 'spec', d.spec, 'par', d.par, 'status', d.status,
-      'by', p.name, 'club', g.name, 'submittedAt', d.submitted_at) order by d.status = 'submitted' desc, d.submitted_at desc)
+      'by', p.name, 'club', g.name, 'submittedAt', d.submitted_at, 'mark', d.mark) order by d.status = 'submitted' desc, d.submitted_at desc)
     from designs d join players p on p.id = d.player_id join groups g on g.id = p.group_id
     where d.status in ('submitted', 'approved') and p.group_id in (select admin_clubs(me))), '[]');
 end $$;

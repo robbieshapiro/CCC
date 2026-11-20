@@ -51,7 +51,8 @@ import { clubPurse, money, openPurse, openPurseOf, placeLabel, purseOf } from '.
 import { canShare, dailySummary, share } from './daily';
 import { aceWin, bigMoment } from './acewin';
 import { scorePop } from './moments';
-import { KIND_NAME, packShot, unpackShot, withHoleNo, type ReplayHole, type ReplayKind } from '../replay';
+import { KIND_NAME, packShot, unpackShot, withHoleNo, type ReplayData, type ReplayHole, type ReplayKind } from '../replay';
+import type { DesignerMark } from '../designer/course';
 import { courseById } from '../golf3d/courses';
 import { periodOf } from '../day';
 
@@ -847,6 +848,50 @@ export function coinPop(host: HTMLElement, amount: number, title: string, sub = 
 async function membersHoles(): Promise<Hole[]> {
   const list = (await api.membersCourse(requireSession()).catch(() => [])).filter(isHole);
   return list.map((m) => buildHole(m.spec, `members-${m.id}`, m.by.slice(0, 9)).hole);
+}
+
+// The designer plays their own course to publish it (Nov 20): three holes, played as a card is, every stroke kept as
+// it flew (packShot) for the challengers' ghost. Finishing hands back the mark; leaving part way keeps nothing.
+export function designerRound(snap: Snapshot, holes: Hole[], done: (mark: DesignerMark) => void, back: () => void) {
+  closeRound();
+  const me = snap.players.find((p) => p.id === snap.me)!;
+  const leave = () => {
+    closeRound();
+    back();
+  };
+  render(`<div class="g3" id="g3"></div>`);
+  document.body.classList.add('court-open');
+  const el = document.getElementById('g3')!;
+  let g: Course3D;
+  try {
+    g = new Course3D(el, me.avatar, leave);
+  } catch {
+    closeRound();
+    render(`<main class="narrow"><h1>This device can't draw the course</h1><p class="muted">The club needs WebGL. Try a recent Safari or Chrome.</p></main>`);
+    return;
+  }
+  game = g;
+  g.leaveText = 'Leave';
+  g.howTo = 'round';
+  g.starter = `Your course, ${me.name}. Whatever you score is the mark the members have to beat.`;
+  const scores: number[] = [];
+  const shots: ReplayData[][] = holes.map(() => []);
+  let at = 0;
+  g.onShotLog = () => {
+    const p = g.lastPlayed;
+    if (p) shots[at].push(packShot(p, { kind: 'card', course: 'members', i: at }, ''));
+  };
+  void (async () => {
+    for (at = 0; at < holes.length; at++) {
+      const par = holes.slice(0, at).reduce((a, h) => a + h.par, 0);
+      const r = await g.play(holes[at], at + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { of: holes.length });
+      if (game !== g) return;
+      scores.push(r.strokes);
+    }
+    if (game !== g) return;
+    closeRound();
+    done({ holes: scores, total: scores.reduce((a, b) => a + b, 0), shots });
+  })();
 }
 
 // Try a hole from the Design Desk (or the Committee's queue): one hole, nothing counts, then back
