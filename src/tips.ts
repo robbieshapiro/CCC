@@ -1,12 +1,12 @@
 // Reginald's word while a screen loads (Nov 18): one short, useful or little-known thing about the club. Every line is
 // true to the code it describes (the drinks in golf3d/clubs.ts, the money in bonus.ts and purse.ts).
 export const TIPS = [
-  'Wave the drinks cart down before you tee off. An Espresso makes the gold twice as wide.',
+  'There’s a cooler by the 1st tee, if you look. An Espresso makes the gold twice as wide.',
   'A Clubhouse Lager sends it 25% further, but the wind moves it twice as much. Choose your hole.',
   'Stuck in the rough? A Transfusion plays rough and sand like fairway.',
   'Sparkling Water cuts the wind to a quarter. Worth it on a gusty day.',
   'An Arnold Palmer halves the needle’s speed. Slow hands, steady card.',
-  'Design a hole for the Members’ Course. You earn $100 each time another member finishes it.',
+  'Design a course at the Design Desk. Once it’s on, you earn $50 every time a challenger fails to beat you.',
   'Everyone plays the same pin and the same wind today. No excuses at the bar.',
   'Three cards a day. Your best one counts.',
   'An eagle pays $500, an ace $2,500. Aim accordingly.',

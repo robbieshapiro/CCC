@@ -1,14 +1,17 @@
-// Home, under the Open: Around the club. Practise the course, the range, design a hole, the Members' Course (with its
-// leader), a course idea for Reginald; then the classic courses of weeks gone by, each with its course record and the
+// Home, under the Open: Around the club. Practise the course, the range, design a course, a course idea for Reginald,
+// and the Pro Shop with a few featured pieces and your bank (the Members' Course duel is up in the Nineteenth Hole);
+// then the classic courses of weeks gone by, each with its course record and the
 // champions of its week. The bar's games are in the Nineteenth Hole row above the Open (barstrip.ts).
 import { lookAttrs, looked } from '../courselook';
 import { api } from '../api';
 import type { CourseRecord, Snapshot } from '../api/types';
-import { scoreLabel } from '../bar';
 import { classics, courseFor, type Course } from '../golf3d/courses';
 import { toParLabel } from '../standings';
 import { requireSession } from '../state';
 import { esc } from '../ui';
+import { balanceOf, ITEMS } from '../shop';
+import { money } from '../purse';
+import { todayInGameTz } from '../day';
 
 const ICON: Record<string, string> = { volcanic: '🌋', coastal: '🌊', autumn: '🍁', chicago: '🏙️', linksland: '☘️' };
 
@@ -20,9 +23,9 @@ export function playTiles(snap: Snapshot) {
       <div class="pm-grid">
         <a class="tile pm-tile" href="#/round/practice"><i>⛳</i><b>Practise the course</b><span>${esc(course.name.replace(/ Course$/, ""))} in today's wind and pins. Nothing counts</span></a>
         <a class="tile pm-tile" href="#/facility"><i>🏌️</i><b>The range</b><span>Range and short game</span></a>
-        <a class="tile pm-tile" href="#/design"><i>✏️</i><b>Design a hole</b><span>Describe it. The architect builds it, you play it</span></a>
-        <a class="tile pm-tile" href="#/bar/members"><i>🏗️</i><b>Members' Course</b><span>Holes the members built</span><em data-lead="members"></em></a>
+        <a class="tile pm-tile" href="#/design"><i>✏️</i><b>Design a course</b><span>Any world you can dream up. Your score is the one to beat</span></a>
         <button class="tile pm-tile" data-course-idea><i>💡</i><b>A course idea</b><span>Send Reginald a place you'd like to play</span></button>
+        ${proShop(snap)}
       </div>
       ${
         old.length
@@ -31,6 +34,24 @@ export function playTiles(snap: Snapshot) {
           : ''
       }
     </section>`;
+}
+
+// The Pro Shop: your bank and three pieces you don't own yet, the newest collection first, a different three each day
+function proShop(snap: Snapshot) {
+  const me = snap.players.find((p) => p.id === snap.me);
+  if (!me) return '';
+  const owned = new Set(me.owned ?? []);
+  const rank = (c?: string) => (c === 'wizard' ? 0 : c === 'tour' ? 1 : 2);
+  const pool = ITEMS.filter((i) => !owned.has(i.id) && i.rack === 'member').sort((a, b) => rank(a.collection) - rank(b.collection));
+  const fresh = pool.filter((i) => rank(i.collection) === rank(pool[0]?.collection));
+  const from = fresh.length >= 3 ? fresh : pool;
+  const day = Number(todayInGameTz().replace(/-/g, '')) % Math.max(1, from.length);
+  const picks = [0, 1, 2].map((k) => from[(day + k) % from.length]).filter((x, i, a) => x && a.indexOf(x) === i);
+  return `<a class="tile pm-tile pm-shop" href="#/clubhouse/shop">
+      <div class="pm-shop-top"><i>🛍️</i><b>The Pro Shop</b><span class="pm-bank">In the bank <b>${money(balanceOf(me))}</b></span></div>
+      ${picks.length ? `<ul class="pm-picks">${picks.map((i) => `<li><span>${esc(i.name)}</span><em>${money(i.price)}</em></li>`).join('')}</ul>` : '<span>You own the lot. Reginald is impressed.</span>'}
+      <span class="pm-shop-go">Shop ›</span>
+    </a>`;
 }
 
 const classicTile = (c: Course) => `<a class="pm-classic${c.look ? looked(c) : ` ${esc(c.holes[0]?.theme ?? '')}`}"${lookAttrs(c)} href="#/classic/${c.id}" data-classic="${c.id}">
@@ -44,17 +65,6 @@ const classicTile = (c: Course) => `<a class="pm-classic${c.look ? looked(c) : `
 
 export async function bindPlayTiles(snap: Snapshot) {
   const s = requireSession();
-  const lead = (game: 'members') =>
-    api
-      .barBoard(s, game)
-      .then((b) => {
-        const el = document.querySelector<HTMLElement>(`[data-lead="${game}"]`);
-        if (!el) return;
-        const top = b.board[0];
-        el.textContent = top ? `Leader: ${top.name}, ${scoreLabel(game, top.score)}${b.mine !== null && !top.mine ? ` · you ${scoreLabel(game, b.mine)}` : ''}` : 'Nobody yet this week';
-      })
-      .catch(() => {});
-  void lead('members');
   if (!classics(snap.month).length) return;
   const records = await api.courseRecords(s).catch(() => null as CourseRecord[] | null);
   document.querySelectorAll<HTMLElement>('[data-classic]').forEach((el) => {
