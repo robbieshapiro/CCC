@@ -1,5 +1,5 @@
 // The Design Desk: a member describes a golf hole, Claude lays it out (tee, fairway, green, bunkers, water, trees,
-// elevation, in one of four looks), and it's kept as their draft. They can ask for changes, and the app asks for a fix
+// elevation, in one of four looks; a course also gets a world of its own, Nov 20), and it's kept as their draft. They can ask for changes, and the app asks for a fix
 // when its quick check finds a problem.
 // POST /api/design { token, prompt }                     a new hole
 // POST /api/design { token, id, change }                 the same hole, changed
@@ -47,7 +47,21 @@ GOOD HOLES
 When you're given an existing design and a change, return the whole design with the change made and everything else kept as it was.
 
 A COURSE
-When asked for a course, design three holes that play as a little course of their own: a name for the course (2 to 4 words), Reginald's one-line review of the course, and the three holes (hole1, hole2, hole3), each a complete hole as above. Give it variety: unless the member asks otherwise, one par 3, one par 4 and one par 5, in an order that flows, about 1,000 to 1,300 yards in all. The holes can share a look or move between looks, as the member's idea suggests. A change to a course may name one hole ("hole 2: longer"): change only that hole and keep the others exactly as they were; a change that names no hole may touch any of them.`;
+When asked for a course, design three holes that play as a little course of their own: a name for the course (2 to 4 words), Reginald's one-line review of the course, and the three holes (hole1, hole2, hole3), each a complete hole as above. Give it variety: unless the member asks otherwise, one par 3, one par 4 and one par 5, in an order that flows, about 1,000 to 1,300 yards in all. The holes can share a look or move between looks, as the member's idea suggests. A change to a course may name one hole ("hole 2: longer"): change only that hole and keep the others exactly as they were; a change that names no hole may touch any of them.
+
+THE WORLD
+A course also has a world: the place it's set in, as the member imagines it. Anything goes (the Moon, a candy land, a haunted graveyard, a neon city, the sea floor, a Scottish moor), so build exactly what they describe. It changes how the course looks, never how it plays, so be bold. If they name no place, pick one that suits their idea and surprises them a little. On a course the world sets the scene, and each hole's look only matters if there's no world.
+- name: the world in 2 to 4 words ("The Sea of Tranquility").
+- light: day, golden (late afternoon), dusk, night (moonlit), overcast.
+- sky: three colours as #rrggbb: overhead, the middle, the horizon. A night sky is near black overhead.
+- ground: #rrggbb colours for fairway, green, rough, sand and beyond (the land outside the course). Fairways and greens must still read as somewhere to play: keep them mid to light and the green a touch different from the fairway; the fun is in the rough, the sand and beyond. Grass needn't be green (pink on a candy course, grey dust on the Moon, purple on an alien planet).
+- water: kind water, lava or slime, and its colour. Every pond and creek is that.
+- coast: true if the sea can run down a side of a hole (a hole's sea water needs it).
+- drift: what floats in the air: none, snow, leaves, petals, embers, ash, confetti, fireflies, bubbles.
+- trees: 1 to 4 kinds planted through the course, mixed: pine, oak, maple, palm, sabal (a Florida palm), cypress, monterey (a windswept coastal cypress), torrey (a gnarled pine), snowpine (a fir under snow), tree (a round leafy tree), cactus, gorse (low bushes), rock (boulders), hoodoo (a tall red rock spire), deadtree, tomb (gravestones), streetlight, column (stone columns). Pick what gets the world across (on the Moon: rock only; a graveyard: deadtree and tomb).
+- landmarks (up to 12): scenery out beyond the play, each with hole (1 to 3), along and across (keep them well out, across beyond ±2.4): lodge, lighthouse, ruin, barn, silo, farmhouse, falls (a waterfall), cider (a stand), haybale, pumpkins, corn, sheep, cow, gator, egret, sealions, bigtop, booth, ferris (a ferris wheel), lantern, mausoleum, bigpumpkin, candles, crow, poppies, iceplant, azalea, fountain, craftsman (a house), umbrella, flagpole.
+- backdrop: what lies beyond the grounds: none, mountains (snowy peaks), mesas (red rock), skyline (city towers), swamp (cypress woods), dunes (sand dunes and the sea), carnival (rides and lights).
+In the review, Reginald can mention the world.`;
 
 const spot = (extra: Record<string, unknown>, req: string[]) => ({
   type: 'object',
@@ -97,11 +111,44 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-// a course: its name, Reginald's review, and three holes
+// the world a course is set in (src/designer/world.ts keeps these lists, and tidies what comes back)
+const str = { type: 'string' };
+const WORLD = {
+  type: 'object',
+  properties: {
+    name: str,
+    light: { type: 'string', enum: ['day', 'golden', 'dusk', 'night', 'overcast'] },
+    sky: { type: 'array', items: str },
+    ground: { type: 'object', properties: { fairway: str, green: str, rough: str, sand: str, beyond: str }, required: ['fairway', 'green', 'rough', 'sand', 'beyond'], additionalProperties: false },
+    water: { type: 'object', properties: { kind: { type: 'string', enum: ['water', 'lava', 'slime'] }, color: str }, required: ['kind', 'color'], additionalProperties: false },
+    coast: { type: 'boolean' },
+    drift: { type: 'string', enum: ['none', 'snow', 'leaves', 'petals', 'embers', 'ash', 'confetti', 'fireflies', 'bubbles'] },
+    trees: { type: 'array', items: { type: 'string', enum: ['pine', 'oak', 'maple', 'palm', 'sabal', 'cypress', 'monterey', 'torrey', 'snowpine', 'tree', 'cactus', 'gorse', 'rock', 'hoodoo', 'deadtree', 'tomb', 'streetlight', 'column'] } },
+    landmarks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['lodge', 'lighthouse', 'ruin', 'barn', 'silo', 'farmhouse', 'falls', 'cider', 'haybale', 'pumpkins', 'corn', 'sheep', 'cow', 'gator', 'egret', 'sealions', 'bigtop', 'booth', 'ferris', 'lantern', 'mausoleum', 'bigpumpkin', 'candles', 'crow', 'poppies', 'iceplant', 'azalea', 'fountain', 'craftsman', 'umbrella', 'flagpole'] },
+          hole: { type: 'integer' },
+          along: { type: 'number' },
+          across: { type: 'number' },
+        },
+        required: ['kind', 'hole', 'along', 'across'],
+        additionalProperties: false,
+      },
+    },
+    backdrop: { type: 'string', enum: ['none', 'mountains', 'mesas', 'skyline', 'swamp', 'dunes', 'carnival'] },
+  },
+  required: ['name', 'light', 'sky', 'ground', 'water', 'coast', 'drift', 'trees', 'landmarks', 'backdrop'],
+  additionalProperties: false,
+};
+
+// a course: its name, Reginald's review, its world, and three holes
 const COURSE = {
   type: 'object',
-  properties: { kind: { type: 'string', enum: ['course'] }, name: { type: 'string' }, review: { type: 'string' }, hole1: SCHEMA, hole2: SCHEMA, hole3: SCHEMA },
-  required: ['kind', 'name', 'review', 'hole1', 'hole2', 'hole3'],
+  properties: { kind: { type: 'string', enum: ['course'] }, name: { type: 'string' }, review: { type: 'string' }, world: WORLD, hole1: SCHEMA, hole2: SCHEMA, hole3: SCHEMA },
+  required: ['kind', 'name', 'review', 'world', 'hole1', 'hole2', 'hole3'],
   additionalProperties: false,
 };
 
@@ -139,8 +186,8 @@ export async function POST(request: Request) {
   const course = previous ? (previous.spec as { kind?: string })?.kind === 'course' : body.kind === 'course';
   const current = (spec: unknown) => {
     if (!course) return JSON.stringify(spec);
-    const c = spec as { name: string; review: string; holes: unknown[] };
-    return JSON.stringify({ kind: 'course', name: c.name, review: c.review, hole1: c.holes[0], hole2: c.holes[1], hole3: c.holes[2] });
+    const c = spec as { name: string; review: string; holes: unknown[]; world?: unknown };
+    return JSON.stringify({ kind: 'course', name: c.name, review: c.review, ...(c.world ? { world: c.world } : {}), hole1: c.holes[0], hole2: c.holes[1], hole3: c.holes[2] });
   };
   const content = previous
     ? `${me.name} described this ${course ? 'course' : 'hole'}: "${previous.prompt}"\n\nThe current design:\n${current(previous.spec)}\n\nChange it: ${change}`
@@ -169,7 +216,7 @@ export async function POST(request: Request) {
     };
     // a course is kept as { kind, name, review, holes: [three holes] }
     const spec = course
-      ? clean({ kind: 'course', name: out.name, review: out.review, holes: [out.hole1, out.hole2, out.hole3].map((h) => clean(h as Record<string, unknown>)) })
+      ? clean({ kind: 'course', name: out.name, review: out.review, world: out.world, holes: [out.hole1, out.hole2, out.hole3].map((h) => clean(h as Record<string, unknown>)) })
       : clean(out);
     if (previous) {
       await db.from('designs').update({ spec, par: null }).eq('id', previous.id);

@@ -26,6 +26,7 @@ export type Kit = {
   skyColors: [string, string, string]; // overhead, mid, horizon
   sun?: { color: string; at: [number, number, number]; size: number; glow?: string };
   clouds?: boolean;
+  stars?: boolean; // the night sky's moonless stars over it
   rail?: boolean; // the edge of the hole is a low rail rather than the stone curb
   post?(h: Hole, p: Post, anim: Anim): THREE.Object3D | null; // null: draw it the usual way
   decor?(h: Hole, d: Decor, anim: Anim): THREE.Object3D | null;

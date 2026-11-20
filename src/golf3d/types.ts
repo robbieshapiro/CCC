@@ -81,7 +81,7 @@ export type Hole = {
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
   noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)
-  theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn' | 'coastal' | 'florida' | 'city' | 'canyon' | 'alpine' | 'linksland' | 'chicago' | 'carnival' | 'arena';
+  theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn' | 'coastal' | 'florida' | 'city' | 'canyon' | 'alpine' | 'linksland' | 'chicago' | 'carnival' | 'arena' | `member:${string}`; // member: a member's own world (src/golf3d/looks/member.ts)
   blurb?: string; // a line for the hole's intro card during the flyover
   teeTip?: string; // what Hank says on this tee: the club the hole wants
   yards?: number; // the length shown on the intro card, if not the straight line from tee to cup

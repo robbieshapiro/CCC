@@ -14,21 +14,45 @@ import { requireSession } from '../state';
 import { esc, header, navigate, render } from '../ui';
 import { designerRound, testHole } from './round';
 
-const LOOKS = [
-  ['', 'Architect’s choice'],
-  ['highlands', '🌲 Highlands'],
-  ['caldera', '🌋 Caldera'],
-  ['links', '🌊 Links'],
-  ['desert', '🌵 Desert'],
+// worlds to start from: tap one and the architect builds it (sky, light, ground, water, trees, landmarks, what's
+// beyond), or write any world you like in the box. Anything goes: it changes how the course looks, never how it plays.
+const WORLDS = [
+  ['', 'Architect’s choice', ''],
+  ['🌲', 'Highland pines', 'parkland in the mountains: tall pines, oaks, a lake, mountains beyond'],
+  ['🌋', 'Volcano', 'a volcanic island: black sand, rivers of lava, palms, embers in the air'],
+  ['🌊', 'Seaside links', 'links on the coast: dunes, fescue, gorse, ruins, sheep, the sea alongside'],
+  ['🌵', 'Desert', 'the desert: sand waste, cacti, red mesas, a hard bright sun'],
+  ['🏜️', 'Red canyon', 'a red rock canyon: hoodoos, mesas, golden light'],
+  ['🏔️', 'Snowy Alps', 'a ski resort: snowy firs, snow falling, a lodge, peaks all round'],
+  ['🍁', 'Autumn farm', 'an autumn farm: maples turning, a red barn, silo, hay bales, pumpkins, leaves falling'],
+  ['🐊', 'Florida swamp', 'a Florida swamp at sunset: sabal palms, live oaks, gators, egrets'],
+  ['🌆', 'City skyline', 'a city course: towers all round, streetlights, the skyline beyond'],
+  ['🌃', 'Neon night', 'a neon city at night: glowing greens, a dark purple sky, streetlights'],
+  ['🌸', 'Cherry blossom', 'a spring garden: pink blossom trees, petals drifting, azaleas'],
+  ['🌴', 'Tropical island', 'a tropical island: palms, white sand, turquoise sea all round'],
+  ['🌕', 'The Moon', 'the Moon: grey dust, a black sky full of stars, craters, no trees, just rocks'],
+  ['🍭', 'Candy land', 'candy land: pink and mint ground, a cotton-candy sky, confetti in the air'],
+  ['🦖', 'Jurassic jungle', 'a prehistoric jungle: huge palms, a waterfall, steam, a green haze'],
+  ['👻', 'Haunted', 'a haunted graveyard at night: dead trees, tombstones, lanterns, a giant pumpkin'],
+  ['🎪', 'Carnival', 'a carnival at dusk: a big top, booths, a ferris wheel, confetti'],
+  ['🏰', 'Castle ruins', 'old castle ruins on the moors: stone, gorse, sheep, grey skies'],
+  ['🧊', 'Ice planet', 'an ice planet: pale blue ground, frozen lakes, snow, a strange green sky'],
+  ['🔥', 'Inferno', 'an inferno: scorched red ground, lava everywhere, ash falling, a blood-red sky'],
+  ['🌅', 'Sunset beach', 'a beach at golden hour: palms, sand, the sea, a big low sun'],
+  ['🪐', 'Alien planet', 'an alien planet: purple grass, a teal sky, glowing slime pools, strange rocks'],
+  ['🫧', 'Underwater', 'the sea floor: blue-green light, bubbles rising, coral-coloured rocks'],
+  ['🎲', 'Surprise me', 'somewhere nobody has ever played golf: surprise me'],
 ] as const;
 const IDEAS = [
   'A volcanic island course: a par 3 over lava, a risky par 4 along the sea, a par 5 into the crater',
-  'Three holes through a desert canyon, the last one a long par 5 with a waste bunker to carry',
+  'Three holes on the Moon, the last a long par 5 across the craters',
   'A links course on the cliffs: wind, pot bunkers, and a par 3 to a green on the edge',
-  'A parkland course around a lake, pines everywhere, a drivable par 4 in the middle',
+  'A candy land course with a lollipop forest and a chocolate river to carry',
+  'A haunted graveyard course, a drivable par 4 in the middle',
 ];
 const STATUS: Record<Design['status'], string> = { draft: 'Draft', submitted: 'With the Committee', approved: 'Approved', rejected: 'Not this time' };
 const LOOK_NAME: Record<string, string> = { highlands: 'Highlands', caldera: 'Caldera', links: 'Links', desert: 'Desert' };
+const worldOf = (c: CourseSpec, i: number) => c.world?.name ?? LOOK_NAME[c.holes[i].look];
 
 export async function designDesk(snap: Snapshot, id?: number) {
   render(`
@@ -41,7 +65,8 @@ export async function designDesk(snap: Snapshot, id?: number) {
       </section>
       <section class="desk-new" id="desk-new">
         <textarea id="desk-prompt" maxlength="600" rows="3" placeholder="${esc(IDEAS[Math.floor(Math.random() * IDEAS.length)])}" aria-label="Describe your course"></textarea>
-        <div class="desk-looks" role="radiogroup" aria-label="Look">${LOOKS.map(([v, l], i) => `<button type="button" role="radio" data-look="${v}" aria-checked="${i === 0}">${l}</button>`).join('')}</div>
+        <p class="desk-worlds-h">Pick a world, or write your own. Anything goes.</p>
+        <div class="desk-looks" role="radiogroup" aria-label="World">${WORLDS.map(([e, l], i) => `<button type="button" role="radio" data-look="${i}" aria-checked="${i === 0}">${e ? `${e} ` : ''}${l}</button>`).join('')}</div>
         <button class="btn" id="desk-draw">Draw the course</button>
         <p class="error" id="desk-err" role="alert"></p>
       </section>
@@ -49,18 +74,21 @@ export async function designDesk(snap: Snapshot, id?: number) {
       <section id="desk-hole"></section>
       <section class="desk-mine"><h2>Your courses</h2><div id="desk-list"><p class="muted">Loading…</p></div></section>
     </main>`);
-  let look = '';
+  let look = 0;
   document.querySelectorAll<HTMLButtonElement>('[data-look]').forEach((b) => {
     b.onclick = () => {
-      look = b.dataset.look ?? '';
+      look = Number(b.dataset.look ?? 0);
       document.querySelectorAll('[data-look]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
     };
   });
   document.getElementById('desk-draw')!.onclick = async () => {
-    const text = (document.getElementById('desk-prompt') as HTMLTextAreaElement).value.trim();
-    if (text.length < 8) return void (document.getElementById('desk-err')!.textContent = 'Tell the architect a little more.');
+    const typed = (document.getElementById('desk-prompt') as HTMLTextAreaElement).value.trim();
+    const world = WORLDS[look]?.[2] ?? '';
+    // a world on its own is enough: the architect designs the holes to suit it
+    const text = typed || (world ? `Three holes in ${world}` : '');
+    if (text.length < 8) return void (document.getElementById('desk-err')!.textContent = 'Pick a world or tell the architect a little more.');
     document.getElementById('desk-err')!.textContent = '';
-    await draw(snap, () => askArchitect({ prompt: look ? `${text} (Look: ${LOOK_NAME[look]})` : text, kind: 'course' }));
+    await draw(snap, () => askArchitect({ prompt: world && typed ? `${typed} (World: ${world})` : text, kind: 'course' }));
   };
   const list = await mine();
   drawList(list);
@@ -146,7 +174,7 @@ function showCourse(snap: Snapshot, d: Design) {
       <ol class="desk-holes">${c.holes
         .map(
           (h, i) => `<li><div class="desk-plan" data-plan="${i}"></div>
-            <p class="eyebrow">Hole ${i + 1} · ${LOOK_NAME[h.look]}</p><b>${esc(h.name)}</b><span class="desk-par">Par ${h.par} · ${h.yards} yd</span>
+            <p class="eyebrow">Hole ${i + 1} · ${esc(worldOf(c, i))}</p><b>${esc(h.name)}</b><span class="desk-par">Par ${h.par} · ${h.yards} yd</span>
             ${h.hint ? `<p class="desk-hint">${esc(h.hint)}</p>` : ''}
             <button class="btn ghost small" data-try="${i}">Try it</button></li>`,
         )

@@ -10,6 +10,9 @@ import { band, blob, heightAt, inPoly, isWater, surfaceAt } from '../golf3d/terr
 import { simulate } from '../golf3d/physics';
 import type { Decor, Hole, Piece, Post, Region, V2, Water } from '../golf3d/types';
 import { makeRng } from '../seed';
+import { KITS } from '../golf3d/kits';
+import { memberKit } from '../golf3d/looks/member';
+import { worldKey, type Landmark, type World } from './world';
 
 export type Look = 'highlands' | 'caldera' | 'links' | 'desert';
 export type Shape = 'straight' | 'dogleg-left' | 'dogleg-right' | 'double-dogleg';
@@ -144,7 +147,16 @@ export function frameOf(raw: HoleSpec) {
 
 export type Built = { hole: Hole; warnings: string[] };
 
-export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {
+// a member's world as a look kit, made once and kept by its key
+function worldTheme(w: World): `member:${string}` {
+  const key = worldKey(w) as `member:${string}`;
+  if (!KITS[key]) KITS[key] = memberKit(w);
+  return key;
+}
+
+// world: the member's own world for the course (src/designer/world.ts), with this hole's landmarks; without it the
+// hole is in its look
+export function buildHole(raw: HoleSpec, id: string, flag?: string, world?: World, landmarks: Landmark[] = []): Built {
   const s = tidy(raw);
   const warnings: string[] = [];
   const rng = makeRng(`hole:${id}:${s.name}`);
@@ -227,13 +239,14 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {
     terrain.push({ kind: 'hill', x: p.x, y: p.y, r: big[0], h: big[1] });
   }
 
-  const sea = s.look === 'links' || s.look === 'caldera';
+  const sea = world ? world.coast : s.look === 'links' || s.look === 'caldera';
   for (const w of s.water) {
     if (w.kind === 'sea' && !sea) {
-      warnings.push('The sea only comes with links or the Caldera: it became a pond.');
+      warnings.push(world ? 'There’s no coast in this world: the sea became a pond.' : 'The sea only comes with links or the Caldera: it became a pond.');
       w.kind = 'pond';
     }
-    const lava = s.look === 'caldera' && w.kind !== 'sea';
+    const lava = world ? false : s.look === 'caldera' && w.kind !== 'sea';
+    const pool: Water['look'] = world ? (w.kind === 'sea' ? 'sea' : world.water.kind === 'water' ? 'lake' : world.water.kind) : lava ? 'lava' : 'lake';
     if (w.kind === 'pond') {
       const p = place(w.along, w.across);
       const r = { small: 18, medium: 28, large: 40 }[w.size];
@@ -242,7 +255,7 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {
         continue;
       }
       terrain.push({ kind: 'disc', x: p.x, y: p.y, r: r + 6, h: -3.2, edge: 10, op: 'add' });
-      water.push({ poly: blob(p.x, p.y, r, r * 0.8, Math.round(p.x), 0.15), level: profile(w.along) - 1.2, look: lava ? 'lava' : 'lake' });
+      water.push({ poly: blob(p.x, p.y, r, r * 0.8, Math.round(p.x), 0.15), level: profile(w.along) - 1.2, look: pool });
     } else if (w.kind === 'creek') {
       const a = place(w.along, -4);
       const b = place(w.along, 4);
@@ -251,7 +264,7 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {
         continue;
       }
       terrain.push({ kind: 'channel', pts: [a, b], width: 9, depth: 3.4 });
-      water.push({ poly: band([a, b], 5.5), level: profile(w.along) - 2, look: lava ? 'lava' : 'lake' });
+      water.push({ poly: band([a, b], 5.5), level: profile(w.along) - 2, look: pool });
     } else {
       // the sea down one side: the ground falls away to a shore beyond the rough
       const sgn = w.side === 'left' ? -1 : 1;
@@ -283,8 +296,12 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {
 
   // trees (or palms, gorse and cacti), in groups and down the edges of the property
   const kinds: Record<Look, Post['look'][]> = { highlands: ['pine', 'pine', 'oak'], caldera: ['palm', 'palm', 'rock'], links: ['gorse', 'gorse', 'rock'], desert: ['cactus', 'cactus', 'rock'] };
+  const mixOf = world ? world.trees : kinds[s.look];
   const sized = (look: Post['look'], p: V2): Post =>
-    look === 'oak' ? { ...p, r: 2, h: 34, look } : look === 'pine' ? { ...p, r: 1.2, h: 22, look } : look === 'palm' ? { ...p, r: 1.2, h: 22, look } : look === 'gorse' ? { ...p, r: 2.2, h: 3, e: 0.3, look } : look === 'cactus' ? { ...p, r: 0.8, h: 9, look } : { ...p, r: 3, h: 3, e: 0.5, look: 'rock' };
+    look === 'oak' ? { ...p, r: 2, h: 34, look } : look === 'pine' ? { ...p, r: 1.2, h: 22, look } : look === 'palm' || look === 'sabal' ? { ...p, r: 1.2, h: 22, look } : look === 'gorse' ? { ...p, r: 2.2, h: 3, e: 0.3, look } : look === 'cactus' ? { ...p, r: 0.8, h: 9, look }
+    : look === 'maple' || look === 'tree' || look === 'monterey' || look === 'torrey' ? { ...p, r: 1.6, h: 26, look } : look === 'cypress' || look === 'snowpine' ? { ...p, r: 1.2, h: 22, look }
+    : look === 'hoodoo' ? { ...p, r: 3, h: 24, look } : look === 'deadtree' ? { ...p, r: 1, h: 18, look } : look === 'tomb' ? { ...p, r: 1.2, h: 3, look } : look === 'streetlight' ? { ...p, r: 0.4, h: 16, look } : look === 'column' ? { ...p, r: 1.4, h: 14, look }
+    : { ...p, r: 3, h: 3, e: 0.5, look: 'rock' };
   const plant = (p: V2, look: Post['look']) => {
     if (!inPoly(p, border) || near(p, tee, 24) || near(p, gc, R + 10) || wet(p)) return;
     posts.push(sized(look, p));
@@ -295,15 +312,15 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {
     for (let i = 0; i < t.count; i++) {
       const a = rng.next() * Math.PI * 2;
       const d = i === 0 ? 0 : Math.sqrt(rng.next()) * spread;
-      plant({ x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }, kinds[s.look][Math.floor(rng.next() * 3)]);
+      plant({ x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }, mixOf[Math.floor(rng.next() * mixOf.length)]);
     }
   }
-  const edgeEvery = s.look === 'desert' ? 70 : s.look === 'links' ? 90 : 45;
+  const edgeEvery = world ? 50 : s.look === 'desert' ? 70 : s.look === 'links' ? 90 : 45;
   for (let f = 0.04; f <= 1.08; f += edgeEvery / L)
     for (const side of [-1, 1]) {
       if (rng.next() < 0.3) continue;
       const k = (corridor - 10 - rng.next() * 18) / wf;
-      plant(place(f, side * k), kinds[s.look][Math.floor(rng.next() * 3)]);
+      plant(place(f, side * k), mixOf[Math.floor(rng.next() * mixOf.length)]);
     }
 
   // where the drive should finish, for the aim and the flyover
@@ -318,13 +335,19 @@ export function buildHole(raw: HoleSpec, id: string, flag?: string): Built {
     { kind: 'sign', x: -22, y: -10, rot: 0 },
     { kind: 'bench', x: 24, y: -14, rot: 0 },
   ];
+  // the world's landmarks on this hole: scenery only, kept off the tee, the green and the water
+  for (const m of landmarks) {
+    const p = place(m.along, m.across);
+    if (near(p, tee, 40) || near(p, gc, R + 24) || wet(p) || !inPoly(p, border)) continue;
+    decor.push({ kind: m.kind, x: p.x, y: p.y, rot: Math.atan2(-p.x, -p.y) });
+  }
   const xs = border.map((p) => p.x);
   const ys = border.map((p) => p.y);
   const hole: Hole = {
     id,
     name: s.name,
     par: s.par,
-    theme: s.look === 'caldera' ? 'volcanic' : s.look === 'highlands' ? 'highland' : s.look,
+    theme: world ? worldTheme(world) : s.look === 'caldera' ? 'volcanic' : s.look === 'highlands' ? 'highland' : s.look,
     noCart: true,
     // played as the weekly course is (Nov 20): tour greens (quicker, the smaller cup, a putt must be dying to drop), the
     // bag with the wood, spin that bites, the green read, drops where it went in, gusting wind that grows with height

@@ -2087,8 +2087,31 @@ function sampleCourse(prompt: string, change?: string) {
   const first = sampleSpec(prompt, change);
   const others = (['highlands', 'links', 'desert', 'caldera'] as const).filter((l) => l !== first.look);
   const holes = [first, { ...SAMPLES[others[0]] }, { ...SAMPLES[others[1]] }].map((h, i) => ({ ...h, name: `${h.name}${i ? '' : ''}` }));
-  return { kind: 'course' as const, name: 'The Practice Course', review: 'Three holes, each a little harder than it looks. The local architect is on holiday.', holes };
+  const text = `${prompt} ${change ?? ''}`.toLowerCase();
+  const world = Object.entries(SAMPLE_WORLDS).find(([k]) => text.includes(k))?.[1];
+  return { kind: 'course' as const, name: 'The Practice Course', review: 'Three holes, each a little harder than it looks. The local architect is on holiday.', holes, ...(world ? { world } : {}) };
 }
+// a few worlds the local architect knows, so the Desk's worlds can be tried with no key
+const SAMPLE_WORLDS: Record<string, unknown> = {
+  moon: {
+    name: 'The Sea of Tranquility', light: 'night', sky: ['#000000', '#05060c', '#1a1d2b'],
+    ground: { fairway: '#a7a8ad', green: '#c9cbd2', rough: '#7c7d82', sand: '#5b5c61', beyond: '#4a4b50' },
+    water: { kind: 'slime', color: '#6fdc3a' }, coast: false, drift: 'none', trees: ['rock'],
+    landmarks: [{ kind: 'flagpole', hole: 1, along: 0.5, across: -2.8 }], backdrop: 'mountains',
+  },
+  candy: {
+    name: 'Sugarloaf Hollow', light: 'golden', sky: ['#7fd3ff', '#ffc6e8', '#fff1b8'],
+    ground: { fairway: '#9df2c9', green: '#ffd1ec', rough: '#ff9fcf', sand: '#fff6d6', beyond: '#c9a0ff' },
+    water: { kind: 'water', color: '#7a4a2a' }, coast: false, drift: 'confetti', trees: ['tree', 'maple', 'palm'],
+    landmarks: [{ kind: 'bigtop', hole: 1, along: 0.6, across: 3 }, { kind: 'ferris', hole: 2, along: 0.8, across: -3.2 }, { kind: 'booth', hole: 3, along: 0.4, across: 2.8 }], backdrop: 'carnival',
+  },
+  haunted: {
+    name: 'Hollow Hills', light: 'night', sky: ['#05030a', '#1c1030', '#4a2a50'],
+    ground: { fairway: '#5f7a4a', green: '#7aa060', rough: '#2f3a28', sand: '#8a7a68', beyond: '#1e1a22' },
+    water: { kind: 'slime', color: '#5fd03a' }, coast: false, drift: 'fireflies', trees: ['deadtree', 'tomb'],
+    landmarks: [{ kind: 'mausoleum', hole: 1, along: 0.5, across: -2.8 }, { kind: 'bigpumpkin', hole: 2, along: 0.7, across: 3 }, { kind: 'lantern', hole: 3, along: 0.3, across: 2.6 }, { kind: 'crow', hole: 3, along: 0.6, across: -2.6 }], backdrop: 'swamp',
+  },
+};
 function sampleSpec(prompt: string, change?: string): Design['spec'] {
   const text = `${prompt} ${change ?? ''}`.toLowerCase();
   const look = /desert|cact|canyon|mesa/.test(text) ? 'desert' : /links|sea|dune|scotland|wind/.test(text) ? 'links' : /lava|volcan|caldera|island/.test(text) ? 'caldera' : 'highlands';
