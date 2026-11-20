@@ -761,8 +761,10 @@ async function shotRound(snap: Snapshot) {
     closeRound();
     navigate('#/');
   };
-  const board = await api.dailyBoard(s, day).catch(() => null);
-  if (!board) return back();
+  let failed = '';
+  const board = await api.dailyBoard(s, day).catch((e) => ((failed = (e as Error).message), null));
+  // say why rather than bounce home without a word
+  if (!board) return void tell("The Daily Shot didn't load", `<p>${esc(failed || 'Try again in a minute.')}</p>`).then(back);
   if (board.tries.length >= SHOT_HOLES) return void shotSummary(day, snap.groupName, back);
   const me = snap.players.find((p) => p.id === snap.me)!;
   const set = dailyHoles(day);
