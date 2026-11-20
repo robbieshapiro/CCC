@@ -279,7 +279,7 @@ Last updated Nov 20, 2026 (the Members' Course a duel with the designer's ghost,
 
 ## Setup status
 
-- [ ] #362: apply `pr_362_duel` (member_cards, live_member_course, start/finish_member_card, person_bonus) after merge.
+- [x] #362: applied `pr_362_duel` on Nov 20; member_cards, live_member_course, start/finish_member_card and the duel money in person_bonus are live.
 - [x] #361: applied `pr_361_member_courses` on Nov 20; designs.mark and post_designer_round are live.
 - [x] #359: applied `pr_359_featured_hole` on Nov 19; members_course returns Tyler's Lost in Orbit with his avatar.
 - [x] #358: applied `pr_358_winged_ball` on Nov 19; the winged golden ball is in shop_items at $3,500.
