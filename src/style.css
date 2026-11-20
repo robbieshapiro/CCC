@@ -2499,7 +2499,7 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .desk-holes .btn { padding: 6px 10px; white-space: nowrap; font-size: 12px; }
 
 /* The duel on the Members' Course (Nov 20): the match up top, and the result */
-.duel-hud { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); z-index: 6; display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'f b' 'f s'; column-gap: 8px; align-items: center; padding: 6px 14px 6px 6px; border-radius: 999px; background: rgba(20, 35, 28, 0.82); border: 1px solid #e6c35c; color: #fff; pointer-events: none; white-space: nowrap; }
+.duel-hud { position: absolute; bottom: calc(190px + env(safe-area-inset-bottom)); top: auto; left: 50%; transform: translateX(-50%); z-index: 6; display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'f b' 'f s'; column-gap: 8px; align-items: center; padding: 6px 14px 6px 6px; border-radius: 999px; background: rgba(20, 35, 28, 0.82); border: 1px solid #e6c35c; color: #fff; pointer-events: none; white-space: nowrap; }
 .duel-hud .dh-face { grid-area: f; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; }
 .duel-hud .dh-face img, .duel-hud .dh-face svg { width: 100%; height: 100%; }
 .duel-hud b { grid-area: b; font: 700 14px var(--serif); color: #ffe08a; }

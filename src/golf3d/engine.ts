@@ -2269,8 +2269,8 @@ export class Course3D {
         g.add(pole);
       }
     };
-    // the banner: behind the tee, facing down the hole, high enough to frame the drive
-    const back = { x: h.tee.x - Math.sin(h.aim) * 16, y: h.tee.y - Math.cos(h.aim) * 16 };
+    // the banner: out ahead on the left of the drive, facing back to the tee (behind the tee it filled the camera)
+    const back = { x: h.tee.x + Math.sin(h.aim) * 55 - Math.cos(h.aim) * 30, y: h.tee.y + Math.cos(h.aim) * 55 + Math.sin(h.aim) * 30 };
     const banner = new THREE.Group();
     const bn = board(26, 5, (x, c) => {
       const grd = x.createLinearGradient(0, 0, c.width, 0);
@@ -2293,8 +2293,7 @@ export class Course3D {
     banner.add(bn.m);
     poles(banner, 26, 14.5);
     banner.position.copy(w3(back.x, back.y, heightAt(h, back.x, back.y)));
-    banner.rotation.y = -h.aim + Math.PI;
-    banner.lookAt(w3(h.cup.x, h.cup.y, banner.position.y));
+    banner.lookAt(w3(h.tee.x, h.tee.y, banner.position.y));
     root.add(banner);
     // the scoreboard: off the right of the green, facing back toward the tee
     const right = { x: Math.cos(h.aim), y: -Math.sin(h.aim) };
