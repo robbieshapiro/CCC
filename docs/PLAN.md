@@ -297,7 +297,7 @@ Last updated Nov 21, 2026 (the Daily Shot pays $100 a player to its winner from 
 
 ## Setup status
 
-- [ ] Apply #380's SQL live (`shot_prize` and `person_bonus`), after Robbie OKs it: money logic.
+- [x] Apply #380's SQL live (`shot_prize` and `person_bonus`), after Robbie OKs it: money logic. Applied Nov 21 as `pr_380_shot_prize`; every member's total unchanged (51 people, $101,275), Eli's acepot 1100.
 
 - [x] #369: applied `pr_369_one_hole` on Nov 20; post_designer_round and finish_member_card take the course's hole count, discard_design is live.
 - [x] The Daily Shot: applied `pr_daily_shot` on Nov 20 (Robbie approved, before merge so the preview plays); every bonus, past prize and the pot verified unchanged.
