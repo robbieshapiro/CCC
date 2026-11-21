@@ -2633,3 +2633,23 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 /* the card tile, pointed at from the Daily Shot: a gold ring that pulses twice */
 .card-glow { animation: cardGlow 1.6s ease-out 2; border-radius: 18px; }
 @keyframes cardGlow { 0% { box-shadow: 0 0 0 0 rgba(230, 195, 92, 0.85); } 100% { box-shadow: 0 0 0 16px rgba(230, 195, 92, 0); } }
+/* the Daily Shot once played (Nov 21): the pot small in the corner, your total and place across every club, your three
+   holes, and the daily card's two ways in */
+.shot-card[data-state='done'] .shot-lead { background: rgba(0, 0, 0, 0.2); padding: 4px 10px; }
+.sd-corner { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: #cdeedd; }
+.sd-corner b { font: 700 15px var(--serif); color: #ffe08a; margin-left: 4px; }
+.shot-card[data-state='done'] .shot-done { display: grid; grid-template-columns: 1fr; justify-content: stretch; gap: 10px; padding: 2px 0 0; }
+.sd-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sd-top b { font: 700 42px/1 var(--serif); color: #ffe08a; }
+.sd-top em { font-style: normal; font: 700 20px/1.1 var(--serif); color: #fff; text-align: right; }
+.sd-top em small { display: block; font: 700 10px var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: #cdeedd; }
+.sd-holes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.sd-holes span { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.1); font-weight: 700; font-size: 14px; color: #fff; }
+.sd-holes small { font-size: 10px; letter-spacing: 0.1em; color: #cdeedd; margin-right: 8px; }
+.sd-card { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sd-card .btn { text-align: center; margin: 0; }
+.btn.ghost-light { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, 0.45); }
+.sd-card .btn { padding: 10px 8px; font-size: 13px; letter-spacing: 0.04em; }
+.shot-card[data-state='done'] [data-shot-body], .shot-card[data-state='done'] .shot-done, .shot-card[data-state='done'] .shot-next, .sd-card { width: 100%; box-sizing: border-box; }
+.shot-card[data-state='done'] .shot-done { text-decoration: none; color: inherit; }
+.shot-card[data-state='done'] .sd-card { display: flex; gap: 8px; } .sd-card .btn { flex: 1 1 0; min-width: 0; }

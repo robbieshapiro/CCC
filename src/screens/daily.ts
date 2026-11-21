@@ -225,7 +225,6 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
   const played = b.tries.length;
   const body = el.querySelector<HTMLElement>('[data-shot-body]')!;
   const next = el.querySelector<HTMLElement>('[data-shot-next]')!;
-  const cardsLine = cardsLeft ? `<a href="#/" data-to-card>Now your daily card ›</a>` : '';
   if (!played) return;
   next.hidden = false;
   if (played < SHOT_ALL) {
@@ -235,21 +234,18 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
     return;
   }
   el.dataset.state = 'done';
-  const closer = closerLine(b);
-  // done: your result is the star, the pot a smaller figure beside it
+  // done: the pot small in the corner, your total and where it stands across every club, your three holes, and the
+  // daily card's own two ways in
+  el.querySelector<HTMLElement>('[data-shot-lead]')!.innerHTML = `<span class="sd-corner">Ace Pot <b>${money(b.pot)}</b></span>`;
+  const hole = (n: number) => {
+    const best = bestOn(b.tries, n);
+    return `<span><small>H${n}</small>${best === null ? '–' : best === 0 ? '⛳' : best >= 150 ? '💧' : ftLabel(best)}</span>`;
+  };
   body.innerHTML = `<a class="shot-done" href="#/daily">
-      <span class="sd-me"><b>${ftLabel(totalFt(b.tries))}</b>${closer ? `<em>${esc(closer)}</em>` : ''}</span>
-      <span class="sd-pot"><small>Ace Pot</small><b>${money(b.pot)}</b></span>
+      <span class="sd-top"><b>${ftLabel(totalFt(b.tries))}</b>${b.place ? `<em>${ordinalOf(b.place)} of ${b.players}<small>all clubs</small></em>` : ''}</span>
+      <span class="sd-holes">${[1, 2, 3].map(hole).join('')}</span>
     </a>`;
-  next.innerHTML = cardsLine || 'Back tomorrow.';
-  // the daily card: to its tile below (play or practise first), not straight to the tee
-  next.querySelector<HTMLAnchorElement>('[data-to-card]')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const card = document.getElementById('card-tile')?.closest('section') ?? document.getElementById('card-tile');
-    if (!card) return void (location.hash = '#/round');
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    card.classList.remove('card-glow');
-    void (card as HTMLElement).offsetWidth;
-    card.classList.add('card-glow');
-  });
+  next.innerHTML = cardsLeft
+    ? `<span class="sd-card"><a class="btn small gold" href="#/round">Play today's card</a><a class="btn small ghost-light" href="#/round/practice">Practise first</a></span>`
+    : 'Back tomorrow.';
 }
