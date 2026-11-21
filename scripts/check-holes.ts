@@ -11,7 +11,7 @@ import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type Meter
 import { bake, gradAt, heightAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
 import { makeRng } from '../src/seed';
-import { dailyHoles, SHOT_FROM } from '../src/dailyholes';
+import { dailyHoles, SHOT_FROM, STEPS_FROM } from '../src/dailyholes';
 import { dailyShot } from '../src/daily';
 import { checkHole } from '../src/designer/hole';
 
@@ -394,10 +394,11 @@ if (mode === 'calibrate') {
   process.exit(0);
 }
 const only = process.argv[3];
-// daily: the Daily Shot's three holes a day, for DAYS days from its first (npm run check-holes -- daily)
+// daily: the Daily Shot's three holes a day, for DAYS days from FROM (default: the longer holes from Nov 22)
 const DAILY_DAYS = Number(process.env.DAYS ?? 30);
 const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-const dailyDays = Array.from({ length: DAILY_DAYS }, (_, i) => addDays(SHOT_FROM, i));
+const DAILY_FROM = process.env.FROM ?? STEPS_FROM;
+const dailyDays = Array.from({ length: DAILY_DAYS }, (_, i) => addDays(DAILY_FROM, i));
 const holes = mode === 'daily' ? dailyDays.flatMap((d) => dailyHoles(d).holes.map((x) => x.hole)) : course.holes.filter((h) => !only || h.id === only);
 // quick mode plays on a baked copy of the ground: near enough for the sims, and far quicker
 if (QUICK) holes.forEach((h) => bake(h));
@@ -718,9 +719,17 @@ if (mode === 'daily' && !process.env.NO_SIM) {
       byHole[x.n - 1].push(...r);
       after.push(...r);
     }
-  byHole.forEach((r, i) => stats(`hole ${i + 1}`, r));
+  const per = byHole.map((r, i) => stats(`hole ${i + 1}`, r));
   const a = stats(`all three, ${dailyDays.length} days`, after);
   console.log(`  median ${((a.med / b.med - 1) * 100).toFixed(0)}% against before`);
-  ok(Math.abs(a.med / b.med - 1) <= 0.15, 'the Daily Shot plays about as hard as the one-shot game (median within 15%)');
+  if (DAILY_FROM < STEPS_FROM) ok(Math.abs(a.med / b.med - 1) <= 0.15, 'the Daily Shot plays about as hard as the one-shot game (median within 15%)');
+  else {
+    // the longer holes from Nov 22 (Robbie: a wood in play, still fun and doable to get it close)
+    console.log(`  hole 2 ${(per[1].med / per[0].med).toFixed(2)}x hole 1, hole 3 ${(per[2].med / per[0].med).toFixed(2)}x`);
+    ok(per[1].med <= per[0].med * 1.4, 'hole 2 plays within 1.4x hole 1 (median)');
+    ok(per[2].med <= per[0].med * 1.8, 'hole 3 plays within 1.8x hole 1 (median)');
+    ok(per.every((p) => p.lost <= 0.08), 'under 8% of shots wet on every hole');
+    ok(per.every((p) => p.aces > 0), 'an ace is possible on every hole');
+  }
   ok(a.aces > 0 || after.length < 1000, 'an ace is still possible');
 }

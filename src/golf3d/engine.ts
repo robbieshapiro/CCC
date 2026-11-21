@@ -54,6 +54,11 @@ export type Drill = {
   tag?: () => string;
   eyebrow?: string;
   onResult?: (r: { ft: number | null; holed: boolean; lost: boolean; from: V2; end: V2 }) => boolean;
+  // the Daily Shot (Nov 21): the ball rolls right to its stop and stays there, a line to the pin, until you tap Next
+  // (or 5 s pass); after a last try (onResult said false), onNext moves the game on
+  hold?: boolean;
+  onNext?: () => void;
+  nextLabel?: () => string;
   // bar games: move on to the next spot after each shot, and say how it went in your own words
   advance?: boolean;
   report?: (r: { holed: boolean; lost: boolean; from: V2; end: V2 }) => string;
@@ -441,6 +446,7 @@ export class Course3D {
   }
 
   destroy() {
+    this.clearHold();
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKey);
@@ -455,6 +461,7 @@ export class Course3D {
 
   // The range or the short game area. Plays like a hole that never ends: leave when you're done.
   practiceArea(hole: Hole, drill: Omit<Drill, 'at'>) {
+    this.clearHold();
     this.drill = { ...drill, at: 0 };
     void this.play(hole, 1, { strokes: 0, par: 0 }, { of: 1 });
   }
@@ -1957,7 +1964,8 @@ export class Course3D {
     this.trailPts.push(this.ball.position.clone());
     if (this.trailPts.length > TRAIL) this.trailPts.shift();
     this.drawTrail();
-    if (s.t >= s.settle + 0.3) {
+    // a held finish waits for the very last of the roll, so a check, a zip back or a release is all seen
+    if (s.t >= (s.practice && this.drill?.hold ? s.r.duration + 0.25 : s.settle + 0.3)) {
       this.focus(false);
       this.endShot();
     }
@@ -1966,6 +1974,65 @@ export class Course3D {
   // Tiger vision: the edges of the screen fall into shadow
   private focus(on: boolean) {
     this.overlay.querySelector('[data-focus]')?.classList.toggle('on', on);
+  }
+
+  // back to the tee (or the next spot) for another go
+  private backToStation() {
+    // a contest moves you on to the next spot, lined up on the pin
+    if (this.drill?.advance) {
+      this.drill.at = (this.drill.at + 1) % this.drill.stations.length;
+      const el = this.overlay.querySelector('[data-station-name]');
+      if (el) el.textContent = this.drill.stations[this.drill.at].name;
+      const at = this.drill.stations[this.drill.at].at;
+      this.aim = Math.atan2(this.hole.cup.x - at.x, this.hole.cup.y - at.y);
+    }
+    this.pos = this.drill ? { ...this.drill.stations[this.drill.at].at } : { ...this.hole.tee };
+    this.placeBall();
+    this.trailPts = [];
+    this.drawTrail();
+    window.setTimeout(() => this.mode === 'roll' && this.toAim(), 1200);
+  }
+
+  // the Daily Shot's held finish: the ball where it came to rest, a line from it to the pin, and Next
+  private hold: { line: THREE.Line; btn: HTMLElement; timer: number } | null = null;
+  private holdFinish(last: { x: number; y: number; z: number }, end: boolean, noLine = false) {
+    this.ball.position.copy(w3(last.x, last.y, last.z + BALL_R));
+    const cup = this.hole.cup;
+    const pts: THREE.Vector3[] = [];
+    for (let k = 0; k <= 24; k++) {
+      const x = last.x + ((cup.x - last.x) * k) / 24;
+      const y = last.y + ((cup.y - last.y) * k) / 24;
+      pts.push(w3(x, y, heightAt(this.hole, x, y) + 0.12));
+    }
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#ffe08a', transparent: true, opacity: 0.85, fog: false, toneMapped: false }));
+    line.frustumCulled = false;
+    line.visible = !noLine; // in the water, or in the cup: nothing to measure
+    this.scene.add(line);
+    const btn = document.createElement('button');
+    btn.className = 'g3-next';
+    btn.textContent = this.drill?.nextLabel?.() ?? 'Next shot ›';
+    this.overlay.appendChild(btn);
+    const go = () => {
+      if (!this.hold) return;
+      this.clearHold();
+      if (end) {
+        this.mode = 'done';
+        this.drill?.onNext?.();
+      } else this.backToStation();
+    };
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      go();
+    });
+    this.hold = { line, btn, timer: window.setTimeout(go, 5000) };
+  }
+  private clearHold() {
+    if (!this.hold) return;
+    window.clearTimeout(this.hold.timer);
+    this.scene.remove(this.hold.line);
+    this.hold.line.geometry.dispose();
+    this.hold.btn.remove();
+    this.hold = null;
   }
 
   private endShot() {
@@ -1982,26 +2049,15 @@ export class Course3D {
       if (this.drill?.targets) this.rangeReport(s.from, r, lost);
       else {
         const said = this.drill?.report?.({ holed: r.holed, lost: r.penalty, from: s.from, end: last });
-        this.callout(said ?? (r.holed ? 'In the hole!' : lost || `${away(d, surfaceAt(this.hole, last) === 'green')} from the pin`), this.drill?.tag?.() ?? 'Practice', 1600);
+        this.callout(said ?? (r.holed ? 'In the hole!' : lost || `${away(d, surfaceAt(this.hole, last) === 'green')} from the pin`), this.drill?.tag?.() ?? 'Practice', this.drill?.hold ? 5000 : 1600);
       }
       const more = this.drill?.onResult?.({ ft: r.penalty || r.holed ? (r.holed ? 0 : null) : Math.round(Math.hypot(last.x - this.hole.cup.x, last.y - this.hole.cup.y) * SCALE * 10) / 10, holed: r.holed, lost: r.penalty, from: s.from, end: { x: last.x, y: last.y } });
+      if (this.drill?.hold) return this.holdFinish(last, more === false, r.penalty || r.holed);
       if (more === false) {
         this.mode = 'done';
         return;
       }
-      // a contest moves you on to the next spot, lined up on the pin
-      if (this.drill?.advance) {
-        this.drill.at = (this.drill.at + 1) % this.drill.stations.length;
-        const el = this.overlay.querySelector('[data-station-name]');
-        if (el) el.textContent = this.drill.stations[this.drill.at].name;
-        const at = this.drill.stations[this.drill.at].at;
-        this.aim = Math.atan2(this.hole.cup.x - at.x, this.hole.cup.y - at.y);
-      }
-      this.pos = this.drill ? { ...this.drill.stations[this.drill.at].at } : { ...this.hole.tee };
-      this.placeBall();
-      this.trailPts = [];
-      this.drawTrail();
-      window.setTimeout(() => this.mode === 'roll' && this.toAim(), 1200);
+      this.backToStation();
       return;
     }
     if (this.spot === undefined) this.spot = r.holed ? { ...this.hole.cup } : r.penalty ? null : { ...r.end };
