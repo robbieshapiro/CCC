@@ -1,7 +1,7 @@
 // The Daily Shot on the home page and after your last try: today's shot, your tries, your streak, the board across
 // every club, and a result to share.
 import { face } from '../faces';
-import { prizesLine } from '../bonus';
+import { prizesLine, shotPrizeLine } from '../bonus';
 import { api } from '../api';
 import type { DailyCrown, DailyState, DailyTry, ShotBoard, ShotTry } from '../api/types';
 import { holeMark, bestOn, dailyHoles, ftLabel, SHOT_ALL, SHOT_HOLES, SHOT_TRIES, totalFt } from '../dailyholes';
@@ -163,6 +163,7 @@ export async function shotSummary(day: string, clubName: string, onClose: () => 
         ${closer ? `<p class="shot-closer">${esc(closer)}</p>` : ''}
         ${b?.place && b.clubPlayers > 1 ? `<p>${ordinalOf(b.clubPlace)} of ${b.clubPlayers} at ${esc(clubName)}</p>` : ''}
         <p class="shot-pot">Ace Pot <b>${money(b?.pot ?? 1000)}</b></p>
+        ${b ? `<p class="fine">${shotPrizeLine(day, b.players)}</p>` : ''}
         <h3>Today</h3>
         ${b ? shotBoardList(b) : '<p class="muted">The board is on its way.</p>'}
       </div>
