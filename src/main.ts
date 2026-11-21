@@ -25,19 +25,26 @@ import { store } from './storage';
 import { esc, muteButton, navigate, render } from './ui';
 
 // The height you can actually see: on a phone the browser's own bars can cover the bottom of 100vh, so the play
-// screen (.g3) sizes itself to this instead. The canvases follow on the resize they hear.
+// screen (.g3) sizes itself to this instead. The canvases follow on the resize they hear. Never less than
+// innerHeight: the visual viewport shrinks with the keyboard up (and in the Home Screen app can stay shrunk after it
+// closes), which once left a practice round filling only the top two thirds of the phone (Nov 21).
 function fitViewport() {
-  const h = window.visualViewport?.height ?? window.innerHeight;
+  const h = Math.max(window.innerHeight, window.visualViewport?.height ?? 0);
   document.documentElement.style.setProperty('--app-h', `${Math.round(h)}px`);
 }
-fitViewport();
-window.addEventListener('resize', fitViewport);
-window.addEventListener('orientationchange', () => window.setTimeout(fitViewport, 300));
-window.visualViewport?.addEventListener('resize', () => {
+// refit, and tell the canvases if the height changed
+function refit() {
   const before = document.documentElement.style.getPropertyValue('--app-h');
   fitViewport();
   if (document.documentElement.style.getPropertyValue('--app-h') !== before) window.dispatchEvent(new Event('resize'));
-});
+}
+fitViewport();
+window.addEventListener('resize', fitViewport);
+window.addEventListener('pageshow', refit);
+// the keyboard going away
+document.addEventListener('focusout', () => window.setTimeout(refit, 350));
+window.addEventListener('orientationchange', () => window.setTimeout(fitViewport, 300));
+window.visualViewport?.addEventListener('resize', refit);
 
 let route = '';
 let routing = false; // the router draws the page itself; the refresh hook mustn't draw it a second time
@@ -85,6 +92,8 @@ async function routeTo() {
   try {
     // the loading card until the screen (and on a 3D one, its course) is up (screens/loader.ts)
     const play = COURSE.has(page) || (page === 'bar' && !!arg && arg !== 'book') || (page === 'facility' && !!arg);
+    // a course sizes itself to the screen as it is now, not to an earlier screen's keyboard-up height
+    if (play) refit();
     startLoad(placeFor(page, arg), play);
     routing = true;
     // a screen to look at draws from the last half minute's data at once; anything you play waits for fresh data
