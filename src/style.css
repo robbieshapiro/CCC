@@ -2667,3 +2667,4 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .sd-tk em { font-style: normal; color: #cdeedd; font-weight: 700; }
 .sd-tk.me { background: rgba(255, 224, 138, 0.22); }
 .shot-card { grid-template-columns: minmax(0, 1fr); } .shot-card > * { min-width: 0; } .sd-ticker { max-width: calc(100% + 28px); }
+.shot-card:not([data-state='done']) .sd-ticker { margin-bottom: 0; }
