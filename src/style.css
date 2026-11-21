@@ -2655,12 +2655,10 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .shot-card[data-state='done'] .sd-card { display: flex; gap: 8px; } .sd-card .btn { flex: 1 1 0; min-width: 0; }
 .shot-card[data-state='going'] [data-shot-body] { display: grid; gap: 10px; } .sd-holes span { white-space: nowrap; }
 /* the Daily Shot's leaders ticker (once you've played): faces rolling right to left, the list twice for a seamless loop */
-.sd-ticker { display: block; overflow: hidden; margin: 0 -14px -4px; padding: 0 14px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent); }
-.sd-track { display: inline-flex; gap: 8px; white-space: nowrap; }
-.sd-ticker.roll .sd-track { animation: sd-roll calc(var(--n) * 3.2s) linear infinite; }
-.sd-ticker.roll:hover .sd-track { animation-play-state: paused; }
-@keyframes sd-roll { to { transform: translateX(calc(-50% - 4px)); } }
-@media (prefers-reduced-motion: reduce) { .sd-ticker { overflow-x: auto; } .sd-ticker.roll .sd-track { animation: none; } }
+.sd-ticker { display: block; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; margin: 0 -14px -4px; padding: 0 14px; scroll-padding: 0 14px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+.sd-ticker::-webkit-scrollbar { display: none; }
+.sd-tk { scroll-snap-align: start; }
+.sd-track { display: inline-flex; gap: 8px; white-space: nowrap; padding-right: 20px; }
 .sd-tk { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); font-size: 13px; color: #fff; }
 .sd-tk i { font-style: normal; font-size: 11px; font-weight: 800; color: #ffe08a; min-width: 12px; text-align: center; }
 .sd-tk b { font-weight: 700; }

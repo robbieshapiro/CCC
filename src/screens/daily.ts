@@ -218,14 +218,14 @@ export async function bindDailyShot(day: string, _cardsLeft?: number | null) {
   const b = await api.dailyBoard(requireSession(), day).catch(() => null);
   if (!b || !document.getElementById('shot-card')) return;
   tickPot(el.querySelector<HTMLElement>('[data-shot-pot]')!, b.pot);
-  // today's leaders across every club, rolling past with their faces, in every state (before anyone's finished: a
+  // today's leaders across every club with their faces, a row to swipe through, in every state (before anyone's finished: a
   // nudge to be first instead)
   const lead = b.board.slice(0, 10);
   const item = (r: (typeof lead)[number], i: number) =>
     `<span class="sd-tk${r.mine ? ' me' : ''}"><i>${i + 1}</i>${face(r, 22)}<b>${esc(r.mine ? 'You' : r.name.split(' ')[0])}</b><em>${ftLabel(r.total)}</em></span>`;
   const run = lead.map(item).join('');
   const ticker = lead.length
-    ? `<span class="sd-ticker${lead.length > 2 ? ' roll' : ''}" style="--n:${lead.length}"><span class="sd-track">${run}${lead.length > 2 ? run : ''}</span></span>`
+    ? `<span class="sd-ticker"><span class="sd-track">${run}</span></span>`
     : '';
   const chip = el.querySelector<HTMLElement>('[data-shot-lead]')!;
   if (lead.length) chip.style.display = 'none'; // the ticker names the leader
