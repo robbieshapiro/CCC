@@ -2284,11 +2284,12 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 /* the four contests under the Ace Pot (Nov 17): each game its own rich colour, made the same way as the gold Ace Pot
    (a diagonal gradient, a light edge on top, a soft glow under), so the five read as one set. The all-brown tiles were
    heavy going, and plain white ones too flat next to the gold. */
-.bs-row .bs-card { --a: #3f8a64; --b: #1f5a3e; --e: #8fd3ad; background: linear-gradient(135deg, var(--a) 0%, var(--b) 100%); border: 1px solid var(--e); color: #fff; box-shadow: 0 8px 20px -12px var(--b), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
-.bs-row .bs-card[data-bs='daily'] { --a: #ec6a4f; --b: #b8322a; --e: #ffb3a1; }
-.bs-row .bs-card[data-bs='drive'] { --a: #4f8ff0; --b: #1f4fae; --e: #a9c9ff; }
-.bs-row .bs-card[data-bs='targets'] { --a: #a874f0; --b: #5b2fae; --e: #d4b8ff; }
-.bs-row .bs-card[data-bs='midway'] { --a: #2fbfa8; --b: #13756a; --e: #9fe8dc; }
+/* today's contests, low key (Nov 21): muted, clearly different tones, no glow */
+.bs-row .bs-card { --a: #3f6a52; --b: #2a4a38; --e: #557a64; background: linear-gradient(160deg, var(--a) 0%, var(--b) 100%); border: 1px solid var(--e); color: #fff; box-shadow: 0 6px 14px -10px rgba(0, 0, 0, 0.45); }
+.bs-row .bs-card[data-bs='daily'] { --a: #2f5a43; --b: #1f3d2e; --e: #4a7560; }
+.bs-row .bs-card[data-bs='drive'] { --a: #3d5368; --b: #2a3a4a; --e: #56708a; }
+.bs-row .bs-card[data-bs='targets'] { --a: #5a4560; --b: #3d2f43; --e: #76607d; }
+.bs-row .bs-card[data-bs='midway'] { --a: #7a5038; --b: #553624; --e: #956a50; }
 .bs-row .bs-card i { display: grid; place-items: center; width: 32px; height: 32px; margin-bottom: 4px; border-radius: 10px; background: rgba(255, 255, 255, 0.2); font-size: 18px; }
 .bs-row .bs-card small { color: rgba(255, 255, 255, 0.85); }
 .bs-row .bs-card b { color: #fff; }
@@ -2669,3 +2670,4 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 /* the Daily Shot's held finish: Next, over the course once the ball has stopped */
 .g3-next { position: absolute; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; padding: 12px 26px; border: 0; border-radius: 999px; background: #e6c35c; color: #163b2c; font: 800 15px var(--font); letter-spacing: 0.04em; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6); animation: g3-next-in 0.3s ease-out; }
 @keyframes g3-next-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+.bs-row .bs-card[data-bs='daily'] small { color: #e6c35c; }

@@ -13,11 +13,13 @@ import { scoreLabel } from '../bar';
 import { money } from '../purse';
 import { requireSession } from '../state';
 import { esc } from '../ui';
+import { ftLabel, SHOT_ALL, SHOT_TRIES } from '../dailyholes';
 
-// today's contests, as at the bar (the club puts up the prizes). The Daily Shot (Closest to the Pin and the Ace Pot,
-// one game from Nov 20) is at the top of home, so it isn't here again.
+// today's contests, as at the bar (the club puts up the prizes), two by two: the Daily Shot (also at the top of home,
+// Robbie Nov 21: here too, first), the long drive, the Target Range and the Midway
 type Card = [game: string, href: string, icon: string, name: string, wait: string];
 const CONTESTS: Card[] = [
+  ['daily', '#/daily', '⛳', 'The Daily Shot', 'Three holes, three shots each'],
   ['drive', '#/bar/drive', '🚀', 'Long drive', `1st pays $${DAILY_PRIZES[0]} today`],
   ['targets', '#/bar/targets', '🏹', 'Target Range', `1st pays $${DAILY_PRIZES[0]} today`],
   ['midway', '#/bar/midway', '🎡', 'The Midway', 'Three carnival holes'],
@@ -106,6 +108,17 @@ export async function bindBarStrip(snap: Snapshot) {
         news.innerHTML = `${face(a.lastAce, 40) || '<i>🏆</i>'}<div><b>${you ? 'You' : esc(a.lastAce.name)} won the Ace Pot today</b><span>${money(a.lastAce.pot)}${you ? ' is yours' : ''} · the pot started again at ${money(ACE_SEED)}</span></div>`;
         news.hidden = false;
       }
+    })
+    .catch(() => {});
+  void api
+    .dailyBoard(s, snap.today)
+    .then((b) => {
+      const top = b.board[0];
+      const played = b.tries.length;
+      const mine = b.board.find((r) => r.mine);
+      const you = mine ? (mine === top ? 'You lead' : `You: ${ftLabel(mine.total)}`) : played && played < SHOT_ALL ? `Hole ${Math.floor(played / SHOT_TRIES) + 1} to play` : '';
+      const pot = `Ace Pot ${money(b.pot)}`;
+      fill('daily', top ? `${top.name} · ${ftLabel(top.total)}` : 'Be first today', you ? `${you} · ${pot}` : pot, top);
     })
     .catch(() => {});
   void api
