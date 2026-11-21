@@ -26,6 +26,20 @@ export const DAILY_PRIZES = [300, 150, 75];
 export const PRIZES_FROM = '2026-11-17';
 export const dailyPrize = (day: string, place: number) => (day >= PRIZES_FROM ? (DAILY_PRIZES[place - 1] ?? 0) : place === 1 ? BONUS.ctp : 0);
 export const prizesLine = () => DAILY_PRIZES.map((n) => `$${n}`).join(' · ');
+// The Daily Shot from Nov 22 (shot_prize in supabase/schema.sql): $100 a finisher to the winner ($300 to $1,500),
+// half to 2nd with 5 or more finishers, a quarter to 3rd with 8 or more. Before that, DAILY_PRIZES.
+export const SHOT_PRIZE_FROM = '2026-11-22';
+export const shotPrize = (day: string, place: number, field: number) => {
+  if (day < SHOT_PRIZE_FROM) return dailyPrize(day, place);
+  const top = Math.min(1500, Math.max(300, 100 * field));
+  return place === 1 ? top : place === 2 && field >= 5 ? Math.floor(top / 2) : place === 3 && field >= 8 ? Math.floor(top / 4) : 0;
+};
+// what today pays, as the field stands
+export const shotPrizeLine = (day: string, field: number) => {
+  if (day < SHOT_PRIZE_FROM) return `Today's top three are paid ${prizesLine()} at midnight.`;
+  const pays = [1, 2, 3].map((k) => shotPrize(day, k, field)).filter(Boolean).map((n) => `$${n.toLocaleString('en-US')}`);
+  return `The winner gets $100 a player, up to $1,500. Today, with ${field} ${field === 1 ? 'player' : 'players'}: ${pays.join(' · ')}.`;
+};
 export const LONG_PUTT_FT = 30;
 export const MONSTER_PUTT_FT = 60;
 // every hole's secret route, by its zone (secret_feats in supabase/schema.sql)

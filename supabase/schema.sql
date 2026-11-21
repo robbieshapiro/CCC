@@ -2660,6 +2660,19 @@ language sql stable security definer set search_path = public, extensions as $$
 $$;
 revoke all on function shot_places() from public, anon, authenticated;
 
+-- the Daily Shot's prize (from Nov 22): $100 a finisher to the winner ($300 to $1,500), half to 2nd with 5 or more
+-- finishers, a quarter to 3rd with 8 or more; days before keep daily_prize ($300 / $150 / $75)
+create or replace function shot_prize(p_day date, p_place int, p_field int) returns int
+language sql immutable as $$
+  select case
+    when p_day < date '2026-11-22' then daily_prize(p_day, p_place)
+    when p_place = 1 then least(1500, greatest(300, 100 * p_field))
+    when p_place = 2 and p_field >= 5 then least(1500, greatest(300, 100 * p_field)) / 2
+    when p_place = 3 and p_field >= 8 then least(1500, greatest(300, 100 * p_field)) / 4
+    else 0 end
+$$;
+revoke all on function shot_prize(date, int, int) from public, anon, authenticated;
+
 -- each closed day's top three at the long drive (a daily board from Nov 17): the day's longest ball per person,
 -- the earlier one first on a tie
 create or replace function drive_places() returns table (day date, k text, h text, place int)
@@ -2770,7 +2783,9 @@ language sql stable security definer set search_path = public, extensions as $$
       -- Closest to the Pin and the long drive: the day's top three (daily_prize)
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from ctp_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as ctp,
       -- the Daily Shot (three holes, from Nov 20): the day's top three, as Closest to the Pin
-      (select coalesce(sum(daily_prize(w.day, w.place)), 0) from shot_places() w where w.place <= 3 and w.k = lower(p.name) and w.h = p.pin_hash)::int as dailyshot,
+      (select coalesce(sum(shot_prize(w.day, w.place, w.field)), 0)
+        from (select s.*, count(*) over (partition by s.day)::int as field from shot_places() s) w
+        where w.place <= 3 and w.k = lower(p.name) and w.h = p.pin_hash)::int as dailyshot,
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from drive_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as drive,
       (select coalesce(sum(daily_prize(w.day, w.place)), 0) from targets_places() w where w.k = lower(p.name) and w.h = p.pin_hash)::int as targets,
       -- the Ace Pot, when you ace it (the club puts up the pot)
