@@ -2679,3 +2679,8 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 @keyframes g3-next-in { from { opacity: 0; transform: translate(-50%, 8px); } }
 .bs-row .bs-card[data-bs='daily'] small { color: #e6c35c; }
 .bsf-by span em { margin-left: 0; }
+/* the duel (Nov 21): a deep claret of its own, nothing like the Daily Shot's green */
+.bs-featured { background: linear-gradient(160deg, #6a2f36, #43191f); border-color: #8a4a50; box-shadow: 0 6px 14px -10px rgba(0, 0, 0, 0.45); }
+.bs-featured .bsf-main small { color: #e6c35c; }
+.bs-featured .bsf-main > span { color: rgba(255, 240, 236, 0.88); }
+.bs-featured .bsf-go { background: #f4ead2; color: #43191f; }
