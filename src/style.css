@@ -2666,3 +2666,6 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .sd-tk.me { background: rgba(255, 224, 138, 0.22); }
 .shot-card { grid-template-columns: minmax(0, 1fr); } .shot-card > * { min-width: 0; } .sd-ticker { max-width: calc(100% + 28px); }
 .shot-card:not([data-state='done']) .sd-ticker { margin-bottom: 0; }
+/* the Daily Shot's held finish: Next, over the course once the ball has stopped */
+.g3-next { position: absolute; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; padding: 12px 26px; border: 0; border-radius: 999px; background: #e6c35c; color: #163b2c; font: 800 15px var(--font); letter-spacing: 0.04em; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6); animation: g3-next-in 0.3s ease-out; }
+@keyframes g3-next-in { from { opacity: 0; transform: translate(-50%, 8px); } }

@@ -9,6 +9,7 @@ import type { Hole, V2 } from './golf3d/types';
 import { buildHole, type HoleSpec } from './designer/hole';
 import { surfaceAt } from './golf3d/terrain';
 import { WORLD_PRESETS, type DailyWorld } from './designer/worlds';
+import type { World } from './designer/world';
 import { makeRng } from './seed';
 
 export const SHOT_FROM = '2026-11-20'; // the first day of the three-hole Daily Shot (before it: one shot, src/daily.ts)
@@ -34,20 +35,39 @@ const STEPS = [
   { yards: [124, 132], green: 'small', bunkers: 2, carry: true, pin: 'tucked', tilt: 0, wind: 1.6 },
 ] as const;
 
+// From Sunday Nov 22 (Robbie: holes 2 and 3 a bit longer, a wood in play, still fun to get close): hole 2 is a full
+// iron that runs on or a soft wood, hole 3 a wood. Big flat greens with open fronts and fairway right up to them so a
+// low shot can run out; bunkers only at the sides, no carry over water. Days before keep the old steps exactly.
+export const STEPS_FROM = '2026-11-22';
+const LONG_STEPS = [
+  STEPS[0],
+  { yards: [135, 148], green: 'large', bunkers: 1, carry: false, pin: 'edge', tilt: 0, wind: 1.2 },
+  { yards: [165, 185], green: 'large', bunkers: 2, carry: false, pin: 'edge', tilt: 0, wind: 1.3 },
+] as const;
+const stepsFor = (day: string) => (day >= STEPS_FROM ? LONG_STEPS : STEPS);
+
 const NAMES = ['The Leap', 'Long Shadow', 'The Lantern', 'Last Light', 'The Steps', 'The Spire', 'Far Flag', 'The Gate', 'Hollow Point', 'The Edge', 'Skyfall', 'The Basin', 'Whisper', 'The Drop', 'High Wire', 'The Crown'];
 
 function spec(day: string, i: number): HoleSpec {
   const rng = makeRng(`dailyhole:${day}:${i}`);
   const r = () => rng.next();
   const pick = <T,>(xs: readonly T[]) => xs[Math.floor(r() * xs.length)];
-  const s = STEPS[i];
+  const s = stepsFor(day)[i];
+  const long = day >= STEPS_FROM;
   const yards = Math.round(s.yards[0] + r() * (s.yards[1] - s.yards[0]));
   const side = r() < 0.5 ? -1 : 1;
   const bunkers: HoleSpec['bunkers'] = [];
-  for (let b = 0; b < s.bunkers; b++) bunkers.push({ along: 0.94 + r() * 0.08, across: (b % 2 ? -side : side) * (1.2 + r() * 0.3), size: pick(['small', 'medium'] as const), kind: 'greenside' });
+  for (let b = 0; b < s.bunkers; b++)
+    bunkers.push(
+      long
+        ? { along: 0.97 + r() * 0.06, across: (b % 2 ? -side : side) * (1.45 + r() * 0.25), size: pick(['small', 'medium'] as const), kind: 'greenside' }
+        : { along: 0.94 + r() * 0.08, across: (b % 2 ? -side : side) * (1.2 + r() * 0.3), size: pick(['small', 'medium'] as const), kind: 'greenside' },
+    );
   const water: HoleSpec['water'] = [];
   // water short of the green on the last: all carry
   if (s.carry) water.push({ kind: 'creek', along: 0.68 + r() * 0.08, across: 0, size: 'medium', side: 'right' });
+  // the long third: sometimes a pond off to one side, never across the front
+  if (long && i === 2 && r() < 0.5) water.push({ kind: 'pond', along: 0.55 + r() * 0.2, across: -side * (2.4 + r() * 0.4), size: 'small', side: side > 0 ? 'left' : 'right' });
   return {
     kind: 'hole',
     name: pick(NAMES),
@@ -58,7 +78,7 @@ function spec(day: string, i: number): HoleSpec {
     bend_at: 0.5,
     bend: 10,
     elevation: pick(i === 0 ? (['flat', 'downhill'] as const) : (['flat', 'downhill', 'uphill', 'tee-high'] as const)),
-    fairway: { width: 'medium', from: 0.8, to: 0.97 },
+    fairway: long && i > 0 ? { width: 'wide', from: 0.6, to: 1 } : { width: 'medium', from: 0.8, to: 0.97 },
     green: { size: s.green, slope: 'flat', tiered: false, raised: false, across: (r() - 0.5) * 0.4 },
     bunkers,
     water,
@@ -81,6 +101,43 @@ function worldsFor(day: string): DailyWorld[] {
   return out;
 }
 
+// Real turf (Robbie, Nov 21: pink or purple greens look silly): the Daily Shot keeps each world's sky, light, water,
+// trees, landmarks and what lies beyond, but a fairway, green or rough that isn't a grass colour is cut as real grass.
+// Members' own courses keep whatever colours they dreamed up.
+const hsl = (c: string) => {
+  const n = parseInt(c.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
+  const mx = Math.max(r, g, b);
+  const mn = Math.min(r, g, b);
+  const l = (mx + mn) / 2;
+  const d = mx - mn;
+  const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  const h = d === 0 ? 0 : mx === r ? 60 * (((g - b) / d) % 6) : mx === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+  return { h: (h + 360) % 360, s: sat, l };
+};
+const grassy = (c: string) => {
+  const { h, s, l } = hsl(c);
+  return h >= 70 && h <= 150 && s >= 0.2 && s <= 0.75 && l >= 0.25 && l <= 0.68;
+};
+const TURF: Record<World['light'], { fairway: string; green: string }> = {
+  day: { fairway: '#62ae52', green: '#6fc062' },
+  golden: { fairway: '#6aa84c', green: '#78bb58' },
+  overcast: { fairway: '#5a9e4c', green: '#66b058' },
+  dusk: { fairway: '#5a9a48', green: '#68ae56' },
+  night: { fairway: '#5a9a50', green: '#6aae60' },
+};
+export function realTurf(w: World): World {
+  const g = w.ground;
+  const turf = !grassy(g.fairway) || !grassy(g.green) ? TURF[w.light] : null;
+  // a pink or purple rough round a real green still reads as candy: it's grass too (the world beyond stays its own)
+  // (snow, red rock, desert sand and autumn browns are real ground and stay; pinks, purples and blues go)
+  const rh = hsl(g.rough);
+  const candy = (rh.h >= 165 && rh.h <= 345 && rh.s > 0.25 && rh.l < 0.85) || ((rh.h < 30 || rh.h > 345) && rh.s > 0.5 && rh.l > 0.6); // or coral
+  const rough = candy ? (w.light === 'night' ? '#3f6e3a' : '#4a7a3c') : null;
+  if (!turf && !rough) return w;
+  return { ...w, ground: { ...g, ...turf, ...(rough ? { rough } : {}) } };
+}
+
 const cache = new Map<string, DailyHoles>();
 
 export function dailyHoles(day: string): DailyHoles {
@@ -89,8 +146,8 @@ export function dailyHoles(day: string): DailyHoles {
   const worlds = worldsFor(day);
   const holes = worlds.map((w, i) => {
     const s = spec(day, i);
-    const hole = buildHole(s, `daily-${day}-${i + 1}`, 'CCC', w.world, w.world.landmarks).hole;
-    const step = STEPS[i];
+    const hole = buildHole(s, `daily-${day}-${i + 1}`, 'CCC', realTurf(w.world), w.world.landmarks).hole;
+    const step = stepsFor(day)[i];
     const gc = (hole.pins ?? [hole.cup])[0]; // the middle of the green
     const greenPoly = hole.regions.find((g) => g.surface === 'green')?.poly ?? [];
     const R = Math.max(10, ...greenPoly.map((q) => Math.hypot(q.x - gc.x, q.y - gc.y)));

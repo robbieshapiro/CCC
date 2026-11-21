@@ -798,6 +798,10 @@ async function shotRound(snap: Snapshot) {
     }).catch(() => {});
   }, 20_000);
   const g = game;
+  // an ace's whole-screen moment, still up: the game moves on once it's closed
+  let win: ReturnType<typeof aceWin> | null = null;
+  const next = () =>
+    done.length >= SHOT_ALL ? (window.clearInterval(tick), void shotSummary(day, snap.groupName, back)) : playHole(Math.floor(done.length / SHOT_TRIES));
   const playHole = (i: number) => {
     const x = set.holes[i];
     const cup = x.hole.cup;
@@ -808,6 +812,14 @@ async function shotRound(snap: Snapshot) {
       stations: [{ name: `${x.yards} yd`, at: x.from }],
       wind: x.wind,
       tag: () => `Shot ${(done.length % SHOT_TRIES) + 1} of ${SHOT_TRIES}`,
+      // the ball stays where it stopped, a line to the pin, until Next (Robbie, Nov 21: it went back too fast to see)
+      hold: true,
+      nextLabel: () => (done.length >= SHOT_ALL ? 'See your day ›' : done.length % SHOT_TRIES === 0 ? 'Next hole ›' : 'Next shot ›'),
+      onNext: () => {
+        const w = win;
+        win = null;
+        void (w ? w.closed : Promise.resolve()).then(() => window.setTimeout(next, w ? 300 : 0));
+      },
       report: (r) => (r.holed ? 'In the hole!' : r.lost ? 'Wet' : ftLabel(Math.hypot(r.end.x - cup.x, r.end.y - cup.y) * SCALE)),
       onResult: (r) => {
         const t = { hole: i + 1, try: (done.length % SHOT_TRIES) + 1, ft: r.ft, holed: r.holed, lost: r.lost };
@@ -815,29 +827,21 @@ async function shotRound(snap: Snapshot) {
         drawHud();
         if (r.holed) keepShot(g, 'ace', 1000, { kind: 'ace', day }, `Ace for ${money(pot)}`);
         // an ace: the whole screen goes to it straight away, with the pot as it stood; the server's figure follows
-        const win = r.holed ? aceWin(pot, x.hole.name) : null;
+        win = r.holed ? aceWin(pot, x.hole.name) : null;
+        const aced = win;
         api
           .dailySubmit(s, day, t)
           .then((res) => {
             pot = res.pot;
             drawHud();
             if (res.holed) {
-              win?.setPot(res.payout);
+              aced?.setPot(res.payout);
               void refresh().catch(() => {});
             }
           })
           .catch((e) => void tell("That shot didn't count", `<p>${esc((e as Error).message)}</p>`).then(back));
-        // three shots on each hole: the first two stay on the tee; after the third, the next hole (or the summary)
-        const holeDone = done.length % SHOT_TRIES === 0;
-        if (!holeDone && !win) return true;
-        const next = () =>
-          done.length >= SHOT_ALL
-            ? (window.clearInterval(tick), void shotSummary(day, snap.groupName, back))
-            : holeDone
-              ? playHole(Math.floor(done.length / SHOT_TRIES))
-              : playHole(i);
-        void (win ? win.closed : Promise.resolve()).then(() => window.setTimeout(next, win ? 300 : 2200));
-        return false;
+        // three shots on each hole: the first two go back to the same tee; after the third (or an ace), onNext moves on
+        return done.length % SHOT_TRIES !== 0 && !aced;
       },
     });
   };
