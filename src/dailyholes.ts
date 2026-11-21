@@ -142,3 +142,6 @@ export const bestOn = (tries: Try[], hole: number) => {
 // the day's total so far: the best on each hole played, added
 export const totalFt = (tries: Try[]) => Math.round([1, 2, 3].reduce((a, h) => a + (bestOn(tries, h) ?? 0), 0) * 10) / 10;
 export const ftLabel = (ft: number) => `${ft < 10 ? ft.toFixed(1) : Math.round(ft)} ft`;
+// a hole's best at a glance: ⛳ ace, 🔥 really close (5 ft or less), 🎯 close (15), 👍 mid (30), 😬 far, 💧 every ball wet
+export const holeEmoji = (best: number) => (best === 0 ? '⛳' : best >= LOST_FT ? '💧' : best <= 5 ? '🔥' : best <= 15 ? '🎯' : best <= 30 ? '👍' : '😬');
+export const holeMark = (best: number | null) => (best === null ? '–' : `${holeEmoji(best)} ${best === 0 ? 'Ace' : best >= LOST_FT ? 'Wet' : ftLabel(best)}`);
