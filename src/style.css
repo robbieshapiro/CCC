@@ -2653,3 +2653,4 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .shot-card[data-state='done'] [data-shot-body], .shot-card[data-state='done'] .shot-done, .shot-card[data-state='done'] .shot-next, .sd-card { width: 100%; box-sizing: border-box; }
 .shot-card[data-state='done'] .shot-done { text-decoration: none; color: inherit; }
 .shot-card[data-state='done'] .sd-card { display: flex; gap: 8px; } .sd-card .btn { flex: 1 1 0; min-width: 0; }
+.shot-card[data-state='going'] [data-shot-body] { display: grid; gap: 10px; } .sd-holes span { white-space: nowrap; }

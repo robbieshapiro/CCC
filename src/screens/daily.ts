@@ -4,7 +4,7 @@ import { face } from '../faces';
 import { prizesLine } from '../bonus';
 import { api } from '../api';
 import type { DailyCrown, DailyState, DailyTry, ShotBoard, ShotTry } from '../api/types';
-import { bestOn, dailyHoles, ftLabel, SHOT_ALL, SHOT_HOLES, SHOT_TRIES, totalFt } from '../dailyholes';
+import { holeMark, bestOn, dailyHoles, ftLabel, SHOT_ALL, SHOT_HOLES, SHOT_TRIES, totalFt } from '../dailyholes';
 import { money } from '../purse';
 import { bestTry, DAILY_TRIES, dailyShot, resultLabel, tryMark } from '../daily';
 import { requireSession } from '../state';
@@ -122,7 +122,7 @@ export function shotShareText(day: string, b: ShotBoard) {
   const set = dailyHoles(day);
   const holes = set.holes.map((x) => {
     const best = bestOn(b.tries, x.n);
-    return best === null ? '–' : best === 0 ? '⛳' : best >= 150 ? '💧' : ftLabel(best);
+    return holeMark(best);
   });
   const closer = closerLine(b);
   return `CCC Daily Shot #${set.number}\n${holes.join(' · ')}\n${ftLabel(totalFt(b.tries))} total${closer ? ` · ${closer.replace(/^Closer/, 'closer').replace(/ today$/, '')}` : ''}\n${location.origin}`;
@@ -157,7 +157,7 @@ export async function shotSummary(day: string, clubName: string, onClose: () => 
         <ul class="shot-holes">${set.holes
           .map((x) => {
             const best = b ? bestOn(b.tries, x.n) : null;
-            return `<li><b>Hole ${x.n}</b><em>${best === null ? '–' : best === 0 ? '⛳ Ace' : best >= 150 ? '💧' : ftLabel(best)}</em></li>`;
+            return `<li><b>Hole ${x.n}</b><em>${holeMark(best)}</em></li>`;
           })
           .join('')}</ul>
         ${closer ? `<p class="shot-closer">${esc(closer)}</p>` : ''}
@@ -227,20 +227,20 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
   const next = el.querySelector<HTMLElement>('[data-shot-next]')!;
   if (!played) return;
   next.hidden = false;
+  // each hole's best so far, with its mark (the hole you're on shows its best yet; holes to come a dash)
+  const hole = (n: number) => `<span><small>H${n}</small>${holeMark(bestOn(b.tries, n))}</span>`;
   if (played < SHOT_ALL) {
     el.dataset.state = 'going';
-    body.innerHTML = `<a class="btn big gold shine" href="#/daily">Continue · hole ${Math.floor(played / SHOT_TRIES) + 1}, shot ${(played % SHOT_TRIES) + 1}</a>`;
-    next.textContent = `${ftLabel(totalFt(b.tries))} so far`;
+    body.innerHTML = `<span class="sd-holes">${[1, 2, 3].map(hole).join('')}</span>
+      <a class="btn big gold shine" href="#/daily">Continue · hole ${Math.floor(played / SHOT_TRIES) + 1}, shot ${(played % SHOT_TRIES) + 1}</a>`;
+    // no running total partway: a wet first ball would read as 150 ft with two shots still to come
+    next.hidden = true;
     return;
   }
   el.dataset.state = 'done';
   // done: the pot small in the corner, your total and where it stands across every club, your three holes, and the
   // daily card's own two ways in
   el.querySelector<HTMLElement>('[data-shot-lead]')!.innerHTML = `<span class="sd-corner">Ace Pot <b>${money(b.pot)}</b></span>`;
-  const hole = (n: number) => {
-    const best = bestOn(b.tries, n);
-    return `<span><small>H${n}</small>${best === null ? '–' : best === 0 ? '⛳' : best >= 150 ? '💧' : ftLabel(best)}</span>`;
-  };
   body.innerHTML = `<a class="shot-done" href="#/daily">
       <span class="sd-top"><b>${ftLabel(totalFt(b.tries))}</b>${b.place ? `<em>${ordinalOf(b.place)} of ${b.players}<small>all clubs</small></em>` : ''}</span>
       <span class="sd-holes">${[1, 2, 3].map(hole).join('')}</span>
