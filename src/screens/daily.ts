@@ -218,37 +218,40 @@ export async function bindDailyShot(day: string, _cardsLeft?: number | null) {
   const b = await api.dailyBoard(requireSession(), day).catch(() => null);
   if (!b || !document.getElementById('shot-card')) return;
   tickPot(el.querySelector<HTMLElement>('[data-shot-pot]')!, b.pot);
-  const top = b.board[0];
-  el.querySelector<HTMLElement>('[data-shot-lead]')!.innerHTML = top
-    ? `${face(top, 22)}<span>${top.mine ? 'You lead' : `${esc(top.name.split(' ')[0])} leads`} · ${ftLabel(top.total)}</span>`
-    : '<span>Be first today</span>';
+  // today's leaders across every club, rolling past with their faces, in every state (before anyone's finished: a
+  // nudge to be first instead)
+  const lead = b.board.slice(0, 10);
+  const item = (r: (typeof lead)[number], i: number) =>
+    `<span class="sd-tk${r.mine ? ' me' : ''}"><i>${i + 1}</i>${face(r, 22)}<b>${esc(r.mine ? 'You' : r.name.split(' ')[0])}</b><em>${ftLabel(r.total)}</em></span>`;
+  const run = lead.map(item).join('');
+  const ticker = lead.length
+    ? `<span class="sd-ticker${lead.length > 2 ? ' roll' : ''}" style="--n:${lead.length}"><span class="sd-track">${run}${lead.length > 2 ? run : ''}</span></span>`
+    : '';
+  const chip = el.querySelector<HTMLElement>('[data-shot-lead]')!;
+  if (lead.length) chip.style.display = 'none'; // the ticker names the leader
+  else chip.innerHTML = '<span>Be first today</span>';
   const played = b.tries.length;
   const body = el.querySelector<HTMLElement>('[data-shot-body]')!;
   const next = el.querySelector<HTMLElement>('[data-shot-next]')!;
+  next.hidden = !ticker;
+  next.innerHTML = ticker;
   if (!played) return;
-  next.hidden = false;
   // each hole's best so far, with its mark (the hole you're on shows its best yet; holes to come a dash)
   const hole = (n: number) => `<span><small>H${n}</small>${holeMark(bestOn(b.tries, n))}</span>`;
   if (played < SHOT_ALL) {
     el.dataset.state = 'going';
     body.innerHTML = `<span class="sd-holes">${[1, 2, 3].map(hole).join('')}</span>
       <a class="btn big gold shine" href="#/daily">Continue · hole ${Math.floor(played / SHOT_TRIES) + 1}, shot ${(played % SHOT_TRIES) + 1}</a>`;
-    // no running total partway: a wet first ball would read as 150 ft with two shots still to come
-    next.hidden = true;
+    // no running total partway (a wet first ball would read as 150 ft with two shots still to come): just the ticker
     return;
   }
   el.dataset.state = 'done';
   // done: the pot small in the corner, your total and where it stands across every club, your three holes, and the
-  // daily card's own two ways in
-  el.querySelector<HTMLElement>('[data-shot-lead]')!.innerHTML = `<span class="sd-corner">Ace Pot <b>${money(b.pot)}</b></span>`;
+  // leaders ticker
+  chip.style.display = '';
+  chip.innerHTML = `<span class="sd-corner">Ace Pot <b>${money(b.pot)}</b></span>`;
   body.innerHTML = `<a class="shot-done" href="#/daily">
       <span class="sd-top"><b>${ftLabel(totalFt(b.tries))}</b>${b.place ? `<em>${ordinalOf(b.place)} of ${b.players}<small>all clubs</small></em>` : ''}</span>
       <span class="sd-holes">${[1, 2, 3].map(hole).join('')}</span>
     </a>`;
-  // today's leaders across every club, rolling past with their faces (the daily card has its own tile just below)
-  const lead = b.board.slice(0, 10);
-  const item = (r: (typeof lead)[number], i: number) =>
-    `<span class="sd-tk${r.mine ? ' me' : ''}"><i>${i + 1}</i>${face(r, 22)}<b>${esc(r.mine ? 'You' : r.name.split(' ')[0])}</b><em>${ftLabel(r.total)}</em></span>`;
-  const run = lead.map(item).join('');
-  next.innerHTML = `<span class="sd-ticker${lead.length > 2 ? ' roll' : ''}" style="--n:${lead.length}"><span class="sd-track">${run}${lead.length > 2 ? run : ''}</span></span>`;
 }
