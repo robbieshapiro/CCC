@@ -2521,6 +2521,13 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .bs-design b { font: 700 19px/1.15 var(--serif); }
 .bs-design div > span { font-size: 12.5px; color: #5a4618; }
 .bs-design .bsf-go { background: #1f5a3e; color: #fff; }
+/* quieter (Nov 21), to sit with today's contests: olive-charcoal, gold small caps, a cream button */
+.bs-design { color: #f4ead2; background: linear-gradient(160deg, #4a4a34, #33331f); border-color: #66664a; box-shadow: 0 6px 14px -10px rgba(0, 0, 0, 0.45); }
+.bs-design small { color: #e6c35c; }
+.bs-design div > span { color: rgba(244, 234, 210, 0.85); }
+.bs-design .bsf-go { background: #f4ead2; color: #2a2a18; }
+.bsf-by { flex-wrap: wrap; }
+.bsf-best { display: block; margin-top: 4px; font-size: 12.5px; opacity: 0.85; }
 /* Around the club's Pro Shop tile (Nov 20): your bank and three featured pieces */
 .pm-grid .pm-shop { grid-column: 1 / -1; min-height: 0; color: #3a2a08; background: linear-gradient(135deg, #fff4d6, #f3d892); border-color: #e6c35c; }
 .pm-shop-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -2671,3 +2678,4 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .g3-next { position: absolute; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; padding: 12px 26px; border: 0; border-radius: 999px; background: #e6c35c; color: #163b2c; font: 800 15px var(--font); letter-spacing: 0.04em; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6); animation: g3-next-in 0.3s ease-out; }
 @keyframes g3-next-in { from { opacity: 0; transform: translate(-50%, 8px); } }
 .bs-row .bs-card[data-bs='daily'] small { color: #e6c35c; }
+.bsf-by span em { margin-left: 0; }

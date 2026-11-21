@@ -89,7 +89,7 @@ export async function bindBarStrip(snap: Snapshot) {
     const who = { avatar: live.avatar, playerId: live.byId, name: live.by };
     const top = live.board.find((r) => r.playerId !== live.byId);
     el.innerHTML = `<div class="bsf-main"><small>The duel · Members' Course</small><b>${esc(c.name)}</b><span>${live.mine ? `Your course is on. Everyone is playing your ${live.mark.total}.` : `Beat ${esc(live.by)}’s ${live.mark.total}: $300 · tie it: $100`}</span>
-      <span class="bsf-by">${face(who, 30)}Designed by <em>${esc(live.by)}</em>${top ? ` · today's best ${esc(top.name)} ${top.total}` : ''}</span></div><span class="bsf-go">${live.mine ? 'Watch' : 'Take them on ›'}</span>`;
+      <span class="bsf-by">${face(who, 30)}<span>Designed by <em>${esc(live.by)}</em></span></span>${top ? `<span class="bsf-best">Today's best: ${top.mine ? 'you' : esc(top.name)}, ${top.total}</span>` : ''}</div><span class="bsf-go">${live.mine ? 'Watch' : 'Take them on ›'}</span>`;
     el.hidden = false;
   });
   void gamesOpen.then((g) => {
