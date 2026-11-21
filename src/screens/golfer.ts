@@ -35,8 +35,20 @@ export async function golfer(snap: Snapshot, id: string) {
     }
   });
   render(`${header(snap.groupName, 'clubhouse')}<main class="narrow">${back}<p class="muted">Loading their card…</p></main>`);
-  const g: GolferCard | null = await api.golferCard(requireSession(), id).catch(() => null);
+  // a slow or failed load is not a missing golfer: try once more, then say so and offer a retry (a busy database once
+  // showed members "No such golfer" for real people)
+  const load = () => api.golferCard(requireSession(), id);
+  let failed = false;
+  const g: GolferCard | null = await load()
+    .catch(() => new Promise<GolferCard | null>((r) => setTimeout(() => r(load()), 1500)))
+    .catch(() => ((failed = true), null));
   if (!location.hash.startsWith(`#/golfer/${id}`) && !location.hash.startsWith(`#/member/${id}`)) return; // they moved on while it loaded
+  if (failed) {
+    render(`${header(snap.groupName, 'clubhouse')}<main class="narrow">${back}<h1>Their card didn't load</h1><p class="muted">The clubhouse is busy. Give it another go.</p><button class="btn" data-retry>Try again</button></main>`);
+    bindBack();
+    document.querySelector('[data-retry]')?.addEventListener('click', () => void golfer(snap, id));
+    return;
+  }
   // your own card is your Locker, unless you asked to see it as others do (#/golfer/<you>/view, from the Locker)
   if (g?.mine && !location.hash.endsWith('/view')) return void location.replace('#/locker');
   if (!g) {
