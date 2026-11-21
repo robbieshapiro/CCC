@@ -212,7 +212,7 @@ function tickPot(el: HTMLElement, to: number) {
   requestAnimationFrame(step);
 }
 
-export async function bindDailyShot(day: string, cardsLeft: number | null) {
+export async function bindDailyShot(day: string, _cardsLeft?: number | null) {
   const el = document.getElementById('shot-card');
   if (!el) return;
   const b = await api.dailyBoard(requireSession(), day).catch(() => null);
@@ -245,7 +245,10 @@ export async function bindDailyShot(day: string, cardsLeft: number | null) {
       <span class="sd-top"><b>${ftLabel(totalFt(b.tries))}</b>${b.place ? `<em>${ordinalOf(b.place)} of ${b.players}<small>all clubs</small></em>` : ''}</span>
       <span class="sd-holes">${[1, 2, 3].map(hole).join('')}</span>
     </a>`;
-  next.innerHTML = cardsLeft
-    ? `<span class="sd-card"><a class="btn small gold" href="#/round">Play today's card</a><a class="btn small ghost-light" href="#/round/practice">Practise first</a></span>`
-    : 'Back tomorrow.';
+  // today's leaders across every club, rolling past with their faces (the daily card has its own tile just below)
+  const lead = b.board.slice(0, 10);
+  const item = (r: (typeof lead)[number], i: number) =>
+    `<span class="sd-tk${r.mine ? ' me' : ''}"><i>${i + 1}</i>${face(r, 22)}<b>${esc(r.mine ? 'You' : r.name.split(' ')[0])}</b><em>${ftLabel(r.total)}</em></span>`;
+  const run = lead.map(item).join('');
+  next.innerHTML = `<span class="sd-ticker${lead.length > 2 ? ' roll' : ''}" style="--n:${lead.length}"><span class="sd-track">${run}${lead.length > 2 ? run : ''}</span></span>`;
 }
