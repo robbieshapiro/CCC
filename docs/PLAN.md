@@ -304,7 +304,7 @@ Last updated Nov 22, 2026 (the Powder Bowl goes up the mountain and moves to Nov
 
 ## Setup status
 
-- [ ] #397: apply the Powder Bowl's eight pars live (`course_pars`, `pr_397_powder_bowl`), and point Nov 29 in `course_schedule` at the Powder Bowl (it was the Pacific Bluffs; Robbie asked, Nov 22).
+- [x] #397: applied `pr_397_powder_bowl` on Nov 22: the Powder Bowl's eight pars (`{4,3,3,4,5,4,4,4}`) and Nov 29 in `course_schedule` now the Powder Bowl (was the Pacific Bluffs; Robbie asked). Verified with a select.
 
 - [x] Apply #390's SQL live (`open_purse_floor(month)`, `open_payouts`, the admin purse line), after Robbie OKs it: money logic. Applied Nov 22 as `pr_390_purse`; closed weeks' payouts unchanged (19 rows, $49,997). Its purse call in `admin_kpis` was swapped in place; live `admin_kpis` is byte-for-byte the same as `schema.sql` (checked Nov 22).
 
