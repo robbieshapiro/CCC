@@ -2688,3 +2688,17 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .bs-featured .bsf-main > span { color: rgba(255, 240, 236, 0.88); }
 .bs-featured .bsf-go { background: #f4ead2; color: #43191f; }
 .pm-classic .pm-champ b { font: 700 14px/1.2 var(--font); }
+
+/* home's flair back (Nov 22): jewel tones, each tile its own, a sheen on top, a thin gold edge and a glow of its colour */
+.bs-row .bs-card { background: linear-gradient(155deg, var(--a) 0%, var(--b) 100%); border: 1px solid rgba(242, 201, 76, 0.55); box-shadow: 0 10px 22px -12px var(--b), inset 0 1px 0 rgba(255, 255, 255, 0.28); }
+.bs-row .bs-card[data-bs='daily'] { --a: #1f8a5a; --b: #0f4d33; }
+.bs-row .bs-card[data-bs='drive'] { --a: #2a5fb8; --b: #173670; }
+.bs-row .bs-card[data-bs='targets'] { --a: #7a45b8; --b: #432470; }
+.bs-row .bs-card[data-bs='midway'] { --a: #c46a2a; --b: #7a3a14; }
+.bs-row .bs-card i { background: rgba(255, 255, 255, 0.18); }
+.bs-row .bs-card small { color: #f6dc8a; }
+.bs-featured { background: linear-gradient(155deg, #a8323e, #5e1622); border: 1px solid rgba(242, 201, 76, 0.55); box-shadow: 0 12px 24px -14px #5e1622, inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.bs-design { color: #fff8e6; background: linear-gradient(155deg, #b8902a, #6e5212); border: 1px solid rgba(255, 230, 160, 0.7); box-shadow: 0 12px 24px -14px #6e5212, inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+.bs-design small { color: #fff1c2; }
+.bs-design div > span { color: rgba(255, 248, 230, 0.9); }
+.bs-design .bsf-go { background: #fff8e6; color: #5a420e; }

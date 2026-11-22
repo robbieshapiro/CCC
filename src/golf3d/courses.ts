@@ -164,7 +164,8 @@ const COURSES: Course[] = [
   {
     id: 'atlanticlinks',
     // the grey-green Atlantic into the dunes, gorse gold, a sea mist, a shamrock
-    look: { colors: ['#13262c', '#22423e', '#3b664c'], glow: 'rgba(232, 197, 71, 0.22)', accent: '#e8c547', ink: '#13262c', soft: '#d8e3c8', icon: '☘️', pattern: 'dunes' },
+    // Nov 22: emerald and gold, into the Atlantic blue (the moss and slate read boring)
+    look: { colors: ['#0f5c3a', '#1f8a52', '#2f7a8c'], glow: 'rgba(242, 201, 76, 0.45)', accent: '#f2c94c', ink: '#0f3a26', soft: '#d6f5e2', icon: '☘️', pattern: 'dunes' },
     // the west coast of Ireland, in the Hole Lab's links look: six holes for the week of Nov 29
     opens: '2026-11-29',
     name: 'The Atlantic Links',
