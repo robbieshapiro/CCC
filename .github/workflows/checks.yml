@@ -32,7 +32,11 @@ jobs:
         run: |
           files=$(git diff --name-only "$BASE" HEAD)
           has() { echo "$files" | grep -qE "$1" && echo true || echo false; }
-          echo "holes=$(has '^(src/golf3d/|scripts/check-holes)')" >> "$GITHUB_OUTPUT"
+          # the slow course check runs for anything that can change how a hole plays. A course's colours alone (its
+          # look: line in courses.ts, or comments there) can't, so that doesn't set it off (Nov 22)
+          golf=$(echo "$files" | grep -E '^(src/golf3d/|scripts/check-holes)' | grep -vx 'src/golf3d/courses.ts' || true)
+          courses=$(git diff -U0 "$BASE" HEAD -- src/golf3d/courses.ts | grep -E '^[+-][^+-]' | grep -vE '^[+-][[:space:]]*(look:|//)' || true)
+          [ -n "$golf$courses" ] && echo "holes=true" >> "$GITHUB_OUTPUT" || echo "holes=false" >> "$GITHUB_OUTPUT"
           echo "minigolf=$(has '^(src/golf3d/(minigolf|haunted|putbot)|scripts/check-minigolf)')" >> "$GITHUB_OUTPUT"
           echo "pool=$(has '^(src/billiards/|scripts/check-pool)')" >> "$GITHUB_OUTPUT"
           echo "uth=$(has '^(src/uth\.ts|scripts/check-uth)')" >> "$GITHUB_OUTPUT"
