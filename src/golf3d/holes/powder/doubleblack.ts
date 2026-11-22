@@ -1,4 +1,4 @@
-// Hole 7, The Double Black (par 4, 520 yd as shown), the hard one, a dogleg left. Off the top of the expert chute,
+// Hole 7, The Double Black (par 4, 560 yd as shown), the hard one, a dogleg left. Off the top of the expert chute,
 // 75 ft down a gully of powder between bands of rock to a ledge of moguls; straight on, the ledge ends at a cliff. The
 // hole turns left there, down a second, steeper chute and over a mountain stream to a small, firm green with tree wells
 // down its left.
@@ -15,24 +15,25 @@ import { slope } from '../atlantic/common';
 import { POWDER_TURF, cliff, firs, moguls, profile } from './common';
 
 const TOP = 150;
-const GREEN = { x: -206, y: 732, rx: 13, ry: 11 };
+const GREEN = { x: -228, y: 776, rx: 12, ry: 10 };
 // the patrol line: down the right of the second chute to the front of the green
 const LINE: V2[] = [
   { x: -24, y: 504 },
   { x: -54, y: 540 },
   { x: -100, y: 610 },
   { x: -150, y: 666 },
-  { x: -190, y: 712 },
+  { x: -204, y: 740 },
+  { x: -214, y: 756 },
 ];
 // a mountain stream across the foot of the second chute, in front of the green, in two runs either side of the
 // snow bridge the patrol line crosses on
 const STREAM_L: V2[] = [
-  { x: -340, y: 700 },
-  { x: -210, y: 692 },
+  { x: -360, y: 740 },
+  { x: -230, y: 732 },
 ];
 const STREAM_R: V2[] = [
-  { x: -172, y: 700 },
-  { x: -104, y: 716 },
+  { x: -192, y: 740 },
+  { x: -124, y: 756 },
 ];
 // the rock bands either side of the first chute: boulders a ball kicks off
 const rocks: Post[] = [];
@@ -50,13 +51,13 @@ for (let y = 330, row = 0; y <= 450; y += 18, row++)
   }
 // tree wells: firs in hollows down the left of the green
 const WELLS: [number, number][] = [
-  [-252, 690],
-  [-262, 726],
-  [-248, 760],
-  [-236, 790],
+  [-272, 730],
+  [-282, 766],
+  [-268, 800],
+  [-256, 830],
 ];
 const wellFirs: Post[] = WELLS.map(([x, y], i) => ({ x, y, r: 4, h: 20 + (i % 3) * 4, soft: true, look: 'snowpine' }));
-const traps = [greenside(GREEN, -186, 728, 6, 8, 2, 3.4, 0), greenside(GREEN, -204, 752, 9, 6, 3, 3.4, 0)];
+const traps = [greenside(GREEN, -208, 772, 6, 8, 2, 3.4, 0), greenside(GREEN, -226, 794, 9, 6, 3, 3.4, 0)];
 
 export const doubleblack: Hole = {
   id: 'doubleblack',
@@ -68,22 +69,22 @@ export const doubleblack: Hole = {
   windByHeight: true,
   gusts: true,
   chipDrop: 0.7,
-  greenFirm: 0.19,
-  yards: 520,
+  greenFirm: 0.22,
+  yards: 560,
   blurb: 'Double black. Down the chute to a ledge of moguls, then left down a second chute and over the stream. Straight on is a cliff.',
   teeTip: 'Driver to the ledge, or a full one over the firs on the left. Long and straight is over the cliff.',
   tee: { x: 0, y: 0 },
-  cup: { x: -206, y: 734 },
-  pins: [{ x: -206, y: 734 }, { x: -213, y: 728 }, { x: -198, y: 736 }, { x: -204, y: 740 }],
+  cup: { x: -228, y: 778 },
+  pins: [{ x: -228, y: 778 }, { x: -234, y: 773 }, { x: -221, y: 780 }, { x: -226, y: 783 }],
   aim: -0.02,
-  bounds: { x0: -360, y0: -50, x1: 140, y1: 840 },
+  bounds: { x0: -360, y0: -50, x1: 140, y1: 880 },
   border: [
     { x: -356, y: -46 },
     { x: 136, y: -46 },
     { x: 136, y: 548 },
     { x: -36, y: 566 },
-    { x: -96, y: 836 },
-    { x: -356, y: 836 },
+    { x: -102, y: 876 },
+    { x: -356, y: 876 },
   ],
   base: 'rough',
   regions: [
@@ -97,7 +98,7 @@ export const doubleblack: Hole = {
     // the patrol line: groomed for the sleds (it plays as a path)
     { poly: band(LINE, 3.5), surface: 'path' },
     // the lip of the cliff at the end of the ledge
-    { poly: band([{ x: 136, y: 552 }, { x: -36, y: 570 }, { x: -94, y: 832 }], 4), surface: 'rock' },
+    { poly: band([{ x: 136, y: 552 }, { x: -36, y: 570 }, { x: -100, y: 872 }], 4), surface: 'rock' },
     ...traps.map((t) => t.region),
   ],
   water: [
@@ -113,8 +114,8 @@ export const doubleblack: Hole = {
       // the ledge
       [540, 74],
       // the second chute, steeper
-      [690, 30],
-      [840, 24],
+      [730, 28],
+      [880, 24],
     ]),
     { kind: 'disc', x: 0, y: 0, r: 15, h: TOP + 1, edge: 10, op: 'set' },
     // the gully: its walls rise either side of the first chute's rocks
@@ -128,10 +129,10 @@ export const doubleblack: Hole = {
     { kind: 'channel', pts: LINE, width: 7, depth: 0.9 },
     // the tree wells
     ...WELLS.map(([x, y]) => ({ kind: 'disc' as const, x, y, r: 9, h: -4.5, edge: 4, op: 'add' as const })),
-    ...greenComplex(GREEN, 27, { lift: 1, edge: 9, tilt: slope(GREEN, 9, [0.6, 0.8]), rolls: [[-6, -4, 6, 0.35], [7, 4, 6, -0.3]] }),
+    ...greenComplex(GREEN, 26, { lift: 1, edge: 9, tilt: slope(GREEN, 9, [0.6, 0.8]), rolls: [[-6, -4, 6, 0.35], [7, 4, 6, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
     // the cliff at the end of the ledge and down the outside of the bend
-    cliff([{ x: 140, y: 584 }, { x: -2, y: 600 }, { x: -60, y: 860 }]),
+    cliff([{ x: 140, y: 584 }, { x: -2, y: 600 }, { x: -66, y: 900 }]),
   ],
   walls: [],
   posts: [

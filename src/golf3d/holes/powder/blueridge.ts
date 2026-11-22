@@ -15,7 +15,7 @@ import { slope } from '../atlantic/common';
 import { POWDER_TURF, cliff, firs, profile } from './common';
 
 const TOP = 110;
-const GREEN = { x: 176, y: 664, rx: 16, ry: 13 };
+const GREEN = { x: 188, y: 690, rx: 13, ry: 11 };
 // the crest at the top of the upper fairway
 const CREST = 500;
 // the cliff edge down the left
@@ -26,7 +26,8 @@ const TRACK: V2[] = [
   { x: 44, y: 548 },
   { x: 100, y: 590 },
   { x: 140, y: 622 },
-  { x: 160, y: 646 },
+  { x: 160, y: 650 },
+  { x: 176, y: 676 },
 ];
 // the creek across the front of the green, in two runs either side of the snow bridge
 const CREEK_L: V2[] = [
@@ -47,7 +48,7 @@ for (let y = 270, row = 0; y <= 430; y += 20, row++)
     corner.push({ x, y, r: Math.max(4, Math.round(h * 0.25)), h, soft: true, look: 'snowpine' });
     if ((x + y) % 40 === 0) WELLS.push([x, y]);
   }
-const traps = [greenside(GREEN, 154, 662, 6, 8, 2, 3.4, 0), greenside(GREEN, 196, 676, 7, 7, 3, 3.4, 0.4)];
+const traps = [greenside(GREEN, 168, 686, 6, 8, 2, 3.4, 0), greenside(GREEN, 206, 702, 7, 7, 3, 3.4, 0.4), greenside(GREEN, 190, 710, 8, 5, 4, 3.4, 0)];
 
 export const blueridge: Hole = {
   id: 'blueridge',
@@ -58,13 +59,13 @@ export const blueridge: Hole = {
   turf: POWDER_TURF,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.14,
+  greenFirm: 0.2,
   yards: 460,
   blurb: 'Blue square. A dogleg right: the upper fairway, the cliff beyond it, then round the firs and over the creek. Or cut the corner.',
   teeTip: 'Driver up the left onto the upper fairway. A full one can carry the firs on the right.',
   tee: { x: 0, y: 0 },
-  cup: { x: 176, y: 666 },
-  pins: [{ x: 176, y: 666 }, { x: 166, y: 660 }, { x: 186, y: 669 }, { x: 174, y: 674 }],
+  cup: { x: 188, y: 692 },
+  pins: [{ x: 188, y: 692 }, { x: 180, y: 687 }, { x: 196, y: 694 }, { x: 186, y: 698 }],
   aim: -0.03,
   bounds: { x0: -140, y0: -50, x1: 300, y1: 760 },
   border: [
@@ -80,7 +81,7 @@ export const blueridge: Hole = {
   regions: [
     { poly: rect(-14, -14, 14, 14), surface: 'fairway' },
     // the upper fairway, on the upslope to the crest: 72 ft across, the cliff off its left
-    { poly: blob(-24, 448, 38, 68, 1, 0.05), surface: 'fairway' },
+    { poly: blob(-24, 448, 32, 68, 1, 0.05), surface: 'fairway' },
     // the lower run beyond the firs, round the corner and down to the creek
     { poly: band([{ x: 30, y: 466 }, { x: 80, y: 530 }, { x: 126, y: 590 }, { x: 138, y: 606 }], 30), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },
@@ -92,8 +93,8 @@ export const blueridge: Hole = {
     ...traps.map((t) => t.region),
   ],
   water: [
-    { poly: band(CREEK_L, 7), level: 17, look: 'lake' },
-    { poly: band(CREEK_R, 7), level: 17, look: 'lake' },
+    { poly: band(CREEK_L, 10), level: 17, look: 'lake' },
+    { poly: band(CREEK_R, 10), level: 17, look: 'lake' },
   ],
   terrain: [
     ...profile(-140, 300, [
@@ -112,8 +113,8 @@ export const blueridge: Hole = {
     { kind: 'hill', x: 260, y: 300, r: 200, h: 14 },
     // the tree wells: deep hollows round the trunks on the corner
     ...WELLS.map(([x, y]) => ({ kind: 'disc' as const, x, y, r: 9, h: -4, edge: 4, op: 'add' as const })),
-    { kind: 'channel', pts: CREEK_L, width: 14, depth: 4 },
-    { kind: 'channel', pts: CREEK_R, width: 14, depth: 4 },
+    { kind: 'channel', pts: CREEK_L, width: 18, depth: 4 },
+    { kind: 'channel', pts: CREEK_R, width: 18, depth: 4 },
     // the cat track sits a little into the snow, so a ball on it keeps to it
     { kind: 'channel', pts: TRACK, width: 7, depth: 0.8 },
     ...greenComplex(GREEN, 18, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [-0.5, 0.85]), rolls: [[-8, -5, 7, 0.35], [9, 5, 6, -0.3]] }),

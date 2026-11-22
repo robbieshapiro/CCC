@@ -233,8 +233,8 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   chairlift: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-14, -8], near: 360 },
   thelodge: { from: { x: 50, y: 470 }, clubs: ['putter', 'chip'], angles: [-16, 4] },
   summitdrop: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-4, 6] },
-  blueridge: { from: { x: -10, y: 470 }, clubs: ['putter', 'chip'], angles: [20, 50], near: 120 },
-  doubleblack: { from: { x: -20, y: 498 }, clubs: ['putter', 'chip'], angles: [-55, -30], near: 150 },
+  blueridge: { from: { x: -10, y: 470 }, clubs: ['putter', 'chip'], angles: [20, 50], near: 180 },
+  doubleblack: { from: { x: -20, y: 498 }, clubs: ['putter', 'chip'], angles: [-55, -30], near: 200 },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
