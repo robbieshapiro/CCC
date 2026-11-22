@@ -226,6 +226,12 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   fairyfort: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-6, 6] },
   bogroad: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-16, -6], near: 110 },
   castlestrand: { from: { x: 0, y: 0 }, clubs: ['driver'], angles: [14, 30], near: 440 },
+  // the Powder Bowl: down the magic carpet, off the snowbank, a drive onto the groomer, a drive down the glade, down the sled run
+  bunnyhill: { from: { x: 52, y: 320 }, clubs: ['putter', 'chip'], angles: [-14, 4] },
+  frozenpond: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-6, 6] },
+  blackdiamond: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-12, -4], near: 480 },
+  chairlift: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-14, -8], near: 360 },
+  thelodge: { from: { x: 56, y: 340 }, clubs: ['putter', 'chip'], angles: [-16, 4] },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.
@@ -451,7 +457,7 @@ if (mode === 'all' || mode === 'basic') {
   ok(periodClosesAt('2026-10').toISOString() === '2026-10-30T04:00:00.000Z' && periodClosesAt('2026-10-30').toISOString() === '2026-11-08T05:00:00.000Z', 'periods close at midnight Eastern, either side of the clocks changing');
   ok(periodOf('2026-10-29') === '2026-10' && periodOf('2026-10-30') === '2026-10-30' && periodOf('2026-11-07') === '2026-10-30' && periodOf('2026-11-08') === '2026-11-08' && periodOf('2026-11-14') === '2026-11-08' && periodOf('2026-11-15') === '2026-11-15', 'weeks start on Sunday from November 8');
   ok(periodClosesAt('2026-11-08').toISOString() === '2026-11-15T05:00:00.000Z', 'a week closes at midnight Eastern going into Sunday');
-  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 6 && courseFor('2026-11-08').id === 'westernreserve' && courseFor('2026-11-15').id === 'windycity', 'October is the Highlands, the Caldera challenge is all six holes, the Western Reserve from Nov 8, then the Windy City from Nov 15');
+  ok(courseFor('2026-10').id === 'highlands' && courseFor('2026-10-30').id === 'caldera' && courseFor('2026-10-30').holes.length === 6 && courseFor('2026-11-08').id === 'westernreserve' && courseFor('2026-11-15').id === 'windycity' && courseFor('2026-12-06').id === 'powderbowl', 'October is the Highlands, the Caldera challenge is all six holes, the Western Reserve from Nov 8, then the Windy City from Nov 15, and the Powder Bowl from Dec 6');
   // every weekly course from Nov 22 has its own look on home (CourseLook), and no two weeks in a row look alike
   {
     const weekly = tourCourses().filter((c) => !c.lab && c.opens >= '2026-11-22');

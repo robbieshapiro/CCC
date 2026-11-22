@@ -102,6 +102,28 @@ function skier(color: string) {
   return g;
 }
 
+// a snowman: three balls of snow, coal eyes, a carrot nose, a red scarf and stick arms
+function snowman() {
+  const g = new THREE.Group();
+  const snow = mat('#f6f9fc', { rough: 0.8 });
+  g.add(mesh(new THREE.SphereGeometry(2.4, 10, 8), snow).translateY(2.1));
+  g.add(mesh(new THREE.SphereGeometry(1.7, 10, 8), snow).translateY(5.4));
+  g.add(mesh(new THREE.SphereGeometry(1.2, 10, 8), snow).translateY(7.9));
+  g.add(mesh(new THREE.TorusGeometry(1.15, 0.3, 6, 12), mat('#c8302c')).rotateX(Math.PI / 2).translateZ(-6.8));
+  const nose = mesh(new THREE.ConeGeometry(0.22, 1.3, 6), mat('#e8792b'), false);
+  nose.rotation.x = Math.PI / 2;
+  nose.position.set(0, 7.9, 1.7);
+  g.add(nose);
+  for (const s of [-0.4, 0.4]) g.add(mesh(new THREE.SphereGeometry(0.14, 5, 4), mat('#1a1a1a'), false).translateX(s).translateY(8.3).translateZ(1.05));
+  for (const s of [-1, 1]) {
+    const arm = mesh(new THREE.CylinderGeometry(0.1, 0.14, 3.4, 4), mat('#5a3d26'), false);
+    arm.rotation.z = s * 1.0;
+    arm.position.set(s * 2.9, 6.2, 0);
+    g.add(arm);
+  }
+  return g;
+}
+
 function peak(hgt: number, r: number, seed: number) {
   const g = new THREE.Group();
   const rock = mesh(new THREE.ConeGeometry(r, hgt, 7 + (seed % 3)), mat('#6e737a'), false);
@@ -129,6 +151,7 @@ export const alpine: Kit = {
   },
   decor(_h, d, anim) {
     if (d.kind === 'lodge') return lodge(anim);
+    if (d.kind === 'snowman') return snowman();
     return null;
   },
   frame(h: Hole, root, anim, floor) {

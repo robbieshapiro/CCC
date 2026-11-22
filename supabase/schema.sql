@@ -2556,6 +2556,9 @@ insert into course_pars (course, pars) values ('windycity', '{4,3,4,4,4,5}')
 on conflict (course) do update set pars = excluded.pars;
 insert into course_pars (course, pars) values ('atlanticlinks', '{4,3,4,3,4,5}')
 on conflict (course) do update set pars = excluded.pars;
+-- the Powder Bowl, the week of Dec 6 (the Architect, Nov 22)
+insert into course_pars (course, pars) values ('powderbowl', '{4,3,5,4,4}')
+on conflict (course) do update set pars = excluded.pars;
 
 -- every past day's Closest to the Pin winner across all clubs, as a person (lower name, PIN hash), ranked as
 -- daily_crown ranks a day: holed first, holed sooner, then nearest, then the next-best try, then the earlier player
