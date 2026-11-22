@@ -34,6 +34,9 @@ import { frozenpond } from './holes/powder/frozenpond';
 import { blackdiamond } from './holes/powder/blackdiamond';
 import { chairlift } from './holes/powder/chairlift';
 import { thelodge } from './holes/powder/thelodge';
+import { summitdrop } from './holes/powder/summitdrop';
+import { blueridge } from './holes/powder/blueridge';
+import { doubleblack } from './holes/powder/doubleblack';
 import { lakefront } from './holes/chicago/lakefront';
 import { lincolnpark } from './holes/chicago/lincolnpark';
 import { millennium } from './holes/chicago/millennium';
@@ -171,8 +174,8 @@ const COURSES: Course[] = [
     // the grey-green Atlantic into the dunes, gorse gold, a sea mist, a shamrock
     // Nov 22: emerald and gold, into the Atlantic blue (the moss and slate read boring)
     look: { colors: ['#0f5c3a', '#1f8a52', '#2f7a8c'], glow: 'rgba(242, 201, 76, 0.45)', accent: '#f2c94c', ink: '#0f3a26', soft: '#d6f5e2', icon: '☘️', pattern: 'dunes' },
-    // the west coast of Ireland, in the Hole Lab's links look: six holes for the week of Nov 29
-    opens: '2026-11-29',
+    // the west coast of Ireland, in the Hole Lab's links look: six holes, played the week of Nov 22 (Robbie's pick)
+    opens: '2026-11-22',
     name: 'The Atlantic Links',
     tagline: 'Six holes on the west coast of Ireland. Dunes, a cliff road, a fairy fort, a bog, and a castle over the sea.',
     holes: [sheepwalk, punchbowl, cliffroad, fairyfort, bogroad, castlestrand],
@@ -183,18 +186,22 @@ const COURSES: Course[] = [
     id: 'powderbowl',
     // a ski resort in December: a night-blue sky over the peaks into glacier ice, and the lodge's red for the button
     look: { colors: ['#0c1f3f', '#2c5d9a', '#8cc7ea'], glow: 'rgba(220, 240, 255, 0.5)', accent: '#e8453c', ink: '#ffffff', soft: '#dcefff', icon: '⛷️', pattern: 'peaks' },
-    // a Colorado ski resort, in the Hole Lab's alpine look: five holes for the week of Dec 6, built by the Architect
-    opens: '2026-12-06',
+    // a Colorado ski resort, in the Hole Lab's alpine look: built by the Architect for Dec 6, then moved up to Nov 29
+    // and taken up the mountain at Robbie's request (Nov 22): eight holes, each a trail, big drops and side-hill runs,
+    // snow always falling, skiers and Colorado wildlife all round, and a hidden après-ski deck. Plays Dec 6 too.
+    opens: '2026-11-29',
     whatsNew: [
-      'Five holes at a Colorado ski resort, in fresh snow.',
+      'Eight holes on a Colorado mountain, in falling snow. Each is a trail: green circle, blue square, black diamond, double black.',
+      'Big drops and side-hill runs. The ball goes where the mountain goes.',
       'The cut is green. Everything else is deep powder: a ball in it stops dead.',
-      'The Black Diamond runs down a mogul field. They kick a ball about.',
-      'Every hole has a secret.',
+      'Moguls, rock bands and tree wells on the blacks.',
+      'Keep an eye out for moose, elk and the odd bear.',
+      'The après deck is open somewhere on the mountain. Every hole has a secret.',
     ],
     name: 'The Powder Bowl',
-    tagline: 'Five holes at a Colorado ski resort. The bunny hill, a skating pond, a black diamond, the chairlift and the lodge.',
-    holes: [bunnyhill, frozenpond, blackdiamond, chairlift, thelodge],
-    par: par([bunnyhill, frozenpond, blackdiamond, chairlift, thelodge]),
+    tagline: 'Eight holes down a Colorado mountain in the snow: the bunny hill, the summit, a blue cruiser, a black, a double black, the chairlift and the lodge.',
+    holes: [bunnyhill, summitdrop, frozenpond, blueridge, blackdiamond, doubleblack, chairlift, thelodge],
+    par: par([bunnyhill, summitdrop, frozenpond, blueridge, blackdiamond, doubleblack, chairlift, thelodge]),
     playoff: { hole: thelodge, from: { x: -4, y: 530 }, label: 'Down to the lodge' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------

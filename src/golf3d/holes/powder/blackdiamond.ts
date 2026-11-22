@@ -1,6 +1,6 @@
-// Hole 3, The Black Diamond (par 5, 680 yd as shown): the hard one. Off the top of the expert run, exposed to a gusting
-// wind, 110 ft down a mogul field, then out across the flats to a small green in the firs with a mountain stream
-// across its front.
+// Hole 5, The Black Diamond (par 5, 680 yd as shown), a black diamond. Off the top of the expert run, exposed to a
+// gusting wind, 120 ft down a mogul field tipped to the right, out across the flats and down a band of rock, to a small
+// green in the firs with a mountain stream across its front.
 // The play: a driver down the moguls (they kick a ball about), a wood along the flats to lay up short of the stream,
 // then a wedge over it.
 // The bail-out: there isn't much of one. The powder either side stops a ball dead and the firs are thick.
@@ -12,7 +12,7 @@ import { greenComplex, greenside, bunker, FAIRWAY_DEPTH } from '../woods';
 import { slope } from '../atlantic/common';
 import { POWDER_TURF, firs, moguls } from './common';
 
-const TOP = 116;
+const TOP = 150;
 const MID = 30;
 const FOOT = 6;
 const GREEN = { x: -26, y: 1000, rx: 16, ry: 13 };
@@ -45,7 +45,7 @@ export const blackdiamond: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.14,
   yards: 680,
-  blurb: 'Off the top of the expert run in the wind, down the moguls, then over the stream to a small green. Par is a fine score.',
+  blurb: 'Black diamond. Down the moguls in the wind, over a band of rock, then the stream to a small green. Par is a fine score.',
   teeTip: 'Driver down the moguls. They\'ll kick it about, so favour the middle.',
   tee: { x: 0, y: 0 },
   cup: { x: -26, y: 1002 },
@@ -67,6 +67,8 @@ export const blackdiamond: Hole = {
     { poly: blob(-4, 740, 31, 210, 2, 0.06), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
+    // the rock band across the flats
+    { poly: rect(-150, 600, 150, 616), surface: 'rock' },
     // the groomer: corduroy, firm and quick
     { poly: band(GROOMER, 4), surface: 'path' },
     ...traps.map((t) => t.region),
@@ -75,10 +77,15 @@ export const blackdiamond: Hole = {
   terrain: [
     { kind: 'ramp', x0: -150, y0: -50, x1: 150, y1: 20, axis: 'y', h0: TOP, h1: TOP, op: 'set' },
     { kind: 'ramp', x0: -150, y0: 20, x1: 150, y1: 480, axis: 'y', h0: TOP, h1: MID, op: 'set' },
-    { kind: 'ramp', x0: -150, y0: 480, x1: 150, y1: 860, axis: 'y', h0: MID, h1: FOOT + 1, op: 'set' },
+    // the flats, then a band of rock: a 12 ft step down across the hole (Nov 22)
+    { kind: 'ramp', x0: -150, y0: 480, x1: 150, y1: 600, axis: 'y', h0: MID, h1: MID - 4, op: 'set' },
+    { kind: 'ramp', x0: -150, y0: 600, x1: 150, y1: 616, axis: 'y', h0: MID - 4, h1: MID - 16, op: 'set' },
+    { kind: 'ramp', x0: -150, y0: 616, x1: 150, y1: 860, axis: 'y', h0: MID - 16, h1: FOOT + 1, op: 'set' },
     { kind: 'ramp', x0: -150, y0: 860, x1: 150, y1: 1090, axis: 'y', h0: FOOT + 1, h1: FOOT, op: 'set' },
     { kind: 'disc', x: 0, y: 0, r: 16, h: TOP + 1, edge: 8, op: 'set' },
-    ...moguls(-24, 28, 200, 470),
+    // the mountainside rises on the left of the moguls
+    { kind: 'hill', x: -160, y: 330, r: 180, h: 18 },
+    ...moguls(-24, 28, 200, 470, 1.5),
     { kind: 'channel', pts: STREAM, width: 18, depth: 5 },
     // the groomer is pressed smooth and a touch below the moguls, so a ball on it keeps to it
     { kind: 'channel', pts: GROOMER, width: 7, depth: 0.8 },
@@ -105,5 +112,9 @@ export const blackdiamond: Hole = {
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 22, y: -12, rot: 0 },
+    { kind: 'trailsign', x: -20, y: 12, rot: 0, label: 'black' },
+    // the rock band, boulders along its lip either side of the run
+    { kind: 'rock', x: -60, y: 600, scale: 5 },
+    { kind: 'rock', x: 58, y: 604, scale: 4 },
   ],
 };

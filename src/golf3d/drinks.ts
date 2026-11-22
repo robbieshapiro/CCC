@@ -57,6 +57,14 @@ const MENUS: Record<string, Menu> = {
     water: { name: 'Red lemonade', colour: '#c8452e' },
     fireball: { name: 'A drop of poitín', colour: '#eef0ea', note: 'Go easy' },
   },
+  alpine: {
+    palmer: { name: 'Hot cocoa, with a splash', colour: '#6b3f24', note: 'Peppermint schnapps' },
+    lager: { name: 'Coors Banquet', colour: '#e1b84f', note: 'Straight from Golden' },
+    espresso: { name: 'Mountain espresso', colour: '#3b2418' },
+    transfusion: { name: 'Hot buttered rum', colour: '#c98a3a' },
+    water: { name: 'Snowmelt', colour: '#e6f2fa', note: 'Off the peak' },
+    fireball: { name: 'The après shot', colour: '#c4361b', note: 'Fireball, obviously' },
+  },
   chicago: {
     palmer: { name: 'Italian beef, dipped', colour: '#8a5a33', note: 'Heavy' },
     lager: { name: 'Old Style tallboy', colour: '#e1b84f' },

@@ -55,6 +55,21 @@ Then register the course:
 - its name in the `COURSES` map in `api/chronicle.ts`, so Reginald can write about it;
 - the calendar check near line 430 of `scripts/check-holes.ts` (`courseFor(...)`): add the new week so it expects your course from its Sunday.
 
+## 2b. Make it an experience, not just holes (Robbie, Nov 22)
+
+Robbie shouldn't ever have to ask for an "experience pass". Every course ships with all of this from the first PR. The models are the Atlantic Links (a soft Irish day, sheep, castles, a bridge over a sea gorge) and the Powder Bowl (snow falling, trail ratings, skiers, moose and bears, a hidden après deck). Read both before you start.
+
+- **The place, felt.** Weather that never stops, for the feel: a look kit's `drift` (snow, leaves), `drizzle`, the light and sky of the place (`light`, `skyColors`, `sun`). Choose a time of day and a season and commit to it.
+- **Real ground.** Big elevation changes on most holes: a high tee, a drop of 60 to 150 ft down a run or off a cliff, a climb to a green on a shelf or a headland. Side-hill fairways that feed a ball one way (a big `hill` set off one edge of the hole, r 150 to 180, h 15 to 20; avoid a global `tilt`, which fights the greens and water). Rollers and humps in the fairways. Greens on benches, shelves and points. No flat holes unless the place is flat.
+- **Hazards that tell the story.** Hazards that belong to the place: moguls and tree wells on a mountain, rock bands, gorges, rivers with bridges, bogs, canyons, sea stacks. A difficulty you can read at a glance: trail ratings on a ski course (a `trailsign` on the tee), a named hard hole, a breather. One or two holes clearly harder.
+- **Life all round, out of play.** Three to five kinds of the place's animals (`looks/livestock.ts`, `looks/mountainlife.ts`, `wildlife.ts` as models) and its people moving about (skiers on runs, a snowcat, sheep, fishermen, a farmer, a cart): always something moving, never a crowd. All of it outside the physics and off the short grass.
+- **One set piece.** Something members will talk about: a bridge over a sea gorge to a castle on a rock, a chute between rock walls, a green under a waterfall. Make the last hole a grand finale.
+- **Something hidden to tap.** A hidden spot with a drink or a perk that nothing on screen points to: an `apres` spot on a hole (a deck, a beach bar, a pub door; tap it between shots, once a hole, for Reginald's tray), a hamper or cooler on the 1st tee. A one-line hint in a blurb or in `src/tips.ts` at most. Give the course its own drinks menu in `src/golf3d/drinks.ts`, named for the place.
+- **Little touches.** Signs, a building or two, decor that rewards a look round: a pub, a patrol hut, a lighthouse, a rainbow.
+- **Look at it before you ship.** With the `browser-check` skill, screenshots from the tee, the lay-up and the green of every hole (`window.__g3`: override `cameraTarget` to place the camera). Fix anything sitting on a green, tee or fairway: scenery footprints are big (a castle is about 80 by 50 ft, a lodge 70 by 40). Read every screenshot.
+
+The Greenkeeper tunes the play week to week and keeps all of this; it never strips the experience out to make a hole easier.
+
 ## 3. Check it plays fair
 
 Run each of these and fix the holes until they pass. Paste the summary lines into the PR.

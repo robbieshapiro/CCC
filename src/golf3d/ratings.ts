@@ -39,10 +39,13 @@ export const RATINGS: Record<string, Rated> = {
     seeds: 4,
     holes: [
       { id: "bunnyhill", member: 0.5, strong: -0.2 },
-      { id: "frozenpond", member: 0.5, strong: 0.8 },
-      { id: "blackdiamond", member: 1.5, strong: 0.3 },
+      { id: "summitdrop", member: 0.8, strong: 0.5 },
+      { id: "frozenpond", member: 0.8, strong: 0.5 },
+      { id: "blueridge", member: 0.5, strong: 0.8 },
+      { id: "blackdiamond", member: 1.5, strong: 0 },
+      { id: "doubleblack", member: 0.8, strong: 1.3 },
       { id: "chairlift", member: 2.3, strong: 1.3 },
-      { id: "thelodge", member: 1.8, strong: 0 },
+      { id: "thelodge", member: 1.5, strong: 0.3 },
     ],
   },
   pacificbluffs: {

@@ -1,5 +1,5 @@
-// Hole 5, The Lodge (par 4, 460 yd as shown): the home run. Off the top of the last run, 70 ft down to a green in
-// front of the lodge, with the fire lit and the deck full.
+// Hole 8, The Lodge (par 4, 460 yd as shown), a green circle: the home run. Off the top of the last run, 95 ft down to
+// a green in front of the lodge, with the fire lit and the deck full.
 // The play: a driver down the run (it runs out a long way), then a wedge over the bunkers to the green.
 // The bail-out: short and right, on the run-out, for a chip up the middle. Left is the lodge's skating pond.
 // The secret: the Sled Run. The kids' sledding track runs down the right, worn into a trough, and ends at the front of
@@ -10,7 +10,7 @@ import { greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
 import { POWDER_TURF, firs } from './common';
 
-const TOP = 72;
+const TOP = 98;
 const FOOT = 4;
 const GREEN = { x: -12, y: 632, rx: 18, ry: 14 };
 // the sled run: down the right to the front of the green
@@ -35,7 +35,7 @@ export const thelodge: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.12,
   yards: 460,
-  blurb: 'The home run: 70 feet down to the lodge, the fire lit and the deck full. The skating pond waits short left.',
+  blurb: 'Green circle. The home run: 95 feet down to the lodge, the fire lit and the deck full. The pond waits short left.',
   teeTip: 'Driver down the run. It\'ll run out a long way.',
   tee: { x: 0, y: 0 },
   cup: { x: -12, y: 634 },
@@ -69,6 +69,8 @@ export const thelodge: Hole = {
     { kind: 'ramp', x0: -140, y0: 580, x1: 150, y1: 730, axis: 'y', h0: FOOT + 1, h1: FOOT, op: 'set' },
     { kind: 'disc', x: 0, y: 0, r: 16, h: TOP + 1, edge: 8, op: 'set' },
     { kind: 'hill', x: -30, y: 200, r: 50, h: 3 },
+    // the mountainside rises on the right of the top half, so the run tips left (Nov 22)
+    { kind: 'hill', x: 160, y: 200, r: 170, h: 16 },
     { kind: 'hill', x: 20, y: 380, r: 40, h: -2 },
     { kind: 'disc', x: -58, y: 592, r: 30, h: -5, edge: 10, op: 'add' },
     // the sled run is worn into a trough, so a ball on it keeps to it
@@ -91,6 +93,7 @@ export const thelodge: Hole = {
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 22, y: -12, rot: 0 },
+    { kind: 'trailsign', x: -20, y: 12, rot: 0, label: 'green' },
     { kind: 'lodge', x: -10, y: 700, rot: 0 },
     { kind: 'snowman', x: 50, y: 660, rot: -0.3 },
   ],
