@@ -1761,6 +1761,9 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .pm-rec small { opacity: 0.75; font-size: 12px; }
 .pm-champ { font-size: 13px; opacity: 0.9; }
 .pm-champ small { opacity: 0.7; font-size: 11px; }
+/* the record and champion lines: their bold names, not the tile's title style */
+.pm-classic .pm-rec b, .pm-classic .pm-champ b { padding-right: 0; font: 700 16px/1.2 var(--serif); color: #f3d98a; }
+.pm-classic .pm-champ b { font-size: 15px; color: #fff; }
 .pm-go { justify-self: start; margin-top: 8px; padding: 6px 12px; border-radius: 999px; background: #f3d98a; color: var(--green); font: 800 12px var(--font); letter-spacing: 0.06em; text-transform: uppercase; }
 
 /* The Season: FedEx Cup style points (season.ts) */
@@ -2684,3 +2687,4 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .bs-featured .bsf-main small { color: #e6c35c; }
 .bs-featured .bsf-main > span { color: rgba(255, 240, 236, 0.88); }
 .bs-featured .bsf-go { background: #f4ead2; color: #43191f; }
+.pm-classic .pm-champ b { font: 700 14px/1.2 var(--font); }
