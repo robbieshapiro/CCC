@@ -32,7 +32,7 @@ const HEAD: V2[] = [
 // the castle rock: the green and, beside it, the castle, sheer to the sea all round
 const ROCK: V2[] = [
   { x: 68, y: 922 },
-  { x: 118, y: 944 },
+  { x: 150, y: 928 },
 ];
 // the strand: hard wet sand under the cliff, rising at its far end back up to the cliff top
 const STRAND: V2[] = [
@@ -140,7 +140,7 @@ export const castlestrand: Hole = {
     CAUSEWAY.piece,
   ],
   walls: [...BRIDGE.walls, ...CAUSEWAY.walls],
-  posts: gorse([[-52, 120], [-56, 260], [-50, 400], [60, 180], [66, 330], [-30, 540], [-12, 800], [12, 820], [106, 918]]),
+  posts: gorse([[-52, 120], [-56, 260], [-50, 400], [60, 180], [66, 330], [-30, 540], [-12, 800], [12, 820]]),
   movers: [],
   pushes: [],
   zones: [{ id: 'strand', poly: band(STRAND.slice(0, 3), 11) }],
@@ -157,7 +157,8 @@ export const castlestrand: Hole = {
     { kind: 'sign', x: 22, y: -12, rot: 0 },
     { kind: 'bench', x: -22, y: -12, rot: 0 },
     // the castle on the point behind the green, and the pub for after
-    { kind: 'castle', x: 116, y: 946, rot: -0.4 },
+    // its footprint is about 80 by 50 ft, bawn wall to the front: well clear of the green, on the rock's far end
+    { kind: 'castle', x: 142, y: 928, rot: 0 },
     { kind: 'pub', x: -70, y: 900, rot: 0.5 },
     BRIDGE.decor,
     CAUSEWAY.decor,
