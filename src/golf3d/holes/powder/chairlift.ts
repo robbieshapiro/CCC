@@ -1,4 +1,4 @@
-// Hole 7, The Chairlift (par 4, 470 yd as shown), a blue square: uphill all the way, 46 ft, under the lift, a dogleg
+// Hole 5, The Chairlift (par 4, 470 yd as shown), a blue square: uphill all the way, 46 ft, under the lift, a dogleg
 // left round a stand of firs to a green on a shelf at the top. It plays every yard of its length.
 // The après deck: a sun deck with a bar, a keg and a fire pit off the right of the corner. Tap it before your next
 // shot and Reginald brings the tray (once a hole). Nothing says it's there.
@@ -10,7 +10,10 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
-import { POWDER_TURF, firs } from './common';
+import { POWDER_TURF, cliff, firs } from './common';
+
+// the cliff edge down the right of the drive (Nov 22, round two)
+const LIP = 96;
 
 const LOW = 6;
 const HIGH = 52;
@@ -53,6 +56,10 @@ export const chairlift: Hole = {
   border: [
     { x: -196, y: -46 },
     { x: 136, y: -46 },
+    { x: 136, y: 100 },
+    { x: LIP, y: 120 },
+    { x: LIP, y: 440 },
+    { x: 136, y: 460 },
     { x: 136, y: 706 },
     { x: -196, y: 706 },
   ],
@@ -80,9 +87,11 @@ export const chairlift: Hole = {
     { kind: 'hill', x: 96, y: 330, r: 60, h: 7 },
     ...greenComplex(GREEN, HIGH, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [0.6, 0.8]), rolls: [[-8, -5, 7, 0.35], [8, 5, 6, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
+    // the cliff down the right of the drive
+    cliff([{ x: LIP + 36, y: 100 }, { x: LIP + 36, y: 460 }]),
   ],
   walls: [],
-  posts: [...stand, ...firs([{ x: 78, y: 40 }, { x: 84, y: 660 }], 26, 'cl-r', -1), ...firs([{ x: -168, y: 480 }, { x: -170, y: 680 }], 26, 'cl-l', 1, 1)],
+  posts: [...stand, ...firs([{ x: 70, y: 40 }, { x: 74, y: 100 }], 26, 'cl-r', -1), ...firs([{ x: 84, y: 520 }, { x: 88, y: 660 }], 26, 'cl-rr', -1), ...firs([{ x: -168, y: 480 }, { x: -170, y: 680 }], 26, 'cl-l', 1, 1)],
   movers: [],
   pushes: [],
   zones: [{ id: 'glade', poly: band([{ x: glade(220), y: 220 }, { x: glade(420), y: 420 }], 9) }],

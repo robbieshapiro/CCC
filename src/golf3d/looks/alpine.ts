@@ -8,6 +8,7 @@ import { mat, mesh } from '../props';
 import { heightAt } from '../terrain';
 import type { Hole } from '../types';
 import { mountainLife } from './mountainlife';
+import { causeway } from './irish';
 
 // a fir with snow on its boughs
 export function snowFir(scale = 1, seed = 0) {
@@ -259,7 +260,7 @@ function peak(hgt: number, r: number, seed: number) {
 }
 
 export const alpine: Kit = {
-  surface: { green: '#58a656', fairway: '#6aa953', fringe: '#5f9c4b', rough: '#eef2f6', sand: '#d8ccb4', path: '#c4c9cf', stone: '#a8adb3' },
+  surface: { green: '#58a656', fairway: '#6aa953', fringe: '#5f9c4b', rough: '#eef2f6', sand: '#d8ccb4', path: '#c4c9cf', stone: '#cfe7f2', rock: '#7d8388' },
   floor: '#e9eef3',
   lake: '#6f9fb8',
   light: { sky: '#dfe9f3', ground: '#c9d2da', hemi: 1.15, sunColor: '#fff4e2', sun: 2.6, fog: '#e6edf3', near: 600, far: 2300, env: 1.1 },
@@ -279,6 +280,19 @@ export const alpine: Kit = {
     if (d.kind === 'trailsign') return trailSign(d.label ?? 'green');
     if (d.kind === 'patrolhut') return patrolHut();
     if (d.kind === 'apresdeck') return apresDeck(anim);
+    // the ice bridge out to the berg: the causeway's shape, in blue ice
+    if (d.kind === 'causeway') {
+      const c = causeway(d.size?.[0] ?? 40, d.size?.[1] ?? 4, d.size?.[2] ?? 12);
+      c.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+        if (m?.color) {
+          const dark = m.color.getHSL({ h: 0, s: 0, l: 0 }).l < 0.2;
+          (o as THREE.Mesh).material = m.clone();
+          ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(dark ? '#4a7f99' : '#cfe7f2');
+        }
+      });
+      return c;
+    }
     return null;
   },
   frame(h: Hole, root, anim, floor) {

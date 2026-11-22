@@ -13,9 +13,18 @@ export const firs = (pts: V2[], every: number, seed: string, out: 1 | -1, rows =
   treeLine(pts, every, `powder:${seed}`, 5, rows, out, 13).map((p) => ({ ...p, look: 'snowpine' as const }));
 
 // moguls: rows of small bumps down a steep run, staggered
-export const moguls = (x0: number, x1: number, y0: number, y1: number, h = 1.3) => {
+export const moguls = (x0: number, x1: number, y0: number, y1: number, h = 1.3, step = 16) => {
   const out: { kind: 'hill'; x: number; y: number; r: number; h: number }[] = [];
   let row = 0;
-  for (let y = y0; y <= y1; y += 16, row++) for (let x = x0 + (row % 2 ? 8 : 0); x <= x1; x += 16) out.push({ kind: 'hill', x, y, r: 7, h });
+  for (let y = y0; y <= y1; y += step, row++) for (let x = x0 + (row % 2 ? step / 2 : 0); x <= x1; x += step) out.push({ kind: 'hill', x, y, r: step * 0.44, h });
   return out;
 };
+
+// The ground down the line of play, as heights at points along y (Nov 22, round two): stacked ramps across the whole
+// hole, so a hole reads as a profile: a tee high up, a drop, an upslope to a crest, a fall away beyond it.
+export const profile = (x0: number, x1: number, pts: [number, number][]) =>
+  pts.slice(1).map(([y, h], i) => ({ kind: 'ramp' as const, x0, y0: pts[i][0], x1, y1: y, axis: 'y' as const, h0: pts[i][1], h1: h, op: 'set' as const }));
+
+// A cliff: the mountain falls away beyond a line, `drop` feet down within `edge` feet. Put the hole's border along the
+// lip, so a ball that rolls over it is gone (out of bounds, played again).
+export const cliff = (pts: V2[], drop = -60, edge = 8) => ({ kind: 'embankment' as const, pts, h: pts.map(() => drop), width: 26, edge });

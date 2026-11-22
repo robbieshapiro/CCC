@@ -30,7 +30,7 @@ import { fairyfort } from './holes/atlantic/fairyfort';
 import { bogroad } from './holes/atlantic/bogroad';
 import { castlestrand } from './holes/atlantic/castlestrand';
 import { bunnyhill } from './holes/powder/bunnyhill';
-import { frozenpond } from './holes/powder/frozenpond';
+import { iceberg } from './holes/powder/iceberg';
 import { blackdiamond } from './holes/powder/blackdiamond';
 import { chairlift } from './holes/powder/chairlift';
 import { thelodge } from './holes/powder/thelodge';
@@ -191,17 +191,17 @@ const COURSES: Course[] = [
     // snow always falling, skiers and Colorado wildlife all round, and a hidden après-ski deck. Plays Dec 6 too.
     opens: '2026-11-29',
     whatsNew: [
-      'Eight holes on a Colorado mountain, in falling snow. Each is a trail: green circle, blue square, black diamond, double black.',
-      'Big drops and side-hill runs. The ball goes where the mountain goes.',
-      'The cut is green. Everything else is deep powder: a ball in it stops dead.',
-      'Moguls, rock bands and tree wells on the blacks.',
-      'Keep an eye out for moose, elk and the odd bear.',
-      'The après deck is open somewhere on the mountain. Every hole has a secret.',
+      'Eight holes down a Colorado mountain, in falling snow. Each is a trail: green circle, blue square, black diamond, double black.',
+      'Two tiers on the long holes: a good drive stops on the upper fairway; only a full one carries the crest and runs down the lower.',
+      'Cliffs. Over the edge is out of bounds.',
+      'Two doglegs: cut the corner if you dare.',
+      'The Iceberg: a green on a berg in the lake. Off the green is in the water.',
+      'Moguls where the drive lands. The après deck is open somewhere on the mountain.',
     ],
     name: 'The Powder Bowl',
-    tagline: 'Eight holes down a Colorado mountain in the snow: the bunny hill, the summit, a blue cruiser, a black, a double black, the chairlift and the lodge.',
-    holes: [bunnyhill, summitdrop, frozenpond, blueridge, blackdiamond, doubleblack, chairlift, thelodge],
-    par: par([bunnyhill, summitdrop, frozenpond, blueridge, blackdiamond, doubleblack, chairlift, thelodge]),
+    tagline: 'Eight holes down a Colorado mountain in the snow: cliffs, moguls, two doglegs, a double black and a green on an iceberg.',
+    holes: [bunnyhill, blueridge, summitdrop, blackdiamond, chairlift, iceberg, doubleblack, thelodge],
+    par: par([bunnyhill, blueridge, summitdrop, blackdiamond, chairlift, iceberg, doubleblack, thelodge]),
     playoff: { hole: thelodge, from: { x: -4, y: 530 }, label: 'Down to the lodge' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------
