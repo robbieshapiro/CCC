@@ -24,7 +24,7 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
 
 - `npm run build` always (it typechecks).
 - `npm run check-api` if you touched `api/`.
-- `npm run check-holes` if you touched holes, terrain, physics or clubs. Its `greens` sweep (in `quick` and `all`) putts every green from all round every pin; never ship a course that fails it.
+- `npm run check-holes` if you touched holes, terrain, physics, clubs or wind. Its `greens` sweep (in `quick` and `all`) putts every green from all round every pin; never ship a course that fails it. **Use the `course-checks` skill** (`.claude/skills/course-checks/`) to pick the right mode: colours, scenery (`src/golf3d/looks/`), decor and copy need only the fast `basic`, never the slow checks.
 - `npm run check-minigolf` if you touched mini golf or the putting bot.
 - `npm run check-uth` if you touched Ultimate Texas Hold'em (`src/uth.ts`): known hands rank right, the rule card settles right, and random hands come out in the known odds. `poker_rank` in `schema.sql` must agree with `pokerRank` (`node node_modules/.cache/check-uth.mjs --sql` prints a comparison to run on scratch Postgres).
 - `npm run check-pool` if you touched 8-ball (`src/billiards/`): Mo plays himself 200 times; every game must end, most with the 8 sunk last.
@@ -32,7 +32,7 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
 ## Working notes (things agents keep relearning)
 
 - **Look before you report.** For any UI, 3D, course or flow change, use the `browser-check` skill (`.claude/skills/browser-check/`) and read the screenshot.
-- **check-holes is slow.** `quick` takes about 1 to 7 minutes a course, and `member` 10 or more. Run them in the background (one course after another, not in parallel), and carry on meanwhile. A change to clubs, the meter or physics touches every course, so check all four.
+- **check-holes is slow.** `quick` takes about 1 to 7 minutes a course, and `member` 10 or more (use `SEEDS=4`). Always set `COURSE=<id>`: CI's own `quick` plays the default course, not yours. Run them in the background (one course after another, not in parallel), and carry on meanwhile. A change to clubs, the meter or physics touches every course, so check all four.
 - **Merging.** Merge only after the `checks` run is green. Poll it with `gh api repos/robbieshapiro/ccc/commits/<sha>/check-runs --jq '.check_runs[]|select(.name=="checks")|.conclusion'`, then merge (squash) with `expectedHeadSha` set to that SHA. Reuse the session branch after each merge: `git fetch origin main && git checkout -B <branch> origin/main`. Merged branches are deleted automatically. This session can't delete other branches on GitHub (the safety check blocks it), so ask Robbie if one needs to go.
 - **Scratch Postgres** (for testing SQL) runs as the `postgres` user, not root:
   - start it with `su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/tmp/pg/data -o '-p 5433 -k /var/tmp/pg' -l /var/tmp/pg/log start"`;
