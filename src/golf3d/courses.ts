@@ -177,7 +177,7 @@ const COURSES: Course[] = [
     tagline: 'Six holes on the west coast of Ireland. Dunes, a cliff road, a fairy fort, a bog, and a castle over the sea.',
     holes: [sheepwalk, punchbowl, cliffroad, fairyfort, bogroad, castlestrand],
     par: par([sheepwalk, punchbowl, cliffroad, fairyfort, bogroad, castlestrand]),
-    playoff: { hole: castlestrand, from: { x: 40, y: 780 }, label: 'Under the castle' },
+    playoff: { hole: castlestrand, from: { x: 40, y: 780 }, label: 'Over the gorge' },
   },
   {
     id: 'powderbowl',

@@ -1,7 +1,10 @@
 // Hole 6, Castle Strand (par 5, 680 yd as shown): the finisher. Up the coast with the Atlantic all down the right,
-// to a green on the cliff edge under the ruined castle.
-// The play: a drive up the fairway on the cliff top, a second over the burn up to the pots, a long iron in.
-// The bail-out: left is always land. The green tips toward the sea, so leave it below the hole on the left.
+// to a green out on the castle rock: a sea stack off the point, cut off from the headland by a gorge of open sea and
+// joined to it by the old castle causeway, a long stone bridge on arches (Nov 22, the grand finale).
+// The play: a drive up the fairway on the cliff top, a second over the river to the headland, a pitch over the gorge.
+// The bold play: go for the rock in two, all carry over the gorge. Eagle if it holds, the sea if it doesn't.
+// The bail-out: the causeway. Lay up to the bridgehead and bump it across; the parapets keep it on.
+// The green tips toward the sea, so leave it below the hole on the left.
 // The secret: the Strand. Under the cliff on the right the sand is wet and hard. A drive that lands on it runs and
 // runs along the shore, and leaves one big shot to the green. Miss it and it's the sea.
 import { band, blob, rect } from '../../terrain';
@@ -10,21 +13,26 @@ import { greenComplex, greenside } from '../woods';
 import { LINKS_TURF, dunes, gorse, pot, slope, stoneBridge } from './common';
 
 const GROUND = 8;
-const GREEN = { x: 56, y: 922, rx: 18, ry: 15 };
+const GREEN = { x: 70, y: 924, rx: 18, ry: 15 };
 // the coast: the cliff top the hole runs along, and the point the green sits on
 const COAST: V2[] = [
   { x: 2, y: -50 },
   { x: 6, y: 200 },
   { x: 12, y: 500 },
   { x: -30, y: 740 },
-  { x: -40, y: 1000 },
+  { x: -96, y: 880 },
+  { x: -110, y: 1000 },
 ];
+// the headland ends at the bridgehead; past it, the gorge
 const HEAD: V2[] = [
   { x: 0, y: 590 },
   { x: 40, y: 750 },
-  { x: 52, y: 830 },
-  { x: 54, y: 930 },
-  { x: 52, y: 1000 },
+  { x: 44, y: 790 },
+];
+// the castle rock: the green and, beside it, the castle, sheer to the sea all round
+const ROCK: V2[] = [
+  { x: 68, y: 922 },
+  { x: 150, y: 928 },
 ];
 // the strand: hard wet sand under the cliff, rising at its far end back up to the cliff top
 const STRAND: V2[] = [
@@ -44,15 +52,15 @@ const BURN: V2[] = [
 const STRAND_H = [1.8, 1.8, 1.9, 2.8, 8];
 // Nov 22 (the Irish pass): the burn is a river now, with the old stone bridge where the lay-up crosses it
 const BRIDGE = stoneBridge({ x: 8, y: 538 }, { x: -2, y: 580 }, 4.5, GROUND + 0.4);
+// the castle causeway over the gorge, headland to rock
+const CAUSEWAY = stoneBridge({ x: 50, y: 830 }, { x: 64, y: 898 }, 4.5, GROUND + 0.4, -8);
 // the reef: a low bar of rock and shingle on the seaward side, so the strand is a trough between it and the cliff
 const REEF: V2[] = STRAND.slice(0, 4).map((p) => ({ x: p.x + 17, y: p.y }));
 const traps = [
   pot(-30, 310, 7, 1), // left of the drive
   pot(2, 750, 7, 2), // left of the second
-  pot(72, 820, 7, 3), // the end of the second fairway
-  greenside(GREEN, 36, 910, 7, 9, 4, 3.4, 0), // left of the green
-  greenside(GREEN, 60, 948, 9, 6, 5, 3.4, 0), // behind it
-  greenside(GREEN, 72, 898, 6, 6, 7, 3.4, 0), // short and right: a links pot guarding the bigger green
+  pot(70, 790, 7, 3), // right of the bridgehead
+  greenside(GREEN, 94, 942, 7, 6, 5, 3.4, 0), // behind and right, under the castle walls
 ];
 
 export const castlestrand: Hole = {
@@ -68,11 +76,11 @@ export const castlestrand: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.15, // Nov 19: a step firmer (was 0.12)
   yards: 680,
-  blurb: 'Up the cliff top with the sea all down your right, over the burn, to a green on the edge under the castle.',
-  teeTip: 'Left is always land. The burn crosses at the end of a big drive.',
+  blurb: 'Up the cliff top with the sea on your right, over the river, then across the gorge to a green on the castle rock.',
+  teeTip: 'The gorge guards the rock. Carry it in two if you dare, or lay up and run one over the castle causeway.',
   tee: { x: 0, y: 0 },
-  cup: { x: 56, y: 924 },
-  pins: [{ x: 56, y: 924 }, { x: 45, y: 916 }, { x: 66, y: 928 }, { x: 53, y: 933 }],
+  cup: { x: 70, y: 926 },
+  pins: [{ x: 70, y: 926 }, { x: 59, y: 918 }, { x: 80, y: 930 }, { x: 67, y: 935 }],
   aim: 0,
   bounds: { x0: -150, y0: -50, x1: 230, y1: 1000 },
   border: [
@@ -90,6 +98,8 @@ export const castlestrand: Hole = {
     { poly: blob(0, 290, 26, 140, 1, 0.06), surface: 'fairway' },
     // the second: on up the cliff top
     { poly: blob(36, 700, 32, 90, 2, 0.08), surface: 'fairway' },
+    // the lay-up: a tongue of fairway out to the bridgehead
+    { poly: blob(46, 812, 13, 24, 5, 0.06), surface: 'fairway' },
     // a wide collar, mown for the run-up (Nov 18: bigger, lower links greens)
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 7, GREEN.ry + 7, 3, 0.07), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.07), surface: 'green' },
@@ -97,6 +107,7 @@ export const castlestrand: Hole = {
     { poly: band(REEF, 5), surface: 'rock' },
     { poly: band(STRAND.slice(0, 4), 11), surface: 'path' },
     BRIDGE.region,
+    CAUSEWAY.region,
     ...traps.map((t) => t.region),
   ],
   water: [
@@ -108,13 +119,14 @@ export const castlestrand: Hole = {
     { kind: 'embankment', pts: COAST, h: [GROUND, GROUND, GROUND, GROUND, GROUND], width: 100, edge: 12, wobble: 5 },
     // the land runs on inland, past the left edge of the hole
     { kind: 'embankment', pts: [{ x: -130, y: -50 }, { x: -130, y: 1000 }], h: [GROUND, GROUND], width: 60, edge: 12 },
-    { kind: 'embankment', pts: HEAD, h: [GROUND, GROUND, GROUND, GROUND, GROUND], width: 46, edge: 10, wobble: 4 },
+    { kind: 'embankment', pts: HEAD, h: [GROUND, GROUND, GROUND], width: 46, edge: 10, wobble: 4 },
+    { kind: 'embankment', pts: ROCK, h: [GROUND, GROUND], width: 30, edge: 5, wobble: 2 },
     { kind: 'embankment', pts: STRAND, h: STRAND_H, width: 12, edge: 8 },
     { kind: 'embankment', pts: REEF, h: [4.6, 4.6, 4.8, 5.6], width: 2.5, edge: 5 },
     // worn a little hollow down its middle, so a running ball keeps to it
     { kind: 'channel', pts: STRAND.slice(0, 3), width: 11, depth: 0.6 },
     // dunes along the landward side, and the rise the castle stands on
-    ...dunes([[-116, 60, 44, 9], [-110, 220, 46, 10], [-112, 380, 44, 8], [-96, 540, 48, 10], [-80, 790, 50, 9], [-70, 930, 48, 9], [-14, 978, 40, 7]]),
+    ...dunes([[-116, 60, 44, 9], [-110, 220, 46, 10], [-112, 380, 44, 8], [-96, 540, 48, 10], [-80, 790, 50, 9], [-100, 930, 40, 9], [-60, 990, 36, 7]]),
     // rumples in the fairways
     ...dunes([[-18, 170, 24, 1.5], [14, 240, 22, -1.1], [-12, 330, 22, 1.3], [12, 400, 20, 1.2], [30, 730, 20, 1.4], [54, 790, 18, -1]]),
     // the tee up on a big dune, the whole hole laid out below (Nov 22)
@@ -125,9 +137,10 @@ export const castlestrand: Hole = {
     // the river, cut deep into the cliff top, and its bridge
     { kind: 'channel', pts: BURN, width: 18, depth: 7 },
     BRIDGE.piece,
+    CAUSEWAY.piece,
   ],
-  walls: [...BRIDGE.walls],
-  posts: gorse([[-52, 120], [-56, 260], [-50, 400], [60, 180], [66, 330], [-30, 540], [-12, 820], [8, 880], [98, 870], [26, 972]]),
+  walls: [...BRIDGE.walls, ...CAUSEWAY.walls],
+  posts: gorse([[-52, 120], [-56, 260], [-50, 400], [60, 180], [66, 330], [-30, 540], [-12, 800], [12, 820]]),
   movers: [],
   pushes: [],
   zones: [{ id: 'strand', poly: band(STRAND.slice(0, 3), 11) }],
@@ -136,19 +149,22 @@ export const castlestrand: Hole = {
     { x: -10, y: -30 },
     { x: -5, y: 280 },
     { x: 40, y: 580 },
-    { x: 56, y: 920 },
+    { x: 46, y: 800 },
+    { x: 70, y: 920 },
   ],
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 22, y: -12, rot: 0 },
     { kind: 'bench', x: -22, y: -12, rot: 0 },
     // the castle on the point behind the green, and the pub for after
-    { kind: 'castle', x: 96, y: 990, rot: -0.3 },
-    { kind: 'pub', x: -44, y: 944, rot: 0.5 },
+    // its footprint is about 80 by 50 ft, bawn wall to the front: well clear of the green, on the rock's far end
+    { kind: 'castle', x: 142, y: 928, rot: 0 },
+    { kind: 'pub', x: -70, y: 900, rot: 0.5 },
     BRIDGE.decor,
+    CAUSEWAY.decor,
     { kind: 'sheep', x: -80, y: 150, rot: 0.6 },
     { kind: 'sheep', x: -86, y: 300, rot: -1.2 },
     { kind: 'sheep', x: -60, y: 600, rot: 2.4 },
-    { kind: 'sheep', x: -24, y: 890, rot: 0.2 },
+    { kind: 'sheep', x: -10, y: 780, rot: 0.2 },
   ],
 };

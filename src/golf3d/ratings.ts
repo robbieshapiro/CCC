@@ -90,7 +90,7 @@ export const RATINGS: Record<string, Rated> = {
       { id: "cliffroad", member: 1.75, strong: 0.5 },
       { id: "fairyfort", member: 0.25, strong: 0.3 },
       { id: "bogroad", member: 0.75, strong: 0.3 },
-      { id: "castlestrand", member: 1, strong: 1 },
+      { id: "castlestrand", member: 1.5, strong: 1 }, // Nov 22: the gorge and causeway (strong not re-run)
     ],
   },
 };
