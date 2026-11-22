@@ -279,6 +279,12 @@ create or replace function open_per_player() returns int language sql immutable 
 -- the least the Open purse is worth in a week anyone plays (src/purse.ts OPEN_FLOOR): $25,000 (was $10,000), so a quiet
 -- week still pays the winner about $7,800; past 25 players the $1,000 a head takes over
 create or replace function open_purse_floor() returns int language sql immutable as $$ select 25000 $$;
+-- and by week (Nov 22, Robbie: bigger, to scale with the Pro Shop): $50,000 from the week of Nov 22 (the Atlantic
+-- Links) on, so a quiet week pays the winner about $15,600; past 50 players the $1,000 a head takes over. Weeks before
+-- keep $25,000, as paid.
+create or replace function open_purse_floor(p_month text) returns int language sql immutable as $$
+  select case when p_month >= '2026-11-22' then 50000 else 25000 end
+$$;
 create or replace function open_payouts()
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
 language sql stable security definer set search_path = public, extensions as $$
@@ -296,7 +302,7 @@ language sql stable security definer set search_path = public, extensions as $$
   g as (select b.month, b.r, count(*)::int as k from b group by b.month, b.r),
   sh as (select array[0.18, 0.109, 0.069, 0.049, 0.041, 0.03625, 0.03375, 0.03125, 0.02925, 0.02725]::numeric[] as a)
   select b.month, b.home_id, b.r, g.k > 1,
-    round(greatest(f.n * open_per_player(), open_purse_floor()) * coalesce((select sum(sh.a[i]) from generate_series(b.r, least(10, b.r + g.k - 1)) i), 0)
+    round(greatest(f.n * open_per_player(), open_purse_floor(b.month)) * coalesce((select sum(sh.a[i]) from generate_series(b.r, least(10, b.r + g.k - 1)) i), 0)
       / (select sum(sh.a[i]) from generate_series(1, least(10, f.n)) i) / g.k)::int
   from b join f on f.month = b.month join g on g.month = b.month and g.r = b.r cross join sh
 $$;
@@ -1619,7 +1625,7 @@ begin
       'neverPlayed14', (select coalesce(json_agg(pe.name order by pe.created_at), '[]') from people pe where created_at > now() - interval '14 days' and not exists (select 1 from rd where rd.who = pe.who)),
       -- the purse a week is worth: from Nov 8 the Open's, every person in any club; before, every club's added up
       'purse', (case when per >= open_purse_from()
-        then (select case when n = 0 then 0 else greatest(n * open_per_player(), open_purse_floor()) end
+        then (select case when n = 0 then 0 else greatest(n * open_per_player(), open_purse_floor(per)) end
           from (select count(distinct (lower(p.name), p.pin_hash)) as n from rounds r join players p on p.id = r.player_id where r.month = per) c)
         else 1000 * (select count(*) from pp where month = per) end),
       'shop7', (select coalesce(sum(pu.price), 0) from purchases pu join mem on mem.id = pu.player_id where pu.created_at > now() - interval '7 days'),

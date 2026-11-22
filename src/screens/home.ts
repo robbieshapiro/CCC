@@ -1,7 +1,7 @@
 import { api, listSessions, localApi, switchClub, useSupabase } from '../api';
 import { lookAttrs, looked } from '../courselook';
 import { badgeFor } from '../shop';
-import { clubPurse, money, OPEN_FLOOR, openPurseOf, placeLabel, purseOf } from '../purse';
+import { clubPurse, money, openFloor, openPurseOf, placeLabel, purseOf } from '../purse';
 import type { Snapshot, CardToday } from '../api/types';
 import { portrait } from '../avatar';
 import { courseFor, nextCourse, type Course } from '../golf3d/courses';
@@ -225,7 +225,7 @@ export function home(snap: Snapshot) {
     if (!openMoney || !open) return;
     // the Open purse, the same figures on the countdown, the Open and the club board
     const cd = document.querySelector('.cd-purse');
-    if (cd) cd.textContent = `💰 ${money(Math.max(openPurseOf(open.field), OPEN_FLOOR))} Open purse`; // the floor shows from the start
+    if (cd) cd.textContent = `💰 ${money(Math.max(openPurseOf(open.field, snap.month), openFloor(snap.month)))} Open purse`; // the floor shows from the start
     document.querySelectorAll<HTMLElement>('[data-pay-for]').forEach((el) => {
       const won = open.local.get(el.dataset.payFor!)?.payout;
       if (won) el.insertAdjacentHTML('beforeend', `<b class="pay">${money(won)}</b> · `);
@@ -284,7 +284,7 @@ function countdown(month: string, course: Course, field: number, open = false) {
     <span>${esc(course.name.replace(/ Course$/, ''))} closes in</span><b data-left>…</b>
     <small>${
       open
-        ? `<em class="cd-purse">💰 ${money(OPEN_FLOOR)} Open purse</em> · top 10 paid`
+        ? `<em class="cd-purse">💰 ${money(openFloor())} Open purse</em> · top 10 paid`
         : `<em class="cd-purse">💰 ${money(purseOf(field))} purse</em> · top 10 paid${field ? '' : ' · $1,000 in with every player'}`
     } · champion crowned midnight ET, ${day}</small>
   </div>`;

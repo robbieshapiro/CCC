@@ -5,7 +5,7 @@ import { api, getSession, listSessions } from '../api';
 import type { Snapshot } from '../api/types';
 import { courseFor } from '../golf3d/courses';
 import { openPurseOn, periodClosesAt, todayInGameTz } from '../day';
-import { money, OPEN_FLOOR, purseOf } from '../purse';
+import { money, openFloor, purseOf } from '../purse';
 import { board, toParLabel } from '../standings';
 import { esc } from '../ui';
 import { copyBox } from '../dialog';
@@ -38,7 +38,7 @@ export function nudgeText(snap: Snapshot): string {
   // how many are in
   const left = rows.length - played.length;
   if (played.length) lines.push(left ? `${played.length} of ${rows.length} have a card in, ${left} still to play.` : `All ${rows.length} have a card in.`);
-  lines.push(openPurseOn(snap.month) ? `${money(OPEN_FLOOR)}+ Open purse, top 10 paid.` : `${money(purseOf(played.length))} purse, top 10 paid.`);
+  lines.push(openPurseOn(snap.month) ? `${money(openFloor(snap.month))}+ Open purse, top 10 paid.` : `${money(purseOf(played.length))} purse, top 10 paid.`);
   return lines.join(' ');
 }
 

@@ -566,12 +566,12 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
         // from Nov 8 the Open pays: your place on it, across every club
         if (openPurseOn(s.month)) {
           const open = await api.openBoard(requireSession());
-          const purse = openPurse(open);
+          const purse = openPurse(open, s.month);
           const meRow = open.find((r) => r.mine);
           const line = sheet.querySelector<HTMLElement>('#purse-line');
           const mine = meRow && purse.pay.get(meRow.playerId);
           if (!line || !mine) return;
-          line.querySelector('dd')!.innerHTML = `<b>${placeLabel(mine.place, mine.tied)} of ${open.length}</b> <small>${mine.payout ? `${money(mine.payout)} if it ended now` : `top 10 paid from ${money(openPurseOf(purse.field))}`}</small>`;
+          line.querySelector('dd')!.innerHTML = `<b>${placeLabel(mine.place, mine.tied)} of ${open.length}</b> <small>${mine.payout ? `${money(mine.payout)} if it ended now` : `top 10 paid from ${money(openPurseOf(purse.field, s.month))}`}</small>`;
           line.hidden = false;
           return;
         }

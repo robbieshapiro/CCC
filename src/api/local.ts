@@ -11,7 +11,7 @@ import { earned, payOf, plaques } from '../trophies';
 import { moTarget, pasPay, PAS_MAX } from '../popashot';
 import { BJ_MAX, BJ_MIN, bjSettle, bjValue, DAILY_LOSS, type BjOutcome, type BjView } from '../blackjack';
 import { DAILY_BOARD, weekOf } from '../bar';
-import { OPEN_FLOOR, OPEN_PER_PLAYER, payouts } from '../purse';
+import { openFloor, OPEN_PER_PLAYER, payouts } from '../purse';
 import { balanceOf, canShop, earningsOf, itemById, needsTitle } from '../shop';
 import { SAMPLES } from '../designer/samples';
 import { CURSES_A_WEEK, LOCKER_MAX, powerOf } from '../powerups';
@@ -121,7 +121,7 @@ function openPaid(db: Db, month: string): Payout[] {
     }
     const sorted = [...best.entries()].sort((a, b) => a[1].tp - b[1].tp);
     const rows = sorted.map(([id, b]) => ({ id, rank: sorted.findIndex((x) => x[1].tp === b.tp) + 1 }));
-    for (const [id, p] of payouts(rows, null, rows.length, OPEN_PER_PLAYER, OPEN_FLOOR)) if (p.payout > 0) out.push({ month: m, playerId: id, name: best.get(id)!.name, ...p });
+    for (const [id, p] of payouts(rows, null, rows.length, OPEN_PER_PLAYER, openFloor(m))) if (p.payout > 0) out.push({ month: m, playerId: id, name: best.get(id)!.name, ...p });
   }
   return out;
 }
