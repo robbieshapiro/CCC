@@ -57,7 +57,7 @@ export async function bindOpen(snap: Snapshot): Promise<ReturnType<typeof openPu
   if (!openPane || !rows) return null;
   // the hole-by-hole scorecard, a tap away under the list (live.ts shows the list and handles the tabs)
   const list = ranked(rows);
-  const purse = openPurseOn(snap.month) ? openPurse(list) : null;
+  const purse = openPurseOn(snap.month) ? openPurse(list, snap.month) : null;
   openPane.innerHTML = table(snap, list, purse?.pay);
 
   // the plaque: each month's Open champion beside the club's own

@@ -1,3 +1,4 @@
+import { periodOf, todayInGameTz } from './day';
 // The weekly purse: every club's board pays its top ten like a tour event. The purse grows with the field ($1,000 for
 // each member who posts a round that week) and all of it is paid to the top ten (everyone, if fewer play), split in
 // the proportions of a tour purse: the winner takes about 30%, tenth about 4.5%.
@@ -14,7 +15,10 @@ export const purseOf = (field: number) => field * PER_PLAYER;
 // first week's payout included): the Pro Shop's typical piece is about $1,400 and its top rack $10,000 and up.
 export const OPEN_PER_PLAYER = 1000;
 export const OPEN_FLOOR = 25_000;
-export const openPurseOf = (field: number) => (field ? Math.max(field * OPEN_PER_PLAYER, OPEN_FLOOR) : 0);
+// from the week of Nov 22 (the Atlantic Links) on, $50,000 (open_purse_floor(month) in supabase/schema.sql)
+export const OPEN_FLOOR_FROM = '2026-11-22';
+export const openFloor = (month = periodOf(todayInGameTz())) => (month >= OPEN_FLOOR_FROM ? 50_000 : OPEN_FLOOR);
+export const openPurseOf = (field: number, month?: string) => (field ? Math.max(field * OPEN_PER_PLAYER, openFloor(month)) : 0);
 
 // rows: each member with a round, their rank (ties share it). winner: who won a playoff for first, if one was played.
 // entries: how many put into the purse, when more played than are paid (members playing in from another club).
@@ -46,8 +50,8 @@ export function payouts(rows: { id: string; rank: number }[], winner?: string | 
 
 // From Nov 8, one purse across every club: the Open. Each person once (their best round, wherever they played it),
 // $250 in each (at least $10,000 in all), the top ten paid. pay is keyed by the Open's id for them; local by their seat in your club, if any.
-export function openPurse(rows: { playerId: string; localId: string | null; total: number; par: number }[]) {
-  const pay = payouts(rows.map((r) => ({ id: r.playerId, rank: rows.filter((x) => x.total - x.par < r.total - r.par).length + 1 })), null, rows.length, OPEN_PER_PLAYER, OPEN_FLOOR);
+export function openPurse(rows: { playerId: string; localId: string | null; total: number; par: number }[], month?: string) {
+  const pay = payouts(rows.map((r) => ({ id: r.playerId, rank: rows.filter((x) => x.total - x.par < r.total - r.par).length + 1 })), null, rows.length, OPEN_PER_PLAYER, openFloor(month));
   const local = new Map<string, { place: number; tied: boolean; payout: number }>();
   for (const r of rows) if (r.localId && pay.get(r.playerId)) local.set(r.localId, pay.get(r.playerId)!);
   return { field: rows.length, pay, local };
