@@ -1,13 +1,13 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 22, 2026 (the handoff refreshed for a new session: this week is the Atlantic Links with a $50,000 purse; earlier notes archived in docs/plans/2026-11-22.md).
+Last updated Nov 22, 2026 (Castle Strand's grand finale: a sea gorge and the castle causeway; the handoff refreshed for a new session: this week is the Atlantic Links with a $50,000 purse; earlier notes archived in docs/plans/2026-11-22.md).
 
 ## Handoff (Nov 22): open threads for the next session
 
 - **This week (Nov 22 to 28) is the Atlantic Links**, Robbie's pick in Admin > Course > "The weeks ahead", fresh from its Irish pass (#387): a soft day (drizzle for looks, 4 to 8 mph), sheep, cottages, a castle and pub, stone bridges, real drops and climbs, a hamper on the 1st tee. The Pacific Bluffs is down for Nov 29.
 - **The Open purse is at least $50,000 a week from this week on** (#390, live, `open_purse_floor(month)`). The first payout at the new size is when this week closes, at midnight Sat Nov 28. Weeks before stay as paid.
 - **The Atlantic Links plays a touch easy.**
-  - The members' sim after the reshape was about +0.9, +1.25, +1.75, +0.25 and +0.75 on holes 1 to 5, against the +1.2 to +1.8 target. Castle Strand (hole 6) wasn't re-run (the run was cut short at Robbie's request); `ratings.ts` keeps its Nov 19 number.
+  - The members' sim after the reshape was about +0.9, +1.25, +1.75, +0.25 and +0.75 on holes 1 to 5, against the +1.2 to +1.8 target. Castle Strand (hole 6) now has the gorge and causeway (#394) and plays +1.5.
   - The Greenkeeper's Thursday run should tune it from real shot data and re-rate hole 6.
 - **The Daily Shot:**
   - holes 2 and 3 are longer from Nov 22 (#379): a wood in play, big open greens;
@@ -22,6 +22,7 @@ Last updated Nov 22, 2026 (the handoff refreshed for a new session: this week is
 
 | PR | What |
 |---|---|
+| #394 | Castle Strand, the Atlantic Links' finale, gets a grand finish: the green and the castle now sit out on a sea stack off the point, cut off by a gorge of open Atlantic and joined to the headland by the castle causeway, a long stone bridge on arches you can play across (parapets keep a ball on). Go for the rock in two over the gorge, or lay up to the bridgehead (a new tongue of fairway) and pitch or bump it across. Same par 5; the Strand still works. Playoff shot renamed 'Over the gorge'. Members' sim on the hole: +1.5 (was +1.0), in the target band, which lifts the course a touch. (`causeway` in `looks/irish.ts`; `stoneBridge(..., bed)` in `holes/atlantic/common.ts`.) |
 | #390 | The Open purse is worth at least $50,000 a week from the week of Nov 22 (the Atlantic Links) on, to scale with the Pro Shop; $1,000 a player still takes over past 50. `open_purse_floor(month)`; weeks before stay $25,000, as paid. |
 | #389 | A `course-checks` skill for agents: which `check-holes` mode a change needs, when the slow checks aren't needed (colours, scenery, decor, copy), how to run them (background, one at a time, `COURSE=`, `SEEDS=4`) and what CI does. CI now runs the slow `quick` only when a change can affect play; a course's colours or the scenery kits get the fast `basic` check (looks, calendar, pars) instead. |
 | #388 | Home's flair back: today's contests in rich jewel tones (emerald Daily Shot, sapphire long drive, amethyst Target Range, copper Midway), the duel in garnet and the Design Desk in brass, each with a sheen, a thin gold edge and a glow. The Atlantic Links' card in emerald and gold into Atlantic blue. |

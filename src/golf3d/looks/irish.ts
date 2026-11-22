@@ -141,6 +141,45 @@ export function bridgeArch(len: number, half: number) {
   return g;
 }
 
+// The castle causeway (Nov 22): a long stone bridge over a sea gorge. Two tall faces of stone from the deck down into
+// the sea, each with a run of arches (dark, the sea showing through in shadow), piers between them and a string
+// course under the parapet. drop: how far the deck stands above the sea bed.
+export function causeway(len: number, half: number, drop: number) {
+  const g = new THREE.Group();
+  const n = Math.max(2, Math.round(len / 16));
+  const span = len / n;
+  const face = drop + 1;
+  for (const z of [-half - 0.6, half + 0.6]) {
+    const out = Math.sign(z);
+    g.add(mesh(new THREE.BoxGeometry(len + 4, face, 1.2), mat(STONE[1])).translateY(-face / 2 - 0.2).translateZ(z));
+    // the string course, a lip of paler stone just under the parapet
+    g.add(mesh(new THREE.BoxGeometry(len + 5, 0.7, 1.6), mat(STONE[2])).translateY(-0.4).translateZ(z));
+    for (let i = 0; i < n; i++) {
+      const cx = -len / 2 + span * (i + 0.5);
+      const r = span * 0.36;
+      // the arch: a dark opening, round topped, down to the water
+      const top = -2.2 - r;
+      const opening = new THREE.Group();
+      opening.add(mesh(new THREE.CircleGeometry(r, 16, 0, Math.PI), mat('#1d2526'), false).translateY(top));
+      opening.add(mesh(new THREE.PlaneGeometry(r * 2, face), mat('#1d2526'), false).translateY(top - face / 2));
+      opening.position.set(cx, 0, z + out * 0.62);
+      if (out < 0) opening.rotation.y = Math.PI;
+      g.add(opening);
+      // the voussoirs: a ring of paler stone round the arch
+      const ring = mesh(new THREE.RingGeometry(r, r + 1.1, 16, 1, 0, Math.PI), mat(STONE[2]), false);
+      ring.position.set(cx, top, z + out * 0.64);
+      if (out < 0) ring.rotation.y = Math.PI;
+      g.add(ring);
+    }
+    // the piers between the arches
+    for (let i = 0; i <= n; i++) {
+      const px = -len / 2 + span * i;
+      g.add(mesh(new THREE.BoxGeometry(2.6, face, 2.2), mat(STONE[0])).translateX(px).translateY(-face / 2 - 0.2).translateZ(z + out * 1));
+    }
+  }
+  return g;
+}
+
 // a faint rainbow standing in the drizzle: seven thin bands of colour, see-through, an arc over the far country
 export function rainbow(radius = 900) {
   const g = new THREE.Group();

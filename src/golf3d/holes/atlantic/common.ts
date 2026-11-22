@@ -14,8 +14,9 @@ export const gorse = (at: [number, number][]): Post[] => at.map(([x, y], i) => (
 
 // A stone bridge over a river (Nov 22): a deck of stone set just above the water, so a ball runs across it dry, low
 // parapet walls either side that a ball kicks off, and a stone arch under it for the look. a to b: across the river.
-// half: half the deck's width. deck: the height of its surface.
-export function stoneBridge(a: V2, b: V2, half: number, deck: number) {
+// half: half the deck's width. deck: the height of its surface. bed: for a bridge over a sea gorge, the height of
+// the sea bed below it; the causeway then stands on tight stone sides, with tall arched faces down into the sea.
+export function stoneBridge(a: V2, b: V2, half: number, deck: number, bed?: number) {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -25,9 +26,16 @@ export function stoneBridge(a: V2, b: V2, half: number, deck: number) {
   const side = (s: number) => ({ a: off(a, -2, s), b: off(b, 2, s), h: 2.6, look: 'stone' as const });
   return {
     region: { poly: band([off(a, -3, 0), off(b, 3, 0)], half), surface: 'stone' as const },
-    piece: { kind: 'embankment' as const, pts: [off(a, -7, 0), off(b, 7, 0)], h: [deck, deck], width: half + 1, edge: 4 },
+    piece: { kind: 'embankment' as const, pts: [off(a, -7, 0), off(b, 7, 0)], h: [deck, deck], width: half + 1, edge: bed === undefined ? 4 : 1.5 },
     walls: [side(half + 0.9), side(-half - 0.9)],
-    decor: { kind: 'bridgearch', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, rot: Math.atan2(u.y, u.x), scale: len, size: [len, half, deck] as [number, number, number] },
+    decor: {
+      kind: bed === undefined ? 'bridgearch' : 'causeway',
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+      rot: Math.atan2(u.y, u.x),
+      scale: len,
+      size: [len, half, bed === undefined ? deck : deck - bed] as [number, number, number],
+    },
   };
 }
 
