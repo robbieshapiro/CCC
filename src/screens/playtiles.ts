@@ -76,8 +76,12 @@ export async function bindPlayTiles(snap: Snapshot) {
       rec.textContent = records ? 'No record yet. Set one.' : '';
       return;
     }
-    const holders = r.holders ?? [];
-    rec.innerHTML = `Record <b>${toParLabel(r.toPar)}</b> · ${holders.slice(0, 2).map((h) => esc(h.name)).join(' & ')}${holders.length > 2 ? ` +${holders.length - 2}` : ''}${r.mine !== null ? `<br><small>Your best ${toParLabel(r.mine)}</small>` : ''}`;
-    champ.innerHTML = r.champions.length ? `🏆 ${r.champions.map((c) => `${esc(c.name)} <small>${esc(c.club)}</small>`).join(' · ')}` : '';
+    // cross-club (Nov 22): each person once, no clubs; the week's champion is the best of every club's champion
+    const uniq = (xs: string[]) => [...new Set(xs)];
+    const holders = uniq((r.holders ?? []).map((h) => h.name));
+    rec.innerHTML = `Course record <b>${toParLabel(r.toPar)}</b> · ${holders.slice(0, 2).map(esc).join(' & ')}${holders.length > 2 ? ` +${holders.length - 2}` : ''}${r.mine !== null ? `<br><small>Your best ${toParLabel(r.mine)}</small>` : ''}`;
+    const best = Math.min(...r.champions.map((c) => c.toPar));
+    const champs = uniq(r.champions.filter((c) => c.toPar === best).map((c) => c.name));
+    champ.innerHTML = champs.length ? `🏆 Week champion${champs.length > 1 ? 's' : ''} <b>${champs.map(esc).join(' & ')}</b>` : '';
   });
 }
