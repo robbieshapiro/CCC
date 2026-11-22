@@ -2,6 +2,7 @@
 // true to the code it describes (the drinks in golf3d/clubs.ts, the money in bonus.ts and purse.ts).
 export const TIPS = [
   'There’s a cooler by the 1st tee, if you look. An Espresso makes the gold twice as wide.',
+  'On the mountain, the après deck is open all day. Somewhere off a blue run, if you look.',
   'A Clubhouse Lager sends it 25% further, but the wind moves it twice as much. Choose your hole.',
   'Stuck in the rough? A Transfusion plays rough and sand like fairway.',
   'Sparkling Water cuts the wind to a quarter. Worth it on a gusty day.',

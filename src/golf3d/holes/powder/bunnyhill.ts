@@ -1,5 +1,5 @@
-// Hole 1, The Bunny Hill (par 4, 390 yd as shown): the breather. Down the beginners' slope, wide and gentle, to a
-// green at the bottom by the ski school.
+// Hole 1, The Bunny Hill (par 4, 390 yd as shown), a green circle: the breather. Down the beginners' slope, wide but
+// tipped to the right off the mountainside, 60 ft down to a green at the bottom by the ski school.
 // The play: a driver down the middle (the slope adds a good deal of roll), then a wedge.
 // The bail-out: there's room either side of the cut, but it's deep powder: a ball in it stops dead.
 // The secret: the Magic Carpet. The ski school's conveyor runs down the right to the front of the green. From the end
@@ -10,7 +10,7 @@ import { greenComplex, greenside, bunker, FAIRWAY_DEPTH } from '../woods';
 import { slope } from '../atlantic/common';
 import { POWDER_TURF, firs } from './common';
 
-const TOP = 38;
+const TOP = 64;
 const FOOT = 4;
 const GREEN = { x: 8, y: 532, rx: 20, ry: 16 };
 // the magic carpet: down the right of the run to the front right of the green
@@ -33,7 +33,7 @@ export const bunnyhill: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.1,
   yards: 390,
-  blurb: 'Down the beginners\' slope to the ski school. Wide and gentle. Stay on the cut: the powder stops a ball dead.',
+  blurb: 'Green circle. Down the beginners\' slope to the ski school. Wide, but it tips right. The powder stops a ball dead.',
   teeTip: 'Driver. The hill gives you plenty of roll.',
   tee: { x: 0, y: 0 },
   cup: { x: 8, y: 534 },
@@ -68,6 +68,8 @@ export const bunnyhill: Hole = {
     { kind: 'hill', x: -90, y: 250, r: 60, h: 6 },
     { kind: 'hill', x: 100, y: 200, r: 60, h: 5 },
     { kind: 'hill', x: -16, y: 160, r: 40, h: 1.5 },
+    // the mountainside rises on the left, so the whole run tips right (Nov 22)
+    { kind: 'hill', x: -150, y: 260, r: 175, h: 16 },
     // the carpet sits a little into the snow, so a ball rolling on it keeps to it
     { kind: 'channel', pts: CARPET, width: 5, depth: 0.6 },
     ...greenComplex(GREEN, FOOT, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [-0.4, 0.9]), rolls: [[-8, -5, 7, 0.35], [9, 5, 6, -0.3]] }),
@@ -88,6 +90,7 @@ export const bunnyhill: Hole = {
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 22, y: -12, rot: 0 },
+    { kind: 'trailsign', x: -20, y: 12, rot: 0, label: 'green' },
     { kind: 'snowman', x: -40, y: 510, rot: 0.4 },
     { kind: 'snowman', x: 70, y: 580, rot: -0.6, scale: 0.8 },
   ],

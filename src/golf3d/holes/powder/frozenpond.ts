@@ -1,5 +1,5 @@
-// Hole 2, The Frozen Pond (par 3, 180 yd as shown): off a tee up on the open hillside, in a gusting wind, over the skating pond to a green
-// tucked under a snowbank. The ice is thin at the edges: a ball that comes up short is in the water.
+// Hole 3, The Frozen Pond (par 3, 180 yd as shown), a green circle: off a tee high on the open hillside, in a gusting
+// wind, down over the skating pond to a green on a bench above it, tucked under a snowbank. The ice is thin at the edges: a ball that comes up short is in the water.
 // The play: a full iron, all carry, to the middle of the green.
 // The bail-out: a cut apron out to the right of the pond, for a chip across the green.
 // The secret: the Snowbank. The bank behind the green is groomed. Fly it long, onto the bank, and it slides back down
@@ -28,7 +28,7 @@ export const frozenpond: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.12,
   yards: 180,
-  blurb: 'Over the skating pond, in a gusting wind, to a green under a snowbank. Short is wet. Long is better.',
+  blurb: 'Green circle. Down over the skating pond, in a gusting wind, to a green on a bench. Short is wet. Long is better.',
   teeTip: 'A full iron. Take enough to carry the pond.',
   tee: { x: 0, y: 0 },
   cup: { x: 4, y: 253 },
@@ -56,15 +56,15 @@ export const frozenpond: Hole = {
   terrain: [
     { kind: 'ramp', x0: -130, y0: -50, x1: 130, y1: 350, axis: 'y', h0: GROUND, h1: GROUND, op: 'set' },
     // the tee up on the hillside
-    { kind: 'hill', x: 0, y: -20, r: 70, h: 14 },
-    { kind: 'disc', x: 0, y: 0, r: 15, h: GROUND + 20, edge: 12, op: 'set' },
+    { kind: 'hill', x: 0, y: -20, r: 80, h: 22 },
+    { kind: 'disc', x: 0, y: 0, r: 15, h: GROUND + 30, edge: 14, op: 'set' },
     // the pond's bowl
     { kind: 'disc', x: 0, y: 146, r: 58, h: -5, edge: 12, op: 'add' },
     // the snowbank behind the green, and the hillside round it
-    { kind: 'hill', x: 4, y: 300, r: 34, h: 11 },
+    { kind: 'hill', x: 4, y: 300, r: 34, h: 13 },
     { kind: 'hill', x: -60, y: 280, r: 40, h: 9 },
     { kind: 'hill', x: 68, y: 290, r: 40, h: 8 },
-    ...greenComplex(GREEN, GROUND, { lift: 0.6, edge: 10, tilt: slope(GREEN, 10, [0.5, -0.9]), rolls: [[-7, -4, 7, 0.3], [8, 5, 6, -0.3]] }),
+    ...greenComplex(GREEN, GROUND + 2, { lift: 0.6, edge: 10, tilt: slope(GREEN, 10, [0.5, -0.9]), rolls: [[-7, -4, 7, 0.3], [8, 5, 6, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
   ],
   walls: [],
@@ -82,6 +82,7 @@ export const frozenpond: Hole = {
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 20, y: -10, rot: 0 },
+    { kind: 'trailsign', x: -18, y: 12, rot: 0, label: 'green' },
     { kind: 'snowman', x: 56, y: 270, rot: -0.4 },
   ],
 };

@@ -1,11 +1,13 @@
-// Hole 4, The Chairlift (par 4, 470 yd as shown): uphill all the way, under the lift, a dogleg left round a stand of
-// firs to a green on a shelf at the top. It plays every yard of its length.
+// Hole 7, The Chairlift (par 4, 470 yd as shown), a blue square: uphill all the way, 46 ft, under the lift, a dogleg
+// left round a stand of firs to a green on a shelf at the top. It plays every yard of its length.
+// The après deck: a sun deck with a bar, a keg and a fire pit off the right of the corner. Tap it before your next
+// shot and Reginald brings the tray (once a hole). Nothing says it's there.
 // The play: a driver out to the right of the firs, then a wood or a long iron up the hill to the green.
 // The bail-out: right. Powder, but open, and the hill brings a ball back toward the cut.
 // The secret: the Glade. A lane has been cleared straight through the firs on the corner. Thread a drive down it and
 // you're up on the shelf with a short iron left.
 import { band, blob, rect } from '../../terrain';
-import type { Hole, Post } from '../../types';
+import type { Hole, Post, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
 import { POWDER_TURF, firs } from './common';
@@ -25,6 +27,8 @@ for (let y = 150, row = 0; y <= 470; y += 20, row++)
     const h = 20 + ((x * 7 + y * 3) % 22);
     stand.push({ x, y, r: Math.max(4, Math.round(h * 0.26)), h, soft: true, look: 'snowpine' });
   }
+// the après deck, off the right of the corner
+const APRES: V2 = { x: 50, y: 492 };
 const traps = [greenside(GREEN, -102, 616, 8, 7, 1, 3.4, 0.5), greenside(GREEN, -138, 658, 9, 6, 2, 3.4, 0)];
 
 export const chairlift: Hole = {
@@ -38,12 +42,13 @@ export const chairlift: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.12,
   yards: 470,
-  blurb: 'Uphill all the way, under the lift and round the firs to a green on a shelf. Plays every yard.',
+  blurb: 'Blue square. Uphill all the way under the lift, round the firs to a green on a shelf. Thirsty? The deck\'s open.',
   teeTip: 'Driver, out to the right of the firs.',
   tee: { x: 0, y: 0 },
   cup: { x: -124, y: 632 },
   pins: [{ x: -124, y: 632 }, { x: -132, y: 626 }, { x: -115, y: 635 }, { x: -122, y: 640 }],
   aim: 0.02,
+  apres: APRES,
   bounds: { x0: -200, y0: -50, x1: 140, y1: 710 },
   border: [
     { x: -196, y: -46 },
@@ -91,6 +96,8 @@ export const chairlift: Hole = {
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 22, y: -12, rot: 0 },
+    { kind: 'trailsign', x: -20, y: 12, rot: 0, label: 'blue' },
+    { kind: 'apresdeck', x: APRES.x, y: APRES.y, rot: 0.5 },
     { kind: 'snowman', x: -150, y: 560, rot: 0.8 },
   ],
 };

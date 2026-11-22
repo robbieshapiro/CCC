@@ -299,6 +299,8 @@ export class Course3D {
   private zones = new Set<string>();
   private drink: { kind: Drink; shots: number } | null = null;
   private cooler: THREE.Group | null = null;
+  // the hole's hidden après-ski deck, if it has one: an unseen target over its decor, there until it's used
+  private apres: THREE.Object3D | null = null;
   // the Midway's power-ups and curses for the hole being played (set by the round before each hole): the Magnet drops
   // a ball that stops on the green within MAGNET_FT; the Express Lane sends a tee shot that finishes in its circle to the
   // green; the Short Pour caps the power; Irons Only takes the driver and wood out of the bag
@@ -761,6 +763,15 @@ export class Course3D {
     // the 1st tee's cooler (Nov 20): there for whoever finds it, never offered
     this.cooler = null;
     if (opts.cooler && !opts.cart && !hole.noCart && !hole.putterOnly && this.world) this.placeCooler();
+    // the après-ski deck (Nov 22): tap it between shots, once a hole, and Reginald brings the tray
+    this.apres = null;
+    if (hole.apres && !hole.putterOnly && this.world) {
+      const hit = new THREE.Mesh(new THREE.SphereGeometry(16, 10, 8), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+      hit.position.copy(w3(hole.apres.x, hole.apres.y, heightAt(hole, hole.apres.x, hole.apres.y) + 4));
+      hit.name = 'apres-hit';
+      this.world.root.add(hit);
+      this.apres = hit;
+    }
     this.startFlyover();
     // the practice areas skip the flyover and get straight to it
     if (this.drill) this.endFlyover();
@@ -1654,6 +1665,11 @@ export class Course3D {
       if (!d.kind && this.coolerAt(e.clientX, e.clientY)) {
         if (this.club === 'putter') this.golfer.setPose('address');
         return this.openCooler();
+      }
+      // a tap on the après deck: the tray comes out to the ball, before the next shot
+      if (!d.kind && this.apresAt(e.clientX, e.clientY)) {
+        if (this.club === 'putter') this.golfer.setPose('address');
+        return this.openApres();
       }
       // a tap on another member: their card, not a swing
       if (!d.kind && this.onGhostTap) {
@@ -2715,6 +2731,23 @@ export class Course3D {
     const ray = new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), this.camera);
     return ray.intersectObject(this.cooler, true).length > 0;
+  }
+
+  private apresAt(cx: number, cy: number) {
+    if (!this.apres || this.cart || this.drink) return false;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), this.camera);
+    return ray.intersectObject(this.apres, false).length > 0;
+  }
+
+  private openApres() {
+    this.apres?.parent?.remove(this.apres);
+    this.apres = null;
+    this.cart = new ReginaldTray(this.scene, this.hole, (k) => this.order(k));
+    this.mode = 'cart';
+    this.overlay.classList.add('carting');
+    this.cart.arrive(this.pos, this.aim, this.overlay.querySelector('[data-cart]') as HTMLElement);
   }
 
   private openCooler() {
