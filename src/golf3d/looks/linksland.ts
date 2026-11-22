@@ -9,7 +9,7 @@ import { mat, mesh } from '../props';
 import { heightAt, inPoly } from '../terrain';
 import type { Hole } from '../types';
 import { flock, herd, highlandCow } from './livestock';
-import { bridgeArch, castle, cottage, fieldWalls, pub, rainbow, roundTower, stoneRing } from './irish';
+import { bridgeArch, castle, causeway, cottage, fieldWalls, pub, rainbow, roundTower, stoneRing } from './irish';
 
 // a ruined tower house: a square keep with a broken top, a gable end and a curtain wall running off it
 export function ruin(seed = 0) {
@@ -83,6 +83,7 @@ export const linksland: Kit = {
     if (d.kind === 'stones') return stoneRing(d.scale ?? 16, Math.round(d.x + d.y));
     if (d.kind === 'rainbow') return rainbow(d.scale ?? 900);
     if (d.kind === 'bridgearch') return bridgeArch(d.size?.[0] ?? 20, d.size?.[1] ?? 5);
+    if (d.kind === 'causeway') return causeway(d.size?.[0] ?? 60, d.size?.[1] ?? 5, d.size?.[2] ?? 16);
     if (d.kind === 'sheep') return sheep();
     if (d.kind === 'cow') return highlandCow(Math.round(d.x + d.y));
     if (d.kind === 'stonewall') return stoneWall(d.scale ?? 60, Math.round(d.x + d.y));
