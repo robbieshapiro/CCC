@@ -306,7 +306,7 @@ Last updated Nov 22, 2026 (a $50,000 Open purse from the Atlantic Links week; a 
 
 ## Setup status
 
-- [x] Apply #390's SQL live (`open_purse_floor(month)`, `open_payouts`, the admin purse line), after Robbie OKs it: money logic. Applied Nov 22 as `pr_390_purse`; closed weeks' payouts unchanged (19 rows, $49,997). Live `admin_kpis` differs from `schema.sql` (it predates a later edit), so only its purse call was swapped in place.
+- [x] Apply #390's SQL live (`open_purse_floor(month)`, `open_payouts`, the admin purse line), after Robbie OKs it: money logic. Applied Nov 22 as `pr_390_purse`; closed weeks' payouts unchanged (19 rows, $49,997). Its purse call in `admin_kpis` was swapped in place; live `admin_kpis` is byte-for-byte the same as `schema.sql` (checked Nov 22).
 
 - [x] Apply #380's SQL live (`shot_prize` and `person_bonus`), after Robbie OKs it: money logic. Applied Nov 21 as `pr_380_shot_prize`; every member's total unchanged (51 people, $101,275), Eli's acepot 1100.
 
