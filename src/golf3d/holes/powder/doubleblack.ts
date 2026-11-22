@@ -50,7 +50,11 @@ for (let y = 330, row = 0; y <= 450; y += 18, row++)
     corner.push({ x, y, r: Math.max(4, Math.round(h * 0.25)), h, soft: true, look: 'snowpine' });
   }
 // tree wells: firs in hollows down the left of the green
+// and down the right of the second chute
 const WELLS: [number, number][] = [
+  [-72, 622],
+  [-98, 680],
+  [-130, 728],
   [-272, 730],
   [-282, 766],
   [-268, 800],
@@ -90,9 +94,9 @@ export const doubleblack: Hole = {
   regions: [
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the ledge, where the drive comes down: moguls, 64 ft across, ending at the cliff
-    { poly: blob(-6, 474, 40, 64, 1, 0.05), surface: 'fairway' },
+    { poly: blob(-6, 474, 34, 64, 1, 0.05), surface: 'fairway' },
     // the second chute, down to the left
-    { poly: band([{ x: -80, y: 476 }, { x: -116, y: 556 }, { x: -170, y: 650 }, { x: -184, y: 672 }], 26), surface: 'fairway' },
+    { poly: band([{ x: -80, y: 476 }, { x: -116, y: 556 }, { x: -170, y: 650 }, { x: -184, y: 672 }], 20), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     // the patrol line: groomed for the sleds (it plays as a path)
@@ -129,7 +133,8 @@ export const doubleblack: Hole = {
     { kind: 'channel', pts: LINE, width: 7, depth: 0.9 },
     // the tree wells
     ...WELLS.map(([x, y]) => ({ kind: 'disc' as const, x, y, r: 9, h: -4.5, edge: 4, op: 'add' as const })),
-    ...greenComplex(GREEN, 26, { lift: 1, edge: 9, tilt: slope(GREEN, 9, [0.6, 0.8]), rolls: [[-6, -4, 6, 0.35], [7, 4, 6, -0.3]] }),
+    // the green sits up on a bench above the stream, tipped toward it: short, or spun back, and it runs off the front into the water
+    ...greenComplex(GREEN, 31, { lift: 1, edge: 9, tilt: slope(GREEN, 9, [0.4, -1], 2.4), rolls: [[-5, 4, 6, 0.3], [6, -3, 5, -0.25]] }),
     ...traps.flatMap((t) => t.pieces),
     // the cliff at the end of the ledge and down the outside of the bend
     cliff([{ x: 140, y: 584 }, { x: -2, y: 600 }, { x: -66, y: 900 }]),
