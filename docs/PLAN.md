@@ -305,7 +305,7 @@ Last updated Nov 22, 2026 (the Powder Bowl, round two: tiers, cliffs, doglegs an
 
 ## Setup status
 
-- [ ] #399: apply the Powder Bowl's new pars live (`course_pars` `{4,4,3,5,4,3,4,4}`, `pr_399_powder_bowl_pars`).
+- [x] #399: applied `pr_399_powder_bowl_pars` on Nov 22: the Powder Bowl's pars in the new order, `{4,4,3,5,4,3,4,4}` (no rounds on it yet). Verified with a select, with Nov 29 still the Powder Bowl.
 
 - [x] #397: applied `pr_397_powder_bowl` on Nov 22: the Powder Bowl's eight pars (`{4,3,3,4,5,4,4,4}`) and Nov 29 in `course_schedule` now the Powder Bowl (was the Pacific Bluffs; Robbie asked). Verified with a select.
 
