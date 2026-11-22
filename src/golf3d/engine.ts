@@ -965,6 +965,7 @@ export class Course3D {
     this.scene.add(this.snow);
   }
   private rainHeavy = false;
+  private rainSoft = false;
   private rainFor(h: Hole, tempest = false) {
     if (this.rain) {
       this.scene.remove(this.rain);
@@ -972,20 +973,23 @@ export class Course3D {
       this.rain = null;
     }
     this.rainHeavy = tempest;
-    if (!h.wet && !tempest) return;
-    // a tempest: light rain at a slant, there without getting in the way
-    const n = tempest ? 600 : 900;
-    const slant = tempest ? 0.6 : 0.25;
+    this.rainSoft = !tempest && !h.wet && !!h.drizzle;
+    if (!h.wet && !tempest && !h.drizzle) return;
+    // a tempest: light rain at a slant, there without getting in the way. A soft day: a fine, slow drizzle
+    const soft = this.rainSoft;
+    const n = tempest ? 600 : soft ? 320 : 900;
+    const slant = tempest ? 0.6 : soft ? 0.12 : 0.25;
+    const len = soft ? 1.1 : 2.4;
     const arr = new Float32Array(n * 6);
     for (let i = 0; i < n; i++) {
       const x = (Math.random() - 0.5) * 120;
       const y = Math.random() * 60;
       const z = (Math.random() - 0.5) * 120;
-      arr.set([x, y, z, x + slant, y - 2.4, z], i * 6);
+      arr.set([x, y, z, x + slant, y - len, z], i * 6);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
-    this.rain = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: tempest ? '#c6ccd8' : '#dfe7ec', transparent: true, opacity: tempest ? 0.2 : 0.45 }));
+    this.rain = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: tempest ? '#c6ccd8' : '#dfe7ec', transparent: true, opacity: tempest ? 0.2 : soft ? 0.3 : 0.45 }));
     this.rain.frustumCulled = false;
     this.scene.add(this.rain);
   }
@@ -2662,12 +2666,28 @@ export class Course3D {
   // the tray (the drink lasts the hole, as the cart's does). Nothing says it's there.
   private placeCooler() {
     const g = new THREE.Group();
-    const box = props.mesh(new THREE.BoxGeometry(2.4, 1.5, 1.5), props.mat('#2f6fb5', { rough: 0.5 }));
-    box.position.y = 0.75;
-    const lid = props.mesh(new THREE.BoxGeometry(2.5, 0.3, 1.6), props.mat('#f4f1ea', { rough: 0.5 }));
-    lid.position.y = 1.62;
-    g.add(box, lid);
-    // bottles in the ice, necks up
+    if (this.hole.theme === 'linksland') {
+      // on the links (Nov 22): a wicker hamper, two leather straps, a tartan rug folded on the lid
+      const wicker = props.mesh(new THREE.BoxGeometry(2.6, 1.4, 1.6), props.mat('#a5783e'));
+      wicker.position.y = 0.7;
+      g.add(wicker);
+      for (let k = 0; k < 5; k++) g.add(props.mesh(new THREE.BoxGeometry(2.64, 0.08, 1.64), props.mat('#7a5428'), false).translateY(0.2 + k * 0.26));
+      const lid = props.mesh(new THREE.BoxGeometry(2.7, 0.22, 1.7), props.mat('#8e6532'));
+      lid.position.y = 1.5;
+      g.add(lid);
+      for (const x of [-0.7, 0.7]) g.add(props.mesh(new THREE.BoxGeometry(0.18, 1.62, 1.72), props.mat('#4a2e18'), false).translateX(x).translateY(0.82));
+      const rug = props.mesh(new THREE.BoxGeometry(1.5, 0.16, 1.2), props.mat('#9a2a2a'));
+      rug.position.set(0.3, 1.69, 0);
+      g.add(rug);
+      for (let k = 0; k < 3; k++) g.add(props.mesh(new THREE.BoxGeometry(1.52, 0.17, 0.08), props.mat('#1f4a3a'), false).translateX(0.3).translateY(1.69).translateZ(-0.4 + k * 0.4));
+    } else {
+      const box = props.mesh(new THREE.BoxGeometry(2.4, 1.5, 1.5), props.mat('#2f6fb5', { rough: 0.5 }));
+      box.position.y = 0.75;
+      const lid = props.mesh(new THREE.BoxGeometry(2.5, 0.3, 1.6), props.mat('#f4f1ea', { rough: 0.5 }));
+      lid.position.y = 1.62;
+      g.add(box, lid);
+    }
+    // bottles in the ice (or the hamper), necks up
     const glass = ['#7a3f1c', '#e8c86a', '#2f6b3a'];
     for (let i = 0; i < 3; i++) {
       const b = props.mesh(new THREE.CylinderGeometry(0.12, 0.2, 0.9, 8), props.mat(glass[i], { rough: 0.2 }));
@@ -3204,7 +3224,7 @@ export class Course3D {
       this.rain.position.set(this.camera.position.x, this.camera.position.y - 30, this.camera.position.z);
       const a = this.rain.geometry.attributes.position as THREE.BufferAttribute;
       const arr = a.array as Float32Array;
-      const fall = this.rainHeavy ? 60 : 55;
+      const fall = this.rainHeavy ? 60 : this.rainSoft ? 26 : 55;
       for (let i = 0; i < arr.length; i += 6) {
         arr[i + 1] -= dt * fall;
         arr[i + 4] -= dt * fall;

@@ -7,7 +7,7 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
-import { LINKS_TURF, dunes, gorse, pot, slope } from './common';
+import { LINKS_TURF, dunes, gorse, pot, slope, stoneBridge } from './common';
 
 const GROUND = 8;
 const GREEN = { x: 56, y: 922, rx: 18, ry: 15 };
@@ -42,6 +42,8 @@ const BURN: V2[] = [
   { x: -140, y: 572 },
 ];
 const STRAND_H = [1.8, 1.8, 1.9, 2.8, 8];
+// Nov 22 (the Irish pass): the burn is a river now, with the old stone bridge where the lay-up crosses it
+const BRIDGE = stoneBridge({ x: 8, y: 538 }, { x: -2, y: 580 }, 4.5, GROUND + 0.4);
 // the reef: a low bar of rock and shingle on the seaward side, so the strand is a trough between it and the cliff
 const REEF: V2[] = STRAND.slice(0, 4).map((p) => ({ x: p.x + 17, y: p.y }));
 const traps = [
@@ -60,7 +62,8 @@ export const castlestrand: Hole = {
   theme: 'linksland',
   tour: true,
   turf: LINKS_TURF,
-  gusts: true,
+  weather: 'soft',
+  drizzle: true,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.15, // Nov 19: a step firmer (was 0.12)
@@ -93,11 +96,12 @@ export const castlestrand: Hole = {
     // the strand: hard wet sand, as firm as a road
     { poly: band(REEF, 5), surface: 'rock' },
     { poly: band(STRAND.slice(0, 4), 11), surface: 'path' },
+    BRIDGE.region,
     ...traps.map((t) => t.region),
   ],
   water: [
     { poly: rect(-146, -46, 226, 996), level: 0, look: 'sea', tide: { amp: 0.8, period: 50 } },
-    { poly: band(BURN, 5), level: GROUND - 1.4, look: 'lake' },
+    { poly: band(BURN, 8), level: GROUND - 1.4, look: 'lake' },
   ],
   terrain: [
     { kind: 'ramp', x0: -150, y0: -50, x1: 230, y1: 1000, axis: 'y', h0: -8, h1: -8, op: 'set' },
@@ -113,13 +117,16 @@ export const castlestrand: Hole = {
     ...dunes([[-116, 60, 44, 9], [-110, 220, 46, 10], [-112, 380, 44, 8], [-96, 540, 48, 10], [-80, 790, 50, 9], [-70, 930, 48, 9], [-14, 978, 40, 7]]),
     // rumples in the fairways
     ...dunes([[-18, 170, 24, 1.5], [14, 240, 22, -1.1], [-12, 330, 22, 1.3], [12, 400, 20, 1.2], [30, 730, 20, 1.4], [54, 790, 18, -1]]),
-    { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 4, edge: 10, op: 'set' },
+    // the tee up on a big dune, the whole hole laid out below (Nov 22)
+    { kind: 'hill', x: 0, y: -20, r: 46, h: 6 },
+    { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 11, edge: 14, op: 'set' },
     ...greenComplex(GREEN, GROUND, { lift: 0.8, edge: 12, tilt: slope(GREEN, 12, [-1, 0.5]), rolls: [[-10, -7, 9, 0.4], [11, 8, 8, -0.35], [0, 10, 6, 0.2]] }),
     ...traps.flatMap((t) => t.pieces),
-    // the burn, cut into the cliff top
-    { kind: 'channel', pts: BURN, width: 12, depth: 3 },
+    // the river, cut deep into the cliff top, and its bridge
+    { kind: 'channel', pts: BURN, width: 18, depth: 7 },
+    BRIDGE.piece,
   ],
-  walls: [],
+  walls: [...BRIDGE.walls],
   posts: gorse([[-52, 120], [-56, 260], [-50, 400], [60, 180], [66, 330], [-30, 540], [-12, 820], [8, 880], [98, 870], [26, 972]]),
   movers: [],
   pushes: [],
@@ -135,7 +142,10 @@ export const castlestrand: Hole = {
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 22, y: -12, rot: 0 },
     { kind: 'bench', x: -22, y: -12, rot: 0 },
-    { kind: 'ruin', x: 92, y: 980, rot: -0.3 },
+    // the castle on the point behind the green, and the pub for after
+    { kind: 'castle', x: 96, y: 990, rot: -0.3 },
+    { kind: 'pub', x: -44, y: 944, rot: 0.5 },
+    BRIDGE.decor,
     { kind: 'sheep', x: -80, y: 150, rot: 0.6 },
     { kind: 'sheep', x: -86, y: 300, rot: -1.2 },
     { kind: 'sheep', x: -60, y: 600, rot: 2.4 },

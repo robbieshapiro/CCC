@@ -9,6 +9,7 @@ import { mat, mesh } from '../props';
 import { heightAt, inPoly } from '../terrain';
 import type { Hole } from '../types';
 import { flock, herd, highlandCow } from './livestock';
+import { bridgeArch, castle, cottage, fieldWalls, pub, rainbow, roundTower, stoneRing } from './irish';
 
 // a ruined tower house: a square keep with a broken top, a gable end and a curtain wall running off it
 export function ruin(seed = 0) {
@@ -72,14 +73,22 @@ export const linksland: Kit = {
     if (p.look === 'gorse') return gorse(Math.max(0.6, p.r), Math.round(p.x + p.y * 3));
     return null;
   },
-  decor(_h, d) {
+  decor(_h, d, anim) {
     if (d.kind === 'ruin') return ruin(Math.round(d.x));
+    // the west of Ireland (Nov 22): see irish.ts
+    if (d.kind === 'cottage') return cottage(anim, Math.round(d.x + d.y));
+    if (d.kind === 'pub') return pub(anim, Math.round(d.x + d.y));
+    if (d.kind === 'castle') return castle(Math.round(d.x));
+    if (d.kind === 'roundtower') return roundTower();
+    if (d.kind === 'stones') return stoneRing(d.scale ?? 16, Math.round(d.x + d.y));
+    if (d.kind === 'rainbow') return rainbow(d.scale ?? 900);
+    if (d.kind === 'bridgearch') return bridgeArch(d.size?.[0] ?? 20, d.size?.[1] ?? 5);
     if (d.kind === 'sheep') return sheep();
     if (d.kind === 'cow') return highlandCow(Math.round(d.x + d.y));
     if (d.kind === 'stonewall') return stoneWall(d.scale ?? 60, Math.round(d.x + d.y));
     return null;
   },
-  frame(h: Hole, root, _anim, floor) {
+  frame(h: Hole, root, anim, floor) {
     const rng = makeRng(`linksland:${h.id}`);
     const { x0, y0, x1, y1 } = h.bounds;
     // dunes with marram on top all round, kept out of the sea
@@ -100,9 +109,41 @@ export const linksland: Kit = {
         root.add(gz);
       }
     }
-    // way more sheep, everywhere, and a few hairy cows (Robbie, Nov 18): see livestock.ts
-    root.add(flock(h, floor, 55));
-    root.add(herd(h, floor, 5));
+    // way more sheep, everywhere, and hairy cows (Robbie, Nov 18; and way more again, Nov 22): see livestock.ts
+    root.add(flock(h, floor, 160));
+    root.add(herd(h, floor, 10));
+    // the country beyond (Nov 22): small fields walled in stone, whitewashed cottages on the slopes, and a castle on
+    // the high ground, kept off the sea
+    root.add(fieldWalls(h, floor));
+    const dry = (x: number, y: number) => !h.water.some((w) => w.look === 'sea' && inPoly({ x, y }, w.poly));
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    const out = (k: number) => {
+      // a spot out past the grounds, all round the hole
+      const a = rng.next() * Math.PI * 2;
+      const d = k + rng.next() * 160;
+      const rx = (x1 - x0) / 2 + d;
+      const ry = (y1 - y0) / 2 + d;
+      return { x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry };
+    };
+    for (let i = 0, t = 0; i < 8 && t < 60; t++) {
+      const p = out(110);
+      if (!dry(p.x, p.y)) continue;
+      const c = cottage(anim, i + Math.round(p.x));
+      c.position.set(p.x, Math.max(floor, heightAt(h, p.x, p.y)), -p.y);
+      c.rotation.y = rng.next() * Math.PI * 2;
+      root.add(c);
+      i++;
+    }
+    for (let i = 0, t = 0; i < 2 && t < 40; t++) {
+      const p = out(260);
+      if (!dry(p.x, p.y)) continue;
+      const c = i === 0 ? castle(Math.round(p.x)) : ruin(Math.round(p.y));
+      c.position.set(p.x, Math.max(floor, heightAt(h, p.x, p.y)), -p.y);
+      c.rotation.y = rng.next() * Math.PI * 2;
+      root.add(c);
+      i++;
+    }
     // the Atlantic beyond everything, grey and wide
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), new THREE.MeshStandardMaterial({ color: '#5a7480', roughness: 0.15, metalness: 0.2 }));
     sea.rotation.x = -Math.PI / 2;

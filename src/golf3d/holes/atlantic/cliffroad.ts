@@ -10,6 +10,8 @@ import { greenComplex, greenside } from '../woods';
 import { LINKS_TURF, dunes, gorse, pot, slope } from './common';
 
 const GROUND = 8;
+// Nov 22 (the Irish pass): the cliff top climbs all the way from a low tee to a plateau green on the headland
+const TOP = GROUND + 13;
 const GREEN = { x: 18, y: 648, rx: 20, ry: 16 };
 // the cliff top the hole runs along; the sea is everything to the right of it
 const COAST: V2[] = [
@@ -39,7 +41,8 @@ export const cliffroad: Hole = {
   theme: 'linksland',
   tour: true,
   turf: LINKS_TURF,
-  gusts: true,
+  weather: 'soft',
+  drizzle: true,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.13,
@@ -75,15 +78,15 @@ export const cliffroad: Hole = {
   terrain: [
     { kind: 'ramp', x0: -150, y0: -50, x1: 190, y1: 750, axis: 'y', h0: -8, h1: -8, op: 'set' },
     // the cliff top: from the left edge of the hole out to the cliff, the green right on the edge
-    { kind: 'embankment', pts: COAST, h: [GROUND, GROUND, GROUND, GROUND], width: 40, edge: 9, wobble: 4 },
-    { kind: 'embankment', pts: [{ x: -130, y: -50 }, { x: -130, y: 750 }], h: [GROUND, GROUND], width: 70, edge: 12 },
-    { kind: 'disc', x: GREEN.x - 2, y: GREEN.y, r: 40, h: GROUND, edge: 8, op: 'set' },
+    { kind: 'embankment', pts: COAST, h: [GROUND, GROUND + 1, GROUND + 6, TOP], width: 40, edge: 9, wobble: 4 },
+    { kind: 'embankment', pts: [{ x: -130, y: -50 }, { x: -130, y: 200 }, { x: -130, y: 490 }, { x: -130, y: 760 }], h: [GROUND, GROUND + 1, GROUND + 6, TOP], width: 70, edge: 12 },
+    { kind: 'disc', x: GREEN.x - 2, y: GREEN.y, r: 40, h: TOP, edge: 8, op: 'set' },
     // dunes along the landward side
     ...dunes([[-120, 60, 40, 8], [-116, 220, 44, 9], [-118, 380, 42, 8], [-112, 520, 42, 8], [-110, 640, 44, 9], [-60, 720, 40, 7]]),
     // rumples in the fairway
     ...dunes([[-14, 160, 22, 1.4], [6, 230, 20, -1], [-20, 330, 22, 1.2], [4, 410, 20, 1.1], [-12, 480, 20, 1.2]]),
-    { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 4, edge: 10, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 0.8, edge: 12, tilt: slope(GREEN, 12, [0.8, 0.6]), rolls: [[-9, -6, 8, 0.35], [10, 6, 7, -0.3], [0, 9, 6, 0.2]] }),
+    { kind: 'disc', x: 0, y: -2, r: 16, h: GROUND + 2, edge: 10, op: 'set' },
+    ...greenComplex(GREEN, TOP, { lift: 0.8, edge: 12, tilt: slope(GREEN, 12, [0.8, 0.6]), rolls: [[-9, -6, 8, 0.35], [10, 6, 7, -0.3], [0, 9, 6, 0.2]] }),
     // the track is worn a little into the ground, so a running ball keeps to it
     { kind: 'channel', pts: TRACK, width: 5, depth: 0.5 },
     ...traps.flatMap((t) => t.pieces),
@@ -103,6 +106,8 @@ export const cliffroad: Hole = {
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: -22, y: -12, rot: 0 },
+    // the lighthouse on the headland, beyond the green
+    { kind: 'lighthouse', x: -96, y: 728, rot: 0.4 },
     { kind: 'sheep', x: -90, y: 180, rot: 0.6 },
     { kind: 'sheep', x: -84, y: 420, rot: -1.4 },
     { kind: 'sheep', x: -96, y: 560, rot: 2.1 },

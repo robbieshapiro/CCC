@@ -8,9 +8,13 @@
 import { band, blob, rect } from '../../terrain';
 import type { Hole, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
-import { LINKS_TURF, dunes, gorse, pot, slope } from './common';
+import { LINKS_TURF, dunes, gorse, pot, slope, stoneBridge } from './common';
 
 const GROUND = 8;
+// Nov 22 (the Irish pass): the valley falls to the river and climbs again to the green
+const LOW = GROUND - 3;
+const HIGH = GROUND + 3;
+const LEVEL = LOW - 1.4;
 const GREEN = { x: 48, y: 530, rx: 19, ry: 16 };
 // the wall runs a little uphill of square; the gate is the gap in it
 const wallY = (x: number) => 446 + (x - 2) * 0.047;
@@ -32,6 +36,8 @@ const TRACK: V2[] = [
   { x: 30, y: 486 },
   { x: 42, y: 513 },
 ];
+// the old stone bridge where the sheep track crosses the river
+const BRIDGE = stoneBridge({ x: -7, y: 349 }, { x: 7, y: 386 }, 4, LOW + 0.4);
 const traps = [
   pot(-27, 318, 7, 1), // left of the landing
   pot(22, 282, 7, 2), // right of it, further on
@@ -47,7 +53,8 @@ export const sheepwalk: Hole = {
   theme: 'linksland',
   tour: true,
   turf: LINKS_TURF,
-  gusts: true,
+  weather: 'soft',
+  drizzle: true,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.1,
@@ -77,26 +84,34 @@ export const sheepwalk: Hole = {
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.07), surface: 'green' },
     // the sheep track, worn to bare earth
     { poly: band(TRACK, 2.6), surface: 'path' },
+    BRIDGE.region,
     ...traps.map((t) => t.region),
   ],
-  water: [{ poly: band(BURN, 5), level: GROUND - 1.4, look: 'lake' }],
+  water: [{ poly: band(BURN, 8), level: LEVEL, look: 'lake' }],
   terrain: [
     { kind: 'ramp', x0: -130, y0: -50, x1: 150, y1: 620, axis: 'y', h0: GROUND, h1: GROUND, op: 'set' },
+    // down the valley to the river, and up the far side to the green
+    { kind: 'ramp', x0: -130, y0: 150, x1: 150, y1: 330, axis: 'y', h0: GROUND, h1: LOW, op: 'set' },
+    { kind: 'ramp', x0: -130, y0: 330, x1: 150, y1: 400, axis: 'y', h0: LOW, h1: LOW, op: 'set' },
+    { kind: 'ramp', x0: -130, y0: 400, x1: 150, y1: 500, axis: 'y', h0: LOW, h1: HIGH, op: 'set' },
+    { kind: 'ramp', x0: -130, y0: 500, x1: 150, y1: 620, axis: 'y', h0: HIGH, h1: HIGH, op: 'set' },
     // the dunes down both sides and behind the green
     ...dunes([[-100, 40, 50, 9], [-96, 190, 46, 8], [-102, 340, 50, 11], [-92, 500, 48, 9], [108, 100, 44, 8], [112, 260, 46, 10], [116, 420, 42, 8], [124, 560, 40, 9], [40, 628, 54, 10]]),
     // the rumpled floor of the valley
     ...dunes([[-20, 110, 24, 1.6], [22, 170, 22, -1.2], [-14, 250, 24, 1.4], [16, 300, 20, 1.2], [-6, 380, 24, -1.2], [-50, 430, 26, 2.2], [70, 470, 20, 1.8]]),
-    // the burn, cut into the ground
-    { kind: 'channel', pts: BURN, width: 12, depth: 3 },
+    // the river, cut deep into the ground, and the bridge over it
+    { kind: 'channel', pts: BURN, width: 18, depth: 7 },
+    BRIDGE.piece,
     // the tee, up on a low dune
     { kind: 'disc', x: 0, y: -2, r: 18, h: GROUND + 5, edge: 12, op: 'set' },
-    ...greenComplex(GREEN, GROUND, { lift: 0.6, edge: 14, tilt: slope(GREEN, 14, [-0.9, 0.5]), rolls: [[-9, -6, 9, 0.4], [11, 7, 8, -0.35], [2, 10, 7, 0.25]] }),
+    ...greenComplex(GREEN, HIGH, { lift: 0.6, edge: 14, tilt: slope(GREEN, 14, [-0.9, 0.5]), rolls: [[-9, -6, 9, 0.4], [11, 7, 8, -0.35], [2, 10, 7, 0.25]] }),
     // the track is worn into the ground, so a rolling ball keeps to it
     { kind: 'channel', pts: TRACK, width: 4.5, depth: 0.6 },
     ...traps.flatMap((t) => t.pieces),
   ],
   // the old dry-stone wall: a ball that hits it kicks off. Fly it, or find the gate.
   walls: [
+    ...BRIDGE.walls,
     { a: { x: -122, y: wallY(-122) }, b: { x: GATE.x0, y: wallY(GATE.x0) }, h: 3, look: 'stone' },
     { a: { x: GATE.x1, y: wallY(GATE.x1) }, b: { x: 142, y: wallY(142) }, h: 3, look: 'stone' },
   ],
@@ -115,6 +130,9 @@ export const sheepwalk: Hole = {
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 22, y: -12, rot: 0 },
     { kind: 'bench', x: -22, y: -12, rot: 0 },
+    // a cottage up behind the tee, its turf fire lit
+    { kind: 'cottage', x: -70, y: -34, rot: 0.3 },
+    BRIDGE.decor,
     { kind: 'sheep', x: -8, y: 462, rot: 0.9 },
     { kind: 'sheep', x: -70, y: 150, rot: 0.4 },
     { kind: 'sheep', x: -76, y: 164, rot: -1.1 },

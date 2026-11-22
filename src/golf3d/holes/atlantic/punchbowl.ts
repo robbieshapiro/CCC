@@ -21,7 +21,8 @@ export const punchbowl: Hole = {
   theme: 'linksland',
   tour: true,
   turf: LINKS_TURF,
-  gusts: true,
+  weather: 'soft',
+  drizzle: true,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.14,
@@ -55,9 +56,9 @@ export const punchbowl: Hole = {
   water: [],
   terrain: [
     { kind: 'ramp', x0: -120, y0: -50, x1: 120, y1: 330, axis: 'y', h0: GROUND, h1: GROUND, op: 'set' },
-    // the tee dune
-    { kind: 'hill', x: 0, y: -10, r: 60, h: 12 },
-    { kind: 'disc', x: 0, y: 0, r: 15, h: GROUND + 12, edge: 8, op: 'set' },
+    // the tee dune (Nov 22: higher, the green well below in its bowl)
+    { kind: 'hill', x: 0, y: -10, r: 70, h: 14 },
+    { kind: 'disc', x: 0, y: 0, r: 15, h: GROUND + 18, edge: 12, op: 'set' },
     // the waste sits in a hollow
     { kind: 'disc', x: -4, y: 92, r: 44, h: -2.5, edge: 16, op: 'add' },
     // the bowl: dunes left, right and behind, their feet at the edge of the green
@@ -78,6 +79,8 @@ export const punchbowl: Hole = {
     { x: 0, y: 218 },
   ],
   decor: [
+    // a faint rainbow over the far dunes, through the drizzle
+    { kind: 'rainbow', x: 120, y: 1500, rot: 0.2, scale: 900 },
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 20, y: -10, rot: 0 },
     { kind: 'sheep', x: -70, y: 266, rot: 0.8 },
