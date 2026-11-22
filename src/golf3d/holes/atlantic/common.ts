@@ -1,6 +1,7 @@
 // The Atlantic Links: what its holes share. Firm, running fairways, wiry fescue rough that grabs a landing ball
 // and takes a little off the next swing, and small deep pots of heavy sand.
-import type { Hole, Post } from '../../types';
+import { band } from '../../terrain';
+import type { Hole, Post, V2 } from '../../types';
 import { bunker } from '../woods';
 
 export const LINKS_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.4, roughDrag: 1.25, roughLie: 0.86, roughScatter: 0.18, fairwayRoll: 0.85, sandLie: 0.75, sandScatter: 0.3 };
@@ -10,6 +11,25 @@ export const pot = (x: number, y: number, r: number, seed: number) => bunker(x, 
 
 // gorse in flower: low and soft, a ball goes through it knocked about
 export const gorse = (at: [number, number][]): Post[] => at.map(([x, y], i) => ({ x, y, r: 2.2 + (i % 3) * 0.4, h: 3, soft: true, look: 'gorse' as const }));
+
+// A stone bridge over a river (Nov 22): a deck of stone set just above the water, so a ball runs across it dry, low
+// parapet walls either side that a ball kicks off, and a stone arch under it for the look. a to b: across the river.
+// half: half the deck's width. deck: the height of its surface.
+export function stoneBridge(a: V2, b: V2, half: number, deck: number) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const u = { x: dx / len, y: dy / len };
+  const n = { x: -u.y, y: u.x };
+  const off = (p: V2, k: number, s: number) => ({ x: p.x + u.x * k + n.x * s, y: p.y + u.y * k + n.y * s });
+  const side = (s: number) => ({ a: off(a, -2, s), b: off(b, 2, s), h: 2.6, look: 'stone' as const });
+  return {
+    region: { poly: band([off(a, -3, 0), off(b, 3, 0)], half), surface: 'stone' as const },
+    piece: { kind: 'embankment' as const, pts: [off(a, -7, 0), off(b, 7, 0)], h: [deck, deck], width: half + 1, edge: 4 },
+    walls: [side(half + 0.9), side(-half - 0.9)],
+    decor: { kind: 'bridgearch', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, rot: Math.atan2(u.y, u.x), scale: len, size: [len, half, deck] as [number, number, number] },
+  };
+}
 
 // dunes: humps of rough either side of a hole
 export const dunes = (at: [number, number, number, number][]) => at.map(([x, y, r, h]) => ({ kind: 'hill' as const, x, y, r, h }));

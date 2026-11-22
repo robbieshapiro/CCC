@@ -30,7 +30,8 @@ export const fairyfort: Hole = {
   theme: 'linksland',
   tour: true,
   turf: LINKS_TURF,
-  gusts: true,
+  weather: 'soft',
+  drizzle: true,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.11, // Nov 19: a step firmer (was 0.08), the easiest hole
@@ -86,6 +87,9 @@ export const fairyfort: Hole = {
   decor: [
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 20, y: -10, rot: 0 },
+    // Nov 22 (the Irish pass): a ring of standing stones out on the hill behind the fort, and a round tower on the skyline
+    { kind: 'stones', x: -96, y: 300, scale: 14 },
+    { kind: 'roundtower', x: 150, y: 420 },
     { kind: 'sheep', x: -70, y: 120, rot: 0.5 },
     { kind: 'sheep', x: 76, y: 150, rot: -1.6 },
   ],

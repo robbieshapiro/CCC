@@ -76,8 +76,9 @@ export type Hole = {
   turf?: { roughKeep: number; roughDrag: number; roughLie: number; roughScatter: number; fairwayRoll: number; fairwayKeep?: number; greenRoll?: number; sandLie: number; sandScatter: number };
   windByHeight?: boolean; // wind scales with how high a shot climbs (none below 3 ft of apex, all of it from 23 ft), on its first flight only
   gusts?: boolean; // an exposed hole: a 10 to 15 mph wind every day, gusting from shot to shot (see conditions.ts)
-  weather?: 'storm' | 'gale'; // autumn storms: a stronger, gusting wind, and rain on some days. gale: Chicago in November, 15 to 30 mph off the lake, gusting (see conditions.ts)
+  weather?: 'storm' | 'gale' | 'soft'; // soft (Nov 22, the Atlantic Links): an Irish soft day, 4 to 8 mph and a drizzle that's only for looks. autumn storms: a stronger, gusting wind, and rain on some days. gale: Chicago in November, 15 to 30 mph off the lake, gusting (see conditions.ts)
   wet?: boolean; // raining today: greens and fairways run a little slower
+  drizzle?: boolean; // a light drizzle always falling, for the feel only (it never slows the ground)
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
   noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)

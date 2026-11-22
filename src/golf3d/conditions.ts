@@ -47,6 +47,12 @@ function rawConditions(h: Hole, day: string): Conditions {
     const toward = day1.next() * Math.PI * 2;
     return { pin, mph, toward, accel: { x: Math.sin(toward) * mph * WIND_PER_MPH, y: Math.cos(toward) * mph * WIND_PER_MPH }, gust: 0.18 };
   }
+  // a soft day in the west of Ireland (Nov 22): light air, 4 to 8 mph, barely gusting
+  if (h.weather === 'soft') {
+    const mph = 4 + Math.floor(rng.next() * 5);
+    const toward = rng.next() * Math.PI * 2;
+    return { pin, mph, toward, accel: { x: Math.sin(toward) * mph * WIND_PER_MPH, y: Math.cos(toward) * mph * WIND_PER_MPH }, gust: 0.04 };
+  }
   // exposed holes on the island: a steady 11 to 14 mph that gusts between 10 and 15 from shot to shot
   if (h.gusts && !storm) {
     const mph = 11 + Math.floor(rng.next() * 4);
