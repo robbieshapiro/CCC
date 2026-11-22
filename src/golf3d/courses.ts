@@ -29,6 +29,11 @@ import { cliffroad } from './holes/atlantic/cliffroad';
 import { fairyfort } from './holes/atlantic/fairyfort';
 import { bogroad } from './holes/atlantic/bogroad';
 import { castlestrand } from './holes/atlantic/castlestrand';
+import { bunnyhill } from './holes/powder/bunnyhill';
+import { frozenpond } from './holes/powder/frozenpond';
+import { blackdiamond } from './holes/powder/blackdiamond';
+import { chairlift } from './holes/powder/chairlift';
+import { thelodge } from './holes/powder/thelodge';
 import { lakefront } from './holes/chicago/lakefront';
 import { lincolnpark } from './holes/chicago/lincolnpark';
 import { millennium } from './holes/chicago/millennium';
@@ -173,6 +178,24 @@ const COURSES: Course[] = [
     holes: [sheepwalk, punchbowl, cliffroad, fairyfort, bogroad, castlestrand],
     par: par([sheepwalk, punchbowl, cliffroad, fairyfort, bogroad, castlestrand]),
     playoff: { hole: castlestrand, from: { x: 40, y: 780 }, label: 'Under the castle' },
+  },
+  {
+    id: 'powderbowl',
+    // a ski resort in December: a night-blue sky over the peaks into glacier ice, and the lodge's red for the button
+    look: { colors: ['#0c1f3f', '#2c5d9a', '#8cc7ea'], glow: 'rgba(220, 240, 255, 0.5)', accent: '#e8453c', ink: '#ffffff', soft: '#dcefff', icon: '⛷️', pattern: 'peaks' },
+    // a Colorado ski resort, in the Hole Lab's alpine look: five holes for the week of Dec 6, built by the Architect
+    opens: '2026-12-06',
+    whatsNew: [
+      'Five holes at a Colorado ski resort, in fresh snow.',
+      'The cut is green. Everything else is deep powder: a ball in it stops dead.',
+      'The Black Diamond runs down a mogul field. They kick a ball about.',
+      'Every hole has a secret.',
+    ],
+    name: 'The Powder Bowl',
+    tagline: 'Five holes at a Colorado ski resort. The bunny hill, a skating pond, a black diamond, the chairlift and the lodge.',
+    holes: [bunnyhill, frozenpond, blackdiamond, chairlift, thelodge],
+    par: par([bunnyhill, frozenpond, blackdiamond, chairlift, thelodge]),
+    playoff: { hole: thelodge, from: { x: -4, y: 530 }, label: 'Down to the lodge' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------
   ...(

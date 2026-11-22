@@ -1,6 +1,6 @@
 # Claude Country Club: where things stand
 
-Last updated Nov 22, 2026 (the handoff refreshed for a new session: this week is the Atlantic Links with a $50,000 purse; earlier notes archived in docs/plans/2026-11-22.md).
+Last updated Nov 22, 2026 (the Architect: the Powder Bowl for the week of Dec 6. Before that, the handoff refreshed for a new session: this week is the Atlantic Links with a $50,000 purse; earlier notes archived in docs/plans/2026-11-22.md).
 
 ## Handoff (Nov 22): open threads for the next session
 
@@ -22,6 +22,7 @@ Last updated Nov 22, 2026 (the handoff refreshed for a new session: this week is
 
 | PR | What |
 |---|---|
+| #PR | The Powder Bowl, the course for the week of Dec 6: five holes at a Colorado ski resort in the Hole Lab's alpine look (par 20, 2,180 yd), built by the Architect. The cut is green and everything else is deep powder that stops a ball dead. The Bunny Hill (par 4, 390 yd, the breather: down the beginners' slope; the Magic Carpet runs a low one down to the green), The Frozen Pond (par 3, 180 yd: over the skating pond in a gusting wind to a small green; the Snowbank behind it slides a long ball back), The Black Diamond (par 5, 680 yd: off the top in a gusting wind, down a mogul field, then over a stream to a small green; the Groomer runs a drive a mile), The Chairlift (par 4, 470 yd, the hard one: uphill round a stand of firs to a green on a shelf; the Glade is a lane cut through the firs) and The Lodge (par 4, 460 yd, the playoff hole: 70 ft down to the lodge, the skating pond short left; the Sled Run slides a low one to the green). Snowmen on the alpine look. CCC Rating: member +1.3 a hole, strong +0.4 (the Chairlift +2.3, the Bunny Hill and the Frozen Pond +0.5). Opens on its Sunday; its `course_pars` row applied on merge. |
 | #390 | The Open purse is worth at least $50,000 a week from the week of Nov 22 (the Atlantic Links) on, to scale with the Pro Shop; $1,000 a player still takes over past 50. `open_purse_floor(month)`; weeks before stay $25,000, as paid. |
 | #389 | A `course-checks` skill for agents: which `check-holes` mode a change needs, when the slow checks aren't needed (colours, scenery, decor, copy), how to run them (background, one at a time, `COURSE=`, `SEEDS=4`) and what CI does. CI now runs the slow `quick` only when a change can affect play; a course's colours or the scenery kits get the fast `basic` check (looks, calendar, pars) instead. |
 | #388 | Home's flair back: today's contests in rich jewel tones (emerald Daily Shot, sapphire long drive, amethyst Target Range, copper Midway), the duel in garnet and the Design Desk in brass, each with a sheen, a thin gold edge and a glow. The Atlantic Links' card in emerald and gold into Atlantic blue. |
@@ -474,6 +475,7 @@ The problem with the new members: once your best round is in, there's no reason 
 - **Week of Sun Nov 15:** The Windy City Classic, six holes.
 - **Week of Sun Nov 22:** The Pacific Bluffs, the California coast, seven holes (#309). Live on the calendar.
 - **Week of Sun Nov 29:** The Atlantic Links, the west coast of Ireland, six holes (#302). Live on the calendar.
+- **Week of Sun Dec 6:** The Powder Bowl, a Colorado ski resort in the snow, five holes (#PR), built by the Architect. Live on the calendar.
 - **From Nov 15:** agent-built courses every week.
 - **A tie at the top** goes to a sudden-death playoff on the Sunday (#87).
 
