@@ -3094,7 +3094,9 @@ export class Course3D {
       // swung the view round across the buildings to the green)
       const toCup = Math.atan2(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
       const off = Math.abs(Math.atan2(Math.sin(toCup - this.aim), Math.cos(toCup - this.aim)));
-      if (ball.y - cupZ > 30 && off < 0.4) {
+      // (Nov 23: and not on a dogleg off a high tee, Blue Ridge: within about 8 degrees, it was 23, which swung the view
+      // from the fairway round into the corner trees)
+      if (ball.y - cupZ > 30 && off < 0.14) {
         if (ball.y - cupZ > 100) {
           // a skyscraper tee (the River): high behind the golfer, looking steeply down the drop, so the golfer is at the
           // foot of the frame and the hole, the water and the pin far below fill the rest

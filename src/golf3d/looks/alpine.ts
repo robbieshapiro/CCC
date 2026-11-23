@@ -28,6 +28,201 @@ export function snowFir(scale = 1, seed = 0) {
   return g;
 }
 
+// Après (Nov 23, Robbie: the Lodge should be the party). Simple low-poly people, built from a few shapes, who bob about;
+// some raise a bottle and spray it, and now and then a cork flies.
+const COATS = ['#d23b3b', '#2b6cd4', '#f2b134', '#2fa36b', '#8a3bd2', '#ff7a2a', '#e94f9b', '#20b2aa', '#f2f2f2', '#1f2a44'];
+function patron(i: number, anim: Anim, bottle = false) {
+  const g = new THREE.Group();
+  const coat = mat(COATS[i % COATS.length]);
+  const body = mesh(new THREE.CapsuleGeometry(0.55, 1.5, 3, 6), coat);
+  body.position.y = 1.9;
+  g.add(body);
+  g.add(mesh(new THREE.SphereGeometry(0.42, 7, 5), mat(['#f0c9a5', '#c99a6e', '#8d5a3b', '#f5d6b8'][i % 4])).translateY(3.4));
+  g.add(mesh(new THREE.ConeGeometry(0.45, 0.6, 7), mat(COATS[(i + 3) % COATS.length])).translateY(3.95));
+  for (const s of [-0.3, 0.3]) g.add(mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.1, 5), mat('#2a2d31')).translateX(s).translateY(0.55));
+  // an arm up with a bottle or a glass
+  const arm = new THREE.Group();
+  arm.position.set(0.55, 2.7, 0);
+  arm.add(mesh(new THREE.CylinderGeometry(0.13, 0.13, 1.2, 5), coat).translateY(0.5));
+  const held = bottle
+    ? mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.8, 7), mat('#2f6b3a', { rough: 0.2 }))
+    : mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.4, 7), mat('#e8c86a', { rough: 0.3 }));
+  held.position.y = 1.25;
+  arm.add(held);
+  arm.rotation.z = bottle ? -0.4 : -0.9;
+  g.add(arm);
+  const phase = i * 1.7;
+  anim.push((clock) => {
+    g.position.y = Math.max(0, Math.sin(clock * 3.2 + phase)) * 0.25;
+    arm.rotation.z = (bottle ? -0.4 : -0.9) + Math.sin(clock * 2.1 + phase) * 0.25;
+  });
+  if (bottle) {
+    // the spray: a fountain of bright drops off the bottle's neck, and a cork now and then
+    const drops: THREE.Mesh[] = [];
+    const foam = new THREE.MeshBasicMaterial({ color: '#fff8d8', transparent: true, opacity: 0.85 });
+    for (let k = 0; k < 10; k++) {
+      const d = new THREE.Mesh(new THREE.SphereGeometry(0.12, 4, 3), foam);
+      g.add(d);
+      drops.push(d);
+    }
+    const cork = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.18, 6), mat('#b5895a'));
+    g.add(cork);
+    anim.push((clock) => {
+      const cycle = (clock + phase) % 9;
+      const on = cycle < 3;
+      drops.forEach((d, k) => {
+        const t = ((clock * 1.6 + k / drops.length) % 1) * 1.1;
+        d.visible = on;
+        d.position.set(1.2 + t * 2.4, 4.4 + t * 3.2 - t * t * 4.5, Math.sin(k * 2.3) * t * 0.8);
+      });
+      const ct = cycle < 1.2 ? cycle : -1;
+      cork.visible = ct >= 0;
+      if (ct >= 0) cork.position.set(1.4 + ct * 6, 4.6 + ct * 9 - ct * ct * 7, 0);
+    });
+  }
+  return g;
+}
+
+// a crowd: n patrons along a line (len ft), every fourth with a bottle
+export function crowd(len: number, n: number, anim: Anim, seed = 0) {
+  const g = new THREE.Group();
+  const rng = makeRng(`crowd:${seed}`);
+  for (let i = 0; i < n; i++) {
+    const p = patron(i + seed, anim, i % 4 === 1);
+    p.position.set(-len / 2 + (len * (i + rng.next() * 0.6)) / n, 0, (rng.next() - 0.5) * 5);
+    p.rotation.y = (rng.next() - 0.5) * 1.6;
+    g.add(p);
+  }
+  return g;
+}
+
+// the big lodge (Nov 23): the timber lodge half again as big, a long deck along its front packed with people, strings
+// of lights over it and patio heaters glowing
+function bigLodge(anim: Anim) {
+  const g = new THREE.Group();
+  const l = lodge(anim);
+  l.scale.setScalar(1.6);
+  g.add(l);
+  const deck = mesh(new THREE.BoxGeometry(124, 1.4, 22), mat('#8a5a33'));
+  deck.position.set(0, 0.7, 43);
+  g.add(deck);
+  for (let x = -60; x <= 60; x += 10) g.add(mesh(new THREE.BoxGeometry(0.5, 3.2, 0.5), mat('#5e3d22')).translateX(x).translateY(2.6).translateZ(53.6));
+  g.add(mesh(new THREE.BoxGeometry(124, 0.4, 0.4), mat('#8a5a33')).translateY(4.2).translateZ(53.6));
+  // the crowd on the deck
+  const people = crowd(110, 26, anim, 3);
+  people.position.set(0, 1.4, 42);
+  g.add(people);
+  // strings of lights, swagged between posts
+  const bulb = new THREE.SphereGeometry(0.22, 5, 4);
+  const colors = ['#ffd98a', '#ff8a5a', '#9fd0ff', '#ffe9b0'];
+  for (let k = 0; k < 4; k++) {
+    for (let i = 0; i <= 28; i++) {
+      const x = -60 + (120 * i) / 28;
+      const sag = Math.sin((i / 28) * Math.PI * 4) ** 2 * 1.6;
+      const b = mesh(bulb, mat(colors[(i + k) % 4], { emissive: colors[(i + k) % 4] }), false);
+      b.position.set(x, 11 - sag, 34 + k * 5);
+      g.add(b);
+    }
+  }
+  // patio heaters
+  for (const x of [-45, -15, 15, 45]) {
+    g.add(mesh(new THREE.CylinderGeometry(0.25, 0.4, 7, 6), mat('#8a9096', { metal: 0.6 })).translateX(x).translateY(4.9).translateZ(48));
+    g.add(mesh(new THREE.ConeGeometry(1.6, 1, 8), mat('#ff8a3a', { emissive: '#ff6a1a' }), false).translateX(x).translateY(8.6).translateZ(48));
+  }
+  return g;
+}
+
+// a hot tub: a cedar tub, steaming, with a few people in it
+function hotTub(anim: Anim) {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(6, 6.2, 3, 16), mat('#7a5232')).translateY(1.5));
+  const water = mesh(new THREE.CylinderGeometry(5.5, 5.5, 0.2, 16), mat('#6fd0e0', { rough: 0.1, emissive: '#1d6f7a' }), false);
+  water.position.y = 2.8;
+  g.add(water);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const p = new THREE.Group();
+    p.add(mesh(new THREE.SphereGeometry(0.42, 7, 5), mat(['#f0c9a5', '#c99a6e', '#8d5a3b', '#f5d6b8'][i % 4])).translateY(3.9));
+    p.add(mesh(new THREE.SphereGeometry(0.7, 7, 5), mat(['#f0c9a5', '#c99a6e', '#8d5a3b', '#f5d6b8'][i % 4])).translateY(3.1));
+    p.position.set(Math.cos(a) * 4.4, 0, Math.sin(a) * 4.4);
+    g.add(p);
+  }
+  const steam = new THREE.Group();
+  for (let i = 0; i < 6; i++) {
+    const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(1.6 + i * 0.3, 0), new THREE.MeshBasicMaterial({ color: '#f2f5f8', transparent: true, opacity: 0.35, depthWrite: false }));
+    steam.add(puff);
+  }
+  g.add(steam);
+  anim.push((clock) =>
+    steam.children.forEach((c, i) => {
+      const t = (clock * 0.25 + i / 6) % 1;
+      c.position.set(Math.sin(i * 2.1) * 2.5, 3.5 + t * 8, Math.cos(i * 1.7) * 2.5);
+      ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.35 * (1 - t);
+    }),
+  );
+  return g;
+}
+
+// a DJ booth: a table and decks, speakers either side, a light that flashes through colours, and a dancing crowd
+function djBooth(anim: Anim) {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.BoxGeometry(8, 3.2, 3), mat('#1f2a44')).translateY(1.6));
+  for (const x of [-2, 2]) g.add(mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.2, 14), mat('#2a2d31')).translateX(x).translateY(3.3));
+  for (const x of [-6.5, 6.5]) {
+    g.add(mesh(new THREE.BoxGeometry(2.6, 6, 2.4), mat('#141414')).translateX(x).translateY(3));
+    for (const y of [1.8, 4.2]) g.add(mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.2, 12), mat('#3a3d42'), false).rotateX(Math.PI / 2).translateX(x).translateY(y).translateZ(1.25));
+  }
+  const dj = patron(7, anim);
+  dj.position.set(0, 0, -2.6);
+  g.add(dj);
+  const light = mesh(new THREE.SphereGeometry(0.8, 8, 6), mat('#ff3bd2', { emissive: '#ff3bd2' }), false);
+  light.position.set(0, 7.6, 0);
+  g.add(light);
+  const hues = ['#ff3bd2', '#3bd2ff', '#ffe23b', '#3bff7a'];
+  anim.push((clock) => {
+    const c = hues[Math.floor(clock * 2) % hues.length];
+    const m = light.material as THREE.MeshStandardMaterial;
+    m.color.set(c);
+    m.emissive.set(c);
+  });
+  const dance = crowd(16, 7, anim, 11);
+  dance.position.set(0, 0, 7);
+  g.add(dance);
+  return g;
+}
+
+// a fire pit with people round it, warming their hands
+function firePit(anim: Anim) {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(2.4, 2.6, 1.2, 12), mat('#6e737a')).translateY(0.6));
+  const fire = mesh(new THREE.ConeGeometry(1.5, 3.2, 7), mat('#ff8a2a', { emissive: '#ff6a1a' }), false);
+  fire.position.y = 2.6;
+  g.add(fire);
+  anim.push((clock) => fire.scale.set(1, 0.8 + Math.sin(clock * 9) * 0.15 + Math.sin(clock * 13) * 0.08, 1));
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const p = patron(i + 20, anim, i === 2);
+    p.position.set(Math.cos(a) * 5.5, 0, Math.sin(a) * 5.5);
+    p.rotation.y = -a + Math.PI / 2;
+    g.add(p);
+  }
+  return g;
+}
+
+// a ski rack, full
+function skiRack() {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.BoxGeometry(12, 0.4, 0.4), mat('#5e3d22')).translateY(3.4));
+  for (const x of [-5.8, 5.8]) g.add(mesh(new THREE.BoxGeometry(0.4, 3.6, 0.4), mat('#5e3d22')).translateX(x).translateY(1.8));
+  for (let i = 0; i < 14; i++) {
+    const ski = mesh(new THREE.BoxGeometry(0.3, 6, 0.1), mat(COATS[i % COATS.length]));
+    ski.position.set(-5.2 + i * 0.8, 3, 0.3);
+    ski.rotation.z = ((i % 3) - 1) * 0.05;
+    g.add(ski);
+  }
+  return g;
+}
+
 // the lodge: a log base, a steep snowy roof, glowing windows and a stone chimney with smoke
 function lodge(anim: Anim) {
   const g = new THREE.Group();
@@ -280,6 +475,12 @@ export const alpine: Kit = {
     if (d.kind === 'trailsign') return trailSign(d.label ?? 'green');
     if (d.kind === 'patrolhut') return patrolHut();
     if (d.kind === 'apresdeck') return apresDeck(anim);
+    if (d.kind === 'biglodge') return bigLodge(anim);
+    if (d.kind === 'hottub') return hotTub(anim);
+    if (d.kind === 'djbooth') return djBooth(anim);
+    if (d.kind === 'firepit') return firePit(anim);
+    if (d.kind === 'skirack') return skiRack();
+    if (d.kind === 'crowd') return crowd(d.size?.[0] ?? 30, d.size?.[1] ?? 8, anim, Math.round(d.x + d.y));
     // the ice bridge out to the berg: the causeway's shape, in blue ice
     if (d.kind === 'causeway') {
       const c = causeway(d.size?.[0] ?? 40, d.size?.[1] ?? 4, d.size?.[2] ?? 12);

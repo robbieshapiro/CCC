@@ -66,7 +66,7 @@ export const blueridge: Hole = {
   tee: { x: 0, y: 0 },
   cup: { x: 188, y: 692 },
   pins: [{ x: 188, y: 692 }, { x: 180, y: 687 }, { x: 196, y: 694 }, { x: 186, y: 698 }],
-  aim: -0.03,
+  aim: -0.052, // the middle of the upper fairway, where a good drive lands
   bounds: { x0: -140, y0: -50, x1: 300, y1: 760 },
   border: [
     { x: -136, y: -46 },

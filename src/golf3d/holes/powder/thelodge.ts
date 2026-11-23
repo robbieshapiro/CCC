@@ -1,6 +1,6 @@
 // Hole 8, The Lodge (par 4, 440 yd as shown), a green circle: the home hole, and the walk-up finish (Robbie, Nov 23:
 // everything else went downhill). From a tee at the bottom of the run, 40 ft up the hill to a green on the lodge's
-// bench, with the fire lit and the deck full. The mountain falls off a cliff down the right of the drive.
+// bench, with the fire lit and the deck full, and the whole hill a party. The mountain falls off a cliff down the right of the drive.
 // The play: a driver up onto the drive bench (the slope stops it where it lands), then a long iron up the climb to the
 // green. It plays longer than it looks.
 // The bail-out: left of the drive. Right is the cliff; short left of the green is the lodge's skating pond.
@@ -39,7 +39,7 @@ export const thelodge: Hole = {
   cup: { x: -12, y: 602 },
   pins: [{ x: -12, y: 602 }, { x: -22, y: 595 }, { x: -1, y: 606 }, { x: -14, y: 609 }],
   aim: -0.01,
-  bounds: { x0: -140, y0: -50, x1: 150, y1: 760 },
+  bounds: { x0: -140, y0: -50, x1: 150, y1: 840 },
   border: [
     { x: -136, y: -46 },
     { x: 146, y: -46 },
@@ -47,8 +47,8 @@ export const thelodge: Hole = {
     { x: LIP, y: 170 },
     { x: LIP, y: 520 },
     { x: 146, y: 540 },
-    { x: 146, y: 756 },
-    { x: -136, y: 756 },
+    { x: 146, y: 836 },
+    { x: -136, y: 836 },
   ],
   base: 'rough',
   regions: [
@@ -76,7 +76,7 @@ export const thelodge: Hole = {
       [440, 30],
       // the climb to the lodge
       [540, BENCH],
-      [760, BENCH + 2],
+      [840, BENCH + 2],
     ]),
     { kind: 'disc', x: 0, y: 0, r: 16, h: LOW + 1, edge: 8, op: 'set' },
     // the mountainside rises on the right of the drive, so it tips left, away from the cliff
@@ -105,7 +105,18 @@ export const thelodge: Hole = {
     { kind: 'teebox', x: 0, y: 0 },
     { kind: 'sign', x: 22, y: -12, rot: 0 },
     { kind: 'trailsign', x: -20, y: 12, rot: 0, label: 'green' },
-    { kind: 'lodge', x: -6, y: 712, rot: 0 },
-    { kind: 'snowman', x: 50, y: 640, rot: -0.3 },
+    // the après (Nov 23, Robbie: the Lodge is the party): the big lodge with its deck packed, a hot tub, a DJ, fire
+    // pits, ski racks, and a crowd lining the walk up to the green, some of them spraying champagne
+    { kind: 'biglodge', x: -6, y: 752, rot: 0 },
+    { kind: 'hottub', x: 70, y: 690, rot: 0 },
+    { kind: 'djbooth', x: -84, y: 684, rot: 0.3 },
+    { kind: 'firepit', x: 54, y: 640, rot: 0 },
+    { kind: 'firepit', x: -62, y: 636, rot: 0 },
+    { kind: 'skirack', x: 92, y: 724, rot: -0.4 },
+    { kind: 'skirack', x: -104, y: 724, rot: 0.4 },
+    { kind: 'crowd', x: 38, y: 520, rot: 1.571, size: [80, 11, 0] },
+    { kind: 'crowd', x: -52, y: 500, rot: 1.571, size: [60, 8, 0] },
+    { kind: 'crowd', x: 42, y: 596, rot: 1.571, size: [30, 6, 0] },
+    { kind: 'snowman', x: 60, y: 560, rot: -0.3 },
   ],
 };
