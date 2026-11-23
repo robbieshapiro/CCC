@@ -825,7 +825,8 @@ async function shotRound(snap: Snapshot) {
         const t = { hole: i + 1, try: (done.length % SHOT_TRIES) + 1, ft: r.ft, holed: r.holed, lost: r.lost };
         done.push(t);
         drawHud();
-        if (r.holed) keepShot(g, 'ace', 1000, { kind: 'ace', day }, `Ace for ${money(pot)}`);
+        // saved with its own hole (Nov 23): an 'ace' hole replays on the Ace Pot game's hole, where this one misses
+        if (r.holed) keepShot(g, 'ace', 1000, { kind: 'shot', day, n: i + 1 }, `Ace for ${money(pot)} on hole ${i + 1}`);
         // an ace: the whole screen goes to it straight away, with the pot as it stood; the server's figure follows
         win = r.holed ? aceWin(pot, x.hole.name) : null;
         const aced = win;
@@ -1290,11 +1291,13 @@ export async function watchReplay(snap: Snapshot, id: number) {
       ? courseById(h.course)?.holes[h.i]
       : h.kind === 'daily'
         ? dailyShot(h.day).hole
-        : h.kind === 'ace'
-          ? aceShot(h.day).hole
-          : h.kind === 'drive'
-            ? driveHole(courseFor(periodOf(h.day)))
-            : targetRange;
+        : h.kind === 'shot'
+          ? dailyHoles(h.day).holes[h.n - 1]?.hole
+          : h.kind === 'ace'
+            ? aceShot(h.day).hole
+            : h.kind === 'drive'
+              ? driveHole(courseFor(periodOf(h.day)))
+              : targetRange;
   if (!hole) return back();
   render(`<div class="g3" id="g3"></div>`);
   document.body.classList.add('court-open');
