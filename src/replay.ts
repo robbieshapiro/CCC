@@ -8,7 +8,8 @@ import type { V2 } from './golf3d/types';
 
 export type ReplayKind = 'daily' | 'ace' | 'drive' | 'targets' | 'card';
 // which hole: the day's shot for a bar game, or a hole on a course (a card)
-export type ReplayHole = { kind: 'daily' | 'ace' | 'drive' | 'targets'; day: string } | { kind: 'card'; course: string; i: number };
+// shot (Nov 23): one of the Daily Shot's three holes that day (n: 1 to 3), so its ace replays on the hole it went in
+export type ReplayHole = { kind: 'daily' | 'ace' | 'drive' | 'targets'; day: string } | { kind: 'shot'; day: string; n: number } | { kind: 'card'; course: string; i: number };
 export type ReplayData = {
   hole: ReplayHole;
   from: [number, number];
