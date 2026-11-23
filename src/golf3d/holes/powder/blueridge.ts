@@ -23,18 +23,19 @@ const LIP = -82;
 // the cat track: from the end of the upper fairway, round below the firs, over the creek on its snow bridge
 const TRACK: V2[] = [
   { x: -6, y: 500 },
-  { x: 70, y: 566 },
-  { x: 140, y: 626 },
-  { x: 160, y: 652 },
+  { x: 44, y: 548 },
+  { x: 100, y: 590 },
+  { x: 140, y: 622 },
+  { x: 160, y: 650 },
   { x: 176, y: 676 },
 ];
 // the creek across the front of the green, in two runs either side of the snow bridge
 const CREEK_L: V2[] = [
   { x: 40, y: 640 },
-  { x: 114, y: 626 },
+  { x: 124, y: 624 },
 ];
 const CREEK_R: V2[] = [
-  { x: 164, y: 630 },
+  { x: 154, y: 626 },
   { x: 230, y: 632 },
   { x: 300, y: 650 },
 ];
@@ -80,20 +81,20 @@ export const blueridge: Hole = {
   regions: [
     { poly: rect(-14, -14, 14, 14), surface: 'fairway' },
     // the upper fairway, on the upslope to the crest: 72 ft across, the cliff off its left
-    { poly: blob(-24, 448, 28, 68, 1, 0.05), surface: 'fairway' },
+    { poly: blob(-24, 448, 32, 68, 1, 0.05), surface: 'fairway' },
     // the lower run beyond the firs, round the corner and down to the creek
-    { poly: band([{ x: 30, y: 466 }, { x: 80, y: 530 }, { x: 126, y: 590 }, { x: 138, y: 606 }], 22), surface: 'fairway' },
+    { poly: band([{ x: 30, y: 466 }, { x: 80, y: 530 }, { x: 126, y: 590 }, { x: 138, y: 606 }], 30), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     // the cat track: packed by the groomers (it plays as a path)
-    { poly: band(TRACK, 6), surface: 'path' },
+    { poly: band(TRACK, 3.5), surface: 'path' },
     // the lip of the cliff
     { poly: rect(LIP - 4, 160, LIP + 6, 640), surface: 'rock' },
     ...traps.map((t) => t.region),
   ],
   water: [
-    { poly: band(CREEK_L, 12), level: 17, look: 'lake' },
-    { poly: band(CREEK_R, 12), level: 17, look: 'lake' },
+    { poly: band(CREEK_L, 10), level: 17, look: 'lake' },
+    { poly: band(CREEK_R, 10), level: 17, look: 'lake' },
   ],
   terrain: [
     ...profile(-140, 300, [
@@ -115,9 +116,8 @@ export const blueridge: Hole = {
     { kind: 'channel', pts: CREEK_L, width: 18, depth: 4 },
     { kind: 'channel', pts: CREEK_R, width: 18, depth: 4 },
     // the cat track sits a little into the snow, so a ball on it keeps to it
-    { kind: 'channel', pts: TRACK, width: 10, depth: 2.6 },
-    // the green sits up on a bench above the creek, tipped toward it: short, or spun back, and it runs off the front into the water
-    ...greenComplex(GREEN, 23, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [-0.3, -1], 2.4), rolls: [[-6, 4, 6, 0.3], [6, -3, 5, -0.25]] }),
+    { kind: 'channel', pts: TRACK, width: 7, depth: 0.8 },
+    ...greenComplex(GREEN, 18, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [-0.5, 0.85]), rolls: [[-8, -5, 7, 0.35], [9, 5, 6, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
     // the cliff down the left
     cliff([{ x: LIP - 36, y: 140 }, { x: LIP - 36, y: 660 }, { x: -76, y: 780 }]),
