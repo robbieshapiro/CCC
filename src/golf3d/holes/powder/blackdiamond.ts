@@ -1,4 +1,4 @@
-// Hole 4, The Black Diamond (par 5, 740 yd as shown), a black diamond, the long one (Nov 23, Robbie's note: the moguls
+// Hole 4, The Black Diamond (par 5, 780 yd as shown), a black diamond, the long one (Nov 23, Robbie's note: the moguls
 // weren't in play). Off the top of the expert run, in a gusting wind, 80 ft down onto a long, flat fairway; past it a
 // band of rock drops into the mogul field, big moguls with firs standing among them in the fairway, then a mountain
 // stream across the front of a small green in the firs. The mountain falls off a cliff down the whole right side.
@@ -16,27 +16,27 @@ import { POWDER_TURF, cliff, firs, moguls, profile } from './common';
 const TOP = 150;
 // where the flat ends: the band of rock drops into the mogul field
 const BAND = 760;
-const GREEN = { x: -26, y: 1040, rx: 13, ry: 11 };
+const GREEN = { x: -26, y: 1100, rx: 13, ry: 11 };
 // the cliff edge down the right
 const LIP = 70;
 // the groomer: down the left of the mogul field, through the ridge and on down the lower run
 const GROOMER: V2[] = [
   { x: -58, y: BAND - 6 },
   { x: -62, y: 860 },
-  { x: -56, y: 960 },
+  { x: -56, y: 1020 },
 ];
 // the stream: across the front of the green, then up its left side
 const STREAM: V2[] = [
-  { x: 150, y: 996 },
-  { x: 20, y: 1000 },
-  { x: -40, y: 996 },
-  { x: -62, y: 1026 },
-  { x: -66, y: 1090 },
+  { x: 150, y: 1056 },
+  { x: 20, y: 1060 },
+  { x: -40, y: 1056 },
+  { x: -62, y: 1086 },
+  { x: -66, y: 1150 },
 ];
-const traps = [bunker(30, 640, 12, 9, 1, FAIRWAY_DEPTH, -0.3), greenside(GREEN, 0, 1050, 7, 8, 2, 3.4, 0), greenside(GREEN, -16, 1064, 9, 6, 3, 3.4, 0)];
+const traps = [bunker(30, 640, 12, 9, 1, FAIRWAY_DEPTH, -0.3), greenside(GREEN, 0, 1110, 7, 8, 2, 3.4, 0), greenside(GREEN, -16, 1124, 9, 6, 3, 3.4, 0)];
 // firs standing among the moguls, in the fairway, on a jittered grid (the groomer's lane down the left is kept clear)
 const among: Post[] = [];
-for (let y = 804, row = 0; y <= 964; y += 26, row++)
+for (let y = 804, row = 0; y <= 1010; y += 26, row++)
   for (let x = -42 + (row % 2 ? 13 : 0); x <= 42; x += 27) {
     const j = ((x * 13 + y * 7) % 11) - 5;
     const h = 18 + ((x * 7 + y * 3) % 14);
@@ -54,14 +54,14 @@ export const blackdiamond: Hole = {
   gusts: true,
   chipDrop: 0.7,
   greenFirm: 0.2,
-  yards: 740,
+  yards: 780,
   blurb: 'Black diamond. Down onto the flat, then lay up short of the rock band or go for it into the moguls and trees. A cliff all down the right.',
   teeTip: 'Driver onto the flat. Then decide: lay up, or take on the moguls. Right is the cliff.',
   tee: { x: 0, y: 0 },
-  cup: { x: -26, y: 1042 },
-  pins: [{ x: -26, y: 1042 }, { x: -32, y: 1037 }, { x: -19, y: 1044 }, { x: -24, y: 1048 }],
+  cup: { x: -26, y: 1102 },
+  pins: [{ x: -26, y: 1102 }, { x: -32, y: 1097 }, { x: -19, y: 1104 }, { x: -24, y: 1108 }],
   aim: -0.01,
-  bounds: { x0: -150, y0: -50, x1: 150, y1: 1130 },
+  bounds: { x0: -150, y0: -50, x1: 150, y1: 1190 },
   border: [
     { x: -146, y: -46 },
     { x: 146, y: -46 },
@@ -69,8 +69,8 @@ export const blackdiamond: Hole = {
     { x: LIP, y: 170 },
     { x: LIP, y: 950 },
     { x: 146, y: 970 },
-    { x: 146, y: 1126 },
-    { x: -146, y: 1126 },
+    { x: 146, y: 1186 },
+    { x: -146, y: 1186 },
   ],
   base: 'rough',
   regions: [
@@ -78,7 +78,7 @@ export const blackdiamond: Hole = {
     // the flat, where the drive comes down and the lay-up stops: 84 ft across, to the rock band
     { poly: blob(-4, 545, 33, 215, 1, 0.04), surface: 'fairway' },
     // the mogul field, below the rock band, down to the stream
-    { poly: blob(-4, 880, 46, 100, 2, 0.05), surface: 'fairway' },
+    { poly: blob(-4, 905, 46, 125, 2, 0.05), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     // the rock band across the hole
@@ -102,14 +102,14 @@ export const blackdiamond: Hole = {
       // the rock band: a 14 ft step down into the mogul field
       [BAND + 16, 44],
       // the mogul field, down to the stream
-      [990, 8],
-      [1130, 6],
+      [1050, 8],
+      [1190, 6],
     ]),
     { kind: 'disc', x: 0, y: 0, r: 16, h: TOP + 1, edge: 8, op: 'set' },
     // the mountainside rises on the left, so the run tips right, toward the cliff
     { kind: 'hill', x: -170, y: 450, r: 180, h: 16 },
     // the moguls, big and tight, where a second shot that goes for it lands
-    ...moguls(-46, 44, 798, 968, 2.2, 14),
+    ...moguls(-46, 44, 798, 1020, 2.2, 14),
     { kind: 'channel', pts: STREAM, width: 18, depth: 5 },
     // the groomer is pressed smooth and a touch below the moguls, so a ball on it keeps to it
     { kind: 'channel', pts: GROOMER, width: 7, depth: 0.8 },
@@ -122,8 +122,8 @@ export const blackdiamond: Hole = {
   posts: [
     ...among,
     ...firs([{ x: -80, y: 30 }, { x: -84, y: 760 }], 24, 'bd-l', 1),
-    ...firs([{ x: -96, y: 800 }, { x: -96, y: 1110 }], 24, 'bd-gl', 1, 1),
-    ...firs([{ x: 26, y: 1020 }, { x: 30, y: 1110 }], 24, 'bd-gr', -1, 1),
+    ...firs([{ x: -96, y: 800 }, { x: -96, y: 1170 }], 24, 'bd-gl', 1, 1),
+    ...firs([{ x: 26, y: 1080 }, { x: 30, y: 1170 }], 24, 'bd-gr', -1, 1),
   ],
   movers: [],
   pushes: [],
