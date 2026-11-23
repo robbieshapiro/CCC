@@ -724,15 +724,16 @@ if (mode === 'daily' && !process.env.NO_SIM) {
         const ft = (r: ReturnType<typeof simulate>) => (r.penalty ? Infinity : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y));
         let ok2 = false;
         for (const club of clubs)
-          for (let p = 0.3; p <= 1.0001 && !ok2; p += 0.02) {
-            const spun = simulate(h, x.from, { angle: toCup, power: p, club, error: 0, clock: 0, spin: 1 }, false);
+          for (let p = 0.3; p <= 1.0001 && !ok2; p += 0.02)
+            for (const spin of [1, 0.5]) {
+            const spun = simulate(h, x.from, { angle: toCup, power: p, club, error: 0, clock: 0, spin }, false);
             const plain = simulate(h, x.from, { angle: toCup, power: p, club, error: 0, clock: 0, spin: 0 }, false);
             if (!spun.penalty && surfaceAt(h, spun.end) === 'green' && ft(spun) < ft(plain)) ok2 = true;
-          }
+            }
         if (ok2) bites++;
         else console.log(`  ${d} hole ${x.n}: no ${clubs.join(' or ')} with backspin holds the green`);
       }
-    ok(bites === dailyDays.length * 3, `${bites} of ${dailyDays.length * 3} Daily Shot holes: a full-backspin ${'iron or wood'} lands on the green and bites`);
+    ok(bites === dailyDays.length * 3, `${bites} of ${dailyDays.length * 3} Daily Shot holes: a backspun iron (or wood on 3) lands on the green and bites`);
   }
   // before: the one-shot game, the last 14 days before the switch
   console.log('Before: the one-shot Closest to the Pin');

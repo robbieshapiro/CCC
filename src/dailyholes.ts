@@ -52,7 +52,7 @@ export const MID_FROM = '2026-11-23';
 const MID_STEPS = [
   { yards: [100, 108], green: 'large', bunkers: 1, carry: false, pin: 'middle', tilt: 0, wind: 1, cap: 9 },
   { yards: [106, 114], green: 'large', bunkers: 1, carry: false, pin: 'side', tilt: 0, wind: 1, cap: 11 },
-  { yards: [148, 160], green: 'large', bunkers: 2, carry: false, pin: 'edge', tilt: 0, wind: 1, cap: 13 },
+  { yards: [144, 154], green: 'large', bunkers: 2, carry: false, pin: 'side', tilt: 0, wind: 1, cap: 13 },
 ] as const;
 const stepsFor = (day: string) => (day >= MID_FROM ? MID_STEPS : day >= STEPS_FROM ? LONG_STEPS : STEPS);
 
