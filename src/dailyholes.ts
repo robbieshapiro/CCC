@@ -193,7 +193,9 @@ export function dailyHoles(day: string): DailyHoles {
           : step.pin === 'edge' || step.pin === 'side'
           ? spots[Math.floor(prng.next() * spots.length)]
           : spots.reduce((b, q) => (trouble(q) < trouble(b) ? q : b), spots[0]);
-    const h: Hole = { ...hole, cup: pin, pins: [pin], name: s.name };
+    // greens that take spin (from Nov 23, Robbie: backspin barely did anything here): spin does half again as much, so a
+    // full backspin iron checks and zips back, as on the Windy City's greens (1.35), a touch more
+    const h: Hole = { ...hole, cup: pin, pins: [pin], name: s.name, ...(day >= MID_FROM ? { greenSpin: 1.5 } : {}) };
     const base = conditionsFor(h, day);
     // the step's multiplier, then its cap (from Nov 23), keeping the direction
     const raw = base.mph * step.wind;
