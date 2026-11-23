@@ -308,7 +308,7 @@ Last updated Nov 23, 2026 (the Daily Shot back to the middle. Before that, Blue 
 
 ## Setup status
 
-- [ ] #403: one-off, Robbie asked: point Hunter's Nov 22 ace replay (replays id 34) at Daily Shot hole 1 (`data.hole` to `{"kind":"shot","day":"2026-11-22","n":1}`).
+- [x] #403: one-off, Robbie asked: Hunter's Nov 22 ace replay (replays id 34) now points at Daily Shot hole 1. Applied `pr_403_hunter_ace_replay` on Nov 23 in a guarded block; frames untouched; verified with a select.
 
 - [x] #399: applied `pr_399_powder_bowl_pars` on Nov 22: the Powder Bowl's pars in the new order, `{4,4,3,5,4,3,4,4}` (no rounds on it yet). Verified with a select, with Nov 29 still the Powder Bowl.
 
