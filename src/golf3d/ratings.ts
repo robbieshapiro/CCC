@@ -35,17 +35,17 @@ export const RATINGS: Record<string, Rated> = {
     ],
   },
   powderbowl: {
-    at: "2026-11-22",
+    at: "2026-11-23",
     seeds: 4,
     holes: [
       { id: "bunnyhill", member: 1.8, strong: 0.8 },
-      { id: "blueridge", member: 1.5, strong: 1 },
-      { id: "summitdrop", member: 2, strong: 1.3 },
+      { id: "blueridge", member: 0.5, strong: 0.8 },
+      { id: "thebowl", member: -0.2, strong: -0.2 },
       { id: "blackdiamond", member: 3, strong: 0.5 },
       { id: "chairlift", member: 2.5, strong: 1.3 },
       { id: "iceberg", member: 0.8, strong: 2 },
       { id: "doubleblack", member: 2.3, strong: 0.8 },
-      { id: "thelodge", member: 2.3, strong: 1.5 },
+      { id: "thelodge", member: 1, strong: 1 },
     ],
   },
   pacificbluffs: {
