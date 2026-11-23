@@ -39,6 +39,7 @@ The Checks workflow runs all of this on every PR and has to pass before merging.
   - connect with `PGOPTIONS='-c search_path=public,extensions' psql -h /var/tmp/pg -p 5433`;
   - pipe files in with `cat file | su postgres -c "psql ..."`, because the postgres user can't read the scratchpad.
 - **Live SQL: use the `live-sql` skill** (`.claude/skills/live-sql/`) for anything touching the live database: applying a PR's SQL, one-off data fixes, and reading live data. Writes run without a prompt (allowed in `.claude/settings.json`). Who may write is under Autopilot above. Never write live data otherwise.
+- **Replays must go in.** A replay is the real flight, so it only goes in on the exact hole and cup it was hit on (Hunter's Nov 22 ace replayed on the wrong hole and missed). Any new game or place that saves a replay gets its own `ReplayHole` kind naming that one hole, resolved only in `replayHoleOf()` (`src/screens/round.ts`); `keepShot()` refuses a replay whose hole isn't the one being played. Read THE RULE at the top of `src/replay.ts` before touching replays, and watch one go in with `browser-check` after.
 - **The Architect can review a PR.** Fire its scheduled task (`fire_trigger`) with extra text saying "review, don't build", naming the PR and the checks to run. It posts one comment on the PR, and takes 30 to 60 minutes.
 
 ## Conventions

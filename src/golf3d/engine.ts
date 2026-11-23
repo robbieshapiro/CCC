@@ -337,6 +337,10 @@ export class Course3D {
   howTo: 'round' | 'practice' | 'daily' | 'playoff' | 'ace' | 'minigolf' | 'midway' | 'members' | 'drive' | 'targets' | 'none' = 'round';
   // the last shot struck: what a replay keeps (src/replay.ts)
   lastPlayed: { club: ClubId; power: number; aim: number; from: V2; r: Result } | null = null;
+  // the hole being played, as the engine has it (its pin moved for the day): a replay is checked against it (src/replay.ts)
+  get playing(): Hole | null {
+    return this.hole ?? null;
+  }
   // a replay: the next swing plays these frames rather than a new shot
   private scripted: Result | null = null;
   // a hole just built: tell the loading card (screens/loader.ts) once its first frame is drawn

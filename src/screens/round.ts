@@ -61,10 +61,38 @@ import { courseById } from '../golf3d/courses';
 import { periodOf } from '../day';
 
 // keep the shot just played as a replay (the server keeps your best of each kind today)
+// Replays must play on the hole, and to the cup, they were hit on (THE RULE in src/replay.ts). keepShot checks the
+// ReplayHole against the hole the engine is playing and won't save one that wouldn't replay true.
 function keepShot(g: Course3D, kind: ReplayKind, score: number, hole: ReplayHole, label: string) {
   const p = g.lastPlayed;
-  if (!p) return;
-  void api.saveReplay(requireSession(), kind, score, packShot(p, hole, label)).catch(() => {});
+  const playing = g.playing;
+  if (!p || !playing) return;
+  const target = replayHoleOf(hole);
+  if (!target || target.id !== playing.id) {
+    console.error(`Replay not kept: ${JSON.stringify(hole)} is ${target?.id ?? 'no hole'}, but the shot was played on ${playing.id}`);
+    return;
+  }
+  const end = p.r.frames[p.r.frames.length - 1];
+  if (p.r.holed && end && Math.hypot(end.x - playing.cup.x, end.y - playing.cup.y) > 2) {
+    console.error(`Replay not kept: it went in, but its ball finishes ${Math.hypot(end.x - playing.cup.x, end.y - playing.cup.y).toFixed(1)} from the cup`);
+    return;
+  }
+  void api.saveReplay(requireSession(), kind, score, packShot(p, hole, label, playing.cup)).catch(() => {});
+}
+
+// The one place a ReplayHole becomes a hole, for saving and for watching (THE RULE in src/replay.ts)
+export function replayHoleOf(h: ReplayHole): Hole | undefined {
+  return h.kind === 'card'
+    ? courseById(h.course)?.holes[h.i]
+    : h.kind === 'shot'
+      ? dailyHoles(h.day).holes[h.n - 1]?.hole
+      : h.kind === 'daily'
+        ? dailyShot(h.day).hole
+        : h.kind === 'ace'
+          ? aceShot(h.day).hole
+          : h.kind === 'drive'
+            ? driveHole(courseFor(periodOf(h.day)))
+            : targetRange;
 }
 import { cardStatus, elsewhereLine } from './cardnote';
 import { earned, plaques } from '../trophies';
@@ -1286,19 +1314,11 @@ export async function watchReplay(snap: Snapshot, id: number) {
   if (!rep) return back();
   const d = rep.data;
   const h = d.hole;
-  const hole =
-    h.kind === 'card'
-      ? courseById(h.course)?.holes[h.i]
-      : h.kind === 'daily'
-        ? dailyShot(h.day).hole
-        : h.kind === 'shot'
-          ? dailyHoles(h.day).holes[h.n - 1]?.hole
-          : h.kind === 'ace'
-            ? aceShot(h.day).hole
-            : h.kind === 'drive'
-              ? driveHole(courseFor(periodOf(h.day)))
-              : targetRange;
-  if (!hole) return back();
+  const found = replayHoleOf(h);
+  if (!found) return back();
+  // to the cup it was played to (saved from Nov 23): a moved pin can't make it miss
+  const cup = d.cup ? { x: d.cup[0], y: d.cup[1] } : null;
+  const hole: Hole = cup ? { ...found, cup, pins: [cup] } : found;
   render(`<div class="g3" id="g3"></div>`);
   document.body.classList.add('court-open');
   const el = document.getElementById('g3')!;
@@ -1321,7 +1341,7 @@ export async function watchReplay(snap: Snapshot, id: number) {
     eyebrow: `Replay · ${KIND_NAME[rep.kind]}`,
     stations: [{ name: label, at: from }],
     // a card's shot is played to that day's pin (and in its wind), as it was
-    ...(h.kind === 'card' ? { wind: conditionsFor(hole, rep.day ?? todayInGameTz()) } : {}),
+    ...(h.kind === 'card' ? { wind: cup ? { ...conditionsFor(hole, rep.day ?? todayInGameTz()), pin: cup } : conditionsFor(hole, rep.day ?? todayInGameTz()) } : {}),
     ...(h.kind === 'targets' ? { rings: RANGE_TARGETS.map((t) => ({ center: t.at, r: RINGS, color: t.color })), net: { ...NET, label: `Window · ${NET.points}|${NET.yards} yd` } } : {}),
     tag: () => 'Replay',
     report: () => label,
