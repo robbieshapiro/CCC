@@ -229,7 +229,7 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   // the Powder Bowl: down the magic carpet, off the snowbank, a drive onto the groomer, a drive down the glade, down the sled run
   bunnyhill: { from: { x: 44, y: 400 }, clubs: ['putter', 'chip'], angles: [-14, 4] },
   iceberg: { from: { x: -78, y: 202 }, clubs: ['putter', 'chip'], angles: [84, 96] },
-  blackdiamond: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-12, -4], near: 480 },
+  blackdiamond: { from: { x: -42, y: 730 }, clubs: ['chip', 'putter'], angles: [-24, -6], near: 200 },
   chairlift: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-14, -8], near: 360 },
   thelodge: { from: { x: -4, y: 400 }, clubs: ['iron', 'wood'], angles: [-8, 2] },
   thebowl: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-3, 3] },

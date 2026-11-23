@@ -2,10 +2,12 @@
 // 75 ft down a gully of powder between bands of rock to a ledge of moguls; straight on, the ledge ends at a cliff. The
 // hole turns left there, down a second, steeper chute and over a mountain stream to a small, firm green with tree wells
 // down its left.
-// The play: a driver down the chute onto the ledge (the moguls kick it about), then a long iron down the second chute.
-// The reward: cut the corner. A full drive aimed left carries the firs on the corner and lands in the second chute,
-// leaving a short iron.
-// The bail-out: none to speak of. Too long off the tee is over the cliff; the rocks kick a ball anywhere.
+// The ledge is a ridge (Nov 23, Robbie: genuinely treacherous): about 50 ft wide, with sheer cliffs both sides of
+// the drive. Off either side is gone.
+// The play: a wood down the chute onto the ridge (the moguls kick it about), then a long iron down the second chute.
+// The reward: cut the corner. A full drive aimed left carries the drop off the left of the ridge and lands in the second
+// chute, leaving a short iron. Short of that, it's over the cliff.
+// The bail-out: none. Too long off the tee is over the cliff at the end; wide is over a side.
 // The secret: the Patrol Line. Ski patrol keep a strip groomed down the right of the second chute for the sleds. From
 // the ledge, a low runner onto it rides down to the front of the green.
 import { band, blob, rect } from '../../terrain';
@@ -15,6 +17,8 @@ import { slope } from '../atlantic/common';
 import { POWDER_TURF, cliff, firs, moguls, profile } from './common';
 
 const TOP = 150;
+// half the ridge's width: the lips of the cliffs either side of the drive
+const RIDGE = 26;
 const GREEN = { x: -228, y: 776, rx: 12, ry: 10 };
 // the patrol line: down the right of the second chute to the front of the green
 const LINE: V2[] = [
@@ -44,7 +48,7 @@ for (let y = 60, i = 0; y <= 330; y += 13, i++)
   }
 // the stand of firs on the corner, which a big drive cuts across
 const corner: Post[] = [];
-for (let y = 330, row = 0; y <= 450; y += 18, row++)
+for (let y = 330, row = 0; y <= 360; y += 18, row++)
   for (let x = -150 + (row % 2 ? 9 : 0); x <= -54; x += 18) {
     const h = 20 + ((x * 7 + y * 3) % 18);
     corner.push({ x, y, r: Math.max(4, Math.round(h * 0.25)), h, soft: true, look: 'snowpine' });
@@ -74,9 +78,12 @@ export const doubleblack: Hole = {
   gusts: true,
   chipDrop: 0.7,
   greenFirm: 0.22,
+  // out of bounds where it comes down, not where it flies: a drive can carry the drop off the left of the ridge into
+  // the second chute (the corner cut)
+  obWhenLanding: true,
   yards: 560,
-  blurb: 'Double black. Down the chute to a ledge of moguls, then left down a second chute and over the stream. Straight on is a cliff.',
-  teeTip: 'Driver to the ledge, or a full one over the firs on the left. Long and straight is over the cliff.',
+  blurb: 'Double black. Down the chute to a narrow ridge, cliffs both sides, then left down a second chute and over the stream.',
+  teeTip: 'A wood to the ridge. Wide either side is over a cliff. Long is too.',
   tee: { x: 0, y: 0 },
   cup: { x: -228, y: 778 },
   pins: [{ x: -228, y: 778 }, { x: -234, y: 773 }, { x: -221, y: 780 }, { x: -226, y: 783 }],
@@ -85,18 +92,27 @@ export const doubleblack: Hole = {
   border: [
     { x: -356, y: -46 },
     { x: 136, y: -46 },
-    { x: 136, y: 548 },
+    { x: 136, y: 372 },
+    // the right side of the ridge
+    { x: RIDGE, y: 388 },
+    { x: RIDGE, y: 560 },
     { x: -36, y: 566 },
     { x: -102, y: 876 },
     { x: -356, y: 876 },
+    { x: -356, y: 476 },
+    // the left side of the ridge, until the second chute opens off it
+    { x: -RIDGE, y: 472 },
+    { x: -RIDGE, y: 388 },
+    { x: -356, y: 372 },
   ],
   base: 'rough',
   regions: [
     { poly: rect(-12, -12, 12, 12), surface: 'fairway' },
     // the ledge, where the drive comes down: moguls, 64 ft across, ending at the cliff
-    { poly: blob(-6, 474, 34, 64, 1, 0.05), surface: 'fairway' },
+    // the ridge: 52 ft across, cliffs both sides
+    { poly: blob(0, 470, RIDGE - 2, 66, 1, 0.03), surface: 'fairway' },
     // the second chute, down to the left
-    { poly: band([{ x: -80, y: 476 }, { x: -116, y: 556 }, { x: -170, y: 650 }, { x: -184, y: 672 }], 20), surface: 'fairway' },
+    { poly: band([{ x: -34, y: 492 }, { x: -80, y: 500 }, { x: -116, y: 556 }, { x: -170, y: 650 }, { x: -184, y: 672 }], 28), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
     // the patrol line: groomed for the sleds (it plays as a path)
@@ -126,7 +142,7 @@ export const doubleblack: Hole = {
     { kind: 'hill', x: -100, y: 200, r: 75, h: 22 },
     { kind: 'hill', x: 100, y: 200, r: 75, h: 22 },
     // moguls on the ledge, where the drive lands
-    ...moguls(-34, 18, 420, 516, 2.2, 14),
+    ...moguls(-18, 16, 420, 516, 2.2, 14),
     { kind: 'channel', pts: STREAM_L, width: 16, depth: 5 },
     { kind: 'channel', pts: STREAM_R, width: 16, depth: 5 },
     // the patrol line is pressed smooth and a touch low, so a ball on it keeps to it
@@ -138,6 +154,10 @@ export const doubleblack: Hole = {
     ...traps.flatMap((t) => t.pieces),
     // the cliff at the end of the ledge and down the outside of the bend
     cliff([{ x: 140, y: 584 }, { x: -2, y: 600 }, { x: -66, y: 900 }]),
+    // and both sides of the ridge
+    cliff([{ x: RIDGE + 34, y: 392 }, { x: RIDGE + 34, y: 556 }]),
+    cliff([{ x: -RIDGE - 34, y: 392 }, { x: -RIDGE - 34, y: 436 }]),
+    cliff([{ x: -RIDGE - 90, y: 392 }, { x: -RIDGE - 90, y: 436 }]),
   ],
   walls: [],
   posts: [
@@ -161,7 +181,7 @@ export const doubleblack: Hole = {
     { kind: 'sign', x: 20, y: -10, rot: 0 },
     { kind: 'trailsign', x: -18, y: 12, rot: 0, label: 'double' },
     // ski patrol's hut, on the ledge by the cliff
-    { kind: 'patrolhut', x: 70, y: 470, rot: -0.6 },
+    { kind: 'patrolhut', x: 62, y: 340, rot: -0.6 },
     { kind: 'rock', x: 30, y: 556, scale: 5 },
     { kind: 'rock', x: -40, y: 640, scale: 5 },
   ],
