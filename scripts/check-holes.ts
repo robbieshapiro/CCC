@@ -11,7 +11,7 @@ import { accuracyError, goldHalf, OVERSWING, powerSpeed, returnSpeed, type Meter
 import { bake, gradAt, heightAt, inPoly, isWater, surfaceAt } from '../src/golf3d/terrain';
 import type { Hole, Shot, V2 } from '../src/golf3d/types';
 import { makeRng } from '../src/seed';
-import { dailyHoles, SHOT_FROM, STEPS_FROM } from '../src/dailyholes';
+import { dailyHoles, MID_FROM, SHOT_FROM, STEPS_FROM } from '../src/dailyholes';
 import { dailyShot } from '../src/daily';
 import { checkHole } from '../src/designer/hole';
 
@@ -710,6 +710,30 @@ if (mode === 'daily' && !process.env.NO_SIM) {
       else fair++;
     }
   ok(fair === dailyDays.length * 3, `${fair} of ${dailyDays.length * 3} Daily Shot holes pass the Desk's check (dry tee and green, a green that holds a putt)`);
+  // spin (Robbie, Nov 23: it didn't seem to work on the Daily Shot): from Nov 23, every hole is in reach of its club
+  // (iron on 1 and 2, wood on 3), so a full-backspin shot can land on the green and bite there, finishing nearer the
+  // pin than the same shot hit plain. On Nov 22 hole 2 was past a full iron, so a spun iron came down short.
+  if (DAILY_FROM >= MID_FROM) {
+    let bites = 0;
+    for (const d of dailyDays)
+      for (const x of dailyHoles(d).holes) {
+        const h = x.hole;
+        // hole 3 can be either: a wood, or a full iron with backspin
+        const clubs: ClubId[] = x.n === 3 ? ['wood', 'iron'] : ['iron'];
+        const toCup = Math.atan2(h.cup.x - x.from.x, h.cup.y - x.from.y);
+        const ft = (r: ReturnType<typeof simulate>) => (r.penalty ? Infinity : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y));
+        let ok2 = false;
+        for (const club of clubs)
+          for (let p = 0.3; p <= 1.0001 && !ok2; p += 0.02) {
+            const spun = simulate(h, x.from, { angle: toCup, power: p, club, error: 0, clock: 0, spin: 1 }, false);
+            const plain = simulate(h, x.from, { angle: toCup, power: p, club, error: 0, clock: 0, spin: 0 }, false);
+            if (!spun.penalty && surfaceAt(h, spun.end) === 'green' && ft(spun) < ft(plain)) ok2 = true;
+          }
+        if (ok2) bites++;
+        else console.log(`  ${d} hole ${x.n}: no ${clubs.join(' or ')} with backspin holds the green`);
+      }
+    ok(bites === dailyDays.length * 3, `${bites} of ${dailyDays.length * 3} Daily Shot holes: a full-backspin ${'iron or wood'} lands on the green and bites`);
+  }
   // before: the one-shot game, the last 14 days before the switch
   console.log('Before: the one-shot Closest to the Pin');
   const before: { ft: number | null; holed: boolean }[] = [];

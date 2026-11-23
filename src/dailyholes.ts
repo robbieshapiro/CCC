@@ -44,7 +44,17 @@ const LONG_STEPS = [
   { yards: [135, 148], green: 'large', bunkers: 1, carry: false, pin: 'edge', tilt: 0, wind: 1.2 },
   { yards: [165, 185], green: 'large', bunkers: 2, carry: false, pin: 'edge', tilt: 0, wind: 1.3 },
 ] as const;
-const stepsFor = (day: string) => (day >= STEPS_FROM ? LONG_STEPS : STEPS);
+// From Monday Nov 23 (Robbie: Nov 22 played far too hard, everyone's medians 45 to 50 ft on holes 2 and 3; holes 1 and
+// 2 irons, 3 a wood, less wind, somewhere in the middle): hole 2 back inside a full iron (132 yd), so a spun iron can
+// reach the green and bite; hole 3 an easy wood. Wind no longer multiplied up, and capped hole by hole (mph), because
+// some looks already blow 11 to 17 on their own. The open fronts and side bunkers of the long steps stay.
+export const MID_FROM = '2026-11-23';
+const MID_STEPS = [
+  { yards: [100, 108], green: 'large', bunkers: 1, carry: false, pin: 'middle', tilt: 0, wind: 1, cap: 9 },
+  { yards: [106, 114], green: 'large', bunkers: 1, carry: false, pin: 'side', tilt: 0, wind: 1, cap: 11 },
+  { yards: [148, 160], green: 'large', bunkers: 2, carry: false, pin: 'edge', tilt: 0, wind: 1, cap: 13 },
+] as const;
+const stepsFor = (day: string) => (day >= MID_FROM ? MID_STEPS : day >= STEPS_FROM ? LONG_STEPS : STEPS);
 
 const NAMES = ['The Leap', 'Long Shadow', 'The Lantern', 'Last Light', 'The Steps', 'The Spire', 'Far Flag', 'The Gate', 'Hollow Point', 'The Edge', 'Skyfall', 'The Basin', 'Whisper', 'The Drop', 'High Wire', 'The Crown'];
 
@@ -170,15 +180,25 @@ export function dailyHoles(day: string): DailyHoles {
         ...hole.water.flatMap((wt) => wt.poly.map((v) => Math.hypot(v.x - q.x, v.y - q.y))),
         999,
       );
+    // side (from Nov 23): an edge pin to the left or right of the middle, not the front or back, so the hole plays the
+    // length it's set to (a front or back pin moved hole 2 by 15 yd either way, past a full iron some days)
+    const len0 = Math.hypot(gc.x - hole.tee.x, gc.y - hole.tee.y) || 1;
+    const along = (q: V2) => Math.abs(((q.x - gc.x) * (gc.x - hole.tee.x) + (q.y - gc.y) * (gc.y - hole.tee.y)) / len0);
+    const sides = spots.filter((q) => along(q) < R * 0.22);
     const pin =
       step.pin === 'middle' || !spots.length
         ? gc
-        : step.pin === 'edge'
+        : step.pin === 'side' && sides.length
+          ? sides[Math.floor(prng.next() * sides.length)]
+          : step.pin === 'edge' || step.pin === 'side'
           ? spots[Math.floor(prng.next() * spots.length)]
           : spots.reduce((b, q) => (trouble(q) < trouble(b) ? q : b), spots[0]);
     const h: Hole = { ...hole, cup: pin, pins: [pin], name: s.name };
     const base = conditionsFor(h, day);
-    const k = step.wind;
+    // the step's multiplier, then its cap (from Nov 23), keeping the direction
+    const raw = base.mph * step.wind;
+    const cap = 'cap' in step ? step.cap : Infinity;
+    const k = step.wind * (raw > cap ? cap / raw : 1);
     const wind = { ...base, pin, mph: Math.round(base.mph * k), accel: { x: base.accel.x * k, y: base.accel.y * k } };
     const yards = Math.round((Math.hypot(h.tee.x - pin.x, h.tee.y - pin.y) * SCALE) / 3);
     return { n: i + 1, world: w, spec: s, hole: h, from: h.tee, wind, yards, label: `${yards} yd` };
