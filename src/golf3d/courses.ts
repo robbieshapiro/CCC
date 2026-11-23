@@ -34,7 +34,7 @@ import { iceberg } from './holes/powder/iceberg';
 import { blackdiamond } from './holes/powder/blackdiamond';
 import { chairlift } from './holes/powder/chairlift';
 import { thelodge } from './holes/powder/thelodge';
-import { summitdrop } from './holes/powder/summitdrop';
+import { thebowl } from './holes/powder/thebowl';
 import { blueridge } from './holes/powder/blueridge';
 import { doubleblack } from './holes/powder/doubleblack';
 import { lakefront } from './holes/chicago/lakefront';
@@ -200,8 +200,8 @@ const COURSES: Course[] = [
     ],
     name: 'The Powder Bowl',
     tagline: 'Eight holes down a Colorado mountain in the snow: cliffs, moguls, two doglegs, a double black and a green on an iceberg.',
-    holes: [bunnyhill, blueridge, summitdrop, blackdiamond, chairlift, iceberg, doubleblack, thelodge],
-    par: par([bunnyhill, blueridge, summitdrop, blackdiamond, chairlift, iceberg, doubleblack, thelodge]),
+    holes: [bunnyhill, blueridge, thebowl, blackdiamond, chairlift, iceberg, doubleblack, thelodge],
+    par: par([bunnyhill, blueridge, thebowl, blackdiamond, chairlift, iceberg, doubleblack, thelodge]),
     playoff: { hole: thelodge, from: { x: -4, y: 530 }, label: 'Down to the lodge' },
   },
   // ---------- the Hole Lab: one test hole in each new look, for the Committee to play (Admin > Course) ----------

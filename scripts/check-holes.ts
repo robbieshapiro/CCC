@@ -231,9 +231,9 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   iceberg: { from: { x: -78, y: 202 }, clubs: ['putter', 'chip'], angles: [84, 96] },
   blackdiamond: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-12, -4], near: 480 },
   chairlift: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-14, -8], near: 360 },
-  thelodge: { from: { x: 50, y: 470 }, clubs: ['putter', 'chip'], angles: [-16, 4] },
-  summitdrop: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-4, 6] },
-  blueridge: { from: { x: -8, y: 494 }, clubs: ['putter', 'chip'], angles: [34, 50], near: 180 },
+  thelodge: { from: { x: -4, y: 400 }, clubs: ['iron', 'wood'], angles: [-8, 2] },
+  thebowl: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-3, 3] },
+  blueridge: { from: { x: -10, y: 470 }, clubs: ['putter', 'chip'], angles: [20, 50], near: 180 },
   doubleblack: { from: { x: -20, y: 498 }, clubs: ['putter', 'chip'], angles: [-55, -30], near: 200 },
 };
 
