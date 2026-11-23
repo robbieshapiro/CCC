@@ -16,7 +16,7 @@ import { POWDER_TURF, cliff, firs, moguls, profile } from './common';
 const TOP = 150;
 // where the flat ends: the band of rock drops into the mogul field
 const BAND = 760;
-const GREEN = { x: -26, y: 1040, rx: 15, ry: 12 };
+const GREEN = { x: -26, y: 1040, rx: 13, ry: 11 };
 // the cliff edge down the right
 const LIP = 70;
 // the groomer: down the left of the mogul field, through the ridge and on down the lower run
@@ -36,8 +36,8 @@ const STREAM: V2[] = [
 const traps = [bunker(30, 640, 12, 9, 1, FAIRWAY_DEPTH, -0.3), greenside(GREEN, 0, 1050, 7, 8, 2, 3.4, 0), greenside(GREEN, -16, 1064, 9, 6, 3, 3.4, 0)];
 // firs standing among the moguls, in the fairway, on a jittered grid (the groomer's lane down the left is kept clear)
 const among: Post[] = [];
-for (let y = 806, row = 0; y <= 960; y += 32, row++)
-  for (let x = -40 + (row % 2 ? 16 : 0); x <= 40; x += 34) {
+for (let y = 804, row = 0; y <= 964; y += 26, row++)
+  for (let x = -42 + (row % 2 ? 13 : 0); x <= 42; x += 27) {
     const j = ((x * 13 + y * 7) % 11) - 5;
     const h = 18 + ((x * 7 + y * 3) % 14);
     among.push({ x: x + j, y: y + ((x * 3 + y) % 9) - 4, r: Math.max(4, Math.round(h * 0.24)), h, soft: true, look: 'snowpine' });
@@ -53,13 +53,13 @@ export const blackdiamond: Hole = {
   windByHeight: true,
   gusts: true,
   chipDrop: 0.7,
-  greenFirm: 0.18,
+  greenFirm: 0.2,
   yards: 740,
   blurb: 'Black diamond. Down onto the flat, then lay up short of the rock band or go for it into the moguls and trees. A cliff all down the right.',
   teeTip: 'Driver onto the flat. Then decide: lay up, or take on the moguls. Right is the cliff.',
   tee: { x: 0, y: 0 },
   cup: { x: -26, y: 1042 },
-  pins: [{ x: -26, y: 1042 }, { x: -33, y: 1036 }, { x: -18, y: 1044 }, { x: -24, y: 1049 }],
+  pins: [{ x: -26, y: 1042 }, { x: -32, y: 1037 }, { x: -19, y: 1044 }, { x: -24, y: 1048 }],
   aim: -0.01,
   bounds: { x0: -150, y0: -50, x1: 150, y1: 1130 },
   border: [
@@ -76,7 +76,7 @@ export const blackdiamond: Hole = {
   regions: [
     { poly: rect(-14, -14, 14, 14), surface: 'fairway' },
     // the flat, where the drive comes down and the lay-up stops: 84 ft across, to the rock band
-    { poly: blob(-4, 545, 42, 215, 1, 0.04), surface: 'fairway' },
+    { poly: blob(-4, 545, 33, 215, 1, 0.04), surface: 'fairway' },
     // the mogul field, below the rock band, down to the stream
     { poly: blob(-4, 880, 46, 100, 2, 0.05), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },

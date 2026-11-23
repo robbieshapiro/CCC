@@ -10,7 +10,7 @@
 // you're up on the shelf with a short iron left.
 import { band, blob, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
-import { greenComplex, greenside } from '../woods';
+import { bunker, FAIRWAY_DEPTH, greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
 import { POWDER_TURF, cliff, firs } from './common';
 
@@ -38,7 +38,7 @@ for (let y = 150, row = 0; y <= 470; y += 20, row++)
 const APRES: V2 = { x: 100, y: 506 };
 // the tip of the corner: firs at the left edge of the fairway, so a drive up the left has them in the way of the green
 for (const [x, y] of [[-14, 288], [-8, 308], [-16, 324], [-6, 340], [-18, 352]] as const) stand.push({ x, y, r: 5, h: 26 + ((x + y) % 6), soft: true, look: 'snowpine' });
-const traps = [greenside(GREEN, -58, 486, 8, 7, 1, 3.4, 0.5), greenside(GREEN, -94, 528, 9, 6, 2, 3.4, 0)];
+const traps = [bunker(58, 318, 12, 9, 5, FAIRWAY_DEPTH, 0.3), greenside(GREEN, -58, 486, 8, 7, 1, 3.4, 0.5), greenside(GREEN, -94, 528, 9, 6, 2, 3.4, 0)];
 
 export const chairlift: Hole = {
   id: 'chairlift',
