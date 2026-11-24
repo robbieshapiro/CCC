@@ -53,7 +53,7 @@ import { applyTweak, type Tweaks } from './tweaks';
 import { isWeek, nextShown, nextStart } from '../day';
 
 // previewHoles: before it opens, members can practise this many of its holes (all of them if unset); the admin can
-// play them all. whatsNew: a few short lines shown before that practice starts.
+// play them all. whatsNew: up to five short lines, shown in the card on the first tee when its practice starts (Nov 24).
 // playoff: the hole a tie for the week's title is played off on, and where the closest-to-the-pin decider is hit from
 // A course's own colours on home (Nov 19): the Play hero, its board and countdown in its week, next week's preview band,
 // the practice notes, its classic tile later and the Committee's tiles. Every course from Nov 22 has one, different from
