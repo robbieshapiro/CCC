@@ -196,7 +196,7 @@ const COURSES: Course[] = [
     practiceFrom: '2026-11-24',
     whatsNew: [
       'Two weeks: Nov 29 to Dec 12. One board, one purse.',
-      'New meter: slower, there before you swing, % after.',
+      'New meter: slower, a mark at 100, your % after the strike.',
       'Long iron and short iron.',
       '$10 a fairway, $15 a green in regulation.',
       'Ride the chairlift to the green.',

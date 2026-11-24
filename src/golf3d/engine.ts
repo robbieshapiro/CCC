@@ -1788,45 +1788,10 @@ export class Course3D {
     return meterPos(this.club, p);
   }
 
-  // The clear meter (the Powder Bowl) sits there before the swing, dimmed, with your plan on it (Nov 24, Robbie), so you
-  // can see what you're about to do. Called every frame while aiming; cheap, it only touches the DOM when it changes.
-  private idleMeter() {
-    if (this.resultTimer) return;
-    const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
-    if (this.hole.meterLook !== 'clear') {
-      if (this.idleKey) {
-        m.hidden = true;
-        m.classList.remove('idle');
-        this.idleKey = '';
-      }
-      return;
-    }
-    const show = this.club !== 'putter';
-    const key = `${show}:${this.club}:${this.style()}:${Math.round(this.power * 200)}`;
-    if (key === this.idleKey && m.hidden === !show) return;
-    this.idleKey = key;
-    m.hidden = !show;
-    if (!show) return;
-    m.classList.add('idle', 'clear');
-    m.classList.remove('accuracy', 'over', 'result', 'pure', 'overpow');
-    m.classList.toggle('vertical', this.style() === 'vertical');
-    m.classList.toggle('stretched', stretched(this.club));
-    m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
-    m.classList.remove('boost', 'fireball');
-    (this.overlay.querySelector('[data-swing-tag]') as HTMLElement).hidden = true;
-    this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.meterAt(this.power)));
-    this.span(this.overlay.querySelector('[data-fill]') as HTMLElement, barX(0), 0);
-    this.mark(this.overlay.querySelector('[data-needle]') as HTMLElement, barX(0));
-    (this.overlay.querySelector('[data-gold]') as HTMLElement).style.cssText = 'display:none';
-    (this.overlay.querySelector('[data-pure]') as HTMLElement).style.cssText = 'display:none';
-    (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = '';
-    this.markFull();
-  }
   // the 100% mark, where full power sits for this club (the wedge and chip read on a stretched scale)
   private markFull() {
     (this.overlay.querySelector('[data-full]') as HTMLElement).style.setProperty('--at', `${barX(this.meterAt(1)) * 100}%`);
   }
-  private idleKey = '';
   private resultTimer = 0;
 
   // After the strike the clear meter holds a moment with the power you hit, and lights up for a pure strike (gold) or
@@ -1834,7 +1799,7 @@ export class Course3D {
   private showResult(box: HTMLElement, p: number, pure: boolean) {
     const pct = this.overlay.querySelector('[data-pct]') as HTMLElement;
     pct.textContent = `${Math.round(p * 100)}%`;
-    box.classList.remove('idle', 'accuracy');
+    box.classList.remove('accuracy');
     box.classList.add('result');
     box.classList.toggle('pure', pure);
     box.classList.toggle('overpow', p > 1);
@@ -1851,7 +1816,6 @@ export class Course3D {
   private clearResult() {
     window.clearTimeout(this.resultTimer);
     this.resultTimer = 0;
-    this.idleKey = '';
     const box = this.overlay.querySelector('[data-swing]') as HTMLElement;
     box.classList.remove('result', 'pure', 'overpow', 'fade');
   }
@@ -1865,7 +1829,7 @@ export class Course3D {
     const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
     m.hidden = false;
     this.clearResult();
-    m.classList.remove('accuracy', 'idle', 'over');
+    m.classList.remove('accuracy', 'over');
     m.classList.toggle('vertical', this.style() === 'vertical');
     // the redrawn meter (the Powder Bowl, Nov 24): taller, a mark at 100%, a brighter strike zone, the % after the strike
     m.classList.toggle('clear', this.hole.meterLook === 'clear');
@@ -3239,12 +3203,6 @@ export class Course3D {
     if (this.replay) this.stepReplay(dt);
     this.cart?.update(dt);
 
-    if (this.mode === 'aim') this.idleMeter();
-    else if (this.mode !== 'meter' && !this.resultTimer && this.idleKey) {
-      // left aiming without swinging (a flyover, the next hole): put the idle meter away
-      (this.overlay.querySelector('[data-swing]') as HTMLElement).hidden = true;
-      this.idleKey = '';
-    }
 
     if (this.mode === 'meter') {
       const m = this.meter;
