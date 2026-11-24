@@ -231,12 +231,12 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   // the Powder Bowl: down the magic carpet, off the snowbank, a drive onto the groomer, a drive down the glade, down the sled run
   bunnyhill: { from: { x: 44, y: 400 }, clubs: ['putter', 'chip'], angles: [-14, 4] },
   iceberg: { from: { x: -78, y: 202 }, clubs: ['putter', 'chip'], angles: [84, 96] },
-  blackdiamond: { from: { x: -42, y: 730 }, clubs: ['chip', 'putter'], angles: [-24, -6], near: 200 },
+  blackdiamond: { from: { x: -40, y: 690 }, clubs: ['putter', 'chip'], angles: [-6, 4], near: 200 },
   chairlift: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-14, -8], near: 360 },
   thelodge: { from: { x: -4, y: 400 }, clubs: ['longiron', 'wood'], angles: [-8, 2] },
   thebowl: { from: { x: 0, y: 0 }, clubs: ['shortiron', 'longiron'], angles: [-3, 3] },
   blueridge: { from: { x: -10, y: 470 }, clubs: ['putter', 'chip'], angles: [20, 50], near: 180 },
-  doubleblack: { from: { x: -20, y: 498 }, clubs: ['putter', 'chip'], angles: [-55, -30], near: 200 },
+  doubleblack: { from: { x: 54, y: 132 }, clubs: ['putter', 'chip'], angles: [-4, 4], near: 160 },
 };
 
 // The best finish (ft from the pin) of any clean shot from the secret's start that uses it.

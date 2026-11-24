@@ -5,10 +5,10 @@ import * as THREE from 'three';
 import { makeRng } from '../../seed';
 import type { Anim, Kit } from '../kits';
 import { mat, mesh, sign } from '../props';
-import { heightAt } from '../terrain';
+import { heightAt, surfaceAt } from '../terrain';
 import { along, chairsDown, chairsUp, liftLength, seatZ, type Lift } from '../lift';
 import type { Hole } from '../types';
-import { mountainLife } from './mountainlife';
+import { mooseDecor, mountainLife } from './mountainlife';
 import { causeway } from './irish';
 
 // a fir with snow on its boughs
@@ -264,6 +264,9 @@ function playLift(h: Hole, l: Lift, anim: Anim) {
     const p = along(l, u);
     const x = p.x + side.x / 2;
     const y = p.y + side.y / 2;
+    // never on the green or round it: the span just runs on over it
+    const round = [[0, 0], [12, 0], [-12, 0], [0, 12], [0, -12]].map(([dx, dy]) => surfaceAt(h, { x: x + dx, y: y + dy }));
+    if (round.some((s) => s === 'green' || s === 'fringe' || s === 'sand')) continue;
     const base = heightAt(h, x, y);
     const top = cable(u) + 1;
     const tw = mesh(new THREE.CylinderGeometry(0.6, 0.9, top - base, 6), steel);
@@ -573,6 +576,7 @@ export const alpine: Kit = {
     if (d.kind === 'snowman') return snowman();
     if (d.kind === 'trailsign') return trailSign(d.label ?? 'green');
     if (d.kind === 'patrolhut') return patrolHut();
+    if (d.kind === 'moose') return mooseDecor(anim, Math.round(d.x + d.y));
     if (d.kind === 'apresdeck') return apresDeck(anim);
     if (d.kind === 'biglodge') return bigLodge(anim);
     if (d.kind === 'hottub') return hotTub(anim);

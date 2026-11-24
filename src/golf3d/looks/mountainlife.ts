@@ -144,6 +144,13 @@ function graze(neck: THREE.Object3D, anim: Anim, phase: number) {
   });
 }
 
+// a moose placed by a hole's decor (`{ kind: 'moose' }`): the Double Black's, by its creeks (Nov 24, Robbie), grazing
+export function mooseDecor(anim: Anim, seed = 0) {
+  const m = moose();
+  graze(m.neck, anim, seed % 11);
+  return m.g;
+}
+
 export function mountainLife(h: Hole, floor: number, anim: Anim) {
   const root = new THREE.Group();
   root.name = 'mountainlife';

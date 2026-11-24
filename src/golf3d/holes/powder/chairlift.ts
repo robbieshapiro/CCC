@@ -4,7 +4,7 @@
 // shot and Reginald brings the tray (once a hole). Nothing says it's there.
 // The lift (Nov 24, Robbie): the chairlift runs from a loading station at the top-left of the drive zone, up over the
 // firs on the corner, to the green. Chip or putt across the station just as a chair sweeps through it and the chair
-// takes the ball up and sets it down on the green. Mistime it and it rolls on into the snow.
+// takes the ball up and lets it go high over the green, to fall onto it. Mistime it and it rolls on into the snow.
 // The play (Nov 23, Robbie: there was nowhere to drive that didn't leave the firs in the way): one wide fairway. Drive
 // to its right side, the long way round, and the green is wide open up the hill. The left side is shorter, but the firs
 // on the corner are in the way of the second unless the drive is perfect.
@@ -40,9 +40,9 @@ for (let y = 150, row = 0; y <= 470; y += 20, row++)
     const h = 20 + ((x * 7 + y * 3) % 22);
     stand.push({ x, y, r: Math.max(4, Math.round(h * 0.26)), h, soft: true, look: 'snowpine' });
   }
-// the lift: the loading station by the firs at the top-left of the drive zone, the top station just short of the green,
-// and where the chair tips the ball out, on the green
-const LIFT: Lift = { load: { x: 6, y: 300 }, top: { x: -58, y: 462 }, drop: { x: -68, y: 490 }, speed: 16, gap: 4, pad: 4, low: 8 };
+// the lift: the loading station by the firs at the top-left of the drive zone, up over the green to a top station
+// behind it. The chair lets go 34 ft up, just short of the green, and the ball falls onto it (Nov 24, Robbie)
+const LIFT: Lift = { load: { x: 6, y: 300 }, top: { x: -105, y: 557 }, drop: { x: -62, y: 458 }, speed: 16, gap: 4, pad: 4, low: 8 };
 // the après deck, off the right of the corner
 const APRES: V2 = { x: 100, y: 506 };
 // the tip of the corner: firs at the left edge of the fairway, so a drive up the left has them in the way of the green
@@ -69,6 +69,8 @@ export const chairlift: Hole = {
   aim: 0.02,
   apres: APRES,
   lift: LIFT,
+  // a ride up the lift takes a while: room for the roll to the station, the ride and the fall onto the green
+  maxTime: 40,
   bounds: { x0: -200, y0: -50, x1: 200, y1: 710 },
   border: [
     { x: -196, y: -46 },
