@@ -17,8 +17,8 @@ import { book } from './screens/book';
 import { clubhouse, isAboutPart, isClubhouseTab } from './screens/clubhouse';
 import { designDesk } from './screens/design';
 import { facility } from './screens/practice';
-import { classics, courseById, courseFor, nextCourse } from './golf3d/courses';
-import { nextShown, todayInGameTz } from './day';
+import { classics, courseById, courseFor, nextCourse, practiceOpen } from './golf3d/courses';
+import { todayInGameTz } from './day';
 import { checkIn } from './screens/activity';
 import { onSnapshot, recent, refresh, startPolling } from './state';
 import { store } from './storage';
@@ -170,8 +170,8 @@ async function routeTo() {
     // any member's practice on the first holes of the next course, before it counts
     if (page === 'practice') {
       const c = nextCourse(s.month);
-      // from Thursday (the Committee any time)
-      if (c && c.id === arg && (s.admin || nextShown(todayInGameTz()))) return practice(s, c);
+      // from Thursday, or the course's own early practice (the Committee any time)
+      if (c && c.id === arg && (s.admin || practiceOpen(c, todayInGameTz()))) return practice(s, c);
       location.hash = '#/';
       return;
     }

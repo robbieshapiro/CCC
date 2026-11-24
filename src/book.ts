@@ -6,6 +6,7 @@
 //     1.9x. Only before your first card of the week, once a week. No card all week and the stake comes back.
 // Bets settle when the week closes. book_field, book_state, book_bet and book_settle in supabase/schema.sql do the
 // same sums; this file is the local mode's copy and the shared types.
+import { daysLeftIn } from './day';
 
 export const BOOK_MARGIN = 0.88;
 export const BOOK_MIN = 1.2;
@@ -23,8 +24,8 @@ export type BookState = {
   bank: number;
 };
 
-// days of the week left to play, today included: 7 on the Sunday, 1 on the Saturday
-export const daysLeft = (week: string, today: string) => Math.max(1, 7 - Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${week}T12:00:00Z`)) / 86_400_000));
+// days of the period left to play, today included: 7 on the Sunday, 1 on the Saturday (14 on a two-week event's first day)
+export const daysLeft = (week: string, today: string) => daysLeftIn(week, today);
 
 // the line for backing yourself: your recent per-hole best times this week's holes, to the half (never a push)
 export const backLine = (prior: number) => Math.floor(prior) + 0.5;

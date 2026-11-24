@@ -17,7 +17,8 @@ export const OPEN_PER_PLAYER = 1000;
 export const OPEN_FLOOR = 25_000;
 // from the week of Nov 22 (the Atlantic Links) on, $50,000 (open_purse_floor(month) in supabase/schema.sql)
 export const OPEN_FLOOR_FROM = '2026-11-22';
-export const openFloor = (month = periodOf(todayInGameTz())) => (month >= OPEN_FLOOR_FROM ? 50_000 : OPEN_FLOOR);
+// the Powder Bowl's two weeks (Nov 29 to Dec 12) pay double the floor, $100,000 (Nov 24)
+export const openFloor = (month = periodOf(todayInGameTz())) => (month === '2026-11-29' ? 100_000 : month >= OPEN_FLOOR_FROM ? 50_000 : OPEN_FLOOR);
 export const openPurseOf = (field: number, month?: string) => (field ? Math.max(field * OPEN_PER_PLAYER, openFloor(month)) : 0);
 
 // rows: each member with a round, their rank (ties share it). winner: who won a playoff for first, if one was played.

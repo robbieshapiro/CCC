@@ -1539,6 +1539,16 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .preview-band.volcanic .pb-go { background: #e8501c; color: #fff; }
 .preview-band.coastal .pb-go { background: #f4ad62; color: #0b2c44; }
 
+/* the ski course's band (Nov 24): snow drifting across it, and the skier carving side to side */
+.pb-text > .pb-when { font-weight: 800; opacity: 1; letter-spacing: 0.02em; }
+.preview-band.snowy .pb-snow { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.preview-band.snowy .pb-snow i { position: absolute; top: -10px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%; background: rgba(255, 255, 255, 0.85); box-shadow: 0 0 4px rgba(255, 255, 255, 0.6); animation: pb-snow var(--d) linear var(--w) infinite; }
+@keyframes pb-snow { from { transform: translate(0, -10px); } 50% { transform: translate(10px, 60px); } to { transform: translate(-6px, 140px); } }
+.preview-band.snowy .pb-icon { animation: pb-carve 2.6s ease-in-out infinite; transform-origin: 50% 80%; }
+@keyframes pb-carve { 0%, 100% { transform: translateX(-4px) rotate(-10deg); } 50% { transform: translateX(4px) rotate(10deg); } }
+.preview-band.snowy .pb-text, .preview-band.snowy .pb-go, .preview-band.snowy .pb-icon { position: relative; }
+@media (prefers-reduced-motion: reduce) { .preview-band.snowy .pb-snow i, .preview-band.snowy .pb-icon { animation: none; } }
+
 /* what's new on a course, before its practice */
 .whats-new { padding-block: 24px; }
 .wn-card { display: grid; gap: 8px; padding: 22px 20px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--gold); }

@@ -7,7 +7,7 @@ import type { AdminKpis, AgentNote, CoursePlanner, CourseRequest, HoleReport, Sn
 import { planCanvas } from '../designer/plan';
 import { applyTweak, FAIRWAY_STEPS, hasTweak, TEE_MAX, teeAt, teeOk, WIND_STEPS, type Tweak } from '../golf3d/tweaks';
 import { tell } from '../dialog';
-import { nextStart, periodName } from '../day';
+import { nextStart, periodName, periodOf } from '../day';
 import { asBuilt, courseById, courseFor, labHoles, nextCourse, scheduleOf, tourCourses, tweaksOf, type Course } from '../golf3d/courses';
 import { hasNight } from '../golf3d/kits';
 import { ratingOf } from '../golf3d/ratings';
@@ -179,7 +179,8 @@ function home(snap: Snapshot): string {
   const now = courseFor(snap.month);
   const back: string[] = [];
   // weeks only: the months before Nov 2026 aren't weeks
-  for (let i = 1; i <= BACK; i++) if (addDays(snap.month, -7 * i) >= FIRST_WEEK) back.push(addDays(snap.month, -7 * i));
+  // (by period: the Powder Bowl's two weeks are one)
+  for (let i = 1, w = periodOf(addDays(snap.month, -1)); i <= BACK && w >= FIRST_WEEK; i++, w = periodOf(addDays(w, -1))) back.push(w);
   const rows = board(snap);
   const played = rows.filter((r) => r.best);
   return `
@@ -224,7 +225,7 @@ const aheadOf = (snap: Snapshot, n = WEEKS) => {
 };
 const dates = (w: string) => {
   const f = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  const end = f(addDays(w, 6));
+  const end = f(addDays(nextStart(w), -1));
   return `${f(w)} to ${end.slice(0, 3) === f(w).slice(0, 3) ? end.slice(4) : end}`;
 };
 function calendar(snap: Snapshot): string {
@@ -234,7 +235,7 @@ function calendar(snap: Snapshot): string {
     .map((w) => {
       const c = courseFor(w);
       const pick = scheduleOf()[w];
-      const prev = courseFor(addDays(w, -7));
+      const prev = courseFor(periodOf(addDays(w, -1)));
       const carry = !pick && prev.id === c.id;
       const chip = pick ? '<i class="ok">Picked</i>' : carry ? '<i class="dim">Carries on</i>' : '<i>Calendar</i>';
       const options = `<option value="">${carry || !pick ? 'No pick (as now)' : 'Clear the pick'}</option>${all

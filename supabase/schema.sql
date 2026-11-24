@@ -117,12 +117,24 @@ language sql stable as $$ select (now() at time zone 'America/New_York')::date $
 -- challenge from Friday 30 October to Saturday 7 November ('2026-10-30'), then from 8 November a week at a time,
 -- Sunday to Saturday, keyed by its Sunday ('2026-11-15'). Keys sort in time order either way. src/day.ts has the
 -- same rule as periodOf().
+-- The Powder Bowl's two-week tournament, Sunday Nov 29 to Saturday Dec 12, is one period, '2026-11-29' (Nov 24; src/day.ts
+-- LONG_PERIODS). period_of(day): the period a day falls in; period_next(period): the day the next one starts.
+create or replace function period_of(d date) returns text
+language sql immutable as $$
+  select case
+    when d between date '2026-11-29' and date '2026-12-12' then '2026-11-29'
+    when d >= date '2026-11-08' then to_char(d - extract(dow from d)::int, 'YYYY-MM-DD')
+    when d >= date '2026-10-30' then '2026-10-30'
+    else to_char(d, 'YYYY-MM') end
+$$;
+create or replace function period_next(p_period text) returns date
+language sql immutable as $$
+  select case when p_period = '2026-10-30' then date '2026-11-08' when p_period = '2026-11-29' then date '2026-12-13'
+    when length(p_period) = 10 then p_period::date + 7 else null end
+$$;
 create or replace function game_month() returns text
 language sql stable as $$
-  select case
-    when game_today() >= date '2026-11-08' then to_char(game_today() - extract(dow from game_today())::int, 'YYYY-MM-DD')
-    when game_today() >= date '2026-10-30' then '2026-10-30'
-    else to_char(game_today(), 'YYYY-MM') end
+  select period_of(game_today())
 $$;
 
 -- older databases have the months-only check on rounds: let it take a week too
@@ -192,10 +204,10 @@ create table if not exists playoff_tries (
 );
 alter table playoff_tries enable row level security;
 
--- the day a period's playoff is played: the Sunday the next week opens
+-- the day a period's playoff is played: the Sunday the next period opens
 create or replace function playoff_day(p_period text) returns date
 language sql immutable as $$
-  select case when p_period = '2026-10-30' then date '2026-11-08' when length(p_period) = 10 then p_period::date + 7 else null end
+  select period_next(p_period)
 $$;
 
 -- Each closed period's champions at a club, and how: 'won' outright, 'playoff' (being played today), 'playoff-won',
@@ -283,7 +295,8 @@ create or replace function open_purse_floor() returns int language sql immutable
 -- Links) on, so a quiet week pays the winner about $15,600; past 50 players the $1,000 a head takes over. Weeks before
 -- keep $25,000, as paid.
 create or replace function open_purse_floor(p_month text) returns int language sql immutable as $$
-  select case when p_month >= '2026-11-22' then 50000 else 25000 end
+  -- the Powder Bowl's two weeks pay double, $100,000 (Nov 24)
+  select case when p_month = '2026-11-29' then 100000 when p_month >= '2026-11-22' then 50000 else 25000 end
 $$;
 create or replace function open_payouts()
 returns table (month text, player_id uuid, place int, tied boolean, payout int)
@@ -3256,6 +3269,8 @@ begin
   if me.role <> 'admin' then raise exception 'Only the committee can pick the course.'; end if;
   if coalesce(p_period, '') !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'A week starts on a Sunday.'; end if;
   if extract(dow from p_period::date) <> 0 then raise exception 'A week starts on a Sunday.'; end if;
+  -- and it must start a period: Dec 6 is the middle of the Powder Bowl's two weeks
+  if period_of(p_period::date) <> p_period then raise exception 'That week is part of a two-week tournament.'; end if;
   if p_period <= game_month() then raise exception 'That week has already started.'; end if;
   if nullif(p_course, '') is null then
     delete from course_schedule where period = p_period;
@@ -3912,7 +3927,7 @@ language sql stable security definer set search_path = public, extensions as $$
   with people as (
     select distinct on (lower(p.name), p.pin_hash) lower(p.name) as k, p.pin_hash as h, p.name, p.id as home_id
     from players p order by lower(p.name), p.pin_hash, p.host_only, p.created_at
-  ), wk as (select game_month() as m, greatest(1, 7 - (game_today() - game_month()::date))::numeric as left_days),
+  ), wk as (select game_month() as m, greatest(1, period_next(game_month()) - game_today())::numeric as left_days),
   r as (
     select pe.home_id, pe.name, rd.month, (rd.total - rd.par)::numeric as tp, coalesce(array_length(rd.holes, 1), 0) as holes, rd.created_at
     from people pe join players p on lower(p.name) = pe.k and p.pin_hash = pe.h join rounds rd on rd.player_id = p.id
@@ -3975,14 +3990,14 @@ begin
     and c.state->>'week' = game_month() and c.state->>'kind' = 'back');
   return json_build_object(
     'week', game_month(),
-    'open', game_today() - game_month()::date < 6,
+    'open', game_today() < period_next(game_month()) - 1,
     'field', coalesce((select json_agg(json_build_object('playerId', f.home_id, 'name', f.name, 'posted', f.posted, 'odds', f.odds,
       'mine', f.home_id = my_home) order by f.odds, f.name) from book_field() f), '[]'),
     'back', json_build_object(
       'line', case when pr is null then null else floor(pr) + 0.5 end,
-      'can', pr is not null and not posted and not backed and game_today() - game_month()::date < 6,
+      'can', pr is not null and not posted and not backed and game_today() < period_next(game_month()) - 1,
       'why', case when backed then 'You''re backed this week.' when posted then 'Mo only takes it before your first card of the week.'
-        when pr is null then 'Mo needs a week of your cards first.' when game_today() - game_month()::date >= 6 then 'The book''s closed till Sunday.' else null end),
+        when pr is null then 'Mo needs a week of your cards first.' when game_today() >= period_next(game_month()) - 1 then 'The book''s closed till Sunday.' else null end),
     'bets', coalesce((select json_agg(json_build_object('id', c.id, 'kind', c.state->>'kind', 'week', c.state->>'week',
       'pick', c.state->>'pickName', 'line', (c.state->>'line')::numeric, 'odds', (c.state->>'odds')::numeric, 'stake', c.stake,
       'payout', c.payout, 'at', c.created_at) order by c.created_at desc)
@@ -3997,7 +4012,7 @@ declare me players := home_of(player_for(p_token)); f record; pr numeric; my_hom
 begin
   perform bar_gate(me, 'book');
   if p_stake not between 10 and 500 then raise exception 'Bets are $10 to $500.'; end if;
-  if game_today() - game_month()::date >= 6 then raise exception 'The book''s closed till Sunday.'; end if;
+  if game_today() >= period_next(game_month()) - 1 then raise exception 'The book''s closed till Sunday.'; end if;
   perform casino_check(me, p_stake);
   if p_kind = 'winner' then
     select * into f from book_field() b where b.home_id = p_pick;

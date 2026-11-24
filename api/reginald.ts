@@ -75,6 +75,8 @@ const clean = (s: unknown, n: number) => String(s ?? '').replace(/[^\p{L}\p{N} '
 // The day the next one starts, and what members call it.
 function periodEnds(period: string) {
   if (period === '2026-10-30') return '2026-11-08';
+  // the Powder Bowl's two-week tournament (src/day.ts LONG_PERIODS)
+  if (period === '2026-11-29') return '2026-12-13';
   if (period.length === 10) return new Date(Date.parse(`${period}T12:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
   if (period === '2026-10') return '2026-10-30'; // October closed early, for the Caldera challenge
   const [y, m] = period.split('-').map(Number);

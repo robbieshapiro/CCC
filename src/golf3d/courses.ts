@@ -50,7 +50,7 @@ import { summitrun } from './holes/lab/summitrun';
 import { theloop } from './holes/lab/theloop';
 import type { Hole, V2 } from './types';
 import { applyTweak, type Tweaks } from './tweaks';
-import { isWeek, nextStart } from '../day';
+import { isWeek, nextShown, nextStart } from '../day';
 
 // previewHoles: before it opens, members can practise this many of its holes (all of them if unset); the admin can
 // play them all. whatsNew: a few short lines shown before that practice starts.
@@ -80,6 +80,8 @@ export type Course = {
   draft?: boolean;
   previewHoles?: number;
   whatsNew?: string[];
+  // practice opens early on this day (the usual is the last three days before it opens, nextShown in src/day.ts)
+  practiceFrom?: string;
   playoff?: { hole: Hole; from: V2; label: string };
   // the Hole Lab: a test hole in a new look, never on the calendar; only the admin plays it, from the Committee Room
   lab?: boolean;
@@ -190,16 +192,20 @@ const COURSES: Course[] = [
     // and taken up the mountain at Robbie's request (Nov 22): eight holes, each a trail, big drops and side-hill runs,
     // snow always falling, skiers and Colorado wildlife all round, and a hidden après-ski deck. Plays Dec 6 too.
     opens: '2026-11-29',
+    // practice opens early (Nov 24, Robbie): a two-week tournament deserves a long run-up
+    practiceFrom: '2026-11-24',
     whatsNew: [
-      'Eight holes down a Colorado mountain, in falling snow. Each is a trail: green circle, blue square, black diamond, double black.',
-      'Two tiers on the long holes: a good drive stops on the upper fairway; only a full one carries the crest and runs down the lower.',
-      'Cliffs. Over the edge is out of bounds.',
-      'Two doglegs: cut the corner if you dare.',
-      'The Iceberg: a green on a berg in the lake. Off the green is in the water.',
-      'Moguls where the drive lands. The après deck is open somewhere on the mountain.',
+      'A two-week tournament: Sunday Nov 29 to Saturday Dec 12. One board, one purse, one champion.',
+      'A new swing meter on this course: there before you swing, a mark at 100, and about a quarter slower. Your % shows after the strike, with a gold flash for a pure one.',
+      'A long iron (165 yd) and a short iron (125 yd) in place of the iron.',
+      'New money everywhere: $10 for every fairway off the tee and $15 for every green in regulation, on your first card of the day.',
+      'Eight holes down a Colorado mountain in the snow: green circle, blue square, black diamond, double black.',
+      'The Chairlift runs: roll one across the loading station as a chair comes through and it drops your ball on the green.',
+      'The Black Diamond is one long run. The Double Black is long and narrow between rock walls. The Iceberg is an island.',
+      'Big, level greens. The après deck is open somewhere on the mountain.',
     ],
     name: 'The Powder Bowl',
-    tagline: 'Eight holes down a Colorado mountain in the snow: cliffs, moguls, two doglegs, a double black and a green on an iceberg.',
+    tagline: 'A two-week tournament: eight holes down a Colorado mountain in the snow, a running chairlift, a double black and a green on an iceberg.',
     holes: [bunnyhill, blueridge, thebowl, blackdiamond, chairlift, iceberg, doubleblack, thelodge],
     par: par([bunnyhill, blueridge, thebowl, blackdiamond, chairlift, iceberg, doubleblack, thelodge]),
     playoff: { hole: thelodge, from: { x: -4, y: 530 }, label: 'Down to the lodge' },
@@ -266,6 +272,8 @@ export function courseFor(period: string, own = true): Course {
 }
 
 export const courseById = (id: string) => all().find((c) => c.id === id);
+// can members practise this upcoming course today?
+export const practiceOpen = (c: Course, today: string) => nextShown(today) || (!!c.practiceFrom && today >= c.practiceFrom);
 // Next week's course, if it's a different one: members can practise its first holes. Without a pick for next week,
 // the next course to open on the calendar.
 export function nextCourse(period: string): Course | undefined {

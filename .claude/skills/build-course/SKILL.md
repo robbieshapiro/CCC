@@ -7,6 +7,9 @@ description: The Architect's playbook for building the weekly course (5 to 9 hol
 
 Each Sunday you build the course for the week that starts two Sundays from now, as code like the Caldera and the Windy City Classic, and ship it: once its checks pass you merge it, and it plays on its week (since Nov 17, at Robbie's request, the club runs itself). Robbie can play it from the Committee Room any time and swap the week if he wants (Admin, Courses, The weeks ahead). The only database writes you make are the course's `course_pars` row and your note.
 
+
+> **The Powder Bowl is a two-week tournament** (Nov 29 to Dec 12, one period keyed '2026-11-29', `LONG_PERIODS` in src/day.ts). There is no week of Dec 6: the next course opens **Dec 13**. Never set `opens` to a Sunday in the middle of a long period (`check-holes basic` fails it).
+
 ## 0. Should you build at all?
 
 - Work out the target Sunday: today's date if it's a Sunday, plus 14 days (`YYYY-MM-DD`). Weeks run Sunday to Saturday (see `src/day.ts`).
