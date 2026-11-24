@@ -345,7 +345,7 @@ function previewBand(month: string) {
   const first = nextStart(month);
   const long = LONG_PERIODS[first];
   const lead = long ? 'Two-week tournament · ' : "Next week's course · ";
-  // the ski course: snow falling across the band, and the skier carving (Nov 24)
+  // the ski course: snow falling across the band (Nov 24)
   const snow = theme === 'alpine' ? `<span class="pb-snow" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${3 + (i % 5) * 0.7}s;--w:${(i * 0.53) % 3}s;--s:${3 + (i % 3) * 2}px"></i>`).join('')}</span>` : '';
   return `<a class="preview-band${next.look ? looked(next) : ` ${esc(theme)}`}${theme === 'alpine' ? ' snowy' : ''}"${lookAttrs(next)} href="#/practice/${next.id}">
     ${snow}
