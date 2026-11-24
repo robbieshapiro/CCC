@@ -6,7 +6,8 @@ import { treeLine } from '../woods';
 
 // deep powder: a landing ball keeps a sixth of its pace and a full club gets about 70% out; firm, quick
 // cut fairways; the bunkers are wet sand under a dusting of snow
-export const POWDER_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.17, roughDrag: 2.1, roughLie: 0.7, roughScatter: 0.24, fairwayRoll: 0.9, sandLie: 0.72, sandScatter: 0.3 };
+// (Nov 24, Robbie: shots from the snow bent too much: the scatter is 0.18, as on the links; it was 0.24)
+export const POWDER_TURF: NonNullable<Hole['turf']> = { roughKeep: 0.17, roughDrag: 2.1, roughLie: 0.7, roughScatter: 0.18, fairwayRoll: 0.9, sandLie: 0.72, sandScatter: 0.3 };
 
 // a line of snow-loaded firs (see treeLine in ../woods)
 export const firs = (pts: V2[], every: number, seed: string, out: 1 | -1, rows = 2): Post[] =>
