@@ -762,9 +762,28 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 /* the redrawn meter (the Powder Bowl, Nov 24): a taller, wider bar, ticks at 25 / 50 / 75 / 100, a live power readout
    over it, a bright gold strike zone that glows, a thicker plan line and needle. Shown only where a hole asks for it. */
 .g3-swing-pct, .g3-swing-ticks { display: none; }
-.g3-swing.clear .g3-swing-pct { display: block; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; min-width: 52px; padding: 3px 8px; border-radius: 10px; background: rgba(12, 22, 16, 0.78); border: 1px solid rgba(255, 233, 160, 0.5); color: #fff3c4; font: 800 14px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
-.g3-swing.clear .g3-swing-pct.over { color: #ff8a7a; border-color: #ff5a4a; }
-.g3-swing.clear.accuracy .g3-swing-pct { opacity: 0.6; }
+.g3-swing.clear .g3-swing-pct { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; min-width: 52px; padding: 3px 8px; border-radius: 10px; background: rgba(12, 22, 16, 0.82); border: 1px solid rgba(255, 233, 160, 0.5); color: #fff3c4; font: 800 15px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
+/* the % shows only after the strike (Nov 24, Robbie: not while it fills) */
+.g3-swing.clear.result .g3-swing-pct { display: block; animation: pct-pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes pct-pop { from { opacity: 0; scale: 0.6; } to { opacity: 1; scale: 1; } }
+.g3-swing.clear { transition: opacity 0.3s; }
+.g3-swing.clear.idle { opacity: 0.75; }
+.g3-swing.clear.fade { opacity: 0; }
+/* swinging into the overswing: the red zone throbs */
+.g3-swing.clear.over .g3-swing-bar .over { animation: over-throb 0.45s ease-in-out infinite alternate; }
+@keyframes over-throb { from { box-shadow: 0 0 6px 1px rgba(255, 70, 60, 0.5); filter: brightness(1); } to { box-shadow: 0 0 20px 6px rgba(255, 90, 60, 0.95); filter: brightness(1.45); } }
+/* past 100%: red hot up the bar, and the number glows */
+.g3-swing.clear.overpow .g3-swing-pct { color: #ffd2c8; border-color: #ff5a4a; box-shadow: 0 0 14px 3px rgba(255, 80, 60, 0.8); }
+.g3-swing.clear.overpow .g3-swing-bar { animation: hot 0.5s ease-out 2; }
+@keyframes hot { 0% { box-shadow: 0 0 0 0 rgba(255, 120, 40, 0); } 40% { box-shadow: 0 0 26px 8px rgba(255, 110, 40, 0.9); } 100% { box-shadow: 0 0 0 0 rgba(255, 120, 40, 0); } }
+/* a pure strike: a gold burst round the bar, a shimmer up it, and the number turns gold */
+.g3-swing.clear.pure .g3-swing-pct { color: #3a2a00; background: linear-gradient(180deg, #fff1b0, #f3c443); border-color: #fff3c4; box-shadow: 0 0 18px 4px rgba(255, 210, 90, 0.95); }
+.g3-swing.clear.pure .g3-swing-bar { border-color: #ffd96b; animation: goldburst 0.6s ease-out 2; overflow: hidden; }
+.g3-swing.clear.pure .g3-swing-bar::after { content: ''; position: absolute; left: -20%; right: -20%; height: 40%; bottom: -60%; background: linear-gradient(0deg, rgba(255, 240, 180, 0) 0%, rgba(255, 240, 180, 0.85) 50%, rgba(255, 240, 180, 0) 100%); animation: glint-up 0.9s ease-out 2; pointer-events: none; }
+@keyframes goldburst { 0% { box-shadow: 0 0 0 0 rgba(255, 210, 90, 0); } 35% { box-shadow: 0 0 34px 12px rgba(255, 210, 90, 0.95); } 100% { box-shadow: 0 0 0 0 rgba(255, 210, 90, 0); } }
+/* both: pure and past 100% */
+.g3-swing.clear.pure.overpow .g3-swing-bar { animation: goldburst 0.6s ease-out 2, hot 0.6s ease-out 0.3s 2; }
+@media (prefers-reduced-motion: reduce) { .g3-swing.clear .g3-swing-bar, .g3-swing.clear .g3-swing-bar::after, .g3-swing.clear .g3-swing-bar .over, .g3-swing.clear .g3-swing-pct { animation: none !important; } }
 .g3-swing.clear.vertical .g3-swing-track { width: 40px; }
 .g3-swing.clear.vertical .g3-swing-bar { width: 40px; height: min(46vh, 390px); border-radius: 20px; border-width: 3px; background: linear-gradient(0deg, #1c2a22, #2f3f34); }
 .g3-swing.clear .g3-swing-bar .over { background: repeating-linear-gradient(135deg, #b3202f, #b3202f 6px, #d63a46 6px, #d63a46 12px); }
@@ -775,10 +794,9 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .g3-swing.clear.vertical .g3-swing-bar .needle { height: 6px; margin: 0 0 -3px; box-shadow: 0 0 0 1px #13261c, 0 0 12px #fff; }
 .g3-swing.clear.vertical .g3-swing-ticks { display: block; position: absolute; left: calc(100% + 6px); top: 0; bottom: 0; width: 28px; pointer-events: none; }
 .g3-swing.clear.vertical.lefty .g3-swing-ticks { left: auto; right: calc(100% + 6px); text-align: right; }
-.g3-swing.clear .g3-swing-ticks i { position: absolute; bottom: var(--at); transform: translateY(50%); font: 700 10px var(--font); font-style: normal; color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); }
-.g3-swing.clear .g3-swing-ticks i::before { content: ''; display: inline-block; width: 8px; height: 2px; margin-right: 3px; vertical-align: middle; background: rgba(255, 255, 255, 0.85); }
+.g3-swing.clear .g3-swing-ticks i { position: absolute; bottom: var(--at); transform: translateY(50%); font: 800 12px var(--font); font-style: normal; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); white-space: nowrap; }
+.g3-swing.clear .g3-swing-ticks i::before { content: ''; display: inline-block; width: 10px; height: 3px; margin-right: 3px; vertical-align: middle; background: #fff; box-shadow: 0 0 4px rgba(0, 0, 0, 0.6); }
 .g3-swing.clear.vertical p { margin-top: 4px; }
-.g3-swing.clear.stretched .g3-swing-ticks { display: none; }
 .g3-swing.vertical .g3-swing-track { width: 30px; }
 .g3-swing.boost .g3-swing-bar .over { background: linear-gradient(270deg, #ffd36a, #f0892c 45%, #e8501c); box-shadow: 0 0 12px rgba(255, 106, 44, 0.85); animation: flicker 0.35s ease-in-out infinite alternate; }
 .g3-swing.vertical.boost .g3-swing-bar .over { background: linear-gradient(0deg, #e8501c, #f0892c 55%, #ffd36a); }
@@ -2729,7 +2747,7 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 @media (max-height: 500px) {
   .g3-swing.clear.vertical { top: 146px; transform: none; }
   .g3-swing.clear.vertical .g3-swing-bar { height: max(120px, calc(100vh - 230px)); }
-  .g3-swing.clear.vertical .g3-swing-pct { bottom: auto; top: 0; left: calc(100% + 40px); transform: none; }
-  .g3-swing.clear.vertical.lefty .g3-swing-pct { left: auto; right: calc(100% + 40px); }
+  .g3-swing.clear.vertical .g3-swing-pct { bottom: auto; top: 0; left: calc(100% + 56px); transform: none; }
+  .g3-swing.clear.vertical.lefty .g3-swing-pct { left: auto; right: calc(100% + 56px); }
   .g3-swing.clear.vertical p { display: none; }
 }

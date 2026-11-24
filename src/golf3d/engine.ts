@@ -1094,7 +1094,7 @@ export class Course3D {
         <small class="g3-swing-tag" data-swing-tag hidden></small>
         <div class="g3-swing-track">
           <b class="g3-swing-pct" data-pct></b>
-          <div class="g3-swing-ticks" aria-hidden="true">${[25, 50, 75, 100].map((t) => `<i style="--at:${barX(t / 100) * 100}%">${t}</i>`).join('')}</div>
+          <div class="g3-swing-ticks" aria-hidden="true"><i data-full style="--at:${barX(1) * 100}%">100</i></div>
           <div class="g3-swing-bar">
             <span class="over"></span><span class="fill" data-fill></span>
             <span class="gold" data-gold></span><span class="pure" data-pure></span>
@@ -1773,6 +1773,74 @@ export class Course3D {
     return meterPos(this.club, p);
   }
 
+  // The clear meter (the Powder Bowl) sits there before the swing, dimmed, with your plan on it (Nov 24, Robbie), so you
+  // can see what you're about to do. Called every frame while aiming; cheap, it only touches the DOM when it changes.
+  private idleMeter() {
+    if (this.resultTimer) return;
+    const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
+    if (this.hole.meterLook !== 'clear') {
+      if (this.idleKey) {
+        m.hidden = true;
+        m.classList.remove('idle');
+        this.idleKey = '';
+      }
+      return;
+    }
+    const show = this.club !== 'putter';
+    const key = `${show}:${this.club}:${this.style()}:${Math.round(this.power * 200)}`;
+    if (key === this.idleKey && m.hidden === !show) return;
+    this.idleKey = key;
+    m.hidden = !show;
+    if (!show) return;
+    m.classList.add('idle', 'clear');
+    m.classList.remove('accuracy', 'over', 'result', 'pure', 'overpow');
+    m.classList.toggle('vertical', this.style() === 'vertical');
+    m.classList.toggle('stretched', stretched(this.club));
+    m.classList.toggle('lefty', this.golfer.spec.hand === 'left');
+    m.classList.remove('boost', 'fireball');
+    (this.overlay.querySelector('[data-swing-tag]') as HTMLElement).hidden = true;
+    this.mark(this.overlay.querySelector('[data-plan]') as HTMLElement, barX(this.meterAt(this.power)));
+    this.span(this.overlay.querySelector('[data-fill]') as HTMLElement, barX(0), 0);
+    this.mark(this.overlay.querySelector('[data-needle]') as HTMLElement, barX(0));
+    (this.overlay.querySelector('[data-gold]') as HTMLElement).style.cssText = 'display:none';
+    (this.overlay.querySelector('[data-pure]') as HTMLElement).style.cssText = 'display:none';
+    (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = '';
+    this.markFull();
+  }
+  // the 100% mark, where full power sits for this club (the wedge and chip read on a stretched scale)
+  private markFull() {
+    (this.overlay.querySelector('[data-full]') as HTMLElement).style.setProperty('--at', `${barX(this.meterAt(1)) * 100}%`);
+  }
+  private idleKey = '';
+  private resultTimer = 0;
+
+  // After the strike the clear meter holds a moment with the power you hit, and lights up for a pure strike (gold) or
+  // one past 100% (red hot), then fades
+  private showResult(box: HTMLElement, p: number, pure: boolean) {
+    const pct = this.overlay.querySelector('[data-pct]') as HTMLElement;
+    pct.textContent = `${Math.round(p * 100)}%`;
+    box.classList.remove('idle', 'accuracy');
+    box.classList.add('result');
+    box.classList.toggle('pure', pure);
+    box.classList.toggle('overpow', p > 1);
+    (this.overlay.querySelector('[data-swing-tip]') as HTMLElement).textContent = '';
+    window.clearTimeout(this.resultTimer);
+    this.resultTimer = window.setTimeout(() => {
+      box.classList.add('fade');
+      this.resultTimer = window.setTimeout(() => {
+        this.clearResult();
+        box.hidden = true;
+      }, 350);
+    }, 1400);
+  }
+  private clearResult() {
+    window.clearTimeout(this.resultTimer);
+    this.resultTimer = 0;
+    this.idleKey = '';
+    const box = this.overlay.querySelector('[data-swing]') as HTMLElement;
+    box.classList.remove('result', 'pure', 'overpow', 'fade');
+  }
+
   // Tap 1: the power bar starts to fill. Your plan is the gold line on it.
   private startSwing() {
     if (this.mode !== 'aim' || this.club === 'putter') return;
@@ -1781,12 +1849,14 @@ export class Course3D {
     this.meter = { phase: 'power', p: 0, d: 0, x: barX(0), speed: drink?.needle ?? 1, half: 0 };
     const m = this.overlay.querySelector('[data-swing]') as HTMLElement;
     m.hidden = false;
-    m.classList.remove('accuracy');
+    this.clearResult();
+    m.classList.remove('accuracy', 'idle', 'over');
     m.classList.toggle('vertical', this.style() === 'vertical');
-    // the redrawn meter (the Powder Bowl, Nov 24): taller, ticked at 25s, a live power readout, a brighter strike zone
+    // the redrawn meter (the Powder Bowl, Nov 24): taller, a mark at 100%, a brighter strike zone, the % after the strike
     m.classList.toggle('clear', this.hole.meterLook === 'clear');
-    // (the wedge and chip read on a stretched scale, so the 25s don't apply: no ticks for them)
+    // (the wedge and chip read on a stretched scale: the 100% mark moves for them, see markFull)
     m.classList.toggle('stretched', stretched(this.club));
+    this.markFull();
     // what you're drinking shows on the meter: for the lager or Reginald's fireball the
     // overswing at the top of the bar turned to fire (swing into it: that's the extra distance), and a tag saying which
     const kind = this.drink?.kind;
@@ -1827,7 +1897,9 @@ export class Course3D {
     }
     const miss = m.x - IMPACT;
     const error = accuracyError(miss, m.half);
-    (this.overlay.querySelector('[data-swing]') as HTMLElement).hidden = true;
+    const box = this.overlay.querySelector('[data-swing]') as HTMLElement;
+    if (this.hole.meterLook === 'clear') this.showResult(box, m.p, error === 0);
+    else box.hidden = true;
     const off = Math.round((m.p - this.power) * 100);
     const power = `${Math.round(m.p * 100)}%${Math.abs(off) >= 4 ? (off > 0 ? ' · long' : ' · short') : ''}`;
     // a bomb: full power, and the inner part of the bright heart (the vertical meter's gold is wider, the heart isn't)
@@ -3150,6 +3222,13 @@ export class Course3D {
     if (this.replay) this.stepReplay(dt);
     this.cart?.update(dt);
 
+    if (this.mode === 'aim') this.idleMeter();
+    else if (this.mode !== 'meter' && !this.resultTimer && this.idleKey) {
+      // left aiming without swinging (a flyover, the next hole): put the idle meter away
+      (this.overlay.querySelector('[data-swing]') as HTMLElement).hidden = true;
+      this.idleKey = '';
+    }
+
     if (this.mode === 'meter') {
       const m = this.meter;
       if (m.phase === 'power') {
@@ -3162,13 +3241,8 @@ export class Course3D {
           m.p = m.d >= OVERSWING ? OVERSWING : fromMeter(this.club, m.d);
         } else m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * (this.hole.meterPace ?? 1) * dt);
         m.x = barX(this.meterAt(m.p));
-        if (this.hole.meterLook === 'clear') {
-          const pct = this.overlay.querySelector('[data-pct]') as HTMLElement | null;
-          if (pct) {
-            pct.textContent = `${Math.round(m.p * 100)}%`;
-            pct.classList.toggle('over', m.p > 1);
-          }
-        }
+        // (the clear meter shows no number while it fills, Nov 24: the overswing just lights up as you swing into it)
+        if (this.hole.meterLook === 'clear') (this.overlay.querySelector('[data-swing]') as HTMLElement).classList.toggle('over', m.p > 1);
         if (m.p >= OVERSWING) this.tapSwing();
       } else {
         m.x -= m.speed * (this.hole.meterPace ?? 1) * dt;
