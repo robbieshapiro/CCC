@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 // Headless checks for the 3D holes: determinism, slopes, secret routes, a greedy solver, and a novice sim.
 // Run: npm run check-holes
-import { bagFor, CLUBS, SCALE as SCALE_FT, type ClubId } from '../src/golf3d/clubs';
+import { bagFor, bagOf, CLUBS, ironIn, SCALE as SCALE_FT, type ClubId } from '../src/golf3d/clubs';
 import { courseById, courseFor, tourCourses } from '../src/golf3d/courses';
 import { MIDWAY, MIDWAY_PAR } from '../src/golf3d/midway';
 import { periodClosesAt, periodOf } from '../src/day';
@@ -102,6 +102,8 @@ const POWERS: Record<ClubId, number[]> = {
   chip: [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1],
   // finer steps where the Caldera asks for touch: a short iron down into the crater, a measured hop between islands
   iron: [0.2, 0.3, 0.4, 0.48, 0.55, 0.62, 0.7, 0.78, 0.85, 0.92, 1],
+  longiron: [0.2, 0.3, 0.4, 0.48, 0.55, 0.62, 0.7, 0.78, 0.85, 0.92, 1],
+  shortiron: [0.2, 0.3, 0.4, 0.48, 0.55, 0.62, 0.7, 0.78, 0.85, 0.92, 1],
   driver: [0.3, 0.36, 0.42, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
   wood: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
 };
@@ -112,9 +114,9 @@ const TOUR_PUTTS = [...Array.from({ length: 29 }, (_, i) => 0.03 + i * 0.02), 0.
 // Clubs a player could pick from this lie: wedge or iron from sand, putter, chip or wedge on the green.
 function clubsFor(h: Hole, pos: V2): ClubId[] {
   const s = surfaceAt(h, pos);
-  if (s === 'sand') return ['wedge', 'iron'];
+  if (s === 'sand') return ['wedge', ironIn(bagOf(h))];
   if (s === 'green') return ['putter', 'chip', 'wedge'];
-  return bagFor(!!h.tour);
+  return bagOf(h);
 }
 
 type Cand = { d: number; shot: Shot };
@@ -231,8 +233,8 @@ const SECRET_FROM: Record<string, { from: V2; clubs: ClubId[]; angles: [number, 
   iceberg: { from: { x: -78, y: 202 }, clubs: ['putter', 'chip'], angles: [84, 96] },
   blackdiamond: { from: { x: -42, y: 730 }, clubs: ['chip', 'putter'], angles: [-24, -6], near: 200 },
   chairlift: { from: { x: 0, y: 0 }, clubs: ['driver', 'wood'], angles: [-14, -8], near: 360 },
-  thelodge: { from: { x: -4, y: 400 }, clubs: ['iron', 'wood'], angles: [-8, 2] },
-  thebowl: { from: { x: 0, y: 0 }, clubs: ['iron', 'wood'], angles: [-3, 3] },
+  thelodge: { from: { x: -4, y: 400 }, clubs: ['longiron', 'wood'], angles: [-8, 2] },
+  thebowl: { from: { x: 0, y: 0 }, clubs: ['shortiron', 'longiron'], angles: [-3, 3] },
   blueridge: { from: { x: -10, y: 470 }, clubs: ['putter', 'chip'], angles: [20, 50], near: 180 },
   doubleblack: { from: { x: -20, y: 498 }, clubs: ['putter', 'chip'], angles: [-55, -30], near: 200 },
 };
@@ -259,10 +261,11 @@ const TIMING = 0.06;
 
 // The three-tap swing as a person plays it: the power stop lands near the plan, the strike near the gold.
 // Tour courses use the vertical meter: a slower needle and wider gold.
-function swing(club: ClubId, plan: number, gauss: () => number, style: MeterStyle = 'classic', calm = false) {
+// pace: the hole's meter speed (the Powder Bowl's is a quarter slower): a slower meter, the same reaction time, a smaller miss
+function swing(club: ClubId, plan: number, gauss: () => number, style: MeterStyle = 'classic', calm = false, pace = 1) {
   if (club === 'putter') return { power: Math.max(0.03, Math.min(1, plan * (1 + gauss() * 0.12))), error: 0 };
-  const power = Math.max(0.05, Math.min(OVERSWING, plan + gauss() * TIMING * powerSpeed(club, plan, calm)));
-  const miss = gauss() * TIMING * returnSpeed(club, power, 1, style);
+  const power = Math.max(0.05, Math.min(OVERSWING, plan + gauss() * TIMING * powerSpeed(club, plan, calm) * pace));
+  const miss = gauss() * TIMING * returnSpeed(club, power, 1, style) * pace;
   return { power, error: accuracyError(miss, goldHalf(club, power, 1, style)) };
 }
 
@@ -307,7 +310,7 @@ function novice(base: Hole, seed: string, tally?: { putts: number }) {
     s++;
     const clock = rng.next() * 30;
     const b = safeShot(h, pos, nav, clock);
-    const sw = swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic', true);
+    const sw = swing(b.shot.club, b.shot.power, gauss, h.tour ? 'vertical' : 'classic', true, h.meterPace ?? 1);
     // storm courses gust from shot to shot, and thick rough scatters a shot (only drawn where they apply, so other
     // courses' runs are unchanged)
     const shot = {
@@ -685,7 +688,7 @@ if (mode === 'daily' && !process.env.NO_SIM) {
     const gauss = () => SKILL_NOW.v * Math.sqrt(-2 * Math.log(rng.next() || 1e-9)) * Math.cos(2 * Math.PI * rng.next());
     const out: { ft: number | null; holed: boolean }[] = [];
     for (let k = 0; k < SHOTS; k++) {
-      const sw = swing(aim.club, aim.power, gauss, h.tour ? 'vertical' : 'classic', true);
+      const sw = swing(aim.club, aim.power, gauss, h.tour ? 'vertical' : 'classic', true, h.meterPace ?? 1);
       const shot = { ...aim, ...sw, angle: aim.angle + (gauss() * 3.5 * Math.PI) / 180, clock: rng.next() * 30, wind: wind.gust ? gusted(wind as Parameters<typeof gusted>[0], rng.next()).accel : wind.accel };
       const r = simulate(h, from, shot, false);
       out.push({ ft: r.holed ? 0 : r.penalty ? null : Math.hypot(r.end.x - h.cup.x, r.end.y - h.cup.y) * SCALE_FT, holed: r.holed });

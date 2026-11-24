@@ -7,7 +7,7 @@ import { CLUBS, type ClubId } from './clubs';
 export const OVERSWING = 1.1; // the bar runs past 100% to here
 
 // how fast the power bar fills, in power per second; it speeds up toward the top
-const FILL: Record<ClubId, number> = { driver: 0.9, wood: 0.85, iron: 0.75, wedge: 0.6, chip: 0.85, putter: 0 };
+const FILL: Record<ClubId, number> = { driver: 0.9, wood: 0.85, iron: 0.75, longiron: 0.78, shortiron: 0.72, wedge: 0.6, chip: 0.85, putter: 0 };
 // calm: the short clubs' meter on the stretched scale below (the chipper since Nov 6, the wedge since Nov 7)
 export const powerSpeed = (club: ClubId, p: number, calm = false) =>
   stretched(club) && calm ? Math.max(0.05, (2 * meterPos(club, p)) / OVERSWING) * stretchRate(club) : FILL[club] * (0.6 + 1.4 * p * p);
@@ -29,11 +29,11 @@ export const fromMeter = (club: ClubId, d: number) => (stretched(club) ? (d * d)
 // (a full driver gives you about ±24 ms to find the gold, a touch kinder than the classic ±19); the scoring clubs get a
 // slower needle and wider gold.
 export type MeterStyle = 'classic' | 'vertical';
-const SLOWER: Record<ClubId, number> = { driver: 1, wood: 1, iron: 1, wedge: 0.75, chip: 0.75, putter: 1 };
-const WIDER: Record<ClubId, number> = { driver: 1.25, wood: 1.2, iron: 1, wedge: 1.5, chip: 1.5, putter: 1 };
+const SLOWER: Record<ClubId, number> = { driver: 1, wood: 1, iron: 1, longiron: 1, shortiron: 1, wedge: 0.75, chip: 0.75, putter: 1 };
+const WIDER: Record<ClubId, number> = { driver: 1.25, wood: 1.2, iron: 1, longiron: 1.05, shortiron: 1.05, wedge: 1.5, chip: 1.5, putter: 1 };
 
 // how fast the needle comes back for the accuracy tap, in bar-lengths per second
-const RETURN: Record<ClubId, number> = { driver: 1.0, wood: 0.92, iron: 0.84, wedge: 0.72, chip: 0.9, putter: 0 };
+const RETURN: Record<ClubId, number> = { driver: 1.0, wood: 0.92, iron: 0.84, longiron: 0.86, shortiron: 0.8, wedge: 0.72, chip: 0.9, putter: 0 };
 // fire: you've a lager or a fireball in you, and the overswing zone is the fire. Swinging into it is what the drink
 // is for, so it's only a little harder than a full swing, where a sober overswing is a gamble.
 // The gamble was halved on Nov 11 (the needle 1.5x as fast at 110%, not 2x; the gold 20% narrower, not 40%): in the

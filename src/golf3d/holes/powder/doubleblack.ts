@@ -14,7 +14,7 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
-import { POWDER_TURF, cliff, firs, moguls, profile } from './common';
+import { POWDER_PLAY, POWDER_TURF, cliff, firs, moguls, profile } from './common';
 
 const TOP = 150;
 // half the ridge's width: the lips of the cliffs either side of the drive
@@ -74,6 +74,7 @@ export const doubleblack: Hole = {
   theme: 'alpine',
   tour: true,
   turf: POWDER_TURF,
+  ...POWDER_PLAY,
   windByHeight: true,
   gusts: true,
   chipDrop: 0.7,

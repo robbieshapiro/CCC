@@ -87,6 +87,9 @@ export type Hole = {
   blurb?: string; // a line for the hole's intro card during the flyover
   teeTip?: string; // what Hank says on this tee: the club the hole wants
   yards?: number; // the length shown on the intro card, if not the straight line from tee to cup
+  bag?: import('./clubs').ClubId[]; // the clubs this hole plays (the Powder Bowl splits the iron); else the course's bag
+  meterPace?: number; // the swing meter's speed here (the Powder Bowl: 0.75, a quarter slower); 1 if unset
+  meterLook?: 'clear'; // the redrawn meter (the Powder Bowl, Nov 24): taller, ticked, a live power readout
   putterOnly?: boolean; // mini golf: the putter is the only club
   flag?: string; // what the pin's flag says, if not the hole number
   aim: number; // initial aim angle (radians, 0 = straight up the hole)

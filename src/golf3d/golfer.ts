@@ -400,7 +400,7 @@ function limb(a: THREE.Vector3, b: THREE.Vector3, r: number, mt: THREE.Material,
 
 export function buildClub(id: ClubId, finish: GolferSpec['putter'] = 'classic', wood?: GolferSpec['driver']) {
   const g = new THREE.Group();
-  const len = id === 'driver' ? 3.7 : id === 'wood' ? 3.5 : id === 'iron' ? 3.3 : id === 'wedge' || id === 'chip' ? 3.1 : 2.9;
+  const len = id === 'driver' ? 3.7 : id === 'wood' ? 3.5 : id === 'longiron' ? 3.4 : id === 'iron' ? 3.3 : id === 'shortiron' ? 3.2 : id === 'wedge' || id === 'chip' ? 3.1 : 2.9;
   const putting = id === 'putter';
   // the shaft: hickory for the wooden putter, black for the blackout one, steel otherwise
   const shaftM = putting && finish === 'hickory' ? m('#8a5a32', 0.6) : putting && finish === 'founders' ? m('#2a1a12', 0.35) : putting && finish === 'blackout' ? m('#1a1a1a', 0.4) : wood === 'carbon' ? m('#2a2a2a', 0.3) : m('#c9ccd1', 0.25, { metalness: 0.8 });

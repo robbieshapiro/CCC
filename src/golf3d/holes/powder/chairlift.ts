@@ -12,7 +12,7 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
 import { bunker, FAIRWAY_DEPTH, greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
-import { POWDER_TURF, cliff, firs } from './common';
+import { POWDER_PLAY, POWDER_TURF, cliff, firs } from './common';
 
 // the cliff edge down the right of the drive (Nov 22, round two)
 const LIP = 124;
@@ -47,6 +47,7 @@ export const chairlift: Hole = {
   theme: 'alpine',
   tour: true,
   turf: POWDER_TURF,
+  ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.12,

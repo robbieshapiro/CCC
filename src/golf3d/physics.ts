@@ -1,5 +1,5 @@
 // Ball physics on a real heightfield: slopes pull, crests launch, chips fly. Fixed step, deterministic.
-import { CLUBS, carryOf } from './clubs';
+import { CLUBS, carryOf, isIron } from './clubs';
 import { gradAt, heightAt, inPoly, isWater, surfaceAt } from './terrain';
 import type { Hole, Post, Shot, Surface, V2, Wall } from './types';
 
@@ -78,8 +78,8 @@ function entryDrop(h: Hole, frames: Frame[], from: V2): V2 | null {
 export function lieFactor(h: Hole, from: V2, club: Shot['club']) {
   const s = surfaceAt(h, from);
   // heavy, wet bunker sand: everything comes out short, and an iron shorter still
-  if (h.turf && s === 'sand') return club === 'iron' ? h.turf.sandLie * 0.75 : h.turf.sandLie;
-  if (club === 'iron' && s === 'sand') return 0.8;
+  if (h.turf && s === 'sand') return isIron(club) ? h.turf.sandLie * 0.75 : h.turf.sandLie;
+  if (isIron(club) && s === 'sand') return 0.8;
   // thick rough smothers a full club; a chip or a putt is played the same
   if (h.turf && s === 'rough' && club !== 'chip' && club !== 'putter') return h.turf.roughLie;
   return 1;

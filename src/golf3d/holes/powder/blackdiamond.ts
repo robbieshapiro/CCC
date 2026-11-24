@@ -11,7 +11,7 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
 import { greenComplex, greenside, bunker, FAIRWAY_DEPTH } from '../woods';
 import { slope } from '../atlantic/common';
-import { POWDER_TURF, cliff, firs, moguls, profile } from './common';
+import { POWDER_PLAY, POWDER_TURF, cliff, firs, moguls, profile } from './common';
 
 const TOP = 150;
 // where the flat ends: the band of rock drops into the mogul field
@@ -50,6 +50,7 @@ export const blackdiamond: Hole = {
   theme: 'alpine',
   tour: true,
   turf: POWDER_TURF,
+  ...POWDER_PLAY,
   windByHeight: true,
   gusts: true,
   chipDrop: 0.7,
