@@ -2,14 +2,18 @@
 // left round a stand of firs to a green on a shelf at the top. It plays every yard of its length.
 // The après deck: a sun deck with a bar, a keg and a fire pit off the right of the corner. Tap it before your next
 // shot and Reginald brings the tray (once a hole). Nothing says it's there.
+// The lift (Nov 24, Robbie): the chairlift runs from a loading station at the top-left of the drive zone, up over the
+// firs on the corner, to the green. Chip or putt across the station just as a chair sweeps through it and the chair
+// takes the ball up and sets it down on the green. Mistime it and it rolls on into the snow.
 // The play (Nov 23, Robbie: there was nowhere to drive that didn't leave the firs in the way): one wide fairway. Drive
 // to its right side, the long way round, and the green is wide open up the hill. The left side is shorter, but the firs
 // on the corner are in the way of the second unless the drive is perfect.
 // The bail-out: right, short of the cliff; the mountainside there tips a ball back to the fairway.
 // The secret: the Glade. A lane has been cleared straight through the firs on the corner. Thread a drive down it and
 // you're up on the shelf with a short iron left.
-import { band, blob, rect } from '../../terrain';
+import { band, blob, circle, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
+import type { Lift } from '../../lift';
 import { bunker, FAIRWAY_DEPTH, greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
 import { POWDER_PLAY, POWDER_TURF, cliff, firs } from './common';
@@ -19,7 +23,9 @@ const LIP = 124;
 
 const LOW = 6;
 const HIGH = 52;
-const GREEN = { x: -80, y: 500, rx: 16, ry: 13 };
+const GREEN = { x: -80, y: 500, rx: 24, ry: 20 };
+// the green sits level with the hill round it (Nov 24, Robbie: no cupcake greens), at the slope's own height there
+const GROUND = LOW + ((GREEN.y - 20) / 540) * (HIGH - 2 - LOW);
 // the glade runs straight from the tee to the green; x along it at y
 const glade = (y: number) => (GREEN.x * y) / GREEN.y;
 const LANE = 14;
@@ -34,6 +40,9 @@ for (let y = 150, row = 0; y <= 470; y += 20, row++)
     const h = 20 + ((x * 7 + y * 3) % 22);
     stand.push({ x, y, r: Math.max(4, Math.round(h * 0.26)), h, soft: true, look: 'snowpine' });
   }
+// the lift: the loading station by the firs at the top-left of the drive zone, the top station just short of the green,
+// and where the chair tips the ball out, on the green
+const LIFT: Lift = { load: { x: 6, y: 300 }, top: { x: -58, y: 462 }, drop: { x: -68, y: 490 }, speed: 16, gap: 4, pad: 4, low: 8 };
 // the après deck, off the right of the corner
 const APRES: V2 = { x: 100, y: 506 };
 // the tip of the corner: firs at the left edge of the fairway, so a drive up the left has them in the way of the green
@@ -52,13 +61,14 @@ export const chairlift: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.12,
   yards: 380,
-  blurb: 'Blue square. Uphill under the lift. Drive right and the green opens up; left is shorter but the firs get in the way. Thirsty? The deck\'s open.',
-  teeTip: 'Driver to the right side. From there the green is wide open.',
+  blurb: 'Blue square. Uphill, and the lift is running: roll one onto a passing chair and it rides up over the firs to the green. Thirsty? The deck\'s open.',
+  teeTip: 'Driver to the right side and the green is wide open. Or lay it by the lift station and time a chip onto a chair.',
   tee: { x: 0, y: 0 },
-  cup: { x: -80, y: 502 },
-  pins: [{ x: -80, y: 502 }, { x: -88, y: 496 }, { x: -71, y: 505 }, { x: -78, y: 510 }],
+  cup: { x: -80, y: 503 },
+  pins: [{ x: -80, y: 503 }, { x: -92, y: 494 }, { x: -66, y: 508 }, { x: -77, y: 515 }],
   aim: 0.02,
   apres: APRES,
+  lift: LIFT,
   bounds: { x0: -200, y0: -50, x1: 200, y1: 710 },
   border: [
     { x: -196, y: -46 },
@@ -83,6 +93,8 @@ export const chairlift: Hole = {
     { poly: band([{ x: glade(170), y: 170 }, { x: glade(470), y: 470 }], 9), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
+    // the loading station: packed snow on a little hump, so a ball can't sit there waiting for a chair
+    { poly: circle(LIFT.load.x, LIFT.load.y, LIFT.pad + 2, 20), surface: 'path' },
     ...traps.map((t) => t.region),
   ],
   water: [],
@@ -93,8 +105,9 @@ export const chairlift: Hole = {
     { kind: 'disc', x: 0, y: 0, r: 16, h: LOW + 1, edge: 8, op: 'set' },
     // the hillside right of the drive tips a ball back toward the cut
     { kind: 'hill', x: 170, y: 330, r: 70, h: 8 },
-    ...greenComplex(GREEN, HIGH, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [0.6, 0.8]), rolls: [[-8, -5, 7, 0.35], [8, 5, 6, -0.3]] }),
+    ...greenComplex(GREEN, GROUND, { lift: 0.3, edge: 16, tilt: slope(GREEN, 16, [0.6, 0.8]), rolls: [[-12, -8, 10, 0.35], [12, 8, 9, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
+    { kind: 'hill', x: LIFT.load.x, y: LIFT.load.y, r: LIFT.pad + 3, h: 0.6 },
     // the cliff down the right of the drive
     cliff([{ x: LIP + 36, y: 100 }, { x: LIP + 36, y: 460 }]),
   ],

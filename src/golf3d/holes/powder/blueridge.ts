@@ -15,7 +15,7 @@ import { slope } from '../atlantic/common';
 import { POWDER_PLAY, POWDER_TURF, cliff, firs, profile } from './common';
 
 const TOP = 110;
-const GREEN = { x: 188, y: 690, rx: 13, ry: 11 };
+const GREEN = { x: 188, y: 690, rx: 20, ry: 16 };
 // the crest at the top of the upper fairway
 const CREST = 500;
 // the cliff edge down the left
@@ -65,8 +65,8 @@ export const blueridge: Hole = {
   blurb: 'Blue square. A dogleg right: the upper fairway, the cliff beyond it, then round the firs and over the creek. Or cut the corner.',
   teeTip: 'Driver up the left onto the upper fairway. A full one can carry the firs on the right.',
   tee: { x: 0, y: 0 },
-  cup: { x: 188, y: 692 },
-  pins: [{ x: 188, y: 692 }, { x: 180, y: 687 }, { x: 196, y: 694 }, { x: 186, y: 698 }],
+  cup: { x: 188, y: 693 },
+  pins: [{ x: 188, y: 693 }, { x: 176, y: 686 }, { x: 200, y: 696 }, { x: 185, y: 702 }],
   aim: -0.052, // the middle of the upper fairway, where a good drive lands
   bounds: { x0: -140, y0: -50, x1: 300, y1: 760 },
   border: [
@@ -118,7 +118,7 @@ export const blueridge: Hole = {
     { kind: 'channel', pts: CREEK_R, width: 18, depth: 4 },
     // the cat track sits a little into the snow, so a ball on it keeps to it
     { kind: 'channel', pts: TRACK, width: 7, depth: 0.8 },
-    ...greenComplex(GREEN, 18, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [-0.5, 0.85]), rolls: [[-8, -5, 7, 0.35], [9, 5, 6, -0.3]] }),
+    ...greenComplex(GREEN, 18, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [-0.5, 0.85]), rolls: [[-12, -8, 10, 0.35], [14, 8, 9, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
     // the cliff down the left
     cliff([{ x: LIP - 36, y: 140 }, { x: LIP - 36, y: 660 }, { x: -76, y: 780 }]),

@@ -536,6 +536,55 @@ if (mode === 'all' || mode === 'basic') {
     ok(!isWater(h, h.tee), `${h.name}: the tee is dry`);
     for (const pin of h.pins ?? [h.cup]) ok(!isWater(h, pin) && surfaceAt(h, pin) === 'green', `${h.name}: pin ${pin.x},${pin.y} is on dry green`);
   }
+  // no cupcake greens (Nov 24, Robbie: raised greens with ledges all round were too hard): from the Powder Bowl on, the
+  // ground beyond a green's edge may not fall away more than 2.5 ft in 20 ft on more than two of eight sides, unless the
+  // hole is an island by design (islandGreen)
+  if ((course.opens ?? '') >= '2026-11-29')
+    for (const h of course.holes) {
+      if (h.islandGreen) continue;
+      let low = 0;
+      const drops: string[] = [];
+      for (let k = 0; k < 8; k++) {
+        const a = (k * Math.PI) / 4;
+        let d = 2;
+        while (d < 80 && surfaceAt(h, { x: h.cup.x + Math.sin(a) * d, y: h.cup.y + Math.cos(a) * d }) === 'green') d++;
+        // the fall from the green's edge over the next 20 ft (a hillside's own slope is a foot or two; a ledge is more)
+        const edge = heightAt(h, h.cup.x + Math.sin(a) * d, h.cup.y + Math.cos(a) * d);
+        let min = Infinity;
+        for (let e = 2; e <= 20; e += 2) {
+          const p = { x: h.cup.x + Math.sin(a) * (d + e), y: h.cup.y + Math.cos(a) * (d + e) };
+          if (surfaceAt(h, p) === 'sand' || isWater(h, p)) break;
+          min = Math.min(min, heightAt(h, p.x, p.y) - edge);
+        }
+        if (min < -2.5) low++;
+        drops.push(min === Infinity ? '-' : min.toFixed(1));
+      }
+      ok(low <= 2, `${h.name}: the green sits level with its surroundings, no cupcake (${drops.join(' ')})`);
+    }
+  // a working chairlift (lift.ts): a putt rolled across the station when a chair comes through rides to the green;
+  // the same putt a moment off doesn't
+  for (const h of course.holes) {
+    const l = h.lift;
+    if (!l) continue;
+    let rode = false;
+    let missed = false;
+    let where = '';
+    for (const off of [30, 40, 24])
+      for (let a = 0; a < 360 && !(rode && missed); a += 15) {
+        const from = { x: l.load.x + Math.sin((a * Math.PI) / 180) * off, y: l.load.y + Math.cos((a * Math.PI) / 180) * off };
+        if (!inPoly(from, h.border) || surfaceAt(h, from) !== 'fairway') continue;
+        const angle = Math.atan2(l.load.x - from.x, l.load.y - from.y);
+        for (let power = 0.4; power <= 1 && !(rode && missed); power += 0.05) {
+          const res = Array.from({ length: Math.round(l.gap * 4) }, (_, i) => simulate(h, from, { angle, power, club: 'putter', error: 0, clock: i / 4 }, false));
+          const rides = res.filter((r) => r.zones.includes('lift'));
+          if (!rides.length) continue;
+          rode ||= rides.every((r) => surfaceAt(h, r.end) === 'green' && !r.penalty);
+          missed ||= rides.length < res.length;
+          where = `from ${from.x.toFixed(0)},${from.y.toFixed(0)}, putter ${power.toFixed(2)}, ${rides.length} of ${res.length} start times ride`;
+        }
+      }
+    ok(rode && missed, `${h.name}: a timed putt onto the chairlift rides to the green, a mistimed one doesn't (${where || 'never caught'})`);
+  }
 }
 
 if (mode === 'all' || mode === 'solve') {

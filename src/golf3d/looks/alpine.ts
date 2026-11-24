@@ -4,8 +4,9 @@
 import * as THREE from 'three';
 import { makeRng } from '../../seed';
 import type { Anim, Kit } from '../kits';
-import { mat, mesh } from '../props';
+import { mat, mesh, sign } from '../props';
 import { heightAt } from '../terrain';
+import { along, chairsDown, chairsUp, liftLength, seatZ, type Lift } from '../lift';
 import type { Hole } from '../types';
 import { mountainLife } from './mountainlife';
 import { causeway } from './irish';
@@ -247,6 +248,104 @@ function lodge(anim: Anim) {
   return g;
 }
 
+// the Chairlift's working lift (lift.ts): towers up the line from the loading station to the top by the green, the chairs where
+// the physics has them (the same clock), so a ball rolled into a chair you can see is the one it takes
+function playLift(h: Hole, l: Lift, anim: Anim) {
+  const g = new THREE.Group();
+  const steel = mat('#5a6168', { metal: 0.5 });
+  const L = liftLength(l);
+  const d = { x: (l.top.x - l.load.x) / L, y: (l.top.y - l.load.y) / L };
+  // the down line runs alongside, off to the side
+  const side = { x: d.y * 7, y: -d.x * 7 };
+  const turn = Math.atan2(-d.x, d.y);
+  const cable = (u: number) => seatZ(h, l, u) + 5;
+  // towers, between the two lines
+  for (let u = 26; u < L - 18; u += 40) {
+    const p = along(l, u);
+    const x = p.x + side.x / 2;
+    const y = p.y + side.y / 2;
+    const base = heightAt(h, x, y);
+    const top = cable(u) + 1;
+    const tw = mesh(new THREE.CylinderGeometry(0.6, 0.9, top - base, 6), steel);
+    tw.position.set(x, (base + top) / 2, -y);
+    g.add(tw);
+    const arm = mesh(new THREE.BoxGeometry(11, 0.8, 0.8), steel);
+    arm.position.set(x, top, -y);
+    arm.rotation.y = turn + Math.PI / 2;
+    g.add(arm);
+  }
+  // the cables
+  for (const off of [0, 1]) {
+    const pts: THREE.Vector3[] = [];
+    for (let u = 0; u <= L; u += 4) {
+      const p = along(l, u);
+      pts.push(new THREE.Vector3(p.x + side.x * off, cable(u), -(p.y + side.y * off)));
+    }
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#2a2e33' })));
+  }
+  // the stations: a bullwheel on a frame at each end, a loading deck and its sign at the bottom
+  for (const u of [0, L]) {
+    const end = along(l, u);
+    const wheel = mesh(new THREE.TorusGeometry(4, 0.4, 6, 18), mat('#b8382f'));
+    wheel.rotation.x = Math.PI / 2;
+    wheel.position.set(end.x + side.x / 2, cable(u), -(end.y + side.y / 2));
+    g.add(wheel);
+    const post = mesh(new THREE.CylinderGeometry(0.7, 0.9, 7, 6), steel);
+    const back = { x: end.x + side.x / 2 - d.x * (u ? -4 : 4), y: end.y + side.y / 2 - d.y * (u ? -4 : 4) };
+    const b = heightAt(h, back.x, back.y);
+    post.scale.y = (cable(u) - b) / 7;
+    post.position.set(back.x, (cable(u) + b) / 2, -back.y);
+    g.add(post);
+  }
+  const deck = mesh(new THREE.CylinderGeometry(l.pad + 1, l.pad + 1.4, 0.3, 20), mat('#8a6a48'));
+  deck.position.set(l.load.x, heightAt(h, l.load.x, l.load.y) + 0.02, -l.load.y);
+  deck.scale.y = 0.4;
+  g.add(deck);
+  const s = sign('The Chairlift', 'Roll it onto a chair');
+  const sp = { x: l.load.x - side.x * 0.9 - d.x * 6, y: l.load.y - side.y * 0.9 - d.y * 6 };
+  s.position.set(sp.x, heightAt(h, sp.x, sp.y), -sp.y);
+  s.rotation.y = turn + Math.PI;
+  g.add(s);
+  // the chairs: red seats on hangers, a few with riders on the way back down
+  const chair = (rider: boolean) => {
+    const c = new THREE.Group();
+    c.add(mesh(new THREE.BoxGeometry(5, 0.6, 2.2), mat('#b8382f')));
+    c.add(mesh(new THREE.BoxGeometry(5, 2, 0.4), mat('#b8382f')).translateY(1).translateZ(1));
+    c.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 5, 4), steel).translateY(2.5).translateZ(1));
+    if (rider) {
+      c.add(mesh(new THREE.CapsuleGeometry(0.45, 1.2, 3, 6), mat('#2b6cd4')).translateX(1.2).translateY(1.3));
+      c.add(mesh(new THREE.SphereGeometry(0.38, 6, 5), mat('#f0c9a5')).translateX(1.2).translateY(2.6));
+    }
+    return c;
+  };
+  const space = l.speed * l.gap;
+  const n = Math.ceil(L / space) + 1;
+  const ups = Array.from({ length: n }, () => chair(false));
+  const downs = Array.from({ length: n }, (_, i) => chair(i % 2 === 0));
+  [...ups, ...downs].forEach((c) => {
+    c.rotation.y = turn;
+    g.add(c);
+  });
+  downs.forEach((c) => (c.rotation.y = turn + Math.PI));
+  anim.push((clock) => {
+    const up = chairsUp(l, clock);
+    const down = chairsDown(l, clock);
+    ups.forEach((c, i) => {
+      c.visible = i < up.length;
+      if (!c.visible) return;
+      const p = along(l, up[i]);
+      c.position.set(p.x, seatZ(h, l, up[i]), -p.y);
+    });
+    downs.forEach((c, i) => {
+      c.visible = i < down.length;
+      if (!c.visible) return;
+      const p = along(l, down[i]);
+      c.position.set(p.x + side.x, seatZ(h, l, down[i]), -(p.y + side.y));
+    });
+  });
+  return g;
+}
+
 // a chairlift: towers up the slope, a cable, chairs going round
 function chairlift(h: Hole, from: { x: number; y: number }, to: { x: number; y: number }, floor: number, anim: Anim) {
   const g = new THREE.Group();
@@ -455,7 +554,7 @@ function peak(hgt: number, r: number, seed: number) {
 }
 
 export const alpine: Kit = {
-  surface: { green: '#58a656', fairway: '#6aa953', fringe: '#5f9c4b', rough: '#eef2f6', sand: '#d8ccb4', path: '#c4c9cf', stone: '#cfe7f2', rock: '#7d8388' },
+  surface: { green: '#58a656', fairway: '#6aa953', fringe: '#5f9c4b', rough: '#eef2f6', sand: '#d8ccb4', path: '#c4c9cf', stone: '#cfe7f2', rock: '#3e4449' },
   floor: '#e9eef3',
   lake: '#6f9fb8',
   light: { sky: '#dfe9f3', ground: '#c9d2da', hemi: 1.15, sunColor: '#fff4e2', sun: 2.6, fog: '#e6edf3', near: 600, far: 2300, env: 1.1 },
@@ -513,7 +612,9 @@ export const alpine: Kit = {
       root.add(f);
     }
     // the chairlift up the left of the hole, from the bottom to past the top
-    root.add(chairlift(h, { x: x0 - 40, y: y1 + 40 }, { x: x0 - 40, y: y0 - 60 }, floor, anim));
+    // (on a hole with a working lift, that one instead)
+    if (h.lift) root.add(playLift(h, h.lift, anim));
+    else root.add(chairlift(h, { x: x0 - 40, y: y1 + 40 }, { x: x0 - 40, y: y0 - 60 }, floor, anim));
     // skiers and boarders on the runs either side, and across the bottom past the green: not a crowd, but always
     // someone coming down (Nov 22)
     const kit = ['#d23b3b', '#2b6cd4', '#f2b134', '#2fa36b', '#8a3bd2', '#ff7a2a', '#e94f9b', '#20b2aa', '#f2f2f2', '#1f2a44'];

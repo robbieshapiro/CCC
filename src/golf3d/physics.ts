@@ -2,6 +2,7 @@
 import { CLUBS, carryOf, isIron } from './clubs';
 import { gradAt, heightAt, inPoly, isWater, surfaceAt } from './terrain';
 import type { Hole, Post, Shot, Surface, V2, Wall } from './types';
+import { along, catchAt, chairsUp, liftLength, seatZ } from './lift';
 
 export const BALL_R = 0.3;
 export const CUP_R = 0.65;
@@ -456,6 +457,33 @@ export function simulate(h: Hole, from: V2, shot: Shot, keepFrames = true): Resu
         sounds.push({ t, s: 'vent' });
       }
       prevGround = ground;
+      // the chairlift (lift.ts): a ball rolling across the station as a chair sweeps through is taken up the line and
+      // set down at the top, on the green
+      if (h.lift && catchAt(h.lift, clock, { x, y })) {
+        const l = h.lift;
+        const L = liftLength(l);
+        const u0 = Math.min(...chairsUp(l, clock).filter((u) => u <= l.low));
+        zones.add('lift');
+        sounds.push({ t, s: 'hop' });
+        for (let u = u0; u < L; u += l.speed * DT * 4) {
+          const p = along(l, u);
+          if (keepFrames) frames.push({ x: p.x, y: p.y, z: seatZ(h, l, u) + 0.6, t });
+          t += DT * 4;
+        }
+        // at the top the chair tips it out, in a little hop onto the green
+        const z0 = seatZ(h, l, L) + 0.6;
+        const z1 = heightAt(h, l.drop.x, l.drop.y);
+        for (let k = 1; k <= 8; k++) {
+          const f = k / 8;
+          t += 0.08;
+          if (keepFrames) frames.push({ x: l.top.x + (l.drop.x - l.top.x) * f, y: l.top.y + (l.drop.y - l.top.y) * f, z: z0 + (z1 - z0) * f + 4 * f * (1 - f), t });
+        }
+        x = l.drop.x;
+        y = l.drop.y;
+        z = z1;
+        sounds.push({ t, s: 'land' });
+        return finish(false, false);
+      }
       // into a hole in the rock: down the tunnel, and out the far end a moment later
       for (const pt of h.portals ?? [])
         if (Math.hypot(x - pt.x, y - pt.y) < pt.r) {
