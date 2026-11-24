@@ -1110,7 +1110,7 @@ export class Course3D {
       <div class="g3-read" data-read hidden></div>
       <div class="g3-cart" data-cart hidden></div>
       <div class="g3-bottom">
-        <div class="g3-club" role="group" aria-label="Club">
+        <div class="g3-club${this.bag.length > 6 ? " seven" : ""}" role="group" aria-label="Club">
           ${this.bag.map((c) => `<button data-club="${c}" ${this.hole?.putterOnly && c !== 'putter' ? 'hidden' : ''}><b>${LABEL[c]}</b><small>${c === 'putter' ? 'roll' : yd(CLUBS[c].carry[1])}</small></button>`).join('')}
         </div>
         <div class="g3-aim">
