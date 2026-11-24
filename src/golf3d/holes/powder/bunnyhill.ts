@@ -37,7 +37,7 @@ export const bunnyhill: Hole = {
   ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.12,
+  greenFirm: 0.18, // a bit firmer (Nov 24, Robbie)
   yards: 470,
   blurb: 'Green circle. Up onto the upper fairway, then down the hill to the ski school. A perfect drive runs over the crest.',
   teeTip: 'Driver. A full one carries the crest and runs. Mind the cliff on the right.',

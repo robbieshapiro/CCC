@@ -107,7 +107,7 @@ export const doubleblack: Hole = {
   windByHeight: true,
   gusts: true,
   chipDrop: 0.7,
-  greenFirm: 0.22,
+  greenFirm: 0.28, // a bit firmer (Nov 24, Robbie)
   // out of bounds where it comes down, not where it flies
   obWhenLanding: true,
   // over the walls is dark rock, not snow (Nov 24, Robbie)

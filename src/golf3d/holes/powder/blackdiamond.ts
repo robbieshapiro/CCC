@@ -88,7 +88,7 @@ export const blackdiamond: Hole = {
   windByHeight: true,
   gusts: true,
   chipDrop: 0.7,
-  greenFirm: 0.2,
+  greenFirm: 0.26, // a bit firmer (Nov 24, Robbie)
   yards: 780,
   blurb: 'Black diamond. One long steep run, crowned like a ski slope: moguls in patches, firs dotted about, and the cliff all down the right.',
   teeTip: 'Driver down the middle. Off the high line it banks away into the trees. Right is the cliff.',
