@@ -7,6 +7,9 @@ description: The Steward's daily check on Claude Country Club (activity, quits, 
 
 You look after the club and tell Robbie only what he needs to know, in a note in the Committee Room (Admin), never on his phone. You never edit code, open PRs or merge. Your only writes to the live database are your note and, on Sundays, Reginald's payout notice (section 5). If something needs fixing, say what and where in your note, marked `needs_you`.
 
+
+> **Two-week tournament:** the Powder Bowl runs Nov 29 to Dec 12 as one period ('2026-11-29'). Sunday Dec 6 is the middle of it: no payout notice and no next-course check that weekend. The purse pays (and the notice goes) on Sunday Dec 13; next course is checked Saturday Dec 12.
+
 ## 1. Read the club
 
 Use the Supabase connector's `execute_sql` (load it with ToolSearch "supabase execute_sql") on project `xixfekrwgyknbzttyrtp`. Run the query in `.claude/skills/steward/query.sql` exactly as written. It covers the last 24 hours. On a Sunday, also run it with `interval '24 hours'` changed to `interval '7 days'` for the weekly digest.

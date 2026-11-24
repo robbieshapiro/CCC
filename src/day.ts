@@ -14,8 +14,18 @@ export const FIRST_WEEK = '2026-11-08';
 
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const weekday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay(); // 0 Sunday
-// Next week's course is shown to members (the practice band, its practice) from Thursday of the week before (Nov 15)
-export const nextShown = (today: string) => weekday(today) >= 4;
+// Periods longer than a week, by their first Sunday, with the Sunday after they end: the Powder Bowl's two-week
+// tournament, Nov 29 to Dec 12 (Nov 24, Robbie). game_month() and period_next() in supabase/schema.sql say the same.
+export const LONG_PERIODS: Record<string, string> = { '2026-11-29': '2026-12-13' };
+// Next period's course is shown to members (the practice band, its practice) for the last three days before it opens:
+// from Thursday of the week before (Nov 15), and the second Thursday of a two-week event
+export const nextShown = (today: string) => {
+  const left = (Date.parse(`${nextStart(periodOf(today))}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000;
+  return left <= 3;
+};
+// whole days left in a period, today included (7 on its Sunday, 1 on its Saturday; 14 on a two-week event's first day)
+export const daysLeftIn = (period: string, today: string) =>
+  Math.max(1, Math.round((Date.parse(`${nextStart(period)}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000));
 
 // Three cards a day (from Nov 15; two from Nov 10). The best card is the day's score (cards_a_day() in SQL)
 export const CARDS_A_DAY = 3;
@@ -27,6 +37,7 @@ export const openPurseOn = (period: string) => period >= FIRST_WEEK;
 export const isWeek = (period: string) => period.length === 10;
 
 export function periodOf(day: string): string {
+  for (const [from, to] of Object.entries(LONG_PERIODS)) if (day >= from && day < to) return from;
   if (day >= FIRST_WEEK) return addDays(day, -weekday(day));
   return day >= CALDERA_START ? CALDERA_START : day.slice(0, 7);
 }
@@ -34,6 +45,7 @@ export function periodOf(day: string): string {
 // The day the next period starts (its key, from the weeks on).
 export function nextStart(period: string): string {
   if (period === CALDERA_START) return FIRST_WEEK;
+  if (LONG_PERIODS[period]) return LONG_PERIODS[period];
   if (isWeek(period)) return addDays(period, 7);
   const [y, m] = period.split('-').map(Number);
   const next = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
@@ -57,9 +69,10 @@ export const span = (period: string) => (period < CALDERA_START ? 'month' : 'wee
 
 const short = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 
-// Its name: "October 2026", "Oct 30 to Nov 7", "Week of Nov 15"
+// Its name: "October 2026", "Oct 30 to Nov 7", "Week of Nov 15", "Nov 29 to Dec 12"
 export function periodName(period: string): string {
   if (period === CALDERA_START) return `${short(period)} to ${short(addDays(FIRST_WEEK, -1))}`;
+  if (LONG_PERIODS[period]) return `${short(period)} to ${short(addDays(LONG_PERIODS[period], -1))}`;
   if (isWeek(period)) return `Week of ${short(period)}`;
   return new Date(`${period}-15T12:00:00Z`).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 }

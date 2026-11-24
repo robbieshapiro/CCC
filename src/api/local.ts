@@ -953,6 +953,7 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
     const db = load();
     if (!playerByToken(db, session.token).admin) throw new Error('Only the committee can pick the course.');
     if (period <= periodOf(todayInGameTz())) throw new Error('That week has already started.');
+    if (periodOf(period) !== period) throw new Error('That week is part of a two-week tournament.');
     const next = { ...(db.schedule ?? {}) };
     if (course) next[period] = course;
     else delete next[period];

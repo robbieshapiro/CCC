@@ -4,8 +4,8 @@ import { badgeFor } from '../shop';
 import { clubPurse, money, openFloor, openPurseOf, placeLabel, purseOf } from '../purse';
 import type { Snapshot, CardToday } from '../api/types';
 import { portrait } from '../avatar';
-import { courseFor, nextCourse, type Course } from '../golf3d/courses';
-import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz, CARDS_A_DAY, nextShown } from '../day';
+import { courseFor, nextCourse, practiceOpen, type Course } from '../golf3d/courses';
+import { CALDERA_START, cardsOn, GAME_TZ, openPurseOn, periodClosesAt, periodName, span, todayInGameTz, CARDS_A_DAY, LONG_PERIODS, nextStart } from '../day';
 import { bindOpen } from './open';
 import { bindLive, liveCards, liveNow } from './live';
 import { bindPlayTiles, playTiles } from './playtiles';
@@ -336,16 +336,24 @@ const leaf = (c: Course) => (c.holes[0]?.theme === 'autumn' ? '🍁 ' : '');
 const THEME_ICON: Record<string, string> = { autumn: '🍁', volcanic: '🌋', coastal: '🌊', chicago: '🏙️', linksland: '☘️' };
 function previewBand(month: string) {
   const next = nextCourse(month);
-  // not until Thursday: the week's own course has the stage until then
-  if (!next || !nextShown(todayInGameTz())) return '';
+  // not until Thursday (or the course's own early practice): the week's own course has the stage until then
+  if (!next || !practiceOpen(next, todayInGameTz())) return '';
   const theme = next.holes[0]?.theme ?? '';
   const starts = periodClosesAt(month);
   const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
-  return `<a class="preview-band${next.look ? looked(next) : ` ${esc(theme)}`}"${lookAttrs(next)} href="#/practice/${next.id}">
+  // a two-week event says so (the Powder Bowl, Nov 29 to Dec 12)
+  const first = nextStart(month);
+  const long = LONG_PERIODS[first];
+  const lead = long ? 'Two-week tournament · ' : "Next week's course · ";
+  // the ski course: snow falling across the band, and the skier carving (Nov 24)
+  const snow = theme === 'alpine' ? `<span class="pb-snow" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${3 + (i % 5) * 0.7}s;--w:${(i * 0.53) % 3}s;--s:${3 + (i % 3) * 2}px"></i>`).join('')}</span>` : '';
+  return `<a class="preview-band${next.look ? looked(next) : ` ${esc(theme)}`}${theme === 'alpine' ? ' snowy' : ''}"${lookAttrs(next)} href="#/practice/${next.id}">
+    ${snow}
     <span class="pb-icon" aria-hidden="true">${next.look?.icon ?? THEME_ICON[theme] ?? '⛳'}</span>
     <span class="pb-text">
-      <small><span class="pb-lead">Next week's course · </span><span data-countdown="${starts.getTime()}" data-done="Open now">opens in <em data-left>…</em></span></small>
+      <small><span class="pb-lead">${esc(lead)}</span><span data-countdown="${starts.getTime()}" data-done="Open now">opens in <em data-left>…</em></span></small>
       <b>${esc(shortName(next))}</b>
+      ${long ? `<span class="pb-when">A two-week tournament · ${esc(periodName(first))}</span>` : ''}
       <span>${n >= next.holes.length ? `Practise all ${n} holes` : `Practise ${n === 1 ? 'the first hole' : `the first ${n} holes`}`} before it counts</span>
     </span>
     <span class="pb-go">Practise the course</span>
