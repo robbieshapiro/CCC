@@ -1,14 +1,15 @@
 // A chairlift that carries the ball (the Powder Bowl's Chairlift, Nov 24, Robbie): chairs run up a straight line from
-// a loading station to a top station just short of the green. Roll a ball across the station just as a chair sweeps through it and the
-// chair takes it up over everything and sets it down on the green. Miss the chair and it rolls on into the snow.
+// a loading station to a top station beyond the green. Roll a ball across the station just as a chair sweeps through
+// it and the chair takes it up over everything and lets it go high over the green, to fall onto it (Nov 24, Robbie:
+// the first version set it down in a little scripted hop, which looked forced). Miss the chair and it rolls on into the snow.
 // One source of truth for the physics (what catches) and the scene (what you see): both read the hole clock.
 import { heightAt } from './terrain';
 import type { Hole, V2 } from './types';
 
 export type Lift = {
   load: V2; // the bottom station, where a chair sweeps low enough to take a ball
-  top: V2; // the top station, just short of the green
-  drop: V2; // where the chair tips the ball out onto the green
+  top: V2; // the top station, beyond the green
+  drop: V2; // the chair lets the ball go high over the line here (on its way to the top), and it falls onto the green
   speed: number; // feet a second along the cable
   gap: number; // seconds between chairs
   pad: number; // how near the station a ball must be to be taken (feet)
@@ -48,6 +49,12 @@ export function seatZ(h: Hole, l: Lift, u: number): number {
   const ground = heightAt(h, p.x, p.y);
   const ease = Math.min(1, u / 30, (L - u) / 24);
   return ground + 1.2 + (RIDE - 1.2) * Math.max(0, ease) ** 0.8;
+}
+
+// how far up the line the chair lets go: the drop spot, as a distance along the line
+export function releaseOf(l: Lift): number {
+  const L = liftLength(l);
+  return ((l.drop.x - l.load.x) * (l.top.x - l.load.x) + (l.drop.y - l.load.y) * (l.top.y - l.load.y)) / L;
 }
 
 // is a chair sweeping the station right now, close enough to take the ball?
