@@ -319,7 +319,7 @@ Last updated Nov 24, 2026 (the Powder Bowl opens for practice, a two-week tourna
 
 ## Setup status
 
-- [ ] #415's period functions (`period_of`, `period_next`, `game_month`, `playoff_day`, `open_purse_floor`, `set_course_schedule`, `book_field`, `book_state`, `book_bet`) applied live
+- [x] #415's period functions (`period_of`, `period_next`, `game_month`, `playoff_day`, `open_purse_floor`, `set_course_schedule`, `book_field`, `book_state`, `book_bet`) applied live (Nov 24, checked: Dec 6 is in the Nov 29 period, the floor is $100,000)
 - [x] #414's `person_bonus` (fairways and greens) applied live (Nov 24, checked: today's first cards pay)
 
 - [x] #403: one-off, Robbie asked: Hunter's Nov 22 ace replay (replays id 34) now points at Daily Shot hole 1. Applied `pr_403_hunter_ace_replay` on Nov 23 in a guarded block; frames untouched; verified with a select.
