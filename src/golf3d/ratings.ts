@@ -44,7 +44,7 @@ export const RATINGS: Record<string, Rated> = {
       { id: "blackdiamond", member: 1.3, strong: 0.5 },
       { id: "chairlift", member: 0.3, strong: 0.3 },
       { id: "iceberg", member: 1.5, strong: 1.8 },
-      { id: "doubleblack", member: 1.3, strong: 2.3 },
+      { id: "doubleblack", member: 1.3, strong: 2.5 },
       { id: "thelodge", member: 0.8, strong: 0.5 },
     ],
   },
