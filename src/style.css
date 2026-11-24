@@ -767,7 +767,6 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .g3-swing.clear.result .g3-swing-pct { display: block; animation: pct-pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
 @keyframes pct-pop { from { opacity: 0; scale: 0.6; } to { opacity: 1; scale: 1; } }
 .g3-swing.clear { transition: opacity 0.3s; }
-.g3-swing.clear.idle { opacity: 0.75; }
 .g3-swing.clear.fade { opacity: 0; }
 /* swinging into the overswing: the red zone throbs */
 .g3-swing.clear.over .g3-swing-bar .over { animation: over-throb 0.45s ease-in-out infinite alternate; }
