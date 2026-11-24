@@ -921,6 +921,7 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .g3-howto-card { width: min(340px, 100%); padding: 22px 20px 18px; border-radius: 14px; background: var(--paper); color: var(--ink); text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); }
 .g3-howto-card h2 { margin: 0; font-family: var(--serif); font-size: 28px; color: var(--green); }
 .g3-howto-card > p { margin: 4px 0 14px; color: var(--muted); font-size: 15px; }
+.g3-howto-card > p.g3-howto-sub { margin: 6px 0 0; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
 .g3-howto-card ul { list-style: none; margin: 12px 0 16px; padding: 0; display: grid; gap: 9px; text-align: left; }
 .g3-howto-card li { display: grid; grid-template-columns: 30px 1fr; column-gap: 10px; align-items: center; }
 .g3-howto-card li i { font-style: normal; font-size: 21px; text-align: center; }
@@ -1544,14 +1545,6 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 @media (prefers-reduced-motion: reduce) { .preview-band.snowy .pb-snow i { animation: none; } }
 
 /* what's new on a course, before its practice */
-.whats-new { padding-block: 24px; }
-.wn-card { display: grid; gap: 8px; padding: 22px 20px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--gold); }
-.whats-new.autumn .wn-card { border-top-color: #c8692a; background: linear-gradient(180deg, #fbf3e6, var(--paper) 40%); }
-.wn-card h1 { margin: 0; }
-.wn-card h2 { margin: 8px 0 0; font-size: 18px; }
-.wn-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.4; }
-.wn-list li::marker { color: #c8692a; }
-.wn-card .summary-actions { margin-top: 8px; justify-content: flex-start; }
 
 /* the share button on a finished round's card */
 .share-score { justify-self: center; }
@@ -2188,7 +2181,6 @@ button.desk-cta { width: 100%; font: inherit; text-align: left; cursor: pointer;
 .board.chicago { --felt: #13244a; background: linear-gradient(160deg, #0d1a36, #132650 60%, #1a3062); border-color: #070e1e; }
 .board.chicago td.who em, .board.chicago .scorecard tr.par td { color: #a9bbdd; }
 .countdown.chicago { background: linear-gradient(90deg, #13244a, #2c4a8a); color: #eef3ff; }
-.whats-new.chicago .wn-card { border-top-color: #2c4a8a; background: linear-gradient(180deg, #eef2fb, var(--paper) 40%); }
 .pm-classic.chicago { background: linear-gradient(160deg, #0b1428, #142650 55%, #22407a); }
 
 
@@ -2490,7 +2482,6 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .board.looked { --felt: var(--c1); background: linear-gradient(160deg, var(--c1), color-mix(in srgb, var(--c1) 70%, var(--c2)) 60%, color-mix(in srgb, var(--c1) 45%, var(--c2))); border-color: color-mix(in srgb, var(--c1) 70%, black); }
 .board.looked td.who em, .board.looked .scorecard tr.par td { color: var(--soft); }
 .countdown.looked { background: linear-gradient(90deg, var(--c1), var(--c2), var(--c3)); color: #fff; }
-.whats-new.looked .wn-card { border-top-color: var(--c2); background: linear-gradient(180deg, color-mix(in srgb, var(--c3) 12%, var(--paper)), var(--paper) 40%); }
 .pm-classic.looked { background: var(--pat), linear-gradient(160deg, var(--c1), var(--c2) 55%, var(--c3)); }
 
 /* Faces beside names (Nov 19, src/faces.ts): a small round portrait wherever a member's name shows */

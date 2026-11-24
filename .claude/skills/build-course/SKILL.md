@@ -49,6 +49,7 @@ Read two finished holes first as models: `src/golf3d/holes/thecarry.ts` and `src
 - par 3 to 5, mixed as above;
 - `name`, `blurb` (one plain line on how to play it), `yards`, `theme`, `tour: true`;
 - 4 `pins`, every one on dry green;
+- `whatsNew`: up to five short, punchy lines (one idea each, no full sentences needed). They show in the card on the first tee when members practise it, never as a page of their own;
 - a `secret`: a clever route a curious player can find. Add where it starts to `SECRET_FROM` in `scripts/check-holes.ts`.
 
 Then register the course:

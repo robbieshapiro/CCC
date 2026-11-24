@@ -4,7 +4,6 @@ import { freshBeforeCard } from '../version';
 // A preview round (the admin, every hole of a course still to come) and a practice round (any member: the first few
 // holes of the next course, or the whole of the week's course once cards start) are played the same way but never posted.
 import { face } from '../faces';
-import { lookAttrs, looked } from '../courselook';
 import { api } from '../api';
 import type { Snapshot } from '../api/types';
 import { crest } from '../brand';
@@ -199,7 +198,7 @@ export const dryForget = () => store.set(DRY_CARD, '');
 const drySave = (c: CardToday) => store.set(DRY_CARD, JSON.stringify({ ...c, day: todayInGameTz() }));
 
 // classic: free play on a course of weeks gone by, for the course record (posted to free_rounds, never counted)
-export async function round(snap: Snapshot, opts: { course?: Course; holes?: number; practice?: boolean; dry?: boolean; classic?: boolean } = {}) {
+export async function round(snap: Snapshot, opts: { course?: Course; holes?: number; practice?: boolean; dry?: boolean; classic?: boolean; notes?: string[] } = {}) {
   closeRound();
   const preview = !!opts.course;
   // the Committee rehearsing a member's card (see dryToday)
@@ -352,6 +351,13 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     due.forEach((p, k) => window.setTimeout(() => scorePop(el, p.tier, p.title, p.amount, unpaid), k * 900));
   };
   if (!opts.practice && game) game.onRest = flushReg;
+  // a course's notes on what's new (Nov 24, Robbie): in the how-to card over the first tee, once the practice has
+  // loaded, not a page of their own before it
+  if (opts.notes?.length && game) {
+    game.whatsNew = opts.notes;
+    game.notesFor = esc(course.name);
+    game.notesIcon = course.holes[0]?.theme === 'alpine' ? '❄️' : '⛳';
+  }
   if (!opts.practice)
     game.onShotLog = (s) => {
       // the moments worth a cheer, on a daily card only (practice and replays earn nothing)
@@ -696,24 +702,10 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   };
 }
 
-// A practice round on the next course. A course with notes on what's new shows them first, then in.
+// A practice round on the next course. A course with notes on what's new shows them in a small sheet on the first tee.
 export function practice(snap: Snapshot, next: Course) {
   const n = Math.min(next.previewHoles ?? next.holes.length, next.holes.length);
-  const go = () => void round(snap, { course: next, holes: n, practice: true });
-  if (!next.whatsNew?.length) return go();
-  closeRound();
-  const theme = next.holes[0]?.theme ?? '';
-  render(`<main class="narrow whats-new${next.look ? looked(next) : ` ${esc(theme)}`}"${lookAttrs(next)}>
-    <section class="wn-card">
-      <p class="eyebrow">Practice · nothing counts</p>
-      <h1>${esc(next.name)}</h1>
-      <p class="muted">${n} ${n === 1 ? 'hole' : 'holes'} · par ${next.holes.slice(0, n).reduce((a, h) => a + h.par, 0)}</p>
-      <h2>What's new</h2>
-      <ul class="wn-list">${next.whatsNew.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-      <div class="summary-actions"><button class="btn big" data-start>Start practice</button><a class="btn ghost" href="#/">Back to the club</a></div>
-    </section>
-  </main>`);
-  document.querySelector<HTMLButtonElement>('[data-start]')!.onclick = go;
+  void round(snap, { course: next, holes: n, practice: true, notes: next.whatsNew });
 }
 
 // The range or the short game area at the practice facility: a session from the moment you step on to when you leave.

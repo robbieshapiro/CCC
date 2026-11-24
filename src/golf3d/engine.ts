@@ -334,6 +334,10 @@ export class Course3D {
   // practice of any kind: the Leave button says so and doesn't ask
   leaveText = '';
   // which how-to card this game shows (first time, then on the ? button)
+  // a course's notes on what's new, shown once in the how-to card on the first tee (the practice before it opens)
+  whatsNew: string[] | null = null;
+  notesFor = '';
+  notesIcon = '⛳';
   howTo: 'round' | 'practice' | 'daily' | 'playoff' | 'ace' | 'minigolf' | 'midway' | 'members' | 'drive' | 'targets' | 'none' = 'round';
   // the last shot struck: what a replay keeps (src/replay.ts)
   lastPlayed: { club: ClubId; power: number; aim: number; from: V2; r: Result } | null = null;
@@ -1310,7 +1314,16 @@ export class Course3D {
   private showHowTo(auto = false) {
     if (this.howTo === 'none') return;
     const key = `ccc-howto-${this.howTo}`;
-    if (auto) {
+    // a course's notes on what's new (Nov 24, Robbie): on the first tee, in this card, every time its practice starts
+    const notes = auto ? this.whatsNew : null;
+    this.whatsNew = null;
+    if (notes?.length) {
+      try {
+        localStorage.setItem(key, '1');
+      } catch {
+        /* fine */
+      }
+    } else if (auto) {
       try {
         if (localStorage.getItem(key)) return;
         localStorage.setItem(key, '1');
@@ -1322,7 +1335,7 @@ export class Course3D {
     // as noise)
     const SWING = ['👆', 'Drag to aim. Tap to swing, tap again in the gold.'];
     const PUTT = ['🟢', 'On the green: drag down, let go.'];
-    const cards: Record<Exclude<typeof this.howTo, 'none'>, [string, string[][]]> = {
+    const cards: Record<string, [string, string[][]]> = {
       round: ['The course', [['🏌️', 'Fewest shots wins.'], SWING, PUTT, ['🍹', 'Wave the cart down. Every drink helps one way.']]],
       practice: ['Practice', [['🆓', 'Nothing counts. Hit all you like.'], SWING, PUTT]],
       daily: ['The Daily Shot', [['⛳', 'Three holes, three shots each.'], ['📏', 'Best on each hole counts. Lowest total wins.'], ['💰', 'An ace takes the pot.']]],
@@ -1334,14 +1347,15 @@ export class Course3D {
       drive: ['Long drive', [['💨', 'Three swings, wind at your back.'], ['🔥', 'The last two come with a Fireball.'], ['📏', 'Longest ball in play wins. Top three paid.']]],
       targets: ['The Target Range', [['🎯', 'Ten balls, six netted targets.'], ['🪂', 'Land in a ring on the fly. A roll-in only gets the outer ring.'], ['✖️', 'Score again next ball: double, then triple.'], ['🥅', 'Drive through the back net’s window for 40.']]],
     };
-    const [title, lines] = cards[this.howTo];
+    const [title, lines] = notes?.length ? ["What's new", notes.map((t) => [this.notesIcon, t])] : cards[this.howTo];
     const card = document.createElement('div');
     card.className = 'g3-howto';
     card.innerHTML = `<div class="g3-howto-card" role="dialog" aria-label="${title}">
       <h2>${title}</h2>
+      ${notes?.length ? `<p class="g3-howto-sub">${this.notesFor} · practice, nothing counts</p>` : ''}
       <ul>${lines.map(([i, t]) => `<li><i>${i}</i><span>${t}</span></li>`).join('')}</ul>
       ${!this.drill && this.hole?.teeTip ? `<p class="g3-howto-tip"><b>Hank on this hole:</b> ${this.hole.teeTip}</p>` : ''}
-      <button class="btn" data-go>Let's go</button>
+      <button class="btn" data-go>${notes?.length ? 'Tee it up' : "Let's go"}</button>
     </div>`;
     this.overlay.appendChild(card);
     // taps on the card are for the card, not the swing underneath
