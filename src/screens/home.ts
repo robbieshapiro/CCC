@@ -176,7 +176,7 @@ export function home(snap: Snapshot) {
       </section>
       ${liveNow()}
       ${liveCards()}
-      ${barStrip()}
+      <!-- (Nov 24, Robbie) the week's board just under today's cards, then next course's practice, then the Nineteenth Hole -->
       <section class="board${look(course)}"${lookAttrs(course)}>
         ${countdown(snap.month, course, purse.field, openMoney)}
         <div class="board-head"><h2>${leaf(course)}${openPurseOn(snap.month) ? esc(openName(course.name, snap.month)) : 'The Open'}</h2><span>${periodName(snap.month)} · best ${cardsOn(snap.month) ? 'card' : 'round'} counts</span></div>
@@ -195,8 +195,9 @@ export function home(snap: Snapshot) {
         <button class="link board-more" id="board-more" hidden>See hole by hole</button>
         ${openPurseOn(snap.month) ? `<a class="season-link" href="#/clubhouse/season" id="season-link">🏆 ${snap.month.slice(0, 4)} Season standings</a>` : ''}
       </section>
-      ${nominateTile()}
       ${previewBand(snap.month)}
+      ${barStrip()}
+      ${nominateTile()}
       ${playTiles(snap)}
       ${honoursPane(snap)}
       <section class="plaque">
