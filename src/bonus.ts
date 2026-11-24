@@ -17,6 +17,10 @@ export const BONUS = {
   monsterPutt: 200, // holed from 60 ft
   chipin: 100, // holed from off the green (not the tee: that's an ace)
   secret: 150, // the first time you find each hole's secret route
+  // fairways and greens hit in regulation (Nov 24, Robbie: a little money to aim for), on the day's first finished
+  // card only, as birdies, from FIR_GIR_FROM
+  fir: 10, // the tee shot on a par 4 or 5 comes to rest on the fairway
+  gir: 15, // on the green (or in) in two under par: one on a par 3, two on a par 4, three on a par 5
   designPlay: 100, // another member finishes your Members' Course hole (once each a week)
   designWeek: 500, // the most your holes can earn you in a week
 };
@@ -45,7 +49,7 @@ export const MONSTER_PUTT_FT = 60;
 // every hole's secret route, by its zone (secret_feats in supabase/schema.sql)
 export const SECRET_FEATS = ['cartpath', 'bridge', 'terrace', 'runway', 'plank', 'amphi', 'blowhole', 'lavatube', 'rimroad', 'ledge', 'liftoff', 'tunnel', 'ashroad', 'seaarch', 'backbank', 'kick', 'ridge', 'sealionrock', 'shelf', 'spillway', 'walk', 'breakwater', 'plaza', 'lowerwacker', 'gangway', 'boardwalk', 'rooftop'];
 
-export type Bonus = { rounds: number; streaks: number; ctp: number; drive?: number; targets?: number; acepot?: number; shots: number; putts?: number; chipins?: number; secrets?: number; designs?: number; duels?: number; dailyshot?: number; grants?: number; trophies?: number; weeks?: number; total: number };
+export type Bonus = { rounds: number; streaks: number; ctp: number; drive?: number; targets?: number; acepot?: number; shots: number; regulation?: number; putts?: number; chipins?: number; secrets?: number; designs?: number; duels?: number; dailyshot?: number; grants?: number; trophies?: number; weeks?: number; total: number };
 
 // before Nov 10 2026 great holes paid the old rates (person_bonus in supabase/schema.sql)
 export const RAISE_FROM = '2026-11-10';
@@ -57,6 +61,36 @@ export const puttBonus = (ft: number) => (ft >= MONSTER_PUTT_FT ? BONUS.monsterP
 // what one hole earns: an ace is an ace whatever the par
 export const shotBonus = (strokes: number, par: number) =>
   strokes === 1 ? BONUS.ace : strokes <= par - 3 ? BONUS.albatross : strokes === par - 2 ? BONUS.eagle : strokes === par - 1 ? BONUS.birdie : 0;
+// Fairways and greens in regulation, worked out from a card's stroke log the way person_bonus does on the server:
+// h, the hole (from 0); l, the lie the stroke was hit from; x, it cost a penalty; i, it went in.
+export const FIR_GIR_FROM = '2026-11-24';
+export function regulation(strokes: { h: number; l: string; x: 0 | 1; i: 0 | 1 }[], pars: number[]) {
+  let firs = 0;
+  let girs = 0;
+  const holes = new Map<number, { l: string; x: 0 | 1; i: 0 | 1 }[]>();
+  for (const s of strokes) holes.set(s.h, [...(holes.get(s.h) ?? []), s]);
+  for (const [h, list] of holes) {
+    const par = pars[h];
+    if (!par) continue;
+    // a fairway: the tee shot on a par 4 or 5 came to rest there, no penalty (the second stroke is played from it)
+    if (par >= 4 && list[0]?.x === 0 && list[1]?.l === 'fairway') firs++;
+    // a green: played from the green, or holed, with par - 2 strokes or fewer gone before (penalties count)
+    let used = 0;
+    for (const s of list) {
+      if (s.l === 'green' && used <= par - 2) {
+        girs++;
+        break;
+      }
+      used += 1 + s.x;
+      if (s.i && used <= par - 2) {
+        girs++;
+        break;
+      }
+    }
+  }
+  return { firs, girs, total: firs * BONUS.fir + girs * BONUS.gir };
+}
+
 // and what it's called
 export const shotName = (strokes: number, par: number) =>
   strokes === 1 ? 'Hole in one' : strokes <= par - 3 ? 'Albatross' : strokes === par - 2 ? 'Eagle' : strokes === par - 1 ? 'Birdie' : '';
@@ -76,7 +110,7 @@ export function streakBonus(days: string[]) {
   return total;
 }
 
-export function bonusOf(o: { roundDays: string[]; days: string[]; ctpPay: number; drivePay?: number; targetsPay?: number; acePay?: number; holes: [number, number, boolean?][]; putts?: number; chipins?: number; secrets?: number; designs?: number; cardWeeks?: string[] }): Bonus {
+export function bonusOf(o: { roundDays: string[]; days: string[]; ctpPay: number; drivePay?: number; targetsPay?: number; acePay?: number; holes: [number, number, boolean?][]; regulation?: number; putts?: number; chipins?: number; secrets?: number; designs?: number; cardWeeks?: string[] }): Bonus {
   const rounds = new Set(o.roundDays).size * BONUS.round;
   const streaks = streakBonus(o.days);
   const ctp = o.ctpPay;
@@ -84,7 +118,7 @@ export function bonusOf(o: { roundDays: string[]; days: string[]; ctpPay: number
   const targets = o.targetsPay ?? 0;
   const acepot = o.acePay ?? 0;
   const shots = o.holes.reduce((a, [s, p, old]) => a + (old ? oldShotBonus(s, p) : shotBonus(s, p)), 0);
-  const extra = { putts: o.putts ?? 0, chipins: o.chipins ?? 0, secrets: o.secrets ?? 0, designs: o.designs ?? 0 };
+  const extra = { regulation: o.regulation ?? 0, putts: o.putts ?? 0, chipins: o.chipins ?? 0, secrets: o.secrets ?? 0, designs: o.designs ?? 0 };
   const weeks = new Set((o.cardWeeks ?? []).filter((w) => w >= '2026-11-08')).size * BONUS.week;
-  return { rounds, streaks, ctp, drive, targets, acepot, shots, ...extra, weeks, total: rounds + streaks + ctp + drive + targets + acepot + shots + extra.putts + extra.chipins + extra.secrets + extra.designs + weeks };
+  return { rounds, streaks, ctp, drive, targets, acepot, shots, ...extra, weeks, total: rounds + streaks + ctp + drive + targets + acepot + shots + extra.regulation + extra.putts + extra.chipins + extra.secrets + extra.designs + weeks };
 }

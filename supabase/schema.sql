@@ -2761,9 +2761,21 @@ create or replace function person_bonus(p players) returns json
 language sql stable security definer set search_path = public, extensions as $$
   with seats as (select person_seats(p) as id),
   r as (
-    select r.holes, r.created_at, coalesce(r.pars, cp.pars) as hp,
+    select r.id, r.holes, r.shots, r.created_at, coalesce(r.pars, cp.pars) as hp,
       row_number() over (partition by (r.created_at at time zone 'America/New_York')::date order by r.created_at) as nth
     from rounds r left join course_pars cp on cp.course = r.course where r.player_id in (select id from seats)
+  ),
+  -- fairways and greens in regulation (Nov 24): $10 a fairway, $15 a green, on the day's first finished round, as
+  -- birdies (src/bonus.ts regulation() does the same sums). From the stroke log: h, the hole (from 0); l, the lie it
+  -- was hit from; x, a penalty; i, holed. j: the stroke's number on its hole; used: strokes gone before it, penalties in.
+  reg as (
+    select r.id, (e->>'h')::int as h, r.hp[(e->>'h')::int + 1] as par, e->>'l' as l,
+      coalesce((e->>'x')::int, 0) as x, coalesce((e->>'i')::int, 0) as i,
+      row_number() over (partition by r.id, e->>'h' order by k) as j,
+      coalesce(sum(1 + coalesce((e->>'x')::int, 0)) over (partition by r.id, e->>'h' order by k rows between unbounded preceding and 1 preceding), 0) as used,
+      lag(coalesce((e->>'x')::int, 0)) over (partition by r.id, e->>'h' order by k) as prev_x
+    from r cross join lateral jsonb_array_elements(case when jsonb_typeof(r.shots) = 'array' then r.shots else '[]'::jsonb end) with ordinality a(e, k)
+    where r.nth = 1 and r.created_at >= timestamp '2026-11-24 00:00' at time zone 'America/New_York'
   ),
   shots as (
     select r.holes[i] as s, r.hp[i] as par, r.created_at from r cross join lateral generate_subscripts(r.holes, 1) i
@@ -2804,6 +2816,8 @@ language sql stable security definer set search_path = public, extensions as $$
       (select coalesce(sum(case when created_at >= timestamp '2026-11-10 00:00' at time zone 'America/New_York'
         then case when s = 1 then 2500 when s <= par - 3 then 1000 when s = par - 2 then 500 when s = par - 1 then 100 else 0 end
         else case when s = 1 then 500 when s <= par - 2 then 100 when s = par - 1 then 25 else 0 end end), 0) from shots)::int as shots,
+      (10 * (select count(*) from reg where j = 2 and par >= 4 and prev_x = 0 and l = 'fairway')
+        + 15 * (select count(distinct (id, h)) from reg where par is not null and ((l = 'green' and used <= par - 2) or (i = 1 and used + 1 <= par - 2))))::int as regulation,
       (select coalesce(sum(case when d >= 60 then 200 when d >= 30 then 75 else 0 end), 0) from strokes where c = 'putter' and i = 1)::int as putts,
       100 * (select count(*) from strokes where c <> 'putter' and i = 1 and coalesce(l, '') <> 'green' and nth > 1)::int as chipins,
       150 * (select count(distinct f) from rounds x cross join lateral unnest(x.feats) f where x.player_id in (select id from seats) and x.card and f = any (secret_feats()))::int as secrets,
@@ -2826,8 +2840,8 @@ language sql stable security definer set search_path = public, extensions as $$
       250 * (select count(distinct x.month) from rounds x where x.player_id in (select id from seats) and x.card and x.month >= '2026-11-08')::int as weeks
   )
   select json_build_object('rounds', b.rounds, 'streaks', b.streaks, 'ctp', b.ctp, 'drive', b.drive, 'targets', b.targets, 'acepot', b.acepot, 'shots', b.shots,
-    'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'duels', b.duels, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks, 'dailyshot', b.dailyshot,
-    'total', b.rounds + b.streaks + b.ctp + b.dailyshot + b.drive + b.targets + b.acepot + b.shots + b.putts + b.chipins + b.secrets + b.designs + b.duels + b.grants + b.trophies + b.weeks) from b
+    'regulation', b.regulation, 'putts', b.putts, 'chipins', b.chipins, 'secrets', b.secrets, 'designs', b.designs, 'duels', b.duels, 'grants', b.grants, 'trophies', b.trophies, 'weeks', b.weeks, 'dailyshot', b.dailyshot,
+    'total', b.rounds + b.streaks + b.ctp + b.dailyshot + b.drive + b.targets + b.acepot + b.shots + b.regulation + b.putts + b.chipins + b.secrets + b.designs + b.duels + b.grants + b.trophies + b.weeks) from b
 $$;
 revoke all on function person_bonus(players) from public, anon, authenticated;
 
