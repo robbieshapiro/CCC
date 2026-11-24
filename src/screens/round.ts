@@ -12,7 +12,7 @@ import { sfx } from '../fx/sound';
 import { Course3D, planVisits, scoreName, type Ghost } from '../golf3d/engine';
 import { CARDS_A_DAY, cardsOn, openPurseOn, todayInGameTz } from '../day';
 import { inPoly, isWater, surfaceAt } from '../golf3d/terrain';
-import { BONUS, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus, shotName } from '../bonus';
+import { BONUS, FIR_GIR_FROM, MONSTER_PUTT_FT, puttBonus, SECRET_FEATS, shotBonus, shotName } from '../bonus';
 import type { CardToday, RoundShot, Spot } from '../api/types';
 import { courseFor, type Course } from '../golf3d/courses';
 import { conditionsFor, WIND_PER_MPH } from '../golf3d/conditions';
@@ -343,12 +343,33 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
   // a holed long putt or chip-in, kept until the ball has dropped (the shot is worked out the moment it's struck, and
   // a pop then gave it away: Nov 18)
   let pending: { title: string; amount: number; sub: string } | null = null;
+  // fairways and greens in regulation: what this hole has used (penalties in), and the pops waiting for the ball to stop
+  let reg = { used: 0, gir: false };
+  let regPending: { tier: 'fir' | 'gir'; title: string; amount: number }[] = [];
+  const flushReg = () => {
+    const due = regPending;
+    regPending = [];
+    due.forEach((p, k) => window.setTimeout(() => scorePop(el, p.tier, p.title, p.amount, unpaid), k * 900));
+  };
+  if (!opts.practice && game) game.onRest = flushReg;
   if (!opts.practice)
     game.onShotLog = (s) => {
       // the moments worth a cheer, on a daily card only (practice and replays earn nothing)
       const first = !holeShots.get(holeAt);
       holeShots.set(holeAt, (holeShots.get(holeAt) ?? 0) + 1);
       if (first) pending = null;
+      // a fairway or a green in regulation (Nov 24): worked out now, popped when the ball comes to rest
+      if (first) reg = { used: 0, gir: false };
+      const hole = course.holes[holeAt];
+      if (pops && hole && todayInGameTz() >= FIR_GIR_FROM) {
+        const rest = surfaceAt(hole, { x: s.t[0], y: s.t[1] });
+        reg.used += 1 + s.x;
+        if (first && hole.par >= 4 && !s.x && !s.i && rest === 'fairway') regPending.push({ tier: 'fir', title: 'Fairway', amount: BONUS.fir });
+        if (!reg.gir && !s.x && (rest === 'green' || s.i) && reg.used <= hole.par - 2) {
+          reg.gir = true;
+          regPending.push({ tier: 'gir', title: 'Green in regulation', amount: BONUS.gir });
+        }
+      }
       if (pops && s.i) {
         const ft = Math.round(Math.hypot(s.t[0] - s.f[0], s.t[1] - s.f[1]));
         if (s.c === 'putter' && puttBonus(ft)) pending = { title: ft >= MONSTER_PUTT_FT ? 'Monster putt' : 'Long putt', amount: puttBonus(ft), sub: unpaid || `${ft} ft` };
@@ -413,6 +434,8 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     // the ball has dropped: now the chip-in or long putt pops, and a birdie or eagle after it
     const held = pending;
     pending = null;
+    // a green in regulation that went straight in (an eagle): it pops quietly first
+    flushReg();
     if (held) scorePop(el, 'putt', held.title, held.amount, held.sub);
     const sb = pops && !opts.practice && h ? shotBonus(strokes, par) : 0;
     if (!sb || strokes === 1 || par - strokes >= 3 || !game) return;

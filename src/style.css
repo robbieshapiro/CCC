@@ -2388,11 +2388,19 @@ details.jv-dials #jv-tweak { margin-top: 10px; display: grid; gap: 10px; }
 .bar-room .bar-game.closed[data-game] { opacity: 0.7; border-style: dashed; }
 
 /* the moments on a card (Nov 17, src/screens/moments.ts): the Target Range's pop, with the word big and the money under */
+/* in the club's colours (Nov 24): the word in cream serif with a gold edge, a soft light behind it in the tier's colour,
+   the money on a gold pill in club green; an eagle all in gold with a shimmer; a fairway or a green, small and lower */
 .tr-pop.moment { top: 46%; }
-.tr-pop.moment b { font-size: 50px; white-space: nowrap; letter-spacing: 0.01em; }
-.tr-pop.moment.eagle b { font-size: 60px; }
-.tr-pop.moment span { background: var(--c); color: #fff; font-size: 20px; padding: 4px 14px; animation: none; box-shadow: 0 4px 16px -4px var(--c); }
-.tr-pop.moment.eagle span { color: #2a1802; }
+.tr-pop.moment b { font: 700 54px/1 var(--serif); white-space: nowrap; letter-spacing: 0.01em; color: var(--cream); -webkit-text-stroke: 0; text-shadow: 0 0 1px #0e241a, 0 0 3px #0e241a, 0 0 4px #0e241a, 0 0 22px var(--c), 0 0 46px rgba(184, 149, 90, 0.5), 0 4px 10px rgba(0, 0, 0, 0.45); }
+.tr-pop.moment span { background: linear-gradient(180deg, #f4dfa6, #c9a24f 55%, #a8843f); color: var(--green); font: 800 18px var(--font); letter-spacing: 0.08em; padding: 4px 16px; animation: none; border: 1px solid rgba(255, 244, 210, 0.8); box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.5), 0 0 16px -2px rgba(212, 167, 60, 0.7); }
+.tr-pop.moment small { color: var(--cream); letter-spacing: 0.2em; padding: 2px 10px; border-radius: 999px; background: rgba(14, 36, 26, 0.55); text-shadow: none; }
+.tr-pop.moment.eagle b { font-size: 66px; color: #f7e3a3; background: linear-gradient(100deg, #f7e3a3 20%, #fff8df 45%, #d4a73c 60%, #f7e3a3 80%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 0 2px #3d2a08) drop-shadow(0 0 14px rgba(212, 167, 60, 0.85)) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45)); animation: gold-sheen 1.6s ease-in-out 0.2s 2; }
+@keyframes gold-sheen { from { background-position: 100% 0; } to { background-position: -20% 0; } }
+.tr-pop.moment.eagle span { font-size: 20px; }
+.tr-pop.moment.fir, .tr-pop.moment.gir { top: 62%; animation-duration: 1.7s; }
+.tr-pop.moment.fir b, .tr-pop.moment.gir b { font-size: 30px; text-shadow: 0 0 1px #0e241a, 0 0 3px #0e241a, 0 0 4px #0e241a, 0 0 14px rgba(47, 122, 74, 0.9), 0 3px 8px rgba(0, 0, 0, 0.45); }
+.tr-pop.moment.fir span, .tr-pop.moment.gir span { font-size: 14px; padding: 2px 12px; background: linear-gradient(180deg, var(--green-2), var(--green)); color: #f4dfa6; border-color: rgba(212, 167, 60, 0.8); }
+@media (prefers-reduced-motion: reduce) { .tr-pop.moment.eagle b { animation: none; } }
 .ace-big.long { font-size: 56px; line-height: 1.05; }
 
 /* Shots of the day (Nov 18, src/replay.ts): replays to watch, under the contests on home */

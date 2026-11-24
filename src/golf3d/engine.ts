@@ -1592,6 +1592,7 @@ export class Course3D {
     this.mode = 'aim';
     this.power = 0;
     this.onAimStart?.(this.strokes);
+    this.onRest?.();
     // a gusting day: the wind picks up or drops off between shots, and the flag shows it
     if (this.dayWind?.gust) {
       this.wind = gusted(this.dayWind, Math.random());
@@ -2370,6 +2371,8 @@ export class Course3D {
   // ---------- the Members' Course duel (Nov 20): the designer's ghost ball, shot for shot, and their showcase ----------
   // called each time the golfer comes to address a ball, with the strokes taken on the hole so far
   onAimStart: ((stroke: number) => void) | null = null;
+  // the ball has come to rest and the next shot is up (the round's fairway and green pops wait for this)
+  onRest: (() => void) | null = null;
   private ghostBall: { ball: THREE.Mesh; tag: THREE.Sprite; line: THREE.Line; pts: THREE.Vector3[]; frames: Frame[]; holed: boolean; t: number } | null = null;
   private showcaseAnim: ((clock: number, dt: number) => void)[] = [];
   // the designer's stroke flies as a pale gold ghost ball with its own tracer and their name over it, then rests there

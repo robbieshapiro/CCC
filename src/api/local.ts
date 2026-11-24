@@ -3,7 +3,7 @@ import { seasonPoints } from '../season';
 import { STOCK_BUDDIES } from '../buddies';
 import { CARDS_A_DAY, cardsOn, GAME_TZ, openPurseOn, periodOf, todayInGameTz } from '../day';
 import { courseById, courseFor } from '../golf3d/courses';
-import { BONUS, bonusOf, dailyPrize, PRIZES_FROM, puttBonus, RAISE_FROM, SECRET_FEATS } from '../bonus';
+import { BONUS, bonusOf, dailyPrize, FIR_GIR_FROM, PRIZES_FROM, puttBonus, RAISE_FROM, regulation, SECRET_FEATS } from '../bonus';
 import { makeRng } from '../seed';
 import { periodChampion } from '../standings';
 import { store } from '../storage';
@@ -296,6 +296,11 @@ export const localApi: Api & { seedDemo(session: { token: string }): void; local
           const old = todayInGameTz(new Date(r.createdAt)) < RAISE_FROM;
           return pars?.length === r.holes.length ? r.holes.map((s, i): [number, number, boolean] => [s, pars[i], old]) : [];
         }),
+        // fairways and greens in regulation, on the day's first finished round from FIR_GIR_FROM (as birdies)
+        regulation: rs
+          .filter((r, i) => !rs.slice(0, i).some((x) => todayInGameTz(new Date(x.createdAt)) === todayInGameTz(new Date(r.createdAt))))
+          .filter((r) => todayInGameTz(new Date(r.createdAt)) >= FIR_GIR_FROM)
+          .reduce((a, r) => a + regulation(r.shots ?? [], courseById(r.course)?.holes.map((h) => h.par) ?? []).total, 0),
         // as person_bonus does: the moments on daily cards (from Nov 8), secrets found, and plays of their holes
         ...(() => {
           const cards = rs.filter((r) => cardsOn(r.month));
