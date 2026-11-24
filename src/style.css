@@ -982,7 +982,6 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .tile:nth-child(2) { animation-delay: 0.08s; }
 .tile:nth-child(3) { animation-delay: 0.16s; }
 .tile:nth-child(4) { animation-delay: 0.24s; }
-.tile:active { transform: scale(0.97); }
 .tile:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
 .tile[hidden] { display: none; }
 .tile i { font-style: normal; font-size: 24px; }
@@ -1011,7 +1010,6 @@ td.who > div { display: flex; align-items: center; gap: 10px; }
 .bar-game { display: grid; grid-template-columns: 40px 1fr; gap: 4px 12px; padding: 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); text-decoration: none; animation: rise 0.45s ease-out both; transition: transform 0.15s; }
 .bar-game:nth-child(2) { animation-delay: 0.08s; }
 .bar-game:nth-child(3) { animation-delay: 0.16s; }
-.bar-game:active { transform: scale(0.98); }
 .bar-game > i { font-style: normal; font-size: 28px; grid-row: span 2; align-self: start; }
 .bar-game > div:first-of-type { display: grid; }
 .bar-game b { font-family: var(--serif); font-size: 20px; color: var(--green); }
@@ -1362,7 +1360,6 @@ h1 .rank-badge { vertical-align: -2px; }
 .shop-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 10px; }
 .shop-item { cursor: pointer; display: grid; gap: 4px; align-content: start; text-align: left; padding: 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); font: inherit; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
 .shop-item:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
-.shop-item:active { transform: scale(0.98); }
 .shop-item .si-kind { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
 .shop-item b { font-family: var(--serif); font-size: 18px; color: var(--green); }
 .shop-item span { font-size: 13px; color: var(--muted); }
@@ -1460,7 +1457,6 @@ td.who .nm .crown { display: inline; margin-left: 4px; }
 .fit-rack h3 small { font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--muted); }
 .fit-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; }
 .fit-item { flex: none; width: 132px; scroll-snap-align: start; display: grid; gap: 4px; justify-items: start; text-align: left; padding: 12px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); font: inherit; color: var(--ink); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-.fit-item:active { transform: scale(0.97); }
 .fit-item .fi-icon { font-style: normal; font-size: 26px; line-height: 1; }
 .fit-item b { font-family: var(--serif); font-size: 15px; line-height: 1.2; color: var(--green); }
 .fit-item em { font-style: normal; font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: #fbf4e0; border: 1px solid rgba(214, 169, 64, 0.6); color: #8a6514; }
@@ -2770,28 +2766,25 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
   .g3-swing.clear.vertical p { display: none; }
 }
 
-/* Buttons that feel like buttons (Nov 24, Robbie: more clickable, more polished). Every button presses down a touch
-   when you tap it (the individual translate and scale properties, so a button's own transform still holds), and the
-   club's buttons get a light rim, a glint along the top edge and a soft shadow under, which flattens as it goes down. */
-:where(button, .btn, [role='button'], .preview-band, .pb-go):not(.link):not(:disabled) {
-  transition: translate 0.08s ease, scale 0.08s ease, box-shadow 0.12s ease, filter 0.12s ease, background-color 0.15s ease;
-}
-:where(button, .btn, [role='button'], .preview-band):not(.link):not(:disabled):active { translate: 0 1px; scale: 0.98; filter: brightness(0.94); }
-@media (hover: hover) {
-  :where(button, .btn):not(.link):not(:disabled):hover { filter: brightness(1.05); }
-}
-.btn { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 2px 0 rgba(0, 0, 0, 0.14), 0 8px 16px -10px rgba(0, 0, 0, 0.45); }
-.btn:not(:disabled):active { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 5px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(0, 0, 0, 0.1); }
-.btn.ghost { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 rgba(22, 59, 44, 0.12), 0 6px 14px -10px rgba(22, 59, 44, 0.35); }
-.btn.ghost:not(:disabled):active { box-shadow: inset 0 2px 4px rgba(22, 59, 44, 0.16); }
-.btn.big { box-shadow: inset 0 0 0 1px rgba(255, 248, 225, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 0 rgba(122, 90, 38, 0.45), 0 10px 20px -12px rgba(0, 0, 0, 0.5); }
-.btn.big:not(:disabled):active { box-shadow: inset 0 0 0 1px rgba(255, 248, 225, 0.3), inset 0 2px 6px rgba(80, 56, 18, 0.35), 0 1px 0 rgba(122, 90, 38, 0.4); }
-.pb-go { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 0 rgba(0, 0, 0, 0.18); }
-.preview-band:active .pb-go { box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.25); }
-/* the course's own buttons in play: the pills and the club row */
-.g3-pill:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 0 rgba(0, 0, 0, 0.18); }
-.g3-pill:not(:disabled):active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3); }
-.g3-club button.on { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 0 rgba(0, 0, 0, 0.2); }
-@media (prefers-reduced-motion: reduce) {
-  :where(button, .btn, [role='button'], .preview-band):not(.link):active { translate: none; scale: none; }
-}
+/* Buttons that feel like buttons (Nov 24, Robbie): a solid edge underneath and a soft shadow, so each one stands up
+   off the page, and when you press it, it goes down onto its edge. Only the buttons: tiles and cards stay put. The
+   press uses the translate property, so a button's own transform still holds. --edge is the colour of the edge. */
+.btn, .g3-pill, .pb-go { --edge: rgba(0, 0, 0, 0.3); box-shadow: 0 3px 0 var(--edge), 0 10px 18px -10px rgba(0, 0, 0, 0.55); transition: translate 0.07s ease, box-shadow 0.07s ease, filter 0.15s ease, background-color 0.15s ease; }
+.btn:not(:disabled):active, .g3-pill:not(:disabled):active, .preview-band:active .pb-go { translate: 0 2px; box-shadow: 0 1px 0 var(--edge), 0 4px 8px -6px rgba(0, 0, 0, 0.45); }
+.btn { --edge: #0b2117; }
+.btn.ghost { --edge: rgba(22, 59, 44, 0.35); box-shadow: 0 3px 0 var(--edge), 0 8px 14px -10px rgba(22, 59, 44, 0.45); }
+.btn.big { --edge: #8a6a2e; }
+.btn.danger { --edge: #6a2a1b; }
+.btn.lava { --edge: #8e2c0c; }
+.g3-pill { --edge: rgba(0, 0, 0, 0.45); }
+.g3-club button:active, .g3-aim button:active { translate: 0 1px; }
+@media (hover: hover) { .btn:not(:disabled):hover { filter: brightness(1.06); } }
+@media (prefers-reduced-motion: reduce) { .btn:active, .g3-pill:active, .preview-band:active .pb-go { translate: none; } }
+
+/* the Daily Shot's Play: the first thing on the page, so it looks it. Polished gold with a deep edge, the flag, a
+   slow glow round it, and the shine running across */
+.shot-card .btn.shot-play { --edge: #6f4f12; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 18px; border-radius: 14px; border: 1px solid #f7e3a3; background: linear-gradient(180deg, #fbe7a4 0%, #e9c565 45%, #c99a3a 100%); color: #13321f; font: 800 20px/1 var(--font); letter-spacing: 0.14em; text-shadow: 0 1px 0 rgba(255, 246, 214, 0.7); box-shadow: 0 4px 0 var(--edge), 0 0 0 0 rgba(255, 214, 110, 0.55), 0 14px 26px -12px rgba(0, 0, 0, 0.6); animation: shot-glow 2.8s ease-in-out infinite; }
+.shot-card .btn.shot-play .flag { font-size: 20px; letter-spacing: 0; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.5)); }
+.shot-card .btn.shot-play:not(:disabled):active { translate: 0 3px; box-shadow: 0 1px 0 var(--edge), 0 6px 10px -8px rgba(0, 0, 0, 0.5); animation: none; }
+@keyframes shot-glow { 0%, 100% { box-shadow: 0 4px 0 var(--edge), 0 0 0 0 rgba(255, 214, 110, 0), 0 14px 26px -12px rgba(0, 0, 0, 0.6); } 50% { box-shadow: 0 4px 0 var(--edge), 0 0 22px 4px rgba(255, 214, 110, 0.45), 0 14px 26px -12px rgba(0, 0, 0, 0.6); } }
+@media (prefers-reduced-motion: reduce) { .shot-card .btn.shot-play { animation: none; } }
