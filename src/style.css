@@ -2769,3 +2769,29 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
   .g3-swing.clear.vertical.lefty .g3-swing-pct { left: auto; right: calc(100% + 56px); }
   .g3-swing.clear.vertical p { display: none; }
 }
+
+/* Buttons that feel like buttons (Nov 24, Robbie: more clickable, more polished). Every button presses down a touch
+   when you tap it (the individual translate and scale properties, so a button's own transform still holds), and the
+   club's buttons get a light rim, a glint along the top edge and a soft shadow under, which flattens as it goes down. */
+:where(button, .btn, [role='button'], .preview-band, .pb-go):not(.link):not(:disabled) {
+  transition: translate 0.08s ease, scale 0.08s ease, box-shadow 0.12s ease, filter 0.12s ease, background-color 0.15s ease;
+}
+:where(button, .btn, [role='button'], .preview-band):not(.link):not(:disabled):active { translate: 0 1px; scale: 0.98; filter: brightness(0.94); }
+@media (hover: hover) {
+  :where(button, .btn):not(.link):not(:disabled):hover { filter: brightness(1.05); }
+}
+.btn { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 2px 0 rgba(0, 0, 0, 0.14), 0 8px 16px -10px rgba(0, 0, 0, 0.45); }
+.btn:not(:disabled):active { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 5px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(0, 0, 0, 0.1); }
+.btn.ghost { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 rgba(22, 59, 44, 0.12), 0 6px 14px -10px rgba(22, 59, 44, 0.35); }
+.btn.ghost:not(:disabled):active { box-shadow: inset 0 2px 4px rgba(22, 59, 44, 0.16); }
+.btn.big { box-shadow: inset 0 0 0 1px rgba(255, 248, 225, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 0 rgba(122, 90, 38, 0.45), 0 10px 20px -12px rgba(0, 0, 0, 0.5); }
+.btn.big:not(:disabled):active { box-shadow: inset 0 0 0 1px rgba(255, 248, 225, 0.3), inset 0 2px 6px rgba(80, 56, 18, 0.35), 0 1px 0 rgba(122, 90, 38, 0.4); }
+.pb-go { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 0 rgba(0, 0, 0, 0.18); }
+.preview-band:active .pb-go { box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.25); }
+/* the course's own buttons in play: the pills and the club row */
+.g3-pill:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 0 rgba(0, 0, 0, 0.18); }
+.g3-pill:not(:disabled):active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3); }
+.g3-club button.on { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 0 rgba(0, 0, 0, 0.2); }
+@media (prefers-reduced-motion: reduce) {
+  :where(button, .btn, [role='button'], .preview-band):not(.link):active { translate: none; scale: none; }
+}
