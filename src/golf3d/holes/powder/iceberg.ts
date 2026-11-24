@@ -31,7 +31,7 @@ export const iceberg: Hole = {
   windByHeight: true,
   gusts: true,
   chipDrop: 0.7,
-  greenFirm: 0.12,
+  greenFirm: 0.18, // a bit firmer (Nov 24, Robbie)
   yards: 150,
   // an island by design: off the green is off the ice (the cupcake check leaves it be)
   islandGreen: true,

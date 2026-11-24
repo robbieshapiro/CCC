@@ -32,7 +32,7 @@ export const thelodge: Hole = {
   ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.12,
+  greenFirm: 0.18, // a bit firmer (Nov 24, Robbie)
   yards: 440,
   blurb: 'Green circle. The walk-up finish: 40 feet up the hill to the lodge, the fire lit and the deck full. It plays longer than it looks.',
   teeTip: 'Driver up onto the bench. Take an extra club for the climb. Not right: the cliff.',

@@ -59,7 +59,7 @@ export const chairlift: Hole = {
   ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.12,
+  greenFirm: 0.18, // a bit firmer (Nov 24, Robbie)
   yards: 380,
   blurb: 'Blue square. Uphill, and the lift is running: roll one onto a passing chair and it rides up over the firs to the green. Thirsty? The deck\'s open.',
   teeTip: 'Driver to the right side and the green is wide open. Or lay it by the lift station and time a chip onto a chair.',

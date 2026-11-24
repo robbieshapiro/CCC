@@ -25,7 +25,7 @@ export const thebowl: Hole = {
   ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.06,
+  greenFirm: 0.1, // a bit firmer (Nov 24, Robbie)
   yards: 155,
   blurb: 'Blue square. Down into the bowl. Its sides are slick: land anywhere inside the rim and it runs down to the green. Some go in.',
   teeTip: 'An iron anywhere inside the rim. The bowl does the rest.',

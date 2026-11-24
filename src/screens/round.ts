@@ -458,9 +458,15 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     holeAt = i;
     const par = course.holes.reduce((a, x, j) => a + (scores[j] === undefined ? 0 : x.par), 0);
     const jumped = new Promise<number>((res) => (jump = res));
+    // between holes (Nov 24, Robbie: it was a still screen): your card so far over the course while the next hole is
+    // built, and a light shimmer on it, then it fades once the new hole has drawn its first frame
+    const walk = scores.filter((x) => x !== undefined).length > 0 ? betweenCard(el, course, scores, i) : null;
+    if (walk) await walk.painted;
+    if (quit || !game) return;
     // picking a card up mid-hole: back to the tee, with the strokes already played on it
     const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: visits[i], of: course.holes.length, strokes: carry, cooler: i === 0 && !carry && !(opts.practice && !livePractice) });
     carry = 0;
+    walk?.done();
     const r = await Promise.race([played, jumped]);
     if (quit || !game) return;
     if (typeof r === 'number') {
@@ -1527,3 +1533,50 @@ export function barRound(snap: Snapshot, kind: BarGame) {
     });
   }
 }
+
+// The card between holes (Nov 24): the course's holes in a row, your score on each one played (a circle round a birdie,
+// a square round a bogey), where you stand, and the next hole coming up. It goes up before the next hole is built (two
+// frames, so it's on screen while the build holds the page) and fades once that hole has drawn. The shimmer runs on
+// the compositor, so it keeps moving while the page is busy.
+function betweenCard(host: HTMLElement, course: Course, scores: number[], next: number) {
+  const played = course.holes.map((h, i) => [scores[i], h.par] as const);
+  const done = played.filter(([s]) => s !== undefined);
+  const total = done.reduce((a, [s]) => a + s, 0);
+  const toPar = done.reduce((a, [s, p]) => a + s - p, 0);
+  const mark = (s: number | undefined, p: number) => (s === undefined ? '' : s <= p - 2 ? 'eagle' : s === p - 1 ? 'birdie' : s === p ? 'par' : s === p + 1 ? 'bogey' : 'double');
+  const box = document.createElement('div');
+  box.className = 'between';
+  box.innerHTML = `<div class="between-card">
+    <p class="eyebrow">${esc(course.name)}</p>
+    <div class="between-score"><b>${toParLabel(toPar)}</b><span>${total} through ${done.length}</span></div>
+    <ol class="between-holes" style="--n:${played.length}">${played
+      .map(([s, p], i) => `<li class="${mark(s, p)}${i === next ? ' next' : ''}" style="--i:${i}"><small>${i + 1}</small><b>${s ?? (i === next ? '⛳' : '')}</b><em>par ${p}</em></li>`)
+      .join('')}</ol>
+    <p class="between-next">To the ${ordinalTee(next + 1)} tee · ${esc(course.holes[next].name)}</p>
+    <div class="between-bar"><i></i></div>
+  </div>`;
+  host.appendChild(box);
+  const shown = performance.now();
+  const painted = new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
+  requestAnimationFrame(() => box.classList.add('in'));
+  return {
+    painted,
+    // once the new hole has drawn (or after a few seconds whatever happens), and never in under a second
+    done() {
+      let gone = false;
+      const go = () => {
+        if (gone) return;
+        gone = true;
+        window.removeEventListener('g3:frame', ready);
+        window.setTimeout(() => {
+          box.classList.remove('in');
+          window.setTimeout(() => box.remove(), 400);
+        }, Math.max(0, 1100 - (performance.now() - shown)));
+      };
+      const ready = () => go();
+      window.addEventListener('g3:frame', ready);
+      window.setTimeout(go, 6000);
+    },
+  };
+}
+const ordinalTee = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;

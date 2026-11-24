@@ -2776,3 +2776,32 @@ p.jv-cal-course { background: none; color: var(--muted); padding: 0; margin: 0; 
 .shot-card .btn.shot-play:not(:disabled):active { translate: 0 3px; box-shadow: 0 1px 0 var(--edge), 0 6px 10px -8px rgba(0, 0, 0, 0.5); animation: none; }
 @keyframes shot-glow { 0%, 100% { box-shadow: 0 4px 0 var(--edge), 0 0 0 0 rgba(255, 214, 110, 0), 0 14px 26px -12px rgba(0, 0, 0, 0.6); } 50% { box-shadow: 0 4px 0 var(--edge), 0 0 22px 4px rgba(255, 214, 110, 0.45), 0 14px 26px -12px rgba(0, 0, 0, 0.6); } }
 @media (prefers-reduced-motion: reduce) { .shot-card .btn.shot-play { animation: none; } }
+
+/* Between holes (Nov 24, src/screens/round.ts betweenCard): your card so far, over the course, while the next hole is
+   built. Only opacity and transform move, so the shimmer keeps going while the page is busy building. */
+.between { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px; background: radial-gradient(120% 90% at 50% 30%, rgba(22, 59, 44, 0.78), rgba(8, 22, 15, 0.92)); opacity: 0; transition: opacity 0.35s ease; pointer-events: none; }
+.between.in { opacity: 1; }
+.between-card { width: min(380px, 100%); display: grid; gap: 12px; padding: 20px 18px 18px; border-radius: 16px; background: var(--paper); color: var(--ink); border-top: 4px solid var(--gold); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7); text-align: center; transform: translateY(10px) scale(0.98); transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1); }
+.between.in .between-card { transform: none; }
+.between-card .eyebrow { margin: 0; }
+.between-score { display: grid; gap: 2px; }
+.between-score b { font: 600 44px/1 var(--serif); color: var(--green); }
+.between-score span { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.between-holes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 4px; }
+.between-holes li { display: grid; justify-items: center; gap: 2px; padding: 6px 0 5px; border-radius: 10px; background: rgba(22, 59, 44, 0.06); opacity: 0; transform: translateY(6px); animation: between-in 0.4s ease forwards; animation-delay: calc(0.15s + var(--i) * 0.06s); }
+.between-holes small { font-size: 10px; font-weight: 800; color: var(--muted); }
+.between-holes b { display: grid; place-items: center; width: 26px; height: 26px; font: 800 15px/1 var(--font); color: var(--ink); border-radius: 4px; }
+.between-holes em { font-style: normal; font-size: 9px; color: var(--muted); letter-spacing: 0.04em; }
+.between-holes li.birdie b, .between-holes li.eagle b { border-radius: 50%; box-shadow: 0 0 0 2px var(--good); color: var(--good); }
+.between-holes li.eagle b { box-shadow: 0 0 0 2px var(--gold), 0 0 0 4px rgba(184, 149, 90, 0.35); color: #8a6a2e; }
+.between-holes li.bogey b { box-shadow: 0 0 0 1.5px var(--bad); color: var(--bad); }
+.between-holes li.double b { box-shadow: 0 0 0 1.5px var(--bad), 0 0 0 4px rgba(163, 68, 46, 0.25); color: var(--bad); }
+.between-holes li.next { background: rgba(184, 149, 90, 0.18); box-shadow: inset 0 0 0 1.5px var(--gold); }
+.between-holes li.next b { font-size: 16px; animation: between-bob 1.2s ease-in-out infinite; }
+.between-next { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--green); }
+.between-bar { position: relative; height: 4px; border-radius: 2px; overflow: hidden; background: rgba(22, 59, 44, 0.12); }
+.between-bar i { position: absolute; inset: 0; width: 40%; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); animation: between-sweep 1.1s ease-in-out infinite; will-change: transform; }
+@keyframes between-in { to { opacity: 1; transform: none; } }
+@keyframes between-bob { 50% { transform: translateY(-3px); } }
+@keyframes between-sweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .between-holes li { animation: none; opacity: 1; transform: none; } .between-holes li.next b, .between-bar i { animation: none; } }

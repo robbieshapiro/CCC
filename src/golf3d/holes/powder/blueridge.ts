@@ -60,7 +60,7 @@ export const blueridge: Hole = {
   ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
-  greenFirm: 0.2,
+  greenFirm: 0.26, // a bit firmer (Nov 24, Robbie)
   yards: 460,
   blurb: 'Blue square. A dogleg right: the upper fairway, the cliff beyond it, then round the firs and over the creek. Or cut the corner.',
   teeTip: 'Driver up the left onto the upper fairway. A full one can carry the firs on the right.',
