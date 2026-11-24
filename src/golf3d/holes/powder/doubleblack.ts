@@ -19,7 +19,7 @@ import { POWDER_PLAY, POWDER_TURF, cliff, firs, moguls, profile } from './common
 const TOP = 150;
 // half the ridge's width: the lips of the cliffs either side of the drive
 const RIDGE = 26;
-const GREEN = { x: -228, y: 776, rx: 12, ry: 10 };
+const GREEN = { x: -228, y: 776, rx: 18, ry: 15 };
 // the patrol line: down the right of the second chute to the front of the green
 const LINE: V2[] = [
   { x: -24, y: 504 },
@@ -82,12 +82,14 @@ export const doubleblack: Hole = {
   // out of bounds where it comes down, not where it flies: a drive can carry the drop off the left of the ridge into
   // the second chute (the corner cut)
   obWhenLanding: true,
+  // over the edge is a cliff face, dark rock, not snow (Nov 24, Robbie: make the OB look like the edge of the mountain)
+  outside: '#34393e',
   yards: 560,
   blurb: 'Double black. Down the chute to a narrow ridge, cliffs both sides, then left down a second chute and over the stream.',
   teeTip: 'A wood to the ridge. Wide either side is over a cliff. Long is too.',
   tee: { x: 0, y: 0 },
-  cup: { x: -228, y: 778 },
-  pins: [{ x: -228, y: 778 }, { x: -234, y: 773 }, { x: -221, y: 780 }, { x: -226, y: 783 }],
+  cup: { x: -228, y: 779 },
+  pins: [{ x: -228, y: 779 }, { x: -237, y: 772 }, { x: -218, y: 782 }, { x: -225, y: 786 }],
   aim: -0.02,
   bounds: { x0: -360, y0: -50, x1: 140, y1: 880 },
   border: [
@@ -150,8 +152,9 @@ export const doubleblack: Hole = {
     { kind: 'channel', pts: LINE, width: 7, depth: 0.9 },
     // the tree wells
     ...WELLS.map(([x, y]) => ({ kind: 'disc' as const, x, y, r: 9, h: -4.5, edge: 4, op: 'add' as const })),
-    // the green sits up on a bench above the stream, tipped toward it: short, or spun back, and it runs off the front into the water
-    ...greenComplex(GREEN, 31, { lift: 1, edge: 9, tilt: slope(GREEN, 9, [0.4, -1], 2.4), rolls: [[-5, 4, 6, 0.3], [6, -3, 5, -0.25]] }),
+    // the green sits low by the stream, level with the slope round it (Nov 24, Robbie: no cupcake greens), tipped toward
+    // the water: short, or spun back, and it runs off the front into the stream
+    ...greenComplex(GREEN, 27, { lift: 0.3, edge: 16, tilt: slope(GREEN, 16, [0.4, -1], 2.4), rolls: [[-8, 6, 9, 0.3], [9, -4, 8, -0.25]] }),
     ...traps.flatMap((t) => t.pieces),
     // the cliff at the end of the ledge and down the outside of the bend
     cliff([{ x: 140, y: 584 }, { x: -2, y: 600 }, { x: -66, y: 900 }]),
@@ -185,5 +188,9 @@ export const doubleblack: Hole = {
     { kind: 'patrolhut', x: 62, y: 340, rot: -0.6 },
     { kind: 'rock', x: 30, y: 556, scale: 5 },
     { kind: 'rock', x: -40, y: 640, scale: 5 },
+    // the lips of the cliffs, broken rock where the snow ends
+    ...[400, 432, 468, 500, 530].map((y, i) => ({ kind: 'rock', x: RIDGE + 9 + (i % 2) * 3, y, scale: 3 + (i % 3) })),
+    ...[398, 430, 462].map((y, i) => ({ kind: 'rock', x: -RIDGE - 9 - (i % 2) * 3, y, scale: 3 + (i % 2) })),
+    ...[100, 70, 40, 10].map((x, i) => ({ kind: 'rock', x, y: 586 + i * 1.5, scale: 3 + (i % 3) })),
   ],
 };

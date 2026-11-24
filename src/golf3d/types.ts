@@ -81,6 +81,9 @@ export type Hole = {
   drizzle?: boolean; // a light drizzle always falling, for the feel only (it never slows the ground)
   maxTime?: number; // seconds a shot may run before the physics calls it (default 24): long roads need longer
   tour?: boolean; // tour greens: quicker, a smaller cup, and a putt has to be dying to drop
+  lift?: import('./lift').Lift; // a chairlift that carries a ball rolled onto a passing chair up to the green (lift.ts)
+  outside?: string; // the colour of the ground beyond the border (the Double Black's cliffs: dark rock, not snow)
+  islandGreen?: boolean; // the green is meant to fall away on all sides (the Iceberg): the ledge check leaves it be
   apres?: { x: number; y: number }; // a hidden après-ski deck (the Powder Bowl): tap it between shots, once a hole, for Reginald's tray. Drawn by its decor ('apresdeck')
   noCart?: boolean; // nowhere for the beverage cart to drive up (a tee on a crater rim, or an island in the sky)
   theme?: 'highland' | 'volcanic' | 'haunted' | 'links' | 'desert' | 'autumn' | 'coastal' | 'florida' | 'city' | 'canyon' | 'alpine' | 'linksland' | 'chicago' | 'carnival' | 'arena' | `member:${string}`; // member: a member's own world (src/golf3d/looks/member.ts)

@@ -64,7 +64,7 @@ function surfaceTexture(h: Hole, shade: (paint: (x: number, y: number, size: num
     g.closePath();
   };
   const hex = (s: Surface, dl = 0) => '#' + new THREE.Color(surfaceColor(h, s)).offsetHSL(0, 0, dl).getHexString();
-  g.fillStyle = h.theme === 'volcanic' ? '#2a2624' : h.theme === 'coastal' ? '#8e8a52' : h.theme === 'haunted' ? HAUNTED_FLOOR : h.theme === 'autumn' ? AUTUMN_FLOOR : LANDS_FLOOR[h.theme ?? ''] ?? kitOf(h)?.floor ?? '#284a25';
+  g.fillStyle = h.outside ?? (h.theme === 'volcanic' ? '#2a2624' : h.theme === 'coastal' ? '#8e8a52' : h.theme === 'haunted' ? HAUNTED_FLOOR : h.theme === 'autumn' ? AUTUMN_FLOOR : LANDS_FLOOR[h.theme ?? ''] ?? kitOf(h)?.floor ?? '#284a25');
   g.fillRect(x0, y0, x1 - x0, y1 - y0);
   const layers: { poly: V2[]; surface: Surface }[] = [{ poly: h.border, surface: h.base }, ...h.regions];
   for (const { poly, surface } of layers) {

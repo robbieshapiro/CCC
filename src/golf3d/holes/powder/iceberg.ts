@@ -13,8 +13,8 @@ import { POWDER_PLAY, POWDER_TURF, firs } from './common';
 
 const SHORE = 22;
 const BERG = 9;
-const GREEN = { x: 6, y: 200, rx: 17, ry: 14 };
-const BERG_R = 33;
+const GREEN = { x: 6, y: 200, rx: 26, ry: 21 };
+const BERG_R = 42;
 // the shore spit, out from the left bank toward the berg
 const SPIT_END = { x: -58, y: 202 };
 const BRIDGE = stoneBridge({ x: SPIT_END.x + 4, y: SPIT_END.y }, { x: GREEN.x - BERG_R + 9, y: GREEN.y - 2 }, 3.5, BERG + 0.4, -6);
@@ -33,11 +33,13 @@ export const iceberg: Hole = {
   chipDrop: 0.7,
   greenFirm: 0.12,
   yards: 150,
+  // an island by design: off the green is off the ice (the cupcake check leaves it be)
+  islandGreen: true,
   blurb: 'Black diamond. All carry over the lake to a green on an iceberg. Its sides are sheer ice: off the green is in the water.',
   teeTip: 'A mid iron, all carry. Land it soft in the middle. The spit on the left is the safe play.',
   tee: { x: 0, y: 0 },
-  cup: { x: 6, y: 201 },
-  pins: [{ x: 6, y: 201 }, { x: -2, y: 196 }, { x: 13, y: 203 }, { x: 4, y: 207 }],
+  cup: { x: 6, y: 202 },
+  pins: [{ x: 6, y: 202 }, { x: -6, y: 194 }, { x: 16, y: 204 }, { x: 3, y: 210 }],
   aim: 0.02,
   bounds: { x0: -140, y0: -50, x1: 140, y1: 330 },
   border: [
@@ -71,7 +73,7 @@ export const iceberg: Hole = {
     // the berg: a flat top and sheer sides down into the lake
     { kind: 'disc', x: GREEN.x, y: GREEN.y, r: BERG_R, h: BERG, edge: 8, op: 'set' },
     // the berg's top is domed, so a loose ball runs off toward the edge
-    { kind: 'hill', x: GREEN.x, y: GREEN.y, r: 40, h: 1.8 },
+    { kind: 'hill', x: GREEN.x, y: GREEN.y, r: 50, h: 1.8 },
     // the green tips gently toward the tee, with a roll in it
     { kind: 'hill', x: GREEN.x + 4, y: GREEN.y + 34, r: 46, h: 1.6 },
     { kind: 'hill', x: GREEN.x - 6, y: GREEN.y + 4, r: 8, h: 0.35 },

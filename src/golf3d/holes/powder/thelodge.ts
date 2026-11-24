@@ -14,13 +14,13 @@ import { POWDER_PLAY, POWDER_TURF, cliff, firs, profile } from './common';
 
 const LOW = 10;
 const BENCH = 50;
-const GREEN = { x: -12, y: 600, rx: 18, ry: 14 };
-const BANK = { x: -12, y: 634, rx: 22, ry: 13 };
+const GREEN = { x: -12, y: 600, rx: 27, ry: 21 };
+const BANK = { x: -12, y: 646, rx: 22, ry: 13 };
 // the cliff edge down the right
 const LIP = 76;
 const traps = [greenside(GREEN, -12, 570, 10, 6, 2, 3.4, 0), greenside(GREEN, 14, 616, 8, 6, 3, 3.4, 0.3), greenside(GREEN, 22, 592, 6, 8, 4, 3.4, 0)];
 // the skating pond, short and left of the green, on the lodge's bench
-const POND = blob(-66, 576, 24, 20, 6, 0.1);
+const POND = blob(-78, 570, 24, 20, 6, 0.1);
 
 export const thelodge: Hole = {
   id: 'thelodge',
@@ -37,8 +37,8 @@ export const thelodge: Hole = {
   blurb: 'Green circle. The walk-up finish: 40 feet up the hill to the lodge, the fire lit and the deck full. It plays longer than it looks.',
   teeTip: 'Driver up onto the bench. Take an extra club for the climb. Not right: the cliff.',
   tee: { x: 0, y: 0 },
-  cup: { x: -12, y: 602 },
-  pins: [{ x: -12, y: 602 }, { x: -22, y: 595 }, { x: -1, y: 606 }, { x: -14, y: 609 }],
+  cup: { x: -12, y: 603 },
+  pins: [{ x: -12, y: 603 }, { x: -27, y: 592 }, { x: 4, y: 609 }, { x: -15, y: 614 }],
   aim: -0.01,
   bounds: { x0: -140, y0: -50, x1: 150, y1: 840 },
   border: [
@@ -82,10 +82,10 @@ export const thelodge: Hole = {
     { kind: 'disc', x: 0, y: 0, r: 16, h: LOW + 1, edge: 8, op: 'set' },
     // the mountainside rises on the right of the drive, so it tips left, away from the cliff
     { kind: 'hill', x: 170, y: 300, r: 170, h: 14 },
-    { kind: 'disc', x: -66, y: 576, r: 26, h: -5, edge: 9, op: 'add' },
+    { kind: 'disc', x: -78, y: 570, r: 26, h: -5, edge: 9, op: 'add' },
     // the snowbank behind the green
     { kind: 'hill', x: BANK.x, y: BANK.y + 14, r: 34, h: 11 },
-    ...greenComplex(GREEN, BENCH, { lift: 1, edge: 9, tilt: slope(GREEN, 9, [0.4, -0.9]), rolls: [[-8, -6, 7, 0.35], [10, 6, 6, -0.3]] }),
+    ...greenComplex(GREEN, BENCH, { lift: 1, edge: 9, tilt: slope(GREEN, 9, [0.4, -0.9]), rolls: [[-12, -9, 10, 0.35], [15, 9, 9, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
     // the cliff down the right of the drive
     cliff([{ x: LIP + 36, y: 150 }, { x: LIP + 36, y: 520 }]),

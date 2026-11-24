@@ -13,7 +13,7 @@ import { slope } from '../atlantic/common';
 import { POWDER_PLAY, POWDER_TURF, cliff, firs, profile } from './common';
 
 const TOP = 64;
-const GREEN = { x: 6, y: 690, rx: 18, ry: 15 };
+const GREEN = { x: 6, y: 690, rx: 27, ry: 22 };
 // the crest between the two fairways
 const CREST = 414;
 // the magic carpet: over the crest on the right, down to the front right of the green
@@ -42,8 +42,8 @@ export const bunnyhill: Hole = {
   blurb: 'Green circle. Up onto the upper fairway, then down the hill to the ski school. A perfect drive runs over the crest.',
   teeTip: 'Driver. A full one carries the crest and runs. Mind the cliff on the right.',
   tee: { x: 0, y: 0 },
-  cup: { x: 6, y: 692 },
-  pins: [{ x: 6, y: 692 }, { x: -6, y: 684 }, { x: 16, y: 696 }, { x: 2, y: 701 }],
+  cup: { x: 6, y: 693 },
+  pins: [{ x: 6, y: 693 }, { x: -12, y: 681 }, { x: 21, y: 699 }, { x: 0, y: 706 }],
   aim: 0.005,
   bounds: { x0: -140, y0: -50, x1: 150, y1: 790 },
   border: [
@@ -90,7 +90,7 @@ export const bunnyhill: Hole = {
     { kind: 'hill', x: -90, y: 250, r: 60, h: 6 },
     // the carpet sits a little into the snow, so a ball rolling on it keeps to it
     { kind: 'channel', pts: CARPET, width: 5, depth: 0.6 },
-    ...greenComplex(GREEN, 10, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [-0.4, 0.9]), rolls: [[-8, -5, 7, 0.35], [9, 5, 6, -0.3]] }),
+    ...greenComplex(GREEN, 10, { lift: 0.8, edge: 10, tilt: slope(GREEN, 10, [-0.4, 0.9]), rolls: [[-12, -8, 10, 0.35], [14, 8, 9, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
     // the cliff down the right
     cliff([{ x: LIP + 36, y: 150 }, { x: LIP + 36, y: 660 }]),

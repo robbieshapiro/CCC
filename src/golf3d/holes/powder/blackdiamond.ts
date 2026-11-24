@@ -16,7 +16,7 @@ import { POWDER_PLAY, POWDER_TURF, cliff, firs, moguls, profile } from './common
 const TOP = 150;
 // where the flat ends: the band of rock drops into the mogul field
 const BAND = 760;
-const GREEN = { x: -26, y: 1100, rx: 13, ry: 11 };
+const GREEN = { x: -26, y: 1100, rx: 20, ry: 16 };
 // the cliff edge down the right
 const LIP = 70;
 // the groomer: down the left of the mogul field, through the ridge and on down the lower run
@@ -36,10 +36,18 @@ const STREAM: V2[] = [
 const traps = [bunker(30, 640, 12, 9, 1, FAIRWAY_DEPTH, -0.3), greenside(GREEN, 0, 1110, 7, 8, 2, 3.4, 0), greenside(GREEN, -16, 1124, 9, 6, 3, 3.4, 0)];
 // firs standing among the moguls, in the fairway, on a jittered grid (the groomer's lane down the left is kept clear)
 const among: Post[] = [];
-for (let y = 804, row = 0; y <= 1010; y += 26, row++)
-  for (let x = -42 + (row % 2 ? 13 : 0); x <= 42; x += 27) {
-    const j = ((x * 13 + y * 7) % 11) - 5;
-    const h = 18 + ((x * 7 + y * 3) % 14);
+// (Nov 24, Robbie: a second shot cleared them easily) across the middle of the field, a band of big old firs, tall and
+// close, 30 to 46 ft: a long second going for it is coming down through them (it used to clear them about one time in
+// eight; now hardly ever). A high third from the lay-up is near the top of its flight there and gets over about half the
+// time. Above and below the band they're shorter and thinner, as before.
+const T0 = 860;
+const T1 = 960;
+const HT = 30;
+for (let y = 800, row = 0; y <= 1010; y += y >= T0 && y < T1 ? 21 : 26, row++)
+  for (let x = -40 + (row % 2 ? 10 : 0); x <= 42; x += y >= T0 && y < T1 ? 20 : 27) {
+    const tall = y >= T0 && y < T1;
+    const j = ((x * 13 + y * 7) % 9) - 4;
+    const h = tall ? HT + ((x * 7 + y * 3) % 17) : 18 + ((x * 7 + y * 3) % 14);
     among.push({ x: x + j, y: y + ((x * 3 + y) % 9) - 4, r: Math.max(4, Math.round(h * 0.24)), h, soft: true, look: 'snowpine' });
   }
 
@@ -59,8 +67,8 @@ export const blackdiamond: Hole = {
   blurb: 'Black diamond. Down onto the flat, then lay up short of the rock band or go for it into the moguls and trees. A cliff all down the right.',
   teeTip: 'Driver onto the flat. Then decide: lay up, or take on the moguls. Right is the cliff.',
   tee: { x: 0, y: 0 },
-  cup: { x: -26, y: 1102 },
-  pins: [{ x: -26, y: 1102 }, { x: -32, y: 1097 }, { x: -19, y: 1104 }, { x: -24, y: 1108 }],
+  cup: { x: -26, y: 1103 },
+  pins: [{ x: -26, y: 1103 }, { x: -35, y: 1096 }, { x: -16, y: 1106 }, { x: -23, y: 1112 }],
   aim: -0.01,
   bounds: { x0: -150, y0: -50, x1: 150, y1: 1190 },
   border: [
@@ -114,7 +122,7 @@ export const blackdiamond: Hole = {
     { kind: 'channel', pts: STREAM, width: 18, depth: 5 },
     // the groomer is pressed smooth and a touch below the moguls, so a ball on it keeps to it
     { kind: 'channel', pts: GROOMER, width: 7, depth: 0.8 },
-    ...greenComplex(GREEN, 5, { lift: 1, edge: 9, tilt: slope(GREEN, 9, [0.6, 0.8]), rolls: [[-6, -4, 6, 0.35], [7, 4, 6, -0.3]] }),
+    ...greenComplex(GREEN, 5, { lift: 0.3, edge: 12, tilt: slope(GREEN, 9, [0.6, 0.8]), rolls: [[-9, -6, 9, 0.35], [10, 6, 9, -0.3]] }),
     ...traps.flatMap((t) => t.pieces),
     // the cliff down the right
     cliff([{ x: LIP + 36, y: 150 }, { x: LIP + 36, y: 970 }]),
