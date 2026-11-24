@@ -188,7 +188,7 @@ export function dailyShotCard(day: string) {
   return `<section class="shot-card" id="shot-card" data-state="fresh">
     <div class="shot-top"><h2>The Daily Shot <span>#${set.number}</span></h2><span class="shot-lead" data-shot-lead></span></div>
     <div class="shot-pot-big"><small>Ace Pot</small><b data-shot-pot>…</b><em>+$50 every miss</em></div>
-    <div data-shot-body><a class="btn big gold shine" href="#/daily">Play</a></div>
+    <div data-shot-body><a class="btn big gold shine shot-play" href="#/daily"><span class="flag" aria-hidden="true">⛳</span>Play</a></div>
     <p class="shot-next" data-shot-next hidden></p>
   </section>`;
 }
@@ -242,7 +242,7 @@ export async function bindDailyShot(day: string, _cardsLeft?: number | null) {
   if (played < SHOT_ALL) {
     el.dataset.state = 'going';
     body.innerHTML = `<span class="sd-holes">${[1, 2, 3].map(hole).join('')}</span>
-      <a class="btn big gold shine" href="#/daily">Continue · hole ${Math.floor(played / SHOT_TRIES) + 1}, shot ${(played % SHOT_TRIES) + 1}</a>`;
+      <a class="btn big gold shine shot-play" href="#/daily">Continue · hole ${Math.floor(played / SHOT_TRIES) + 1}, shot ${(played % SHOT_TRIES) + 1}</a>`;
     // no running total partway (a wet first ball would read as 150 ft with two shots still to come): just the ticker
     return;
   }
