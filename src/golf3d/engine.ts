@@ -10,7 +10,7 @@ import { ask, type AskOpts } from '../dialog';
 import { CartGirl, type Visitor } from './cartgirl';
 import { ReginaldTray } from './reginaldtray';
 import { conditionsFor, gusted, tempestOn, WIND_PER_MPH, withPin, type Conditions } from './conditions';
-import { bagFor, carryOf, CLUBS, drinksOn, SCALE, type ClubId, type Drink } from './clubs';
+import { bagFor, carryOf, CLUBS, drinksOn, ironIn, isIron, SCALE, type ClubId, type Drink } from './clubs';
 import { MAGNET_FT } from '../powerups';
 import { pour } from './drinks';
 import { Golfer, HANK_SPEC, reactionFor, type GolferSpec, type Reaction } from './golfer';
@@ -191,7 +191,7 @@ const BOMB = 1.2;
 const yd = (ft: number) => `${Math.round((ft * SCALE) / 3)} yd`;
 const away = (ft: number, putt: boolean) => (putt ? `${Math.round(ft * SCALE)} ft` : yd(ft));
 
-const LABEL: Record<ClubId, string> = { driver: 'Driver', wood: 'Wood', iron: 'Iron', wedge: 'Wedge', chip: 'Chip', putter: 'Putter' };
+const LABEL: Record<ClubId, string> = { driver: 'Driver', wood: 'Wood', iron: 'Iron', longiron: 'Long iron', shortiron: 'Short iron', wedge: 'Wedge', chip: 'Chip', putter: 'Putter' };
 
 // The swing bar: the impact point sits near the left end; power runs from there to the right, overswing last.
 const IMPACT = 0.12;
@@ -1093,6 +1093,8 @@ export class Course3D {
       <div class="g3-swing" data-swing hidden>
         <small class="g3-swing-tag" data-swing-tag hidden></small>
         <div class="g3-swing-track">
+          <b class="g3-swing-pct" data-pct></b>
+          <div class="g3-swing-ticks" aria-hidden="true">${[25, 50, 75, 100].map((t) => `<i style="--at:${barX(t / 100) * 100}%">${t}</i>`).join('')}</div>
           <div class="g3-swing-bar">
             <span class="over"></span><span class="fill" data-fill></span>
             <span class="gold" data-gold></span><span class="pure" data-pure></span>
@@ -1279,9 +1281,10 @@ export class Course3D {
   private lie() {
     const s = surfaceAt(this.hole, this.pos);
     if (this.hole.putterOnly) return { allowed: ['putter'] as ClubId[], want: 'putter' as ClubId, d: Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y) };
-    const allowed: ClubId[] = s === 'sand' ? ['wedge', 'iron'] : s === 'green' ? ['putter', 'chip', 'wedge'] : this.bag;
+    const iron = ironIn(this.bag);
+    const allowed: ClubId[] = s === 'sand' ? ['wedge', iron] : s === 'green' ? ['putter', 'chip', 'wedge'] : this.bag;
     const d = Math.hypot(this.hole.cup.x - this.pos.x, this.hole.cup.y - this.pos.y);
-    const want: ClubId = s === 'green' ? 'putter' : this.hole.tour && s !== 'sand' && d >= 26 ? this.reachFor(d, s, allowed) : s === 'sand' ? (d > 110 ? 'iron' : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? 'iron' : 'driver';
+    const want: ClubId = s === 'green' ? 'putter' : this.hole.tour && s !== 'sand' && d >= 26 ? this.reachFor(d, s, allowed) : s === 'sand' ? (d > 110 ? iron : 'wedge') : d < 26 && s !== 'rough' ? 'putter' : d < 40 && s !== 'rough' ? 'chip' : d < 95 ? 'wedge' : d < 215 || s === 'rough' ? iron : 'driver';
     return { allowed, want, d };
   }
 
@@ -1289,12 +1292,12 @@ export class Course3D {
   // climb or drop to the pin (the same table the power plan uses). Out of the rough, never the chip.
   private reachFor(d: number, s: string, allowed: ClubId[]): ClubId {
     const drop = Math.round((heightAt(this.hole, this.hole.cup.x, this.hole.cup.y) - heightAt(this.hole, this.pos.x, this.pos.y)) / 2) * 2;
-    for (const c of ['chip', 'wedge', 'iron', 'wood', 'driver'] as ClubId[]) {
+    for (const c of ['chip', 'wedge', 'shortiron', 'iron', 'longiron', 'wood', 'driver'] as ClubId[]) {
       if (!allowed.includes(c) || (c === 'chip' && (s === 'rough' || d > 60))) continue;
       const t = this.stopTable(c, drop);
       if (t[t.length - 1] * this.boost() >= d * 1.02) return c;
     }
-    return allowed.includes('driver') ? 'driver' : 'iron';
+    return allowed.includes('driver') ? 'driver' : allowed.includes('iron') ? 'iron' : (allowed.find(isIron) ?? allowed[0]);
   }
 
   private setStrokes() {
@@ -1743,7 +1746,8 @@ export class Course3D {
   // upward and the club goes back with it, then the needle and the club come down together to the strike.
   // the clubs in the bag: tour courses and the practice facility carry the wood as well
   private get bag() {
-    const bag = bagFor(!!this.hole.tour || !!this.drill);
+    // a hole's own bag first (the Powder Bowl splits the iron)
+    const bag = this.hole.bag ?? bagFor(!!this.hole.tour || !!this.drill);
     return this.mods.noWoods ? bag.filter((c) => c !== 'driver' && c !== 'wood') : bag;
   }
 
@@ -1779,6 +1783,10 @@ export class Course3D {
     m.hidden = false;
     m.classList.remove('accuracy');
     m.classList.toggle('vertical', this.style() === 'vertical');
+    // the redrawn meter (the Powder Bowl, Nov 24): taller, ticked at 25s, a live power readout, a brighter strike zone
+    m.classList.toggle('clear', this.hole.meterLook === 'clear');
+    // (the wedge and chip read on a stretched scale, so the 25s don't apply: no ticks for them)
+    m.classList.toggle('stretched', stretched(this.club));
     // what you're drinking shows on the meter: for the lager or Reginald's fireball the
     // overswing at the top of the bar turned to fire (swing into it: that's the extra distance), and a tag saying which
     const kind = this.drink?.kind;
@@ -3079,7 +3087,7 @@ export class Course3D {
     }
     const flying = this.mode === 'roll' && this.shot && this.shot.club !== 'putter';
     const dir = this.mode === 'roll' ? this.follow.clone() : new THREE.Vector3(Math.sin(this.aim), 0, -Math.cos(this.aim));
-    const long = this.club === 'driver' || this.club === 'wood' || this.club === 'iron';
+    const long = this.club === 'driver' || this.club === 'wood' || isIron(this.club);
     const back = this.mode === 'roll' ? (flying ? 34 : 20) : long ? 20 : this.club === 'wedge' ? 17 : 14;
     // lining up: down behind the golfer, about head height and a bit (lowered Nov 14: it sat high, looking down on them)
     const up = this.mode === 'roll' ? (flying ? 20 : 12) : long ? 8.5 : 7;
@@ -3150,13 +3158,20 @@ export class Course3D {
         const fire = !!this.drink && drinksOn(this.hole?.id ?? '')[this.drink.kind].boost > 1 && m.p > 1;
         // the chipper and the wedge climb their stretched scale at a steady pace (see meterPos); the rest fill by power
         if (stretched(this.club)) {
-          m.d = Math.min(OVERSWING, m.d + stretchRate(this.club) * m.speed * (fire ? 0.45 : 1) * dt);
+          m.d = Math.min(OVERSWING, m.d + stretchRate(this.club) * m.speed * (fire ? 0.45 : 1) * (this.hole.meterPace ?? 1) * dt);
           m.p = m.d >= OVERSWING ? OVERSWING : fromMeter(this.club, m.d);
-        } else m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * dt);
+        } else m.p = Math.min(OVERSWING, m.p + powerSpeed(this.club, m.p) * m.speed * (fire ? 0.45 : 1) * (this.hole.meterPace ?? 1) * dt);
         m.x = barX(this.meterAt(m.p));
+        if (this.hole.meterLook === 'clear') {
+          const pct = this.overlay.querySelector('[data-pct]') as HTMLElement | null;
+          if (pct) {
+            pct.textContent = `${Math.round(m.p * 100)}%`;
+            pct.classList.toggle('over', m.p > 1);
+          }
+        }
         if (m.p >= OVERSWING) this.tapSwing();
       } else {
-        m.x -= m.speed * dt;
+        m.x -= m.speed * (this.hole.meterPace ?? 1) * dt;
         // gone right past the impact point: a full hook
         if (m.x < IMPACT - m.half - 0.15) {
           m.x = IMPACT - m.half - 0.15;

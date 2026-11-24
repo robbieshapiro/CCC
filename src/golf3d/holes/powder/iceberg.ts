@@ -9,7 +9,7 @@ import { band, blob, circle, rect } from '../../terrain';
 import type { Hole } from '../../types';
 import { greenside } from '../woods';
 import { stoneBridge } from '../atlantic/common';
-import { POWDER_TURF, firs } from './common';
+import { POWDER_PLAY, POWDER_TURF, firs } from './common';
 
 const SHORE = 22;
 const BERG = 9;
@@ -27,6 +27,7 @@ export const iceberg: Hole = {
   theme: 'alpine',
   tour: true,
   turf: POWDER_TURF,
+  ...POWDER_PLAY,
   windByHeight: true,
   gusts: true,
   chipDrop: 0.7,

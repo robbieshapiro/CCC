@@ -10,7 +10,7 @@ import { blob, rect } from '../../terrain';
 import type { Hole } from '../../types';
 import { greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
-import { POWDER_TURF, cliff, firs, profile } from './common';
+import { POWDER_PLAY, POWDER_TURF, cliff, firs, profile } from './common';
 
 const LOW = 10;
 const BENCH = 50;
@@ -29,6 +29,7 @@ export const thelodge: Hole = {
   theme: 'alpine',
   tour: true,
   turf: POWDER_TURF,
+  ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.12,

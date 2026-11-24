@@ -12,7 +12,7 @@ import { band, blob, rect } from '../../terrain';
 import type { Hole, Post, V2 } from '../../types';
 import { greenComplex, greenside } from '../woods';
 import { slope } from '../atlantic/common';
-import { POWDER_TURF, cliff, firs, profile } from './common';
+import { POWDER_PLAY, POWDER_TURF, cliff, firs, profile } from './common';
 
 const TOP = 110;
 const GREEN = { x: 188, y: 690, rx: 13, ry: 11 };
@@ -57,6 +57,7 @@ export const blueridge: Hole = {
   theme: 'alpine',
   tour: true,
   turf: POWDER_TURF,
+  ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.2,

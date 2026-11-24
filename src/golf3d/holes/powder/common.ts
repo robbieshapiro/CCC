@@ -2,6 +2,7 @@
 // the snow and kept green, and everything else is deep powder. A ball that lands in it stops nearly dead, and a full
 // club only gets about 70% out of it. Firs, heavy with snow, line every run.
 import type { Hole, Post, V2 } from '../../types';
+import { SPLIT_BAG } from '../../clubs';
 import { treeLine } from '../woods';
 
 // deep powder: a landing ball keeps a sixth of its pace and a full club gets about 70% out; firm, quick
@@ -29,3 +30,7 @@ export const profile = (x0: number, x1: number, pts: [number, number][]) =>
 // A cliff: the mountain falls away beyond a line, `drop` feet down within `edge` feet. Put the hole's border along the
 // lip, so a ball that rolls over it is gone (out of bounds, played again).
 export const cliff = (pts: V2[], drop = -60, edge = 8) => ({ kind: 'embankment' as const, pts, h: pts.map(() => drop), width: 26, edge });
+
+// How the Powder Bowl plays (Robbie, Nov 24): the iron split into a long and a short one, a swing meter a quarter
+// slower, and the redrawn meter (taller, ticked, a live power readout). Only here; every other course is unchanged.
+export const POWDER_PLAY: Pick<Hole, 'bag' | 'meterPace' | 'meterLook'> = { bag: SPLIT_BAG, meterPace: 0.75, meterLook: 'clear' };

@@ -1,6 +1,7 @@
 // The bag. Bigger clubs go farther but have a smaller sweet spot on the swing meter.
 // The driver's needle also speeds up with power: a full rip is a lottery ticket.
-export type ClubId = 'driver' | 'wood' | 'iron' | 'wedge' | 'chip' | 'putter';
+// longiron, shortiron (Nov 24): the Powder Bowl splits the iron in two (a hole's own `bag`); every other course keeps one
+export type ClubId = 'driver' | 'wood' | 'iron' | 'longiron' | 'shortiron' | 'wedge' | 'chip' | 'putter';
 
 export type Club = {
   id: ClubId;
@@ -22,6 +23,10 @@ export const CLUBS: Record<ClubId, Club> = {
   // than the driver
   wood: { id: 'wood', name: 'Wood', carry: [150, 300], loft: 20, keep: 0.2, sweet: 0.065, curve: 23, push: 0.05, check: 8, release: 0.06, bend: 22 },
   iron: { id: 'iron', name: 'Iron', carry: [50, 180], loft: 30, keep: 0.18, sweet: 0.08, curve: 20, push: 0.04, check: 12, release: 0.08, bend: 18 },
+  // the split irons (Nov 24, the Powder Bowl): a long iron up to about 165 yd, a touch less forgiving, and a short iron
+  // to about 125 yd for approaches, more forgiving and with more spin
+  longiron: { id: 'longiron', name: 'Long iron', carry: [70, 225], loft: 24, keep: 0.19, sweet: 0.07, curve: 21, push: 0.045, check: 10, release: 0.07, bend: 19 },
+  shortiron: { id: 'shortiron', name: 'Short iron', carry: [45, 170], loft: 34, keep: 0.16, sweet: 0.09, curve: 18, push: 0.035, check: 13, release: 0.09, bend: 16 },
   wedge: { id: 'wedge', name: 'Wedge', carry: [8, 90], loft: 52, keep: 0.08, sweet: 0.13, curve: 8, push: 0.02, check: 15, release: 0.14, bend: 9 },
   // the chipper: a low runner that lands soft and rolls out, with a quick needle and a forgiving gold zone
   chip: { id: 'chip', name: 'Chip', carry: [3, 32], loft: 30, keep: 0.24, sweet: 0.15, curve: 6, push: 0.02, check: 4, release: 0.18, bend: 6 },
@@ -36,6 +41,13 @@ export const BAG: ClubId[] = ['driver', 'iron', 'wedge', 'chip', 'putter'];
 // tour courses (the Caldera on) and the practice facility carry the wood too, so every distance has a club
 export const TOUR_BAG: ClubId[] = ['driver', 'wood', 'iron', 'wedge', 'chip', 'putter'];
 export const bagFor = (tour: boolean) => (tour ? TOUR_BAG : BAG);
+// the Powder Bowl's bag (Nov 24): the iron split into a long and a short one
+export const SPLIT_BAG: ClubId[] = ['driver', 'wood', 'longiron', 'shortiron', 'wedge', 'chip', 'putter'];
+// a hole's own bag if it has one, else the course's
+export const bagOf = (h: { tour?: boolean; bag?: ClubId[] }) => h.bag ?? bagFor(!!h.tour);
+export const isIron = (c: ClubId) => c === 'iron' || c === 'longiron' || c === 'shortiron';
+// the iron a bag plays out of sand or for a mid-length shot
+export const ironIn = (bag: ClubId[]): ClubId => (bag.includes('shortiron') ? 'shortiron' : 'iron');
 
 export const carryOf = (club: ClubId, power: number, boost = 1) => {
   const c = CLUBS[club].carry;

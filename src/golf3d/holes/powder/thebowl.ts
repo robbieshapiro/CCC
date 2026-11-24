@@ -7,7 +7,7 @@
 // at the pin.
 import { blob, circle } from '../../terrain';
 import type { Hole, V2 } from '../../types';
-import { POWDER_TURF, firs } from './common';
+import { POWDER_PLAY, POWDER_TURF, firs } from './common';
 
 const RIM = 30;
 const FLOOR = 12;
@@ -22,6 +22,7 @@ export const thebowl: Hole = {
   theme: 'alpine',
   tour: true,
   turf: POWDER_TURF,
+  ...POWDER_PLAY,
   windByHeight: true,
   chipDrop: 0.7,
   greenFirm: 0.06,
