@@ -244,12 +244,14 @@ export function home(snap: Snapshot) {
           placeholder: 'Where is it, what is it like, and which holes would you play? A real place, a dream, anything.',
         })),
   );
-  if (cards && !cardIn)
+  // (always asked, even when the count here says all of today's are in: the Committee can give a member extra cards
+  // for a day, Nov 26)
+  if (cards)
     void api.cardToday(requireSession()).then((t) => {
       const tile = document.getElementById('card-tile');
       const state = tileState(t, false);
       // a card going, elsewhere, all in, or the second card waiting
-      if (tile && (state !== 'fresh' || t?.n)) {
+      if (tile && t && (state !== 'fresh' || t.n)) {
         tile.innerHTML = cardTile(state, course, t, CARD_LINKS);
         bindCardNote(tile, CARD_LINKS, navigate);
         bindBarCta();
