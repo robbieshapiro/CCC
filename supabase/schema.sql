@@ -1770,10 +1770,27 @@ language sql stable security definer set search_path = public, extensions as $$
   select count(*)::int from rounds r where r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today() and r.month = game_month()
 $$;
 revoke all on function cards_today(players) from public, anon, authenticated;
+-- Extra cards for one person on one day, a make-good the Committee gives (Nov 26: Hunter and Eli, after the aim and
+-- black-screen bugs). Keyed by the person (lower name and PIN), as bonus_grants; written by hand, never by the app.
+create table if not exists extra_cards (
+  k text not null,
+  h text not null,
+  day date not null,
+  n int not null check (n between 1 and 10),
+  reason text,
+  primary key (k, h, day)
+);
+alter table extra_cards enable row level security;
+-- how many cards this person may play today: the three, and any extras for today
+create or replace function cards_allowed(me players) returns int
+language sql stable security definer set search_path = public, extensions as $$
+  select cards_a_day() + coalesce((select sum(e.n) from extra_cards e where e.k = lower(me.name) and e.h = me.pin_hash and e.day = game_today()), 0)::int
+$$;
+revoke all on function cards_allowed(players) from public, anon, authenticated;
 -- all of today's cards are in
 create or replace function card_in(me players) returns boolean
 language sql stable security definer set search_path = public, extensions as $$
-  select cards_today(me) >= cards_a_day()
+  select cards_today(me) >= cards_allowed(me)
 $$;
 revoke all on function card_in(players) from public, anon, authenticated;
 
@@ -1826,7 +1843,7 @@ begin
     (select p.group_id from players p where p.id = c.player_id),
     (select r.group_id from rounds r where card_in(me) and r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today()
       and r.month = game_month() order by r.created_at desc limit 1));
-  return json_build_object('done', card_in(me), 'n', cards_today(me), 'of', cards_a_day(),
+  return json_build_object('done', card_in(me), 'n', cards_today(me), 'of', cards_allowed(me),
     'best', (select min(r.total - r.par) from rounds r where r.player_id in (select person_seats(me)) and (r.created_at at time zone 'America/New_York')::date = game_today() and r.month = game_month()),
     'id', c.id, 'course', c.course, 'scores', coalesce(c.scores, '{}'),
     'shots', coalesce(c.shots, 0), 'spots', c.spots, 'feats', coalesce(c.feats, '{}'),
