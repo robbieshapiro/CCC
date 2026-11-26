@@ -103,6 +103,7 @@ export const useGame = (g: Course3D) => void (game = g);
 
 export function closeRound() {
   leavePractice();
+  document.querySelectorAll('.between').forEach((x) => x.remove());
   game?.destroy();
   game = null;
   document.body.classList.remove('court-open');
@@ -462,11 +463,16 @@ export async function round(snap: Snapshot, opts: { course?: Course; holes?: num
     // built, and a light shimmer on it, then it fades once the new hole has drawn its first frame
     const walk = scores.filter((x) => x !== undefined).length > 0 ? betweenCard(el, course, scores, i) : null;
     if (walk) await walk.painted;
-    if (quit || !game) return;
+    if (quit || !game) return walk?.done();
     // picking a card up mid-hole: back to the tee, with the strokes already played on it
-    const played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: visits[i], of: course.holes.length, strokes: carry, cooler: i === 0 && !carry && !(opts.practice && !livePractice) });
+    let played: ReturnType<typeof game.play>;
+    try {
+      played = game.play(h, i + 1, { strokes: scores.reduce((a, b) => a + b, 0), par }, { cart: visits[i], of: course.holes.length, strokes: carry, cooler: i === 0 && !carry && !(opts.practice && !livePractice) });
+    } finally {
+      // the card always goes, whatever happened building the hole (Nov 26)
+      walk?.done();
+    }
     carry = 0;
-    walk?.done();
     const r = await Promise.race([played, jumped]);
     if (quit || !game) return;
     if (typeof r === 'number') {
@@ -1557,12 +1563,18 @@ function betweenCard(host: HTMLElement, course: Course, scores: number[], next: 
   </div>`;
   host.appendChild(box);
   const shown = performance.now();
-  const painted = new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
+  // two frames so it's on screen; and never more than half a second, if the page isn't drawing (in the background)
+  const painted = new Promise<void>((res) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => res()));
+    window.setTimeout(res, 500);
+  });
   requestAnimationFrame(() => box.classList.add('in'));
   return {
     painted,
     // once the new hole has drawn (or after a few seconds whatever happens), and never in under a second
     done() {
+      if (box.dataset.going) return;
+      box.dataset.going = '1';
       let gone = false;
       const go = () => {
         if (gone) return;
