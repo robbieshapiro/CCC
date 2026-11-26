@@ -1,6 +1,6 @@
 // Hole 7, The Double Black (par 4, 640 yd as shown), the hard one. Straight down the fall line from the top of the
 // expert chute, between dark rock walls (Nov 24, Robbie: long and narrow; a bomb can run out but never reach the green).
-// One very narrow fairway, 28 ft across, straight down a gully of firs and moguls. It's 1 in 4 where the drives come
+// One narrow fairway, 36 ft across, straight down a gully of firs and moguls. It's 1 in 4 where the drives come
 // down, then a shelf where even a bomb runs out and stops, a creek across the foot of the shelf, steep again, and a
 // second creek in front of the green on its bench. A moose or two by the water.
 // The play: a straight drive down the fairway, then a long iron off the shelf, over the creeks to the green. Off the
@@ -26,7 +26,7 @@ const FAIRWAY: V2[] = [
   { x: -3, y: 690 },
   { x: -2, y: 870 },
 ];
-const HALF = 14;
+const HALF = 18; // 36 ft (Nov 26, the Greenkeeper: at 28 ft a member-skill drive found the firs every time)
 // the patrol line: straight down the right of the gully, then round to the green
 const LINE: V2[] = [
   { x: 54, y: 150 },
@@ -113,7 +113,7 @@ export const doubleblack: Hole = {
   // over the walls is dark rock, not snow (Nov 24, Robbie)
   outside: '#34393e',
   yards: 640,
-  blurb: 'Double black. Long and narrow, straight down a gully between rock walls: a 28 ft fairway through the firs and moguls, over two creeks.',
+  blurb: 'Double black. Long and narrow, straight down a gully between rock walls: a 36 ft fairway through the firs and moguls, over two creeks.',
   teeTip: 'A straight drive or the trees. Even a bomb stops on the shelf. Off the gully is out.',
   tee: { x: 0, y: 0 },
   cup: { x: 0, y: 903 },
@@ -133,7 +133,7 @@ export const doubleblack: Hole = {
   base: 'rough',
   regions: [
     { poly: rect(-14, -14, 14, 14), surface: 'fairway' },
-    // the fairway: 28 ft across, all the way down
+    // the fairway: 36 ft across, all the way down
     { poly: band(FAIRWAY, HALF), surface: 'fairway' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx + 5, GREEN.ry + 5, 3, 0.06), surface: 'fringe' },
     { poly: blob(GREEN.x, GREEN.y, GREEN.rx, GREEN.ry, 3, 0.06), surface: 'green' },
