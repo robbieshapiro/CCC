@@ -329,7 +329,7 @@ Last updated Nov 26, 2026 (extra cards for a day, and three more for Hunter and 
 
 ## Setup status
 
-- [ ] #426's `extra_cards`, `cards_allowed`, `card_in`, `card_today` applied live, and Hunter's and Eli's three extra cards for Nov 26 granted
+- [x] #426's `extra_cards`, `cards_allowed`, `card_in`, `card_today` applied live, and Hunter's and Eli's three extra cards for Nov 26 granted (checked: Hunter 3 played of 6, Eli G 0 of 6)
 
 - [x] #415's period functions (`period_of`, `period_next`, `game_month`, `playoff_day`, `open_purse_floor`, `set_course_schedule`, `book_field`, `book_state`, `book_bet`) applied live (Nov 24, checked: Dec 6 is in the Nov 29 period, the floor is $100,000)
 - [x] #414's `person_bonus` (fairways and greens) applied live (Nov 24, checked: today's first cards pay)
