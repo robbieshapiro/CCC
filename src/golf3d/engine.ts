@@ -248,6 +248,8 @@ export class Course3D {
   private number = 1;
   private overlay: HTMLElement;
   private raf = 0;
+  private glLost = false; // the graphics have been dropped and not yet given back
+  private unNudge = () => {};
   private last = performance.now();
   private clock = 0; // hole clock: drives movers, matches the physics
   private slow = 0; // seconds spent below a smooth frame rate, for the automatic quality drop
@@ -377,18 +379,26 @@ export class Course3D {
     host.appendChild(this.renderer.domElement);
     this.overlay = html(`<div class="g3-ui"></div>`);
     host.appendChild(this.overlay);
-    // If the device drops the graphics (low memory, often on iPad), say so rather than sit on a blank screen.
-    // three.js redraws on its own when they come back; if they don't, a reload brings the club back.
-    const dark = html(`<div class="g3-dark" hidden><p>The course went dark.</p><button class="btn">Reload</button></div>`);
+    // If the device drops the graphics (low memory, on iPhones and iPads), ask for them back (Nov 26, Hunter: the
+    // screen went black and stayed black: without preventDefault the browser never restores them) and hold the
+    // drawing until they're back; three.js uploads the course again on its own. If they don't come back in a few
+    // seconds, say so: a reload picks a card up where it was (it saves after every stroke).
+    const dark = html(`<div class="g3-dark" hidden><p>The course went dark.</p><button class="btn">Tap to pick it back up</button></div>`);
     dark.querySelector('button')!.addEventListener('click', () => location.reload());
     host.appendChild(dark);
     let darkTimer = 0;
-    this.renderer.domElement.addEventListener('webglcontextlost', () => {
-      darkTimer = window.setTimeout(() => (dark.hidden = false), 2500);
+    this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.glLost = true;
+      darkTimer = window.setTimeout(() => (dark.hidden = false), 4000);
     });
     this.renderer.domElement.addEventListener('webglcontextrestored', () => {
       clearTimeout(darkTimer);
+      this.glLost = false;
       dark.hidden = true;
+      // the shadow map is rebuilt with everything else
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
     });
 
     this.sky();
@@ -457,6 +467,7 @@ export class Course3D {
 
   destroy() {
     this.clearHold();
+    this.unNudge();
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKey);
@@ -1151,20 +1162,43 @@ export class Course3D {
         sfx('tick');
       };
     });
+    // the aim arrows: hold to keep turning. One hold at a time for both arrows, and it stops however the finger comes
+    // off: a second press, a lift anywhere, the app going to the background, the shot starting, or 3 seconds at most
+    // (Nov 26, Eli: the aim kept spinning after letting go, a hold whose timer was never cleared)
+    let hold = { timer: 0, until: 0 };
+    const stopHold = () => {
+      window.clearInterval(hold.timer);
+      hold = { timer: 0, until: 0 };
+    };
+    for (const ev of ['pointerup', 'pointercancel', 'blur'] as const) window.addEventListener(ev, stopHold);
+    document.addEventListener('visibilitychange', stopHold);
+    this.unNudge = () => {
+      stopHold();
+      for (const ev of ['pointerup', 'pointercancel', 'blur'] as const) window.removeEventListener(ev, stopHold);
+      document.removeEventListener('visibilitychange', stopHold);
+    };
     this.overlay.querySelectorAll<HTMLButtonElement>('[data-nudge]').forEach((b) => {
-      let timer = 0;
+      const dir = Number(b.dataset.nudge);
       const step = () => {
-        if (this.mode === 'aim') this.aim += Number(b.dataset.nudge) * (this.club === 'putter' ? 0.004 : 0.008);
+        if (this.mode !== 'aim' || performance.now() > hold.until) return stopHold();
+        this.aim += dir * (this.club === 'putter' ? 0.004 : 0.008);
       };
       b.onpointerdown = (e) => {
         e.preventDefault();
+        stopHold();
+        try {
+          b.setPointerCapture(e.pointerId);
+        } catch {
+          /* fine */
+        }
+        hold.until = performance.now() + 3000;
         step();
-        timer = window.setInterval(step, 60);
+        hold.timer = window.setInterval(step, 60);
       };
-      const stop = () => clearInterval(timer);
-      b.onpointerup = stop;
-      b.onpointerleave = stop;
-      b.onpointercancel = stop;
+      b.onpointerup = stopHold;
+      b.onpointerleave = stopHold;
+      b.onpointercancel = stopHold;
+      b.onlostpointercapture = stopHold;
     });
     const view = q('[data-view]');
     view.onclick = () => this.setView(this.view === 'play' ? 'target' : 'play');
@@ -3178,6 +3212,7 @@ export class Course3D {
 
   private loop = () => {
     this.raf = requestAnimationFrame(this.loop);
+    if (this.glLost) return;
     const now = performance.now();
     const raw = (now - this.last) / 1000;
     const dt = Math.min(0.05, raw);
